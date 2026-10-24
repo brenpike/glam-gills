@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HABITATS } from '../logic/areas';
-import { REFUGE_PICTURE } from '../logic/refugeUi';
+import { REFUGE_PICTURE, REFUGE_PICTURE_TOP_BAND_H } from '../logic/refugeUi';
 import {
   REFUGE_ART_STATES,
   REFUGE_COB,
@@ -19,10 +19,12 @@ import {
   REFUGE_NUDGE_TEX,
   REFUGE_PICTURE_TEX,
   REFUGE_PLANTS_BASE,
+  REFUGE_PLANTS_TEX,
   REFUGE_PLOT_SOIL,
   REFUGE_PLOT_TOP,
   REFUGE_PLANTS_PAINTERS,
   REFUGE_SECTION_PAINTERS,
+  REFUGE_SPARKLE_TEX,
   REFUGE_TRASH_TEX,
   REFUGE_TRASH_VARIANTS,
   blendHex,
@@ -133,6 +135,61 @@ function record(paint: (ctx: CanvasRenderingContext2D) => void): Painted[] {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+/** The y values a path command reaches or bends towards, with how far its round parts reach up. */
+function commandYs(cmd: Cmd): number[] {
+  const [name, ...a] = cmd;
+  if (name === 'arc') return [a[1] - a[2]];
+  if (name === 'ellipse') return [a[1] - Math.max(a[2], a[3])];
+  if (name === 'rect') return [a[1]];
+  return a.filter((_, i) => i % 2 === 1);
+}
+
+/**
+ * The highest point `paint` puts ink or fill at, in its local y (down is +): every path point and
+ * control point, less half the line width of a stroke. Follows translate, save and restore; a
+ * rotate or scale fails the measure, as it would bend the points.
+ */
+function paintedTop(paint: (ctx: CanvasRenderingContext2D) => void): number {
+  vi.stubGlobal('Path2D', LogPath);
+  const offsets: number[] = [0];
+  let top = Infinity;
+  const state: Record<string, unknown> = { fillStyle: '', strokeStyle: '', lineWidth: 1 };
+  const ops: Record<string, (...args: unknown[]) => void> = {
+    save: () => void offsets.push(offsets[offsets.length - 1]),
+    restore: () => void offsets.pop(),
+    translate: (_x, y) => void (offsets[offsets.length - 1] += y as number),
+    rotate: () => {
+      throw new Error('paintedTop cannot follow a rotate');
+    },
+    scale: () => {
+      throw new Error('paintedTop cannot follow a scale');
+    },
+    fill: (path) => {
+      for (const cmd of (path as LogPath).cmds) top = Math.min(top, offsets[offsets.length - 1] + Math.min(...commandYs(cmd)));
+    },
+    stroke: (path) => {
+      const half = (state.lineWidth as number) / 2;
+      for (const cmd of (path as LogPath).cmds) {
+        top = Math.min(top, offsets[offsets.length - 1] + Math.min(...commandYs(cmd)) - half);
+      }
+    },
+  };
+  const ctx = new Proxy(state, {
+    get: (target, key) => {
+      const name = String(key);
+      if (name in target) return target[name];
+      if (name === 'createLinearGradient') return () => ({ addColorStop: () => undefined });
+      return ops[name] ?? (() => undefined);
+    },
+    set: (target, key, value) => {
+      target[String(key)] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+  paint(ctx);
+  return top;
+}
 
 const strokes = (painted: Painted[]): Painted[] => painted.filter((p) => p.op === 'stroke');
 const fills = (painted: Painted[]): Painted[] => painted.filter((p) => p.op === 'fill');
@@ -367,6 +424,17 @@ describe('plants layer', () => {
     expect(REFUGE_PLANTS_BASE.y).toBeGreaterThan(78);
     expect(REFUGE_PLANTS_BASE.y).toBeLessThan(REFUGE_PICTURE.h);
   });
+
+  it('keeps clear of the picture top band an area line may cover (issue #113, ND-8)', () => {
+    // The plants frame (to its 60 px bound, before its padding) and every look's ink end below the band.
+    expect(REFUGE_PLANTS_BASE.y - 60).toBeGreaterThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+    expect(REFUGE_PLANTS_TEX.originY).toBeLessThanOrEqual(64);
+    for (const look of HABITAT_LOOK_IDS) {
+      const top = paintedTop((ctx) => paintRefugePlants(ctx, look));
+      expect(top, look).toBeGreaterThanOrEqual(-60);
+      expect(REFUGE_PLANTS_BASE.y + top, look).toBeGreaterThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -434,6 +502,15 @@ describe('trash batches', () => {
     expect(refugeTrashSlots(1)[0].x).toBe(100);
     const three = refugeTrashSlots(3);
     for (let i = 1; i < three.length; i++) expect(three[i].x - three[i - 1].x).toBeGreaterThanOrEqual(44);
+  });
+
+  it('keeps every trash and sparkle frame at rest below the picture top band an area line may cover (issue #113, ND-8)', () => {
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      for (const s of refugeTrashSlots(n)) {
+        expect(s.y - REFUGE_TRASH_TEX.originY).toBeGreaterThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+        expect(s.y - REFUGE_SPARKLE_TEX.originY).toBeGreaterThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+      }
+    }
   });
 });
 

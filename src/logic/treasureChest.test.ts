@@ -286,7 +286,7 @@ describe('chestListing', () => {
     for (const [rarity, hints] of hinted) {
       const rarityHint = UNFOUND_HINTS[rarity];
       for (const hint of hints) {
-        expect(hint).toMatch(new RegExp(`^Area \\d+, (${HABITATS.map((habitat) => habitat.name).join('|')}): `));
+        expect(hint).toMatch(new RegExp(`^(${HABITATS.map((habitat) => habitat.name).join('|')}): Area \\d+: `));
         expect(hint.endsWith(`: ${rarityHint.charAt(0).toLowerCase()}${rarityHint.slice(1)}`)).toBe(true);
       }
     }
@@ -302,7 +302,7 @@ describe('chestListing', () => {
       rarityName: 'Common',
       badge: 'circle',
       found: false,
-      hint: 'Area 1, Canal: look near the main swim path!',
+      hint: 'Canal: Area 1: look near the main swim path!',
       slot: 'head',
       slotName: 'Head',
       perk: null,
@@ -476,7 +476,7 @@ describe('chestListing', () => {
       name: UNFOUND_NAME,
       rarity: 'rare',
       found: false,
-      hint: 'Area 2, Lily pad pond: look off the main path!',
+      hint: 'Lily pad pond: Area 2: look off the main path!',
       label: DREAM_COLOUR_LABEL,
     });
     expect(chestListing(canalShells)[2].countText).toBe('12 of 16 found');
@@ -541,56 +541,56 @@ describe('area hints', () => {
   });
 
   it.each<[string, string]>([
-    ['canal/pond-plant', 'Area 1, Canal: look near the main swim path!'],
-    ['canal/toy-boat', 'Area 1, Canal: look off the main path!'],
-    ['canal/castle-tower', 'Area 1, Canal: look in a cave or log, or past the current!'],
-    ['canal/sun-pyramid', 'Area 1, Canal: break a Dash pot with Tail Dash!'],
-    ['canal/sun-hat', 'Area 1, Canal: look near the main swim path!'],
-    ['mint', 'Area 1, Canal: look near the main swim path!'],
-    ['galaxy', 'Area 1, Canal: break a Dash pot with Tail Dash!'],
-    ['pond/lily-pad', 'Area 2, Lily pad pond: look near the main swim path!'],
-    ['pond/frog-statue', 'Area 2, Lily pad pond: look off the main path!'],
-    ['pond/lotus-lantern', 'Area 2, Lily pad pond: look in a cave or log, or past the current!'],
-    ['pond/rainbow-dragonfly-wings', 'Area 2, Lily pad pond: break a Dash pot with Tail Dash!'],
-    ['lily-green', 'Area 2, Lily pad pond: look off the main path!'],
-    ['pond/reed-bundle', 'Area 3, Lily pad pond: look near the main swim path!'],
-    ['pond/wooden-duck-decoy', 'Area 3, Lily pad pond: look off the main path!'],
-    ['pond/firefly-jar', 'Area 3, Lily pad pond: look in a cave or log, or past the current!'],
-    ['pond/golden-lotus-throne', 'Area 3, Lily pad pond: break a Dash pot with Tail Dash!'],
-    ['pond/firefly-cape', 'Area 3, Lily pad pond: break a Dash pot with Tail Dash!'],
-    ['firefly-gold', 'Area 3, Lily pad pond: look off the main path!'],
-    ['chinampa/scarecrow', 'Area 4, Chinampa gardens: look off the main path!'],
-    ['poppy-red', 'Area 4, Chinampa gardens: look off the main path!'],
-    ['chinampa/watering-can', 'Area 5, Chinampa gardens: look near the main swim path!'],
-    ['chinampa/pinata', 'Area 5, Chinampa gardens: look off the main path!'],
-    ['chinampa/talavera-fountain', 'Area 5, Chinampa gardens: look in a cave or log, or past the current!'],
-    ['chinampa/alebrije-statue', 'Area 5, Chinampa gardens: break a Dash pot with Tail Dash!'],
-    ['chinampa/rainbow-serape-cape', 'Area 5, Chinampa gardens: break a Dash pot with Tail Dash!'],
-    ['plum', 'Area 5, Chinampa gardens: look off the main path!'],
+    ['canal/pond-plant', 'Canal: Area 1: look near the main swim path!'],
+    ['canal/toy-boat', 'Canal: Area 1: look off the main path!'],
+    ['canal/castle-tower', 'Canal: Area 1: look in a cave or log, or past the current!'],
+    ['canal/sun-pyramid', 'Canal: Area 1: break a Dash pot with Tail Dash!'],
+    ['canal/sun-hat', 'Canal: Area 1: look near the main swim path!'],
+    ['mint', 'Canal: Area 1: look near the main swim path!'],
+    ['galaxy', 'Canal: Area 1: break a Dash pot with Tail Dash!'],
+    ['pond/lily-pad', 'Lily pad pond: Area 2: look near the main swim path!'],
+    ['pond/frog-statue', 'Lily pad pond: Area 2: look off the main path!'],
+    ['pond/lotus-lantern', 'Lily pad pond: Area 2: look in a cave or log, or past the current!'],
+    ['pond/rainbow-dragonfly-wings', 'Lily pad pond: Area 2: break a Dash pot with Tail Dash!'],
+    ['lily-green', 'Lily pad pond: Area 2: look off the main path!'],
+    ['pond/reed-bundle', 'Lily pad pond: Area 3: look near the main swim path!'],
+    ['pond/wooden-duck-decoy', 'Lily pad pond: Area 3: look off the main path!'],
+    ['pond/firefly-jar', 'Lily pad pond: Area 3: look in a cave or log, or past the current!'],
+    ['pond/golden-lotus-throne', 'Lily pad pond: Area 3: break a Dash pot with Tail Dash!'],
+    ['pond/firefly-cape', 'Lily pad pond: Area 3: break a Dash pot with Tail Dash!'],
+    ['firefly-gold', 'Lily pad pond: Area 3: look off the main path!'],
+    ['chinampa/scarecrow', 'Chinampa gardens: Area 4: look off the main path!'],
+    ['poppy-red', 'Chinampa gardens: Area 4: look off the main path!'],
+    ['chinampa/watering-can', 'Chinampa gardens: Area 5: look near the main swim path!'],
+    ['chinampa/pinata', 'Chinampa gardens: Area 5: look off the main path!'],
+    ['chinampa/talavera-fountain', 'Chinampa gardens: Area 5: look in a cave or log, or past the current!'],
+    ['chinampa/alebrije-statue', 'Chinampa gardens: Area 5: break a Dash pot with Tail Dash!'],
+    ['chinampa/rainbow-serape-cape', 'Chinampa gardens: Area 5: break a Dash pot with Tail Dash!'],
+    ['plum', 'Chinampa gardens: Area 5: look off the main path!'],
   ])('hints at an unfound %s with "%s"', (id, expected) => {
     expect(hintOf(chestListing([]), id)).toBe(expected);
   });
 
-  it('names Area 4 and the chinampa gardens in the hint of every unfound Area 4 treasure and Poppy red', () => {
+  it('names the chinampa gardens and Area 4 in the hint of every unfound Area 4 treasure and Poppy red', () => {
     const chinampaIds = [...CHINAMPA_TREASURES.filter((treasure) => !isPaintShell(treasure)).map((treasure) => treasure.id), 'poppy-red'];
     expect(chinampaIds.length).toBeGreaterThan(1);
-    for (const id of chinampaIds) expect(hintOf(chestListing([]), id), id).toMatch(/^Area 4, Chinampa gardens: /);
+    for (const id of chinampaIds) expect(hintOf(chestListing([]), id), id).toMatch(/^Chinampa gardens: Area 4: /);
   });
 
-  it('names Area 5 and the chinampa gardens in the hint of every unfound Area 5 treasure and Plum', () => {
+  it('names the chinampa gardens and Area 5 in the hint of every unfound Area 5 treasure and Plum', () => {
     const chinampa2Ids = [...CHINAMPA_2_TREASURES.filter((treasure) => !isPaintShell(treasure)).map((treasure) => treasure.id), 'plum'];
     expect(chinampa2Ids).toHaveLength(12);
-    for (const id of chinampa2Ids) expect(hintOf(chestListing([]), id), id).toMatch(/^Area 5, Chinampa gardens: /);
+    for (const id of chinampa2Ids) expect(hintOf(chestListing([]), id), id).toMatch(/^Chinampa gardens: Area 5: /);
   });
 
-  it('builds every area and rarity hint from the area label, habitat name and rarity hint', () => {
+  it('builds every area and rarity hint from the habitat name, area label and rarity hint (issue #113, ND-9)', () => {
     expect(RARITIES.map((rarity) => areaHint(POND_2_AREA, rarity))).toEqual([
-      'Area 3, Lily pad pond: look near the main swim path!',
-      'Area 3, Lily pad pond: look off the main path!',
-      'Area 3, Lily pad pond: look in a cave or log, or past the current!',
-      'Area 3, Lily pad pond: break a Dash pot with Tail Dash!',
+      'Lily pad pond: Area 3: look near the main swim path!',
+      'Lily pad pond: Area 3: look off the main path!',
+      'Lily pad pond: Area 3: look in a cave or log, or past the current!',
+      'Lily pad pond: Area 3: break a Dash pot with Tail Dash!',
     ]);
-    expect(areaHint({ ...CANAL_AREA, number: 7 }, 'rare')).toBe('Area 7, Canal: look off the main path!');
+    expect(areaHint({ ...CANAL_AREA, number: 7 }, 'rare')).toBe('Canal: Area 7: look off the main path!');
   });
 
   it('gives an area of an unknown habitat the plain rarity hint', () => {
@@ -603,8 +603,8 @@ describe('area hints', () => {
     expect(unlockedAreaIds({})).toEqual([CANAL_AREA.id]);
     expect(unlockedAreaIds(ALL_BEATEN)).toEqual(AREAS.map((area) => area.id));
     const noStars = chestListing([]);
-    expect(hintOf(noStars, 'pond/reed-bundle')).toBe('Area 3, Lily pad pond: look near the main swim path!');
-    expect(hintOf(noStars, 'firefly-gold')).toBe('Area 3, Lily pad pond: look off the main path!');
+    expect(hintOf(noStars, 'pond/reed-bundle')).toBe('Lily pad pond: Area 3: look near the main swim path!');
+    expect(hintOf(noStars, 'firefly-gold')).toBe('Lily pad pond: Area 3: look off the main path!');
     expect(entryHints(chestListing([]))).toEqual(entryHints(noStars));
   });
 
@@ -619,12 +619,12 @@ describe('area hints', () => {
 
   it('hints from a custom areas table, and the plain rarity hint for an entry no area holds', () => {
     const onlyArea3 = chestListing([], [POND_2_AREA]);
-    expect(hintOf(onlyArea3, 'pond/reed-bundle')).toBe('Area 3, Lily pad pond: look near the main swim path!');
-    expect(hintOf(onlyArea3, 'firefly-gold')).toBe('Area 3, Lily pad pond: look off the main path!');
+    expect(hintOf(onlyArea3, 'pond/reed-bundle')).toBe('Lily pad pond: Area 3: look near the main swim path!');
+    expect(hintOf(onlyArea3, 'firefly-gold')).toBe('Lily pad pond: Area 3: look off the main path!');
     expect(hintOf(onlyArea3, 'canal/toy-boat')).toBe('Look off the main path!');
     expect(hintOf(onlyArea3, 'lily-green')).toBe('Look off the main path!');
     const renumbered = chestListing([], [{ ...CANAL_AREA, number: 4 }]);
-    expect(hintOf(renumbered, 'canal/pond-plant')).toBe('Area 4, Canal: look near the main swim path!');
+    expect(hintOf(renumbered, 'canal/pond-plant')).toBe('Canal: Area 4: look near the main swim path!');
     for (const section of chestListing([], [])) {
       for (const entry of section.entries) expect(entry.hint, entry.id).toBe(UNFOUND_HINTS[entry.rarity]);
     }

@@ -6,14 +6,16 @@ import {
   NEW_AREA_LABEL,
   areaLabel,
   areaStarsText,
+  areasLine,
   bestStarsLine,
   exitClosedText,
+  habitatAreasLabel,
   lockedAreaText,
   snacksLeftLabel,
   starLines,
   starsShortLine,
 } from './areaText';
-import { AREAS, POND_2_AREA } from './areas';
+import { AREAS, HABITATS, POND_2_AREA } from './areas';
 import { ALL_TREASURES, treasureById } from './catalogue';
 import { NO_STARS, STARS_PER_AREA, type AreaStars } from './stars';
 
@@ -68,9 +70,16 @@ function allStarLines(earned: AreaStars, specialName: string): string[] {
   return flags.flatMap((rescued) => flags.flatMap((rescueOpen) => starLines(earned, specialName, rescued, rescueOpen)));
 }
 
+/** Area number sets covering every areasLine form. */
+const AREA_NUMBER_SAMPLES: readonly (readonly number[])[] = [[1], [2, 3], [1, 3], [5, 6, 7], [8, 9, 10], [1, 3, 8], [1, 2, 4]];
+
 /** Every output of every text helper over the samples. */
 function collectHelperOutputs(): string[] {
   const outputs: string[] = [areaLabel(1), areaLabel(12), lockedAreaText(2), lockedAreaText(12)];
+  for (const numbers of AREA_NUMBER_SAMPLES) {
+    outputs.push(areasLine(numbers));
+    for (const habitat of HABITATS) outputs.push(habitatAreasLabel(habitat.name, numbers));
+  }
   for (let count = 0; count <= STARS_PER_AREA; count += 1) outputs.push(areaStarsText(count));
   for (const left of SNACKS_LEFT_SAMPLES) outputs.push(snacksLeftLabel(left), exitClosedText(left));
   for (const earned of allStars()) {
@@ -224,5 +233,73 @@ describe('area map text', () => {
 
   it.each([-1, STARS_PER_AREA + 1, 1.5, Number.NaN])('rejects %s for the stars text', (count) => {
     expect(() => areaStarsText(count)).toThrow(RangeError);
+  });
+});
+
+describe('habitat area labels (issue #113, ND-6)', () => {
+  it('names one area as areaLabel does', () => {
+    expect(areasLine([1])).toBe('Area 1');
+    expect(areasLine([4])).toBe(areaLabel(4));
+  });
+
+  it('joins two areas with "and"', () => {
+    expect(areasLine([2, 3])).toBe('Areas 2 and 3');
+    expect(areasLine([1, 3])).toBe('Areas 1 and 3');
+  });
+
+  it('gives three or more consecutive areas as a range', () => {
+    expect(areasLine([5, 6, 7])).toBe('Areas 5 to 7');
+    expect(areasLine([8, 9, 10])).toBe('Areas 8 to 10');
+    expect(areasLine([1, 2, 3, 4, 5])).toBe('Areas 1 to 5');
+  });
+
+  it('lists any other set with commas and a last "and"', () => {
+    expect(areasLine([1, 3, 8])).toBe('Areas 1, 3 and 8');
+    expect(areasLine([1, 2, 4])).toBe('Areas 1, 2 and 4');
+    expect(areasLine([1, 2, 3, 9])).toBe('Areas 1, 2, 3 and 9');
+  });
+
+  it('sorts the numbers ascending first', () => {
+    expect(areasLine([3, 2])).toBe('Areas 2 and 3');
+    expect(areasLine([7, 5, 6])).toBe('Areas 5 to 7');
+    expect(areasLine([8, 1, 3])).toBe('Areas 1, 3 and 8');
+  });
+
+  it('does not change the list it is given', () => {
+    const numbers = [3, 1, 2];
+    areasLine(numbers);
+    expect(numbers).toEqual([3, 1, 2]);
+  });
+
+  it('labels a habitat with its name and its areas', () => {
+    expect(habitatAreasLabel('Canal', [1])).toBe('Canal: Area 1');
+    expect(habitatAreasLabel('Lily pad pond', [2, 3])).toBe('Lily pad pond: Areas 2 and 3');
+    expect(habitatAreasLabel('Chinampa gardens', [4, 5])).toBe('Chinampa gardens: Areas 4 and 5');
+    expect(habitatAreasLabel('Spring cave', [5, 6, 7])).toBe('Spring cave: Areas 5 to 7');
+  });
+
+  it("labels today's habitats from the area table", () => {
+    const labels = HABITATS.map((habitat) =>
+      habitatAreasLabel(
+        habitat.name,
+        AREAS.filter((area) => area.habitatId === habitat.id).map((area) => area.number),
+      ),
+    );
+    expect(labels).toEqual(['Canal: Area 1', 'Lily pad pond: Areas 2 and 3', 'Chinampa gardens: Areas 4 and 5']);
+  });
+
+  it('throws for an empty list', () => {
+    expect(() => areasLine([])).toThrow(RangeError);
+    expect(() => habitatAreasLabel('Canal', [])).toThrow(RangeError);
+  });
+
+  it.each([0, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])('throws for the area number %s', (areaNumber) => {
+    expect(() => areasLine([1, areaNumber])).toThrow(RangeError);
+    expect(() => habitatAreasLabel('Canal', [areaNumber])).toThrow(RangeError);
+  });
+
+  it('throws for a number given twice', () => {
+    expect(() => areasLine([2, 2])).toThrow(RangeError);
+    expect(() => habitatAreasLabel('Lily pad pond', [2, 3, 2])).toThrow(RangeError);
   });
 });

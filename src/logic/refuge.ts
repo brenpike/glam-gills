@@ -1,3 +1,4 @@
+import { areasLine } from './areaText';
 import { AREAS, HABITATS, isAreaBeaten, type AreaData, type Habitat } from './areas';
 import { MORPH_UNFOUND_NAME } from './morphs';
 import type { AreaStarsRecord } from './stars';
@@ -64,6 +65,15 @@ export const EMPTY_REFUGE_PENDING: Readonly<RefugePending> = Object.freeze({
 /** Hint on a hidden refuge section: the area that opens it. */
 export function refugeHiddenHint(areaNumber: number): string {
   return `Beat Area ${areaNumber}`;
+}
+
+/**
+ * The area line under a section's habitat name (issue #113, ND-8): the areas its batches come from,
+ * such as "Area 1" or "Areas 2 and 3", or null for a hidden section, which shows none.
+ */
+export function refugeAreaLine(section: Readonly<RefugeSection>): string | null {
+  if (section.state === 'hidden') return null;
+  return areasLine(section.batches.map((batch) => batch.areaNumber));
 }
 
 /** A habitat name as a place in a sentence: "the canal". Same rule as the fact card hints. */

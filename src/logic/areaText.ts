@@ -1,6 +1,6 @@
 /**
  * Area, exit and star text (PRD H1 to H8): kind, short, and readable by an 8-year-old. Areas are
- * named "Area 1" in UI text, never "level".
+ * named "Area 1" in UI text, never "level"; a habitat's areas read "Areas 2 and 3" (issue #113).
  */
 import { STARS_PER_AREA, starCount, type AreaStars } from './stars';
 
@@ -32,6 +32,44 @@ export function areaStarsText(count: number): string {
 /** UI name of area `areaNumber`, such as "Area 1". */
 export function areaLabel(areaNumber: number): string {
   return `Area ${areaNumber}`;
+}
+
+/** Throws a RangeError unless `numbers` holds at least one area number, each an integer of 1 or more, none twice. */
+function checkAreaNumbers(numbers: readonly number[]): void {
+  if (numbers.length === 0) throw new RangeError('areasLine needs at least one area number');
+  for (const areaNumber of numbers) {
+    if (!Number.isInteger(areaNumber) || areaNumber < 1) {
+      throw new RangeError(`areasLine needs integer area numbers of 1 or more, got ${areaNumber}`);
+    }
+  }
+  if (new Set(numbers).size !== numbers.length) throw new RangeError(`areasLine got an area number twice: ${numbers.join(', ')}`);
+}
+
+/** Whether ascending `sorted` steps by exactly 1 from each number to the next. */
+function isConsecutive(sorted: readonly number[]): boolean {
+  return sorted.every((areaNumber, index) => index === 0 || areaNumber === sorted[index - 1] + 1);
+}
+
+/**
+ * The areas a habitat holds (issue #113, ND-6), in ascending order: "Area 1" for one, "Areas 2 and 3"
+ * for two, "Areas 5 to 7" for three or more consecutive, else "Areas 1, 3 and 8". Throws a
+ * RangeError for an empty list, a number that is not an integer of 1 or more, or a duplicate.
+ */
+export function areasLine(numbers: readonly number[]): string {
+  checkAreaNumbers(numbers);
+  const sorted = [...numbers].sort((a, b) => a - b);
+  if (sorted.length === 1) return areaLabel(sorted[0]);
+  const last = sorted[sorted.length - 1];
+  if (sorted.length >= 3 && isConsecutive(sorted)) return `Areas ${sorted[0]} to ${last}`;
+  return `Areas ${sorted.slice(0, -1).join(', ')} and ${last}`;
+}
+
+/**
+ * A habitat's area map label (issue #113, ND-6): its name and the areas it holds, such as
+ * "Lily pad pond: Areas 2 and 3". Throws as areasLine does.
+ */
+export function habitatAreasLabel(habitatName: string, numbers: readonly number[]): string {
+  return `${habitatName}: ${areasLine(numbers)}`;
 }
 
 /** Snack counter label: the snacks left, such as "5 left". */

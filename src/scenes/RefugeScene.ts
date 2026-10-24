@@ -14,6 +14,7 @@ import {
   REFUGE_MORE_TO_COME,
   REFUGE_SEE_AGAIN_LABEL,
   REFUGE_TITLE,
+  refugeAreaLine,
   refugeHiddenHint,
   refugeSections,
   withoutCleanUps,
@@ -21,11 +22,12 @@ import {
   type RefugeSection,
 } from '../logic/refuge';
 import {
+  REFUGE_AREA_LINE_PAD_X,
+  REFUGE_AREA_LINE_PAD_Y,
   REFUGE_BACK_BUTTON,
   REFUGE_BACK_LABEL,
   REFUGE_NEXT_LABEL,
   REFUGE_NEXT_TILE,
-  REFUGE_PART_GAP_PX,
   REFUGE_PREV_LABEL,
   REFUGE_PREV_TILE,
   REFUGE_SEE_AGAIN_TILE,
@@ -73,6 +75,17 @@ import {
 const NAME_PANEL: MapPanelSpec = { padX: 8, padY: 4, minH: 0, fill: UI_PANEL, fontPx: 18 };
 /** A hidden section's hint ("Beat Area N"): bold ink 18 px on the area map's soft pink message fill, padding 8 across and 4 down. */
 const HINT_PANEL: MapPanelSpec = { padX: 8, padY: 4, minH: 0, fill: UI_PANEL_PINK, fontPx: 18 };
+/**
+ * A section's area line ("Areas 2 and 3", issue #113, ND-8): bold ink 18 px on white, padding
+ * REFUGE_AREA_LINE_PAD_X across and REFUGE_AREA_LINE_PAD_Y down, as refugeLayout measures it.
+ */
+const AREA_LINE_PANEL: MapPanelSpec = {
+  padX: REFUGE_AREA_LINE_PAD_X,
+  padY: REFUGE_AREA_LINE_PAD_Y,
+  minH: 0,
+  fill: UI_PANEL,
+  fontPx: 18,
+};
 /** The "More to come" teaser picture shows dimmed. */
 const TEASER_ALPHA = 0.5;
 /** The fact cards and the milestone card sit above every refuge part. */
@@ -127,13 +140,15 @@ interface TrashParts {
 }
 
 /**
- * One section's objects: its name label, its picture, the clean picture and plants layer (the clean
- * picture only on a section that turns clean now, the plants on every clean one), its trash, its
- * hint (hidden sections) and its "See it again" tile (clean sections).
+ * One section's objects: its name label, its area line (every section but a hidden one), its
+ * picture, the clean picture and plants layer (the clean picture only on a section that turns clean
+ * now, the plants on every clean one), its trash, its hint (hidden sections) and its "See it again"
+ * tile (clean sections).
  */
 interface SectionParts {
   section: RefugeSection;
   name: PanelParts;
+  areaLine: PanelParts | null;
   picture: Phaser.GameObjects.Image;
   pictureInfo: TexInfo;
   cleanPicture: Phaser.GameObjects.Image | null;
@@ -202,7 +217,9 @@ function rectContains(rect: Rect, point: Vec2): boolean {
  * (scrollToRefugeFocus). A third, full-canvas camera draws only the fact and milestone cards, last,
  * so a card and its dim cover the sections.
  *
- * A hidden section shows its silhouette, "???" and its hint ("Beat Area N"). A dirty section shows
+ * A hidden section shows its silhouette, "???" and its hint ("Beat Area N"); every other section
+ * shows its area line ("Areas 2 and 3") under its name, or over the top of its picture where the
+ * layout has no row for it (issue #113, ND-8). A dirty section shows
  * its dirty picture with a trash batch for each area not yet beaten; a clean one its clean picture,
  * its plants and a "See it again" tile that shows its milestone card again, naming the current
  * explorer.
@@ -407,6 +424,7 @@ export class RefugeScene extends Phaser.Scene {
     const blooms = section.state === 'clean' && section.batches.some(cleansNow);
     const showsClean = section.state === 'clean' && !blooms;
     const pictureInfo = look === null ? art.hidden : art.sections[look][showsClean ? 'clean' : 'dirty'];
+    const areaLine = refugeAreaLine(section);
     const trash = hidden
       ? []
       : section.batches.flatMap((batch, index) =>
@@ -415,6 +433,7 @@ export class RefugeScene extends Phaser.Scene {
     return {
       section,
       name: this.addPanel(NAME_PANEL.fontPx, hidden ? REFUGE_HIDDEN_NAME : section.habitatName),
+      areaLine: areaLine === null ? null : this.addPanel(AREA_LINE_PANEL.fontPx, areaLine),
       picture: this.add.image(0, 0, pictureInfo.key),
       pictureInfo,
       cleanPicture: look !== null && blooms ? this.add.image(0, 0, art.sections[look].clean.key) : null,
@@ -464,6 +483,7 @@ export class RefugeScene extends Phaser.Scene {
       ...parts.trash.flatMap((trash) => (trash.sparkle === null ? [] : [trash.sparkle])),
       parts.name.panel,
       parts.name.text,
+      ...(parts.areaLine === null ? [] : [parts.areaLine.panel, parts.areaLine.text]),
       ...(parts.hint === null ? [] : [parts.hint.panel, parts.hint.text]),
       ...(parts.seeAgain === null ? [] : [parts.seeAgain.container]),
     ];
@@ -522,6 +542,10 @@ export class RefugeScene extends Phaser.Scene {
         const hint = this.partsOf(id).hint;
         return hint === null ? null : panelSizeFor(hint.text, wrapW, HINT_PANEL);
       },
+      areaLine: (id, wrapW) => {
+        const areaLine = this.partsOf(id).areaLine;
+        return areaLine === null ? null : panelSizeFor(areaLine.text, wrapW, AREA_LINE_PANEL);
+      },
     };
   }
 
@@ -572,18 +596,23 @@ export class RefugeScene extends Phaser.Scene {
       if (trash.sparkle !== null) placeBaked(trash.sparkle, art.sparkle, trash.at.x, trash.at.y);
     }
     placePanel(parts.name, rects.name, NAME_PANEL);
+    if (parts.areaLine !== null && rects.areaLine !== null) placePanel(parts.areaLine, rects.areaLine, AREA_LINE_PANEL);
     if (parts.hint !== null && rects.hint !== null) placePanel(parts.hint, rects.hint, HINT_PANEL);
     if (parts.seeAgain !== null && rects.seeAgain !== null) {
       parts.seeAgain.container.setPosition(rects.seeAgain.x, rects.seeAgain.y);
     }
   }
 
-  /** Places the dim teaser picture level with the section pictures, and "More to come" in the name row above it. */
+  /**
+   * Places the dim teaser picture level with the section pictures, and "More to come" in the name
+   * row above it, level with the section names (the name row is centred on them, above any area line).
+   */
   private layoutTeaser(placed: RefugeLayout): void {
     const first = placed.sections[0];
     const teaser = placed.teaser;
     placeBaked(this.teaserPicture, this.assets.refuge.teaser, teaser.x, first.picture.y);
-    const nameRow: Rect = { x: teaser.x, y: first.rect.y, w: teaser.w, h: first.picture.y - REFUGE_PART_GAP_PX - first.rect.y };
+    const nameRowH = 2 * (first.name.y + first.name.h / 2 - first.rect.y);
+    const nameRow: Rect = { x: teaser.x, y: first.rect.y, w: teaser.w, h: nameRowH };
     const size = panelSizeFor(this.teaserLabel.text, teaser.w, NAME_PANEL);
     placePanel(this.teaserLabel, centredIn(size, nameRow), NAME_PANEL);
   }
@@ -934,7 +963,11 @@ export class RefugeScene extends Phaser.Scene {
 
   /** Every text object and button, for a resolution change. */
   private setResolution(dpr: number): void {
-    const panels = [this.title, this.teaserLabel, ...this.parts.flatMap((parts) => [parts.name, ...(parts.hint ? [parts.hint] : [])])];
+    const panels = [
+      this.title,
+      this.teaserLabel,
+      ...this.parts.flatMap((parts) => [parts.name, ...(parts.areaLine ? [parts.areaLine] : []), ...(parts.hint ? [parts.hint] : [])]),
+    ];
     for (const parts of panels) {
       parts.text.setResolution(dpr);
     }

@@ -11,13 +11,21 @@
  * points for a scene that strokes the growth itself.
  *
  * Text is not drawn here: the area number (bold ink 28 px), the "New!" word
- * (bold ink 18 px), the habitat labels (bold ink 20 px), the title (bold ink
- * 28 px) and the message line (bold ink 20 px) are scene text, laid over these
- * shapes, as for buttons (drawUi.ts). The sizes below are what the guide fixes.
+ * (bold ink 18 px), the habitat labels (bold ink 20 px, on their tabs), the
+ * title (bold ink 28 px) and the message line (bold ink 20 px) are scene text,
+ * laid over these shapes, as for buttons (drawUi.ts). The sizes below are what
+ * the guide fixes.
  *
- * Colours are the 3d set only: backdrop #0c6a8c (LETTERBOX, the scene's), path
+ * Colours are the 3d set: backdrop #0c6a8c (LETTERBOX, the scene's), path
  * #55e4d8, unlocked marker #ffe14a, locked marker and every badge disc and
- * panel #ffffff, message #ffd9e6, "New!" pill #ff82bf, ink #2b2350.
+ * panel #ffffff, message #ffd9e6, "New!" pill #ff82bf, ink #2b2350; plus the
+ * look marker fills below and one habitat tint per look ({@link MAP_HABITAT_TINTS}).
+ *
+ * Habitat panels (issue #113, ND-1, ND-4, ND-7): each run of a habitat's areas sits on a rounded
+ * panel ({@link paintMapPanel}) in its look's tint, a light shade of the look's unlocked marker
+ * fill, with the ink line; its label sits on a folder tab ({@link paintMapTab}) on the panel's top
+ * edge, in the same tint, its open bottom merging into the panel. Grouping never reads by colour
+ * alone (X2): the panel's ink outline, the tab label and the marker shapes carry it.
  *
  * Contrast and greyscale (guide 10): locked is told from unlocked by the padlock
  * badge, never by fill (#ffe14a and #ffffff are only 1.30:1 apart); earned is
@@ -421,29 +429,37 @@ export function paintMapStarRow(ctx: CanvasRenderingContext2D, earned: number): 
 // Text panels
 // ---------------------------------------------------------------------------
 
-/** What the scene needs to size a panel round a line of text. */
-export interface MapPanelSpec {
+/** What the scene needs to size a panel or tab round a line of text. */
+export interface MapTextSpec {
   /** Padding across, logical px. */
   readonly padX: number;
   /** Padding down, logical px. */
   readonly padY: number;
   /** Smallest panel height, logical px (0 for none). */
   readonly minH: number;
-  /** Fill. */
-  readonly fill: string;
   /** Text size, bold ink, px. */
   readonly fontPx: number;
 }
 
-/** Habitat label: bold ink 20 px on white, padding 8 across and 4 down, 32 tall for one line. */
-export const MAP_LABEL_PANEL: MapPanelSpec = { padX: 8, padY: 4, minH: 32, fill: UI_PANEL, fontPx: 20 };
+/** A text panel in one fill. */
+export interface MapPanelSpec extends MapTextSpec {
+  /** Fill. */
+  readonly fill: string;
+}
+
+/**
+ * Habitat label on its tab (issue #113, ND-1): bold ink 20 px, padding 8 across and 4 down, 32 tall
+ * for one line, the same measure as areaMap's habitat label. The fill is the habitat's tint
+ * ({@link mapHabitatTint}).
+ */
+export const MAP_TAB_TEXT: MapTextSpec = { padX: 8, padY: 4, minH: 32, fontPx: 20 };
 /** Message line: bold ink 20 px on soft pink #ffd9e6 (11.19:1), padding 8 across and 4 down. */
 export const MAP_MESSAGE_PANEL: MapPanelSpec = { padX: 8, padY: 4, minH: 0, fill: UI_PANEL_PINK, fontPx: 20 };
 /** Title "Where to?": bold ink 28 px on white, padding 8 all round. */
 export const MAP_TITLE_PANEL: MapPanelSpec = { padX: 8, padY: 8, minH: 0, fill: UI_PANEL, fontPx: 28 };
 
 /** Panel size round a text block of `textW` x `textH` logical px. */
-export function mapPanelSize(textW: number, textH: number, spec: MapPanelSpec): { w: number; h: number } {
+export function mapPanelSize(textW: number, textH: number, spec: MapTextSpec): { w: number; h: number } {
   return { w: textW + 2 * spec.padX, h: Math.max(spec.minH, textH + 2 * spec.padY) };
 }
 
@@ -473,4 +489,108 @@ export function paintMapPanel(ctx: CanvasRenderingContext2D, w: number, h: numbe
   p.arcTo(0, 0, w, 0, r);
   p.closePath();
   shape(ctx, p, fill, LW);
+}
+
+// ---------------------------------------------------------------------------
+// Habitat panels and tabs
+// ---------------------------------------------------------------------------
+
+/**
+ * Habitat tint by look (issue #113, ND-4): 30% of the look's unlocked marker fill over white, so
+ * each tint is a light shade of its marker's hue. A new `HabitatLookId` fails to compile until it
+ * has its tint. Ink on each is 4.5:1 or more and each is 3:1 or more against the #0c6a8c backdrop:
+ * canal #fff6c9 (ink 13.21:1, backdrop 5.58:1), pond #caf2d0 (11.74:1, 4.95:1), chinampa #ffe7c6
+ * (11.99:1, 5.06:1). Derived (provisional).
+ */
+export const MAP_HABITAT_TINTS: Readonly<Record<HabitatLookId, string>> = {
+  canal: '#fff6c9',
+  pond: '#caf2d0',
+  chinampa: '#ffe7c6',
+};
+
+/** The habitat tint of `look`. An unknown look throws a RangeError, so none falls back to the canal's. */
+export function mapHabitatTint(look: HabitatLookId): string {
+  if (!Object.hasOwn(MAP_HABITAT_TINTS, look)) throw new RangeError(`unknown map habitat look "${look}"`);
+  return MAP_HABITAT_TINTS[look];
+}
+
+/** A box in map space, top-left corner and size. */
+export interface MapBox {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/**
+ * How far below a tab's bottom edge each of its sides runs, to meet its panel's ink line: 0 where
+ * the panel's top is straight, more where a side stands over one of the panel's rounded corners.
+ */
+export interface MapTabFeet {
+  readonly left: number;
+  readonly right: number;
+}
+
+/** Depth of the outline of a panel `panelH` tall below its top edge, `inset` px in from one of its sides. */
+function panelEdgeDepth(inset: number, panelH: number): number {
+  const r = Math.min(panelH / 2, PANEL_MAX_RADIUS);
+  if (inset < 0 || inset >= r) return 0;
+  return r - Math.sqrt(r * r - (r - inset) * (r - inset));
+}
+
+/**
+ * The feet of the tab `tab` sitting on the top edge of `panel` (the tab's bottom on the panel's
+ * top): each side runs down to the panel's outline beneath it. A side past the panel's end gets 0.
+ */
+export function mapTabFeet(tab: MapBox, panel: MapBox): MapTabFeet {
+  return {
+    left: panelEdgeDepth(tab.x - panel.x, panel.h),
+    right: panelEdgeDepth(panel.x + panel.w - (tab.x + tab.w), panel.h),
+  };
+}
+
+/** Texture frame for a w x h tab with `feet`. The anchor is the tab's top-left corner. */
+export function mapTabTextureSize(w: number, h: number, feet: MapTabFeet): TexSize {
+  return frameFromBounds(0, 0, w, h + Math.max(feet.left, feet.right) + LW, Math.ceil(LW / 2) + 1);
+}
+
+/**
+ * Paint a w x h folder tab with its top-left corner at local (0, 0), to sit on a panel's top edge
+ * (issue #113, ND-1): the fill with rounded top corners (radius min(h / 2, w / 2, 18)), an ink 3.5
+ * line over the top and down both sides, and no line along the bottom. The fill reaches one line
+ * width below the bottom, so it hides the panel's top line under the tab and the tab opens into the
+ * panel; each side runs on to its foot ({@link mapTabFeet}), and the fill squares off the panel's
+ * rounded corner there, so the tab and panel read as one shape.
+ */
+export function paintMapTab(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  fill: string,
+  feet: MapTabFeet = { left: 0, right: 0 },
+): void {
+  const r = Math.min(h / 2, w / 2, PANEL_MAX_RADIUS);
+  const body = new Path2D();
+  body.moveTo(0, h + LW);
+  body.lineTo(0, r);
+  body.arcTo(0, 0, r, 0, r);
+  body.lineTo(w - r, 0);
+  body.arcTo(w, 0, w, r, r);
+  body.lineTo(w, h + LW);
+  body.closePath();
+  const cornerW = Math.min(w / 2, PANEL_MAX_RADIUS);
+  if (feet.left > 0) body.rect(0, h, cornerW, feet.left + LW);
+  if (feet.right > 0) body.rect(w - cornerW, h, cornerW, feet.right + LW);
+  ctx.fillStyle = fill;
+  ctx.fill(body);
+  const outline = new Path2D();
+  outline.moveTo(0, h + feet.left);
+  outline.lineTo(0, r);
+  outline.arcTo(0, 0, r, 0, r);
+  outline.lineTo(w - r, 0);
+  outline.arcTo(w, 0, w, r, r);
+  outline.lineTo(w, h + feet.right);
+  ctx.lineWidth = LW;
+  ctx.strokeStyle = INK;
+  ctx.stroke(outline);
 }

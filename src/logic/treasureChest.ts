@@ -4,7 +4,7 @@
  * and art layers.
  */
 import { AREAS, habitatById, type AreaData } from './areas';
-import { areaLabel } from './areaText';
+import { habitatAreasLabel } from './areaText';
 import {
   ALL_TREASURES,
   DREAM_COLOURS,
@@ -244,14 +244,14 @@ function lowerFirstLetter(text: string): string {
 }
 
 /**
- * Where to look for an unfound treasure of `rarity` in `area` (PRD C11, B6): the area and habitat,
- * then the rarity hint, e.g. 'Area 1, Canal: look near the main swim path!'. The plain unfoundHint
- * when the area's habitat is unknown.
+ * Where to look for an unfound treasure of `rarity` in `area` (PRD C11, B6; issue #113, ND-9): the
+ * habitat and area, then the rarity hint, e.g. 'Lily pad pond: Area 3: look in a cave or log, or past
+ * the current!'. The plain unfoundHint when the area's habitat is unknown.
  */
 export function areaHint(area: Readonly<AreaData>, rarity: Rarity): string {
   const habitat = habitatById(area.habitatId);
   if (habitat === undefined) return unfoundHint(rarity);
-  return `${areaLabel(area.number)}, ${habitat.name}: ${lowerFirstLetter(UNFOUND_HINTS[rarity])}`;
+  return `${habitatAreasLabel(habitat.name, [area.number])}: ${lowerFirstLetter(UNFOUND_HINTS[rarity])}`;
 }
 
 /** Hint of an unfound entry: its area's hint, or the plain unfoundHint when no area holds it. */

@@ -29,12 +29,14 @@ import {
   milestoneBody,
   newlyBeatenAreaIds,
   newlyCleanHabitatIds,
+  refugeAreaLine,
   refugeHiddenHint,
   refugePendingFrom,
   refugeSections,
   withTripResult,
   withoutCleanUps,
   withoutMilestone,
+  type RefugeSection,
 } from './refuge';
 import { SAVE_GATE_REGISTRY_KEY } from './save';
 import { SESSION_REGISTRY_KEY } from './session';
@@ -189,6 +191,57 @@ describe('refugeSections', () => {
         { areaId: 'reed-marsh-2', areaNumber: 6, cleared: false },
       ],
     });
+  });
+});
+
+describe('refugeAreaLine (issue #113, ND-8)', () => {
+  it('shows no area line on a hidden section', () => {
+    expect(refugeSections({}).map(refugeAreaLine)).toEqual([null, null, null]);
+    expect(refugeSections(specialOnly(CANAL_AREA.id, POND_AREA.id)).map(refugeAreaLine)).toEqual([null, null, null]);
+  });
+
+  it('names the areas of a dirty section', () => {
+    const sections = refugeSections(beaten(POND_AREA.id, CHINAMPA_2_AREA.id));
+    expect(sections.map((section) => section.state)).toEqual(['hidden', 'dirty', 'dirty']);
+    expect(sections.map(refugeAreaLine)).toEqual([null, 'Areas 2 and 3', 'Areas 4 and 5']);
+  });
+
+  it('names the areas of a clean section', () => {
+    const sections = refugeSections(beaten(...AREAS.map((area) => area.id)));
+    expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean']);
+    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5']);
+  });
+
+  it('takes the area numbers from the area data', () => {
+    const renumbered = AREAS.map((area) => ({ ...area, number: area.number + 10 }));
+    expect(refugeSections(beaten(CANAL_AREA.id, POND_AREA.id), renumbered).map(refugeAreaLine)).toEqual([
+      'Area 11',
+      'Areas 12 and 13',
+      null,
+    ]);
+  });
+
+  it('names a future habitat of three areas', () => {
+    const marsh: RefugeSection = {
+      habitatId: MARSH_HABITAT.id,
+      habitatName: MARSH_HABITAT.name,
+      look: MARSH_HABITAT.look,
+      firstAreaNumber: 6,
+      state: 'dirty',
+      batches: [
+        { areaId: 'reed-marsh-1', areaNumber: 6, cleared: true },
+        { areaId: 'reed-marsh-2', areaNumber: 7, cleared: false },
+        { areaId: 'reed-marsh-3', areaNumber: 8, cleared: false },
+      ],
+    };
+    expect(refugeAreaLine(marsh)).toBe('Areas 6 to 8');
+    expect(refugeAreaLine({ ...marsh, state: 'clean' })).toBe('Areas 6 to 8');
+    expect(refugeAreaLine({ ...marsh, state: 'hidden' })).toBeNull();
+  });
+
+  it('uses no banned word', () => {
+    const lines = refugeSections(beaten(...AREAS.map((area) => area.id))).map(refugeAreaLine);
+    for (const line of lines) for (const word of BANNED) expect(line?.toLowerCase()).not.toContain(word);
   });
 });
 

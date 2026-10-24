@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-24
+
+### Added
+
+- On the area map, each habitat sits on its own lightly coloured panel with an outline. A tab names the habitat and its areas, such as "Lily pad pond: Areas 2 and 3" (#113).
+- In the refuge, each habitat shows which areas it covers, such as "Areas 2 and 3" under "Lily pad pond". A "???" section shows no areas (#113).
+
+### Changed
+
+- Treasure Chest hints name the habitat first, then the area, such as "Lily pad pond: Area 3: look in a cave or log, or past the current!" (#113).
+
 ## [0.32.0] - 2026-10-24
 
 ### Added

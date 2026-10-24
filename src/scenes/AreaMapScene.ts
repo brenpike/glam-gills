@@ -1,22 +1,26 @@
 import * as Phaser from 'phaser';
 import {
   areaMapPanelKey,
+  areaMapTabKey,
   bakeAreaMapPanel,
   bakeAreaMapPath,
+  bakeAreaMapTab,
   type AreaMapMarkerPair,
   type AreaMapTextures,
 } from '../art/areaMapTextures';
 import {
   MAP_BADGE_OFFSET,
-  MAP_LABEL_PANEL,
   MAP_MESSAGE_PANEL,
   MAP_PILL_CENTRE,
   MAP_STAR_ROW_CENTRE,
+  MAP_TAB_TEXT,
   MAP_TITLE_PANEL,
+  mapHabitatTint,
   mapPanelSize,
-  type MapPanelSpec,
+  mapTabFeet,
+  type MapTextSpec,
 } from '../art/drawAreaMap';
-import { isHabitatLookId } from '../art/habitatLook';
+import { isHabitatLookId, type HabitatLookId } from '../art/habitatLook';
 import { LETTERBOX } from '../art/palette';
 import type { TexInfo } from '../art/textures';
 import {
@@ -28,6 +32,7 @@ import {
   scrollToFocus,
   type AreaMapAction,
   type AreaMapEntry,
+  type AreaMapHabitat,
   type AreaMapLayout,
   type AreaMapMeasure,
   type AreaMapStars,
@@ -78,7 +83,12 @@ const PATH_KEY = 'area-map-path';
 /** Texture keys of the title and message panels, each baked again under the same key at every new size. */
 const TITLE_PANEL_KEY = areaMapPanelKey('title');
 const MESSAGE_PANEL_KEY = areaMapPanelKey('message');
-/** Texture key of habitat label `index`'s panel, baked again under the same key at every new size. */
+/**
+ * Texture keys of habitat `index`'s parts, each baked again under the same key at every new size: its
+ * tinted backdrop panel, its folder tab, and its tab as a plain panel when the labels sit along the axis.
+ */
+const habitatPanelKey = (index: number): string => areaMapPanelKey(`habitat-${index}`);
+const habitatTabKey = (index: number): string => areaMapTabKey(`habitat-${index}`);
 const labelPanelKey = (index: number): string => areaMapPanelKey(`label-${index}`);
 const BACKDROP_COVER = 8192;
 const CAPTURED_KEYS: readonly number[] = [
@@ -106,9 +116,10 @@ interface MarkerParts {
   pillAt: Vec2;
 }
 
-/** One habitat label's objects: its white panel and its name. */
-interface LabelParts {
+/** One habitat run's objects (issue #113, ND-1): its tinted backdrop panel, its tab and its label text. */
+interface HabitatParts {
   panel: Phaser.GameObjects.Image;
+  tab: Phaser.GameObjects.Image;
   text: Phaser.GameObjects.Text;
 }
 
@@ -145,16 +156,18 @@ function areaMapEntry(area: Readonly<AreaData>, stars: AreaStarsRecord): AreaMap
   };
 }
 
-/**
- * The marker pair of the habitat look of `habitatId` in `art`. Throws a RangeError for an unknown
- * habitat or look; it never falls back to the canal markers.
- */
-function markerPairFor(art: AreaMapTextures, habitatId: string): AreaMapMarkerPair {
+/** The habitat look of `habitatId`. Throws a RangeError for an unknown habitat or look; it never falls back to the canal. */
+function habitatLookOf(habitatId: string): HabitatLookId {
   const look = habitatById(habitatId)?.look;
   if (look === undefined || !isHabitatLookId(look)) {
-    throw new RangeError(`AreaMapScene: no marker look ${String(look)} for habitat ${habitatId}`);
+    throw new RangeError(`AreaMapScene: no map look ${String(look)} for habitat ${habitatId}`);
   }
-  return art.markersByLook[look];
+  return look;
+}
+
+/** The marker pair of the habitat look of `habitatId` in `art`. Throws as habitatLookOf does. */
+function markerPairFor(art: AreaMapTextures, habitatId: string): AreaMapMarkerPair {
+  return art.markersByLook[habitatLookOf(habitatId)];
 }
 
 /** Shows the baked texture `info` at its logical size with its anchor at (`x`, `y`). */
@@ -167,14 +180,14 @@ function placeBaked(image: Phaser.GameObjects.Image, info: TexInfo, x: number, y
 }
 
 /** Wraps `text` at `wrapW` less the padding across of `spec` and returns its panel size, in whole CSS px. */
-function panelSizeFor(text: Phaser.GameObjects.Text, wrapW: number, spec: MapPanelSpec): Size {
+function panelSizeFor(text: Phaser.GameObjects.Text, wrapW: number, spec: MapTextSpec): Size {
   text.setWordWrapWidth(Math.max(1, wrapW - 2 * spec.padX), true);
   const size = mapPanelSize(text.width, text.height, spec);
   return { w: Math.ceil(size.w), h: Math.ceil(size.h) };
 }
 
 /** Wraps `text` to the panel `rect` less the padding of `spec` (with 1 px slack, so it breaks as measured) and centres it there. */
-function placeTextInPanel(text: Phaser.GameObjects.Text, rect: Rect, spec: MapPanelSpec): void {
+function placeTextInPanel(text: Phaser.GameObjects.Text, rect: Rect, spec: MapTextSpec): void {
   text.setWordWrapWidth(Math.max(1, rect.w - 2 * spec.padX + 1), true);
   text.setPosition(rect.x + (rect.w - text.width) / 2, rect.y + (rect.h - text.height) / 2);
 }
@@ -187,8 +200,10 @@ function rectContains(rect: Rect, point: Vec2): boolean {
 /**
  * The area map (PRD N2; art guide 8 "Area map", 9, 10), opened by Go! on the explorer card: one
  * marker per area in AREAS on a winding path, grouped by habitat, laid out by areaMapLayout(). The
- * opaque #0c6a8c backdrop takes every press. Back, the title and the message line are fixed on the
- * main camera; the map is drawn by a second camera whose viewport is the layout's viewport, so it
+ * opaque #0c6a8c backdrop takes every press. Each habitat run sits on a panel in its look's tint,
+ * labelled on a folder tab on the panel's top edge, or on a tab inside the panel when the labels sit
+ * along the axis (issue #113, ND-1); locked runs keep their label and panel. Back, the title and the
+ * message line are fixed on the main camera; the map is drawn by a second camera whose viewport is the layout's viewport, so it
  * scrolls along the layout's axis by drag (1:1, no fling, from 8 px), by the wheel, and to follow
  * the focus (scrollToFocus).
  *
@@ -230,7 +245,7 @@ export class AreaMapScene extends Phaser.Scene {
   private path!: Phaser.GameObjects.Image;
   private focusRing!: Phaser.GameObjects.Image;
   private markers: MarkerParts[] = [];
-  private labels: LabelParts[] = [];
+  private habitats: HabitatParts[] = [];
 
   /** Number of the locked area the message line names, or 0 while it is hidden. */
   private messageArea = 0;
@@ -259,7 +274,7 @@ export class AreaMapScene extends Phaser.Scene {
     this.leaving = false;
     this.press = null;
     this.markers = [];
-    this.labels = [];
+    this.habitats = [];
     this.messageArea = 0;
     this.messageTimer = null;
     this.scroll.value = 0;
@@ -330,7 +345,7 @@ export class AreaMapScene extends Phaser.Scene {
     this.messageLayer = this.add.container(0, 0, [this.messagePanel, this.messageText]).setVisible(false).setAlpha(0);
     const largestLocked = Math.max(2, ...this.entries.map((entry) => entry.number));
     this.messageProbe = this.addText(MAP_MESSAGE_PANEL.fontPx).setText(lockedAreaText(largestLocked)).setVisible(false);
-    this.labelProbe = this.addText(MAP_LABEL_PANEL.fontPx).setVisible(false);
+    this.labelProbe = this.addText(MAP_TAB_TEXT.fontPx).setVisible(false);
     this.fixedLayer = this.add.container(0, 0, [
       backdrop,
       this.titlePanel,
@@ -345,7 +360,8 @@ export class AreaMapScene extends Phaser.Scene {
   /**
    * The map parts on the map camera, back to front (art guide 8): the path, the star rows, the
    * markers and their numbers, the focus ring, the padlock badges, then the "New!" pills and words.
-   * The habitat labels are added on top at the first layout, which knows how many there are.
+   * The habitat parts are added at the first layout, which knows how many there are: the panels at
+   * the back, the tabs and labels on top.
    */
   private buildMap(): void {
     const art = this.assets.areaMap;
@@ -382,13 +398,18 @@ export class AreaMapScene extends Phaser.Scene {
     };
   }
 
-  /** A habitat label's panel and name text, added on top of the map. */
-  private createLabel(): LabelParts {
-    const parts: LabelParts = {
+  /**
+   * Habitat `index`'s parts: its panel at the back of the map, after the earlier habitats' panels and
+   * behind the path and every marker part, and its tab and label text on top of the map. None takes input.
+   */
+  private createHabitat(index: number): HabitatParts {
+    const parts: HabitatParts = {
       panel: this.add.image(0, 0, '__DEFAULT'),
-      text: this.addText(MAP_LABEL_PANEL.fontPx),
+      tab: this.add.image(0, 0, '__DEFAULT'),
+      text: this.addText(MAP_TAB_TEXT.fontPx),
     };
-    this.mapLayer.add([parts.panel, parts.text]);
+    this.mapLayer.addAt(parts.panel, index);
+    this.mapLayer.add([parts.tab, parts.text]);
     return parts;
   }
 
@@ -421,7 +442,7 @@ export class AreaMapScene extends Phaser.Scene {
   private measure(): AreaMapMeasure {
     return {
       title: (wrapW) => panelSizeFor(this.titleText, wrapW, MAP_TITLE_PANEL),
-      habitat: (name, wrapW) => panelSizeFor(this.labelProbe.setText(name), wrapW, MAP_LABEL_PANEL),
+      habitat: (label, wrapW) => panelSizeFor(this.labelProbe.setText(label), wrapW, MAP_TAB_TEXT),
       message: (wrapW) => panelSizeFor(this.messageProbe, wrapW, MAP_MESSAGE_PANEL),
     };
   }
@@ -455,14 +476,14 @@ export class AreaMapScene extends Phaser.Scene {
     this.placeMessage();
   }
 
-  /** Bakes the path for the layout and places every marker part and habitat label in content CSS px. */
+  /** Bakes the path for the layout and places every marker part and habitat panel, tab and label in content CSS px. */
   private layoutMap(placed: AreaMapLayout): void {
     placeBaked(this.path, bakeAreaMapPath(this, PATH_KEY, placed.path, this.bakeScale()), 0, 0);
     this.pathFractionShown = -1;
     this.applyPathDraw();
     placed.nodes.forEach((node, index) => this.placeMarker(this.markers[index], node.cell, node.centre));
-    while (this.labels.length < placed.habitats.length) this.labels.push(this.createLabel());
-    placed.habitats.forEach((habitat, index) => this.placeLabel(this.labels[index], index, habitat.name, habitat.rect));
+    while (this.habitats.length < placed.habitats.length) this.habitats.push(this.createHabitat(this.habitats.length));
+    placed.habitats.forEach((habitat, index) => this.placeHabitat(this.habitats[index], index, habitat, placed.labelsAlong));
     this.placeNewPills();
   }
 
@@ -475,11 +496,21 @@ export class AreaMapScene extends Phaser.Scene {
     parts.pillAt = { x: cell.x + MAP_PILL_CENTRE.x, y: cell.y + MAP_PILL_CENTRE.y };
   }
 
-  /** Places habitat label `index`: its white panel at `rect` and `name` centred in it. */
-  private placeLabel(parts: LabelParts, index: number, name: string, rect: Rect): void {
-    const info = bakeAreaMapPanel(this, labelPanelKey(index), MAP_LABEL_PANEL.fill, rect.w, rect.h, this.bakeScale());
-    placeBaked(parts.panel, info, rect.x, rect.y);
-    placeTextInPanel(parts.text.setText(name), rect, MAP_LABEL_PANEL);
+  /**
+   * Places habitat `index` (issue #113, ND-1): its panel in its look's tint at `habitat.panel`, its
+   * tab at `habitat.rect` in the same tint, a folder tab on the panel's top edge, or a plain panel
+   * inside it when the labels sit along the axis, and its label centred on the tab.
+   */
+  private placeHabitat(parts: HabitatParts, index: number, habitat: Readonly<AreaMapHabitat>, labelsAlong: boolean): void {
+    const tint = mapHabitatTint(habitatLookOf(habitat.id));
+    const scale = this.bakeScale();
+    const { panel, rect } = habitat;
+    placeBaked(parts.panel, bakeAreaMapPanel(this, habitatPanelKey(index), tint, panel.w, panel.h, scale), panel.x, panel.y);
+    const tabInfo = labelsAlong
+      ? bakeAreaMapPanel(this, labelPanelKey(index), tint, rect.w, rect.h, scale)
+      : bakeAreaMapTab(this, habitatTabKey(index), tint, rect.w, rect.h, mapTabFeet(rect, panel), scale);
+    placeBaked(parts.tab, tabInfo, rect.x, rect.y);
+    placeTextInPanel(parts.text.setText(habitat.label), rect, MAP_TAB_TEXT);
   }
 
   /** Puts the "New!" pills and words where they rest, moved down by the bob offset. */
@@ -855,7 +886,7 @@ export class AreaMapScene extends Phaser.Scene {
       this.labelProbe,
       ...this.markers.map((parts) => parts.number),
       ...this.markers.flatMap((parts) => (parts.pillWord === null ? [] : [parts.pillWord])),
-      ...this.labels.map((parts) => parts.text),
+      ...this.habitats.map((parts) => parts.text),
     ];
   }
 

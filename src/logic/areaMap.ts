@@ -1,9 +1,9 @@
 /**
  * Area map (PRD N2; art guide 8 "Area map"): the screen where the player picks an area to explore,
  * shown after the explorer is chosen. The pure CSS px layout of its marker cells, winding path,
- * habitat labels, title, Back and locked message, and its focus, key and scroll rules. Text comes in
- * measured as panel sizes (AreaMapMeasure); nothing here reads the area list, so the scene passes one
- * AreaMapEntry per area, in area order.
+ * habitat labels and panels, title, Back and locked message, and its focus, key and scroll rules. Text
+ * comes in measured as panel sizes (AreaMapMeasure); nothing here reads the area list, so the scene
+ * passes one AreaMapEntry per area, in area order.
  *
  * Fixed parts. Back, the standard wide button (64 px tall), sits top-left inside the 16 px margins.
  * The title panel sits 12 px beside Back, centred down it, when it fits there (as wide as the room
@@ -13,11 +13,11 @@
  *
  * Scrolling parts. `viewport` is the screen rect between the fixed parts (12 px clear of both, the
  * full canvas width) that the map scrolls in, along `axis`: x when the canvas is at least as wide as
- * it is tall, else y. The cells, markers, path and habitat labels are in content CSS px, with the
- * origin at the content's top-left; scrolled by `s` along the axis, content point (cx, cy) shows on
- * screen at (viewport.x + cx - s, viewport.y + cy) on axis x and (viewport.x + cx, viewport.y + cy - s)
- * on axis y. Content shorter than the viewport along the axis takes the viewport's length, with the
- * map centred in it, so it does not scroll.
+ * it is tall, else y. The cells, markers, path, habitat labels and panels are in content CSS px,
+ * with the origin at the content's top-left; scrolled by `s` along the axis, content point (cx, cy)
+ * shows on screen at (viewport.x + cx - s, viewport.y + cy) on axis x and
+ * (viewport.x + cx, viewport.y + cy - s) on axis y. Content shorter than the viewport along the axis
+ * takes the viewport's length, with the map centred in it, so it does not scroll.
  *
  * Marker cell. Each area takes an AREA_CELL_W x AREA_CELL_H cell (80 x 112, the same on both axes):
  * from the top, the AREA_PILL_SLOT_PX slot for the "New!" pill, the AREA_MARKER_PX marker (its centre
@@ -28,25 +28,38 @@
  * the cell. Along the axis, neighbouring markers are AREA_NODE_GAP_PX apart on axis x (their cells 16
  * apart), and neighbouring cells are AREA_NODE_GAP_PX apart on axis y (their markers 80 apart).
  *
- * Lane and habitats. Inside the content, 16 px in from every edge: a band across the axis holds the
- * habitat labels (above the cells on axis x, left of them on axis y), one per run of entries sharing
- * a habitat, each at the start of its run; 12 px past the band is the lane of cells, ending 16 px
- * before the far content edge. Across the axis the cells step middle, one side, middle, the other
- * side, repeating, with up to AREA_WIND_PX between the furthest marker centres: as much as the lane
- * has room for past one cell, down to straight. The path joins the marker centres in entry order and
- * never leaves the lane. A run starts 32 px past the end of the run before it: its last cell or its
- * label, whichever is longer.
+ * Lane and habitats (issue #113, ND-1, ND-2, ND-7). Each run of entries sharing a habitat has a
+ * label, its habitat name and its areas (habitatAreasLabel, such as "Lily pad pond: Areas 2 and 3"),
+ * on a tab, and a rounded tinted backdrop panel that holds the run's cells with AREA_PANEL_PAD_PX on
+ * every side. Locked runs keep their label and panel. The lane of cells ends 16 px before the far
+ * content edge across the axis; the panels sit in the 16 px content margin, 8 px or more inside the
+ * content, and the first panel starts 8 px in along the axis, so the first cell is 16 px in. Across
+ * the axis the cells step middle, one side, middle, the other side, repeating, with up to
+ * AREA_WIND_PX between the furthest marker centres: as much as the lane has room for past one cell,
+ * down to straight. The path joins the marker centres in entry order and never leaves the lane. A
+ * run starts RUN_GAP_PX (32) past the end of the panel before it.
+ *   - Axis x, labels in the band (steps 0 and 1): a band across the top, as tall as the tallest tab,
+ *     starts 16 px in, and the lane starts AREA_PANEL_PAD_PX past it. Each tab wraps inside its
+ *     panel's width (its cells plus the pad each side), and a word longer than that widens the panel.
+ *     A panel spans across the used lane (cells plus winding) plus the pad, and its tab sits on its
+ *     top edge with their left ends aligned.
+ *   - Axis y: there is no band, so the lane starts 16 px in. Each panel spans the whole lane plus the
+ *     pad each side, and its tab, wrapping inside that width, sits on its top edge at the run start
+ *     along the axis, left ends aligned; the next run starts at its tab.
+ *   - Axis x, labels along the axis (step 2): each tab sits inside its panel at the run start,
+ *     centred across the lane, 12 px before the run's first cell, wrapping at the canvas width less
+ *     the margins. The panel spans the used lane plus the pad, and grows across to hold the tab.
  *
  * Fit order (art guide 8). Text, markers, stars and Back never shrink. When the cells do not fit
  * across the lane, the layout takes these steps in order, each keeping the steps before it, and the
  * first try that fits wins (`fitStep` is the last step taken):
- *   0. The title beside Back and the habitat labels in the band.
+ *   0. The title beside Back and the habitat labels in the band (on axis y, on their panels).
  *   1. The title under Back. This step is taken only when the title does not fit beside Back: moving
  *      it under Back never adds room across the lane (it only shortens the viewport), so a title
  *      that fits beside Back stays there through steps 2 and 3, as in the guide's 460 x 320 example.
- *   2. Each habitat label leaves the band and sits along the axis at the start of its run, centred
- *      across the lane, 12 px before the run's first cell; the band is freed and the lane starts 16
- *      px in from the content edge.
+ *   2. Axis x only: each habitat label leaves the band and sits along the axis inside its panel; the
+ *      band is freed and the lane starts 16 px in from the content edge. Axis y has no band, so this
+ *      step frees nothing there and is never taken.
  *   3. The title hides (`title` is null).
  * When no try fits, the try with the most room across the lane is returned (the earliest on a tie,
  * so the title stays when hiding it frees nothing) with `fits` false; the lane then keeps one cell's
@@ -60,6 +73,7 @@
  * asks for the locked message, and Back goes back. Escape is Back, on key repeat too, as on the
  * explorer card.
  */
+import { habitatAreasLabel } from './areaText';
 import type { HudView, Rect, Size } from './hudLayout';
 import { BACK_LABEL } from './stylerText';
 import { UI, WIDE_BUTTON, nextFocusIndex, wideButtonWidth, type TankKey } from './tankUi';
@@ -116,7 +130,10 @@ export const AREA_MAP_BACK_LABEL = BACK_LABEL;
 /** Back: the standard wide button, 64 px tall, sized to its label. */
 export const AREA_MAP_BACK_BUTTON: Size = Object.freeze({ w: wideButtonWidth(AREA_MAP_BACK_LABEL), h: WIDE_BUTTON.h });
 
-/** Room along the scroll axis between the end of one habitat run and the start of the next, in CSS px. */
+/** Room between a habitat panel's edge and the cells it holds, in CSS px (issue #113, ND-7). */
+export const AREA_PANEL_PAD_PX = 8;
+
+/** Room along the scroll axis between the end of one habitat panel and the start of the next run, in CSS px. */
 const RUN_GAP_PX = 32;
 
 /** Cross-lane steps of the winding path, repeating from the first marker: middle, one side, middle, the other side. */
@@ -144,8 +161,8 @@ export interface AreaMapEntry {
 export interface AreaMapMeasure {
   /** The screen title panel. */
   title: (wrapW: number) => Size;
-  /** A habitat name label panel. */
-  habitat: (name: string, wrapW: number) => Size;
+  /** A habitat label panel (its tab): the label text, such as "Lily pad pond: Areas 2 and 3". */
+  habitat: (label: string, wrapW: number) => Size;
   /** The panel of the largest locked message the map can show, such as "Beat Area 9 to unlock!". */
   message: (wrapW: number) => Size;
 }
@@ -164,18 +181,24 @@ export interface AreaMapNode {
   centre: Vec2;
 }
 
-/** One habitat label: its habitat id and name and the label panel, in content CSS px. */
+/**
+ * One habitat run (issue #113, ND-1): its habitat id and name, its label (habitatAreasLabel of the
+ * run's area numbers), the label's tab panel `rect` and the run's backdrop `panel`, in content CSS px.
+ */
 export interface AreaMapHabitat {
   id: string;
   name: string;
+  label: string;
   rect: Rect;
+  panel: Rect;
 }
 
 /**
  * The map layout (module doc). `title` (null when hidden), `back`, `message` and `viewport` are fixed
  * screen rects; `nodes` (in entry order), `path` and `habitats` (one per run of entries sharing a
  * habitat) are in content CSS px within `content`. `fitStep` is the last fit step taken (0 to 3) and
- * `labelsAlong` whether the habitat labels sit along the axis (step 2) instead of in the band. `fits`
+ * `labelsAlong` whether the habitat labels sit along the axis inside their panels (step 2, axis x
+ * only) instead of on their panels' top edges. `fits`
  * is false only when no fit step makes room across the axis for one cell; the lane then keeps a
  * cell's depth and reaches past the viewport.
  */
@@ -203,11 +226,12 @@ export interface AreaMapKeyResult {
   action: AreaMapAction;
 }
 
-/** A run of consecutive entries sharing a habitat: its id, name, and the count of entries in it. */
+/** A run of consecutive entries sharing a habitat: its id, name, its entries' area numbers, and its label. */
 interface HabitatRun {
   id: string;
   name: string;
-  count: number;
+  numbers: number[];
+  label: string;
 }
 
 /** A box in axis terms: `u` and `along` on the scroll axis, `v` and `cross` across it. */
@@ -218,11 +242,34 @@ interface AxisBox {
   cross: number;
 }
 
-/** Where the runs and cells start along the scroll axis, and the content length they use. */
+/** Where one run's tab, panel and first cell start along the scroll axis, and where its panel ends. */
+interface RunAlong {
+  tab: number;
+  panel: number;
+  firstCell: number;
+  panelEnd: number;
+}
+
+/** Where each run and cell sits along the scroll axis, and the content length they use. */
 interface AlongPlacement {
-  runStarts: number[];
+  runs: RunAlong[];
   cellStarts: number[];
   used: number;
+}
+
+/** The lane across the scroll axis: its start, its depth, its middle, and the depth the cells and winding use. */
+interface LaneCross {
+  start: number;
+  depth: number;
+  mid: number;
+  used: number;
+}
+
+/** Where one run's tab and panel start across the scroll axis, and the panel's depth across it. */
+interface RunCross {
+  tab: number;
+  panel: number;
+  panelCross: number;
 }
 
 /** The fixed top: Back, the title (null when hidden), whether it is under Back, and the bottom edge of the lowest. */
@@ -247,12 +294,12 @@ const FIT_LEVELS: readonly FitLevel[] = Object.freeze([
   { fitStep: 3, labelsAlong: true, title: false },
 ]);
 
-/** One try: its fit level, header, viewport, label panels, and the lane's start and room across the axis. */
+/** One try: its fit level, header, viewport, label tabs, and the lane's start and room across the axis. */
 interface FitTry {
   level: FitLevel;
   header: MapHeader;
   viewport: Rect;
-  labels: Size[];
+  tabs: Size[];
   laneStart: number;
   laneRoom: number;
   need: number;
@@ -304,14 +351,23 @@ function cellStep(axis: AreaMapAxis): number {
   return axis === 'x' ? AREA_MARKER_PX + AREA_NODE_GAP_PX : AREA_CELL_H + AREA_NODE_GAP_PX;
 }
 
-/** Groups consecutive entries sharing a habitat id into runs, in entry order. */
+/** Along length of a run of `count` cells, from its first cell's start to its last cell's end. */
+function cellsSpan(axis: AreaMapAxis, count: number): number {
+  return (count - 1) * cellStep(axis) + cellOnAxis(axis).along;
+}
+
+/**
+ * Groups consecutive entries sharing a habitat id into runs, in entry order, each labelled with its
+ * habitat name and area numbers (issue #113, ND-6). Throws as habitatAreasLabel does.
+ */
 function habitatRuns(entries: readonly AreaMapEntry[]): HabitatRun[] {
   const runs: HabitatRun[] = [];
   for (const entry of entries) {
     const last = runs[runs.length - 1];
-    if (last !== undefined && last.id === entry.habitatId) last.count += 1;
-    else runs.push({ id: entry.habitatId, name: entry.habitatName, count: 1 });
+    if (last !== undefined && last.id === entry.habitatId) last.numbers.push(entry.number);
+    else runs.push({ id: entry.habitatId, name: entry.habitatName, numbers: [entry.number], label: '' });
   }
+  for (const run of runs) run.label = habitatAreasLabel(run.name, run.numbers);
   return runs;
 }
 
@@ -346,13 +402,25 @@ function messageRect(view: HudView, measure: AreaMapMeasure): Rect {
 }
 
 /**
- * Width a habitat label panel wraps at: the canvas less its margins, and on axis y with the labels in
- * the band also less the gap and one cell (art guide 8).
+ * Width a run's tab wraps at (module doc, issue #113 ND-7): on axis y the panel's width (the canvas
+ * less the panel insets); on axis x along the axis the canvas less its margins; on axis x in the band
+ * the run's cells plus the pad each side.
  */
-function labelWrapWidth(axis: AreaMapAxis, view: HudView, labelsAlong: boolean): number {
-  const room = view.cssW - 2 * UI.margin;
-  if (axis === 'x' || labelsAlong) return Math.max(0, room);
-  return Math.max(0, room - UI.gap - AREA_CELL_W);
+function tabWrapWidth(axis: AreaMapAxis, view: HudView, run: HabitatRun, labelsAlong: boolean): number {
+  if (axis === 'y') return Math.max(0, view.cssW - 2 * (UI.margin - AREA_PANEL_PAD_PX));
+  if (labelsAlong) return Math.max(0, view.cssW - 2 * UI.margin);
+  return cellsSpan(axis, run.numbers.length) + 2 * AREA_PANEL_PAD_PX;
+}
+
+/**
+ * Depth across the axis the lane needs: a cell, and also the tallest tab when the labels sit along
+ * the axis, or on axis y the widest tab less the panel's pad each side.
+ */
+function laneNeed(axis: AreaMapAxis, labelsAlong: boolean, tabCross: number): number {
+  const cellCross = cellOnAxis(axis).cross;
+  if (labelsAlong) return Math.max(cellCross, tabCross);
+  if (axis === 'y') return Math.max(cellCross, tabCross - 2 * AREA_PANEL_PAD_PX);
+  return cellCross;
 }
 
 /** Builds the try for `level`: the header, the viewport under it, the label panels and the lane across the axis. */
@@ -367,13 +435,18 @@ function fitTry(
   const header = headerLayout(view, measure, level.title);
   const top = header.bottom + UI.gap;
   const viewport: Rect = { x: 0, y: top, w: Math.max(0, view.cssW), h: Math.max(0, message.y - UI.gap - top) };
-  const labelWrap = labelWrapWidth(axis, view, level.labelsAlong);
-  const labels = runs.map((run) => measure.habitat(run.name, labelWrap));
-  const labelCross = Math.max(0, ...labels.map((label) => crossOf(axis, label)));
-  const laneStart = level.labelsAlong ? UI.margin : UI.margin + labelCross + UI.gap;
+  const tabs = runs.map((run) => measure.habitat(run.label, tabWrapWidth(axis, view, run, level.labelsAlong)));
+  const tabCross = Math.max(0, ...tabs.map((tab) => crossOf(axis, tab)));
+  const inBand = axis === 'x' && !level.labelsAlong;
+  const laneStart = inBand ? UI.margin + tabCross + AREA_PANEL_PAD_PX : UI.margin;
   const laneRoom = crossOf(axis, viewport) - UI.margin - laneStart;
-  const need = Math.max(cellOnAxis(axis).cross, level.labelsAlong ? labelCross : 0);
-  return { level, header, viewport, labels, laneStart, laneRoom, need };
+  const need = laneNeed(axis, level.labelsAlong, tabCross);
+  return { level, header, viewport, tabs, laneStart, laneRoom, need };
+}
+
+/** The fit levels open on `axis`: axis y has no band, so it never takes step 2 (module doc). */
+function fitLevelsFor(axis: AreaMapAxis): readonly FitLevel[] {
+  return axis === 'x' ? FIT_LEVELS : FIT_LEVELS.filter((level) => !level.labelsAlong);
 }
 
 /** The first try whose lane holds a cell (and the labels along it), else the one with the most room, earliest on a tie. */
@@ -384,31 +457,80 @@ function chooseTry(tries: readonly FitTry[]): FitTry {
 }
 
 /**
- * Places the runs along the scroll axis from the margin: each run's label at its start, its cells
- * cellStep apart (after the label and UI.gap when the labels sit along the axis), and the next run
- * RUN_GAP_PX past the end of this run's last cell or its label, whichever is longer.
+ * Where one run starting at `start` along the axis puts its tab, panel and first cell, and where its
+ * panel ends (module doc): on axis y the tab, then the panel under it; on axis x along the axis the
+ * tab inside the panel, UI.gap before the first cell; on axis x in the band the tab over the panel's
+ * start, the panel at least as long as the tab.
+ */
+function runAlong(axis: AreaMapAxis, tab: Size, count: number, labelsAlong: boolean, start: number): RunAlong {
+  const pad = AREA_PANEL_PAD_PX;
+  const span = cellsSpan(axis, count);
+  if (axis === 'y') {
+    const panel = start + tab.h;
+    return { tab: start, panel, firstCell: panel + pad, panelEnd: panel + pad + span + pad };
+  }
+  if (labelsAlong) {
+    const firstCell = start + pad + tab.w + UI.gap;
+    return { tab: start + pad, panel: start, firstCell, panelEnd: firstCell + span + pad };
+  }
+  return { tab: start, panel: start, firstCell: start + pad, panelEnd: start + Math.max(span + 2 * pad, tab.w) };
+}
+
+/**
+ * Places the runs along the scroll axis, the first panel AREA_PANEL_PAD_PX inside the margin: each
+ * run as runAlong places it, its cells cellStep apart from its first cell, and the next run
+ * RUN_GAP_PX past the end of its panel. `runs` holds at least one run.
  */
 function placeAlong(
   axis: AreaMapAxis,
   runs: readonly HabitatRun[],
-  labelAlong: readonly number[],
+  tabs: readonly Size[],
   labelsAlong: boolean,
 ): AlongPlacement {
-  const runStarts: number[] = [];
+  const placed: RunAlong[] = [];
   const cellStarts: number[] = [];
   const step = cellStep(axis);
-  const cellAlong = cellOnAxis(axis).along;
-  let cursor: number = UI.margin;
-  let end: number = UI.margin;
+  let cursor = UI.margin - AREA_PANEL_PAD_PX;
   runs.forEach((run, runIndex) => {
-    runStarts.push(cursor);
-    const first = labelsAlong ? cursor + labelAlong[runIndex] + UI.gap : cursor;
-    for (let i = 0; i < run.count; i += 1) cellStarts.push(first + i * step);
-    const cellsEnd = first + (run.count - 1) * step + cellAlong;
-    end = labelsAlong ? cellsEnd : Math.max(cellsEnd, cursor + labelAlong[runIndex]);
-    cursor = end + RUN_GAP_PX;
+    const along = runAlong(axis, tabs[runIndex], run.numbers.length, labelsAlong, cursor);
+    placed.push(along);
+    for (let i = 0; i < run.numbers.length; i += 1) cellStarts.push(along.firstCell + i * step);
+    cursor = along.panelEnd + RUN_GAP_PX;
   });
-  return { runStarts, cellStarts, used: end + UI.margin };
+  const end = placed[placed.length - 1].panelEnd;
+  return { runs: placed, cellStarts, used: end + UI.margin - AREA_PANEL_PAD_PX };
+}
+
+/**
+ * Where a run's tab and panel sit across the axis (module doc): on axis y the panel spans the lane
+ * plus the pad, the tab at its start; on axis x the panel spans the used lane plus the pad, centred
+ * on the lane, with the tab on its top edge, or along the axis centred on the lane with the panel
+ * grown to hold it.
+ */
+function runCross(axis: AreaMapAxis, labelsAlong: boolean, tab: Size, lane: LaneCross): RunCross {
+  const pad = AREA_PANEL_PAD_PX;
+  if (axis === 'y') {
+    const panel = lane.start - pad;
+    return { tab: panel, panel, panelCross: lane.depth + 2 * pad };
+  }
+  const tabCross = crossOf(axis, tab);
+  const panelCross = (labelsAlong ? Math.max(lane.used, tabCross) : lane.used) + 2 * pad;
+  const panel = lane.mid - panelCross / 2;
+  return { tab: labelsAlong ? lane.mid - tabCross / 2 : panel - tabCross, panel, panelCross };
+}
+
+/** The habitat of `run`: its label, its tab rect and its panel rect, shifted `shift` along the axis. */
+function habitatAt(
+  axis: AreaMapAxis,
+  run: HabitatRun,
+  tab: Size,
+  along: RunAlong,
+  cross: RunCross,
+  shift: number,
+): AreaMapHabitat {
+  const tabBox = { u: along.tab + shift, v: cross.tab, along: alongOf(axis, tab), cross: crossOf(axis, tab) };
+  const panelBox = { u: along.panel + shift, v: cross.panel, along: along.panelEnd - along.panel, cross: cross.panelCross };
+  return { id: run.id, name: run.name, label: run.label, rect: boxRect(axis, tabBox), panel: boxRect(axis, panelBox) };
 }
 
 /** The node for a cell at `cell`: the marker centre AREA_MARKER_CENTRE_Y down and its square target. */
@@ -420,22 +542,23 @@ function nodeAt(id: string, cell: Rect): AreaMapNode {
 
 /**
  * Lays out the area map for the CSS canvas `view` (module doc). `entries` holds at least one area,
- * ids unique; else throws RangeError.
+ * ids unique, and each habitat run's area numbers are integers of 1 or more, none twice; else throws
+ * RangeError.
  */
 export function areaMapLayout(view: HudView, entries: readonly AreaMapEntry[], measure: AreaMapMeasure): AreaMapLayout {
   checkEntries(entries);
   const axis: AreaMapAxis = view.cssW >= view.cssH ? 'x' : 'y';
   const message = messageRect(view, measure);
   const runs = habitatRuns(entries);
-  const chosen = chooseTry(FIT_LEVELS.map((level) => fitTry(view, axis, runs, measure, message, level)));
-  const { header, viewport, labels, laneStart, level } = chosen;
+  const chosen = chooseTry(fitLevelsFor(axis).map((level) => fitTry(view, axis, runs, measure, message, level)));
+  const { header, viewport, tabs, laneStart, level } = chosen;
 
   const cell = cellOnAxis(axis);
   const lane = Math.max(chosen.need, chosen.laneRoom);
   const wind = clamp(chosen.laneRoom - cell.cross, 0, AREA_WIND_PX);
   const laneMid = laneStart + lane / 2;
 
-  const placed = placeAlong(axis, runs, labels.map((label) => alongOf(axis, label)), level.labelsAlong);
+  const placed = placeAlong(axis, runs, tabs, level.labelsAlong);
   const contentAlong = Math.max(alongOf(axis, viewport), placed.used);
   const shift = (contentAlong - placed.used) / 2;
   const contentCross = Math.max(crossOf(axis, viewport), laneStart + lane + UI.margin);
@@ -444,12 +567,11 @@ export function areaMapLayout(view: HudView, entries: readonly AreaMapEntry[], m
     const v = laneMid + (WIND_STEPS[index % WIND_STEPS.length] * wind) / 2 - cell.cross / 2;
     return nodeAt(entry.id, boxRect(axis, { u: placed.cellStarts[index] + shift, v, along: cell.along, cross: cell.cross }));
   });
+  const laneCross: LaneCross = { start: laneStart, depth: lane, mid: laneMid, used: cell.cross + wind };
   const habitats = runs.map((run, runIndex) => {
-    const label = labels[runIndex];
-    const labelCross = crossOf(axis, label);
-    const v = level.labelsAlong ? laneMid - labelCross / 2 : UI.margin;
-    const box = { u: placed.runStarts[runIndex] + shift, v, along: alongOf(axis, label), cross: labelCross };
-    return { id: run.id, name: run.name, rect: boxRect(axis, box) };
+    const tab = tabs[runIndex];
+    const cross = runCross(axis, level.labelsAlong, tab, laneCross);
+    return habitatAt(axis, run, tab, placed.runs[runIndex], cross, shift);
   });
 
   return {

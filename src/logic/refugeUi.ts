@@ -25,11 +25,21 @@
  *
  * Section. Each section is REFUGE_SECTION_W wide. From the top: the name row (as tall as the tallest
  * name label, each label centred in it; the label is the habitat name, or "???" before the section
- * shows), REFUGE_PART_GAP_PX, the REFUGE_PICTURE, REFUGE_PART_GAP_PX, then the REFUGE_SLOT_H slot.
- * The slot holds the "See it again" tile (REFUGE_SEE_AGAIN_TILE) when the section is clean, else the
- * hint panel when the section has one, either centred in the slot. Sections run along x UI.gap apart,
- * starting UI.margin in from the content's left edge, then the "More to come" teaser, the size of a
- * section, UI.gap after the last section, then UI.margin to the content's right edge.
+ * shows), the area-line row when there is one (below), REFUGE_PART_GAP_PX, the REFUGE_PICTURE,
+ * REFUGE_PART_GAP_PX, then the REFUGE_SLOT_H slot. The slot holds the "See it again" tile
+ * (REFUGE_SEE_AGAIN_TILE) when the section is clean, else the hint panel when the section has one,
+ * either centred in the slot. Sections run along x UI.gap apart, starting UI.margin in from the
+ * content's left edge, then the "More to come" teaser, the size of a section, UI.gap after the last
+ * section, then UI.margin to the content's right edge.
+ *
+ * Area lines (issue #113, ND-8). A section that shows (not "???") has an area line panel, such as
+ * "Areas 2 and 3", measured by RefugeMeasure.areaLine. When any section has one, every section gets
+ * one area-line row, REFUGE_AREA_LINE_GAP_PX under the name row and as tall as the tallest area line
+ * panel, each panel centred in it. When that row would make the sections taller than the viewport
+ * (the 320 and 340 px tall canvases), there is no row: each area line panel sits straight under the
+ * name row, centred across, over the top of its picture, and must end within the picture's top
+ * REFUGE_PICTURE_TOP_BAND_H px, which the art keeps clear (areaLineOnPicture). Text, gaps, the
+ * picture and the slot never shrink.
  *
  * Focus and keys. Focus indices 0 to k-1 are the "See it again" tiles in entry order (k of them),
  * then k is Prev, k + 1 is Next and k + 2 is Back. Tab and Shift+Tab step through them, wrapping.
@@ -55,6 +65,21 @@ export const REFUGE_SECTION_W = REFUGE_PICTURE.w;
 
 /** Room between a section's name row and its picture, and between its picture and its slot, in CSS px. */
 export const REFUGE_PART_GAP_PX = 8;
+
+/** Room between a section's name row and its area-line row, in CSS px (issue #113, ND-8). */
+export const REFUGE_AREA_LINE_GAP_PX = 4;
+
+/**
+ * Height of the band at the top of a section's picture, in picture px, that the art keeps clear of
+ * trash and plants: an area line drawn over the picture ends within it (issue #113, ND-8).
+ */
+export const REFUGE_PICTURE_TOP_BAND_H = 20;
+
+/** Padding across each side of an area line panel's text, in CSS px (issue #113, ND-8). */
+export const REFUGE_AREA_LINE_PAD_X = 8;
+
+/** Padding above and below an area line panel's text, in CSS px: small enough for the picture's top band (issue #113, ND-8). */
+export const REFUGE_AREA_LINE_PAD_Y = 2;
 
 /** Height of the slot under a section's picture that holds its "See it again" tile or its hint, in CSS px. */
 export const REFUGE_SLOT_H = TILE_BUTTON.h;
@@ -101,16 +126,23 @@ export interface RefugeMeasure {
   name: (id: string, wrapW: number) => Size;
   /** The hint panel of section `id` (such as "Beat Area 4"), or null when it shows none. */
   hint: (id: string, wrapW: number) => Size | null;
+  /**
+   * The area line panel of section `id` (such as "Areas 2 and 3"), or null when it shows none (a "???"
+   * section). Absent means no section shows an area line (issue #113, ND-8).
+   */
+  areaLine?: (id: string, wrapW: number) => Size | null;
 }
 
 /**
- * One section, in content CSS px: its entry id, the whole section, its name label, its picture, its
- * slot, and the "See it again" tile or the hint panel in the slot (null when absent).
+ * One section, in content CSS px: its entry id, the whole section, its name label, its area line panel
+ * (null when it shows none), its picture, its slot, and the "See it again" tile or the hint panel in
+ * the slot (null when absent).
  */
 export interface RefugeSection {
   id: string;
   rect: Rect;
   name: Rect;
+  areaLine: Rect | null;
   picture: Rect;
   slot: Rect;
   seeAgain: Rect | null;
@@ -128,8 +160,10 @@ export interface RefugeTile {
  * The refuge layout (module doc). `title` (null when hidden), `back`, `prev`, `next` and `viewport`
  * are fixed screen rects; `sections` (in entry order), `teaser` and `tiles` (the "See it again"
  * tiles, in focus order) are in content CSS px within `content`. `panAtBottom` is whether the pan
- * tiles sit in the bottom row. `fits` is false when the sections are taller than the viewport, or a
- * name label is wider than a section, or a hint panel does not fit its slot.
+ * tiles sit in the bottom row. `areaLineOnPicture` is whether the area lines sit over the pictures
+ * for want of room for their row (module doc). `fits` is false when the sections are taller than the
+ * viewport, or a name label or area line panel is wider than a section, or an area line panel over a
+ * picture ends below its top band, or a hint panel does not fit its slot.
  */
 export interface RefugeLayout {
   viewport: Rect;
@@ -142,6 +176,7 @@ export interface RefugeLayout {
   prev: Rect;
   next: Rect;
   panAtBottom: boolean;
+  areaLineOnPicture: boolean;
   fits: boolean;
 }
 
@@ -258,17 +293,43 @@ function refugeFrame(view: HudView, measure: RefugeMeasure): RefugeFrame {
   return { back, prev, next, title, viewport, panAtBottom };
 }
 
-/** The section of `entry` at content x `x` and y `top`, with a name row `nameRowH` tall and its measured name and hint panels. */
-function placeSection(
-  entry: RefugeEntry,
-  x: number,
-  top: number,
-  nameRowH: number,
-  name: Size,
-  hint: Size | null,
-): RefugeSection {
+/** Measured panels of one section: its name label, area line (null when none) and hint (null when none). */
+interface SectionPanels {
+  name: Size;
+  areaLine: Size | null;
+  hint: Size | null;
+}
+
+/** Heights shared by every section: the name row and the area-line row (0 when there is none). */
+interface SectionRows {
+  nameRowH: number;
+  areaRowH: number;
+}
+
+/** Room the area-line row takes, its gap included: 0 when there is none. */
+function areaRowSpan(rows: SectionRows): number {
+  return rows.areaRowH > 0 ? REFUGE_AREA_LINE_GAP_PX + rows.areaRowH : 0;
+}
+
+/** Height of every section with these rows: name row, area-line row, picture and slot with their gaps. */
+function sectionHeight(rows: SectionRows): number {
+  return rows.nameRowH + areaRowSpan(rows) + 2 * REFUGE_PART_GAP_PX + REFUGE_PICTURE.h + REFUGE_SLOT_H;
+}
+
+/** The area line panel `size` at content x `x` under the name row ending at `nameRowEnd`: centred in its row, else straight under the name row. */
+function placeAreaLine(size: Size | null, x: number, nameRowEnd: number, areaRowH: number): Rect | null {
+  if (size === null) return null;
+  if (areaRowH > 0) return centredIn(size, { x, y: nameRowEnd + REFUGE_AREA_LINE_GAP_PX, w: REFUGE_SECTION_W, h: areaRowH });
+  return { x: x + (REFUGE_SECTION_W - size.w) / 2, y: nameRowEnd, w: size.w, h: size.h };
+}
+
+/** The section of `entry` at content x `x` and y `top`, with the shared `rows` and its measured panels. */
+function placeSection(entry: RefugeEntry, x: number, top: number, rows: SectionRows, panels: SectionPanels): RefugeSection {
+  const { nameRowH } = rows;
+  const { name, hint } = panels;
   const nameRow: Rect = { x, y: top, w: REFUGE_SECTION_W, h: nameRowH };
-  const picture: Rect = { x, y: top + nameRowH + REFUGE_PART_GAP_PX, w: REFUGE_PICTURE.w, h: REFUGE_PICTURE.h };
+  const pictureY = top + nameRowH + areaRowSpan(rows) + REFUGE_PART_GAP_PX;
+  const picture: Rect = { x, y: pictureY, w: REFUGE_PICTURE.w, h: REFUGE_PICTURE.h };
   const slot: Rect = { x, y: picture.y + picture.h + REFUGE_PART_GAP_PX, w: REFUGE_SECTION_W, h: REFUGE_SLOT_H };
   const seeAgain = entry.seeAgain ? centredIn(REFUGE_SEE_AGAIN_TILE, slot) : null;
   const hintRect = entry.seeAgain || hint === null ? null : centredIn(hint, slot);
@@ -276,6 +337,7 @@ function placeSection(
     id: entry.id,
     rect: { x, y: top, w: REFUGE_SECTION_W, h: slot.y + slot.h - top },
     name: centredIn(name, nameRow),
+    areaLine: placeAreaLine(panels.areaLine, x, top + nameRowH, rows.areaRowH),
     picture,
     slot,
     seeAgain,
@@ -290,6 +352,20 @@ function partsFit(names: readonly Size[], hints: readonly (Size | null)[]): bool
   return namesFit && hintsFit;
 }
 
+/** Whether every area line is no wider than a section and, over a picture, ends within its top band. */
+function areaLinesFit(sections: readonly RefugeSection[], onPicture: boolean): boolean {
+  return sections.every(({ areaLine, picture }) => {
+    if (areaLine === null) return true;
+    const inBand = !onPicture || areaLine.y + areaLine.h <= picture.y + REFUGE_PICTURE_TOP_BAND_H;
+    return areaLine.w <= REFUGE_SECTION_W && inBand;
+  });
+}
+
+/** The tallest of the area line panels, or 0 when none shows. */
+function tallestAreaLine(areaLines: readonly (Size | null)[]): number {
+  return Math.max(0, ...areaLines.map((areaLine) => areaLine?.h ?? 0));
+}
+
 /**
  * Lays out the refuge for the CSS canvas `view` (module doc). `entries` holds at least one section,
  * ids unique; else throws RangeError.
@@ -300,8 +376,13 @@ export function refugeLayout(view: HudView, entries: readonly RefugeEntry[], mea
   const { viewport } = frame;
   const names = entries.map((entry) => measure.name(entry.id, REFUGE_SECTION_W));
   const hints = entries.map((entry) => (entry.seeAgain ? null : measure.hint(entry.id, REFUGE_SECTION_W)));
+  const areaLines = entries.map((entry) => measure.areaLine?.(entry.id, REFUGE_SECTION_W) ?? null);
   const nameRowH = Math.max(...names.map((name) => name.h));
-  const sectionH = nameRowH + 2 * REFUGE_PART_GAP_PX + REFUGE_PICTURE.h + REFUGE_SLOT_H;
+  const withRow: SectionRows = { nameRowH, areaRowH: tallestAreaLine(areaLines) };
+  const rowFits = sectionHeight(withRow) <= viewport.h;
+  const rows: SectionRows = rowFits ? withRow : { nameRowH, areaRowH: 0 };
+  const areaLineOnPicture = !rowFits && withRow.areaRowH > 0;
+  const sectionH = sectionHeight(rows);
 
   const used = 2 * UI.margin + (entries.length + 1) * REFUGE_SECTION_W + entries.length * UI.gap;
   const contentW = Math.max(viewport.w, used);
@@ -309,7 +390,11 @@ export function refugeLayout(view: HudView, entries: readonly RefugeEntry[], mea
   const top = Math.max(0, (viewport.h - sectionH) / 2);
 
   const sections = entries.map((entry, index) =>
-    placeSection(entry, left + index * REFUGE_PAN_STEP, top, nameRowH, names[index], hints[index]),
+    placeSection(entry, left + index * REFUGE_PAN_STEP, top, rows, {
+      name: names[index],
+      areaLine: areaLines[index],
+      hint: hints[index],
+    }),
   );
   const tiles: RefugeTile[] = [];
   sections.forEach((section, sectionIndex) => {
@@ -327,7 +412,8 @@ export function refugeLayout(view: HudView, entries: readonly RefugeEntry[], mea
     prev: frame.prev,
     next: frame.next,
     panAtBottom: frame.panAtBottom,
-    fits: sectionH <= viewport.h && partsFit(names, hints),
+    areaLineOnPicture,
+    fits: sectionH <= viewport.h && partsFit(names, hints) && areaLinesFit(sections, areaLineOnPicture),
   };
 }
 

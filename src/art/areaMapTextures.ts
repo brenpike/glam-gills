@@ -14,11 +14,11 @@
  * text over these shapes: the area number over the marker, the word "New!"
  * over the pill (kept separate so the pill and its word bob together).
  *
- * Panels and the path depend on the layout (text width, marker positions), so
- * they are baked on request by {@link bakeAreaMapPanel} and
- * {@link bakeAreaMapPath}, not in {@link bakeAreaMapTextures}. Each re-bakes
- * under one fixed key per panel or path, so a new layout replaces its texture
- * rather than adding one. A scene may instead draw its panels with its own
+ * Panels, habitat tabs and the path depend on the layout (text width, marker
+ * positions), so they are baked on request by {@link bakeAreaMapPanel},
+ * {@link bakeAreaMapTab} and {@link bakeAreaMapPath}, not in
+ * {@link bakeAreaMapTextures}. Each re-bakes under one fixed key per panel, tab
+ * or path, so a new layout replaces its texture rather than adding one. A scene may instead draw its panels with its own
  * drawPanel: the look is the same.
  */
 import * as Phaser from 'phaser';
@@ -32,6 +32,7 @@ import {
   MAP_STAR_ROW_TEX,
   mapPanelTextureSize,
   mapPathTextureSize,
+  mapTabTextureSize,
   paintMapFocusRing,
   paintMapMarker,
   paintMapNewPill,
@@ -39,7 +40,9 @@ import {
   paintMapPanel,
   paintMapPath,
   paintMapStarRow,
+  paintMapTab,
   type MapPoint,
+  type MapTabFeet,
 } from './drawAreaMap';
 import { bake, type TexInfo } from './textures';
 
@@ -62,6 +65,8 @@ export const areaMapStarRowKey = (earned: number): string => `area-map-stars-${e
  * never per size, so re-baking at a new size replaces the old body and a resize adds no texture.
  */
 export const areaMapPanelKey = (role: string): string => `area-map-panel-${role}`;
+/** Folder tab for one tab `role` (such as 'habitat-0'), issue #113: one key per role, never per size, as the panels. */
+export const areaMapTabKey = (role: string): string => `area-map-tab-${role}`;
 
 // ---------------------------------------------------------------------------
 // Bake
@@ -136,7 +141,7 @@ export function bakeAreaMapTextures(scene: Phaser.Scene, bakeScale: number): Are
 
 /**
  * Bake (re-bake under the same key) a w x h panel body in `fill` (the habitat
- * label, message and title panels, sized by mapPanelSize) under `key`, from
+ * panels and, along the axis, their tabs, and the message and title panels) under `key`, from
  * {@link areaMapPanelKey}. Anchor is the panel's top-left corner. The key names
  * the panel, not its size, so the panel textures stay one per panel however
  * often the layout changes; set the panel's image texture again after each bake.
@@ -150,6 +155,24 @@ export function bakeAreaMapPanel(
   bakeScale: number,
 ): TexInfo {
   return bake(scene, key, mapPanelTextureSize(w, h), bakeScale, (ctx) => paintMapPanel(ctx, w, h, fill));
+}
+
+/**
+ * Bake (re-bake under the same key) a w x h habitat folder tab in `fill` (issue #113, ND-1) under
+ * `key`, from {@link areaMapTabKey}, its sides running down to `feet` (mapTabFeet of the tab and
+ * its panel). Anchor is the tab's top-left corner: put it at the tab rect, on its panel's top edge,
+ * over the panel. Set the tab's image texture again after each bake.
+ */
+export function bakeAreaMapTab(
+  scene: Phaser.Scene,
+  key: string,
+  fill: string,
+  w: number,
+  h: number,
+  feet: MapTabFeet,
+  bakeScale: number,
+): TexInfo {
+  return bake(scene, key, mapTabTextureSize(w, h, feet), bakeScale, (ctx) => paintMapTab(ctx, w, h, fill, feet));
 }
 
 /**

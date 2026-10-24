@@ -3,12 +3,17 @@ import { CARD, SMALLEST_CANVAS, cardTightTextWidth, factCardBodyWrapWidths, isSu
 import type { HudView, Rect, Size } from './hudLayout';
 import { refugeSections } from './refuge';
 import {
+  REFUGE_AREA_LINE_GAP_PX,
+  REFUGE_AREA_LINE_PAD_X,
+  REFUGE_AREA_LINE_PAD_Y,
   REFUGE_BACK_BUTTON,
   REFUGE_NEXT_LABEL,
   REFUGE_NEXT_TILE,
   REFUGE_PAN_STEP,
   REFUGE_PAN_TOP_MIN_W,
+  REFUGE_PART_GAP_PX,
   REFUGE_PICTURE,
+  REFUGE_PICTURE_TOP_BAND_H,
   REFUGE_PREV_LABEL,
   REFUGE_PREV_TILE,
   REFUGE_SECTION_W,
@@ -38,6 +43,7 @@ const LINE_HEIGHT_EM = 1.25;
 const TITLE_PX = 28;
 const NAME_PX = 18;
 const HINT_PX = 18;
+const AREA_LINE_PX = 18;
 const MARGIN = 16;
 const GAP = 12;
 const MIN_TARGET_PX = 48;
@@ -60,6 +66,24 @@ const HABITAT_NAMES: Readonly<Record<string, string>> = Object.freeze({
   cave: 'Spring cave',
   deep: 'Deep canal',
 });
+
+/** The area line of each section id: today's areas, then made-up future ones, the last the widest. */
+const AREA_LINES: Readonly<Record<string, string>> = Object.freeze({
+  canal: 'Area 1',
+  pond: 'Areas 2 and 3',
+  chinampa: 'Areas 4 and 5',
+  cave: 'Areas 6 and 7',
+  deep: 'Areas 8 to 10',
+});
+
+/** Height of a one-line area line panel: 18 px text and the 2 px padding above and below. */
+const AREA_LINE_H = AREA_LINE_PX * LINE_HEIGHT_EM + 2 * REFUGE_AREA_LINE_PAD_Y;
+
+/** Height of a section with one-line names and no area-line row: name 30.5, 8, picture 96, 8, slot 64. */
+const SECTION_H = 206.5;
+
+/** Height of a section with one-line names and the area-line row: SECTION_H, 4, then the 26.5 px row. */
+const SECTION_WITH_ROW_H = SECTION_H + REFUGE_AREA_LINE_GAP_PX + AREA_LINE_H;
 
 /** The tankUi.test canvas grid (art guide 1). */
 const CANVAS_WIDTHS: readonly number[] = [
@@ -99,20 +123,38 @@ function panelSize(text: string, px: number, wrapW: number, padX: number, padY: 
   return { w: textSize.w + 2 * padX, h: textSize.h + 2 * padY };
 }
 
-/** Panels as the scene draws them: the title padded 8 all round, names and hints 8 across and 4 down. */
+/** An area line panel as the scene draws it: 18 px text padded 8 across and 2 down. */
+function areaLineSize(id: string, wrapW: number): Size {
+  return panelSize(AREA_LINES[id], AREA_LINE_PX, wrapW, REFUGE_AREA_LINE_PAD_X, REFUGE_AREA_LINE_PAD_Y);
+}
+
+/**
+ * Panels as the scene draws them: the title padded 8 all round, names and hints 8 across and 4 down,
+ * area lines 8 across and 2 down. The canal and clean sections show; the others are "???", with no
+ * area line.
+ */
 function measureFor(entries: readonly RefugeEntry[]): RefugeMeasure {
   const shown = new Set(entries.filter((entry) => entry.seeAgain).map((entry) => entry.id));
+  const shows = (id: string): boolean => id === 'canal' || shown.has(id);
   return {
     title: (wrapW) => panelSize(TITLE_TEXT, TITLE_PX, wrapW, 8, 8),
-    name: (id, wrapW) => panelSize(id === 'canal' || shown.has(id) ? HABITAT_NAMES[id] : HIDDEN_NAME, NAME_PX, wrapW, 8, 4),
+    name: (id, wrapW) => panelSize(shows(id) ? HABITAT_NAMES[id] : HIDDEN_NAME, NAME_PX, wrapW, 8, 4),
     hint: (id, wrapW) => (id === 'canal' ? null : panelSize(HINT_TEXT, HINT_PX, wrapW, 8, 4)),
+    areaLine: (id, wrapW) => (shows(id) ? areaLineSize(id, wrapW) : null),
   };
 }
 
-/** Every habitat named, so the widest names are measured. */
+/** The measure without area lines, as before issue #113. */
+function measureWithoutAreaLines(entries: readonly RefugeEntry[]): RefugeMeasure {
+  const { title, name, hint } = measureFor(entries);
+  return { title, name, hint };
+}
+
+/** Every habitat named and every area line shown, so the widest names and area lines are measured. */
 const NAMED_MEASURE: RefugeMeasure = {
   ...measureFor([]),
   name: (id, wrapW) => panelSize(HABITAT_NAMES[id], NAME_PX, wrapW, 8, 4),
+  areaLine: areaLineSize,
 };
 
 /** The five PRD N2 habitat sections; the first `clean` of them show "See it again". */
@@ -265,6 +307,42 @@ describe('refugeLayout', () => {
     );
   });
 
+  it.each(CASES)('places the area lines on $view.cssW x $view.cssH with $entries.length section(s) (issue #113, ND-8)', ({ view, entries }) => {
+    const measure = measureFor(entries);
+    const layout = refugeLayout(view, entries, measure);
+    const pictureYs = new Set(layout.sections.map((section) => section.picture.y - section.rect.y));
+    expect(pictureYs.size).toBe(1);
+    for (const section of layout.sections) {
+      const expected = measure.areaLine?.(section.id, REFUGE_SECTION_W) ?? null;
+      if (expected === null || section.areaLine === null) {
+        expect(section.areaLine).toBe(expected);
+        continue;
+      }
+      expect({ w: section.areaLine.w, h: section.areaLine.h }).toEqual(expected);
+      expect(section.areaLine.h).toBeGreaterThanOrEqual(AREA_LINE_PX);
+      expect(inside(section.areaLine, section.rect)).toBe(true);
+      expect(section.areaLine.x - section.rect.x).toBeCloseTo(section.rect.x + section.rect.w - (section.areaLine.x + section.areaLine.w));
+      const nameRowEnd = section.rect.y + section.name.h;
+      expect(section.areaLine.y).toBeGreaterThanOrEqual(nameRowEnd - EPS);
+      expect(gapBetween(section.areaLine, section.slot)).toBeGreaterThanOrEqual(REFUGE_PART_GAP_PX - EPS);
+      if (layout.areaLineOnPicture) {
+        expect(section.areaLine.y).toBeCloseTo(nameRowEnd);
+        expect(section.areaLine.y + section.areaLine.h).toBeLessThanOrEqual(section.picture.y + REFUGE_PICTURE_TOP_BAND_H + EPS);
+      } else {
+        expect(section.areaLine.y - nameRowEnd).toBeGreaterThanOrEqual(REFUGE_AREA_LINE_GAP_PX - EPS);
+        expect(section.picture.y - (section.areaLine.y + section.areaLine.h)).toBeGreaterThanOrEqual(REFUGE_PART_GAP_PX - EPS);
+      }
+    }
+  });
+
+  it.each(supportedCanvases())('puts the area lines on the pictures only on the 320 and 340 px tall canvases: $cssW x $cssH', (view) => {
+    const layout = layoutOf(view, todaysSections(1));
+    expect(layout.areaLineOnPicture).toBe(view.cssH <= 340);
+    expect(layout.sections[0].rect.h).toBeCloseTo(layout.areaLineOnPicture ? SECTION_H : SECTION_WITH_ROW_H);
+    expect(layout.sections[0].rect.h).toBeLessThanOrEqual(layout.viewport.h);
+    expect(layout.fits).toBe(true);
+  });
+
   it.each(CASES)('stacks each section on $view.cssW x $view.cssH: name, 8, picture, 8, slot', ({ view, entries }) => {
     const layout = layoutOf(view, entries);
     for (const section of layout.sections) {
@@ -325,6 +403,85 @@ describe('refugeLayout', () => {
     expect(refugeLayout({ cssW: 460, cssH: 300 }, ONE_SECTION, NAMED_MEASURE).fits).toBe(false);
   });
 
+  it('shows no area line and no row when the measure has no area lines', () => {
+    for (const view of [LARGE, SMALL_LANDSCAPE, SMALL_PORTRAIT]) {
+      const entries = fiveSections(2);
+      const layout = refugeLayout(view, entries, measureWithoutAreaLines(entries));
+      expect(layout.sections.map((section) => section.areaLine)).toEqual([null, null, null, null, null]);
+      expect(layout.areaLineOnPicture).toBe(false);
+      expect(layout.sections[0].rect.h).toBeCloseTo(SECTION_H);
+      expect(layout.fits).toBe(true);
+    }
+  });
+
+  it('shows no area line and no row when no section shows one', () => {
+    const entries = fiveSections(0);
+    const measure: RefugeMeasure = { ...measureFor(entries), areaLine: () => null };
+    const layout = refugeLayout(LARGE, entries, measure);
+    expect(layout.sections.every((section) => section.areaLine === null)).toBe(true);
+    expect(layout.areaLineOnPicture).toBe(false);
+    expect(layout.sections[0].rect.h).toBeCloseTo(SECTION_H);
+  });
+
+  it('gives every section the area-line row, a "???" section an empty one', () => {
+    const entries = fiveSections(2);
+    const layout = layoutOf(LARGE, entries);
+    expect(layout.areaLineOnPicture).toBe(false);
+    expect(layout.sections.map((section) => section.areaLine !== null)).toEqual([true, true, false, false, false]);
+    for (const section of layout.sections) {
+      expect(section.rect.h).toBeCloseTo(SECTION_WITH_ROW_H);
+      expect(section.picture.y - section.rect.y).toBeCloseTo(30.5 + REFUGE_AREA_LINE_GAP_PX + AREA_LINE_H + REFUGE_PART_GAP_PX);
+    }
+    const [canal] = layout.sections;
+    expect(canal.areaLine).toEqual({
+      x: canal.rect.x + (REFUGE_SECTION_W - areaLineSize('canal', REFUGE_SECTION_W).w) / 2,
+      y: canal.rect.y + 30.5 + REFUGE_AREA_LINE_GAP_PX,
+      w: areaLineSize('canal', REFUGE_SECTION_W).w,
+      h: AREA_LINE_H,
+    });
+    expect(layout.teaser.h).toBeCloseTo(SECTION_WITH_ROW_H);
+  });
+
+  it('keeps the row as tall as the tallest area line panel, each one centred in it', () => {
+    const entries = fiveSections(5);
+    const measure: RefugeMeasure = {
+      ...measureFor(entries),
+      areaLine: (id, wrapW) => (id === 'pond' ? { w: 120, h: 40 } : areaLineSize(id, wrapW)),
+    };
+    const layout = refugeLayout(LARGE, entries, measure);
+    const [canal, pond] = layout.sections;
+    expect(canal.rect.h).toBeCloseTo(SECTION_H + REFUGE_AREA_LINE_GAP_PX + 40);
+    expect(pond.areaLine?.y).toBeCloseTo(pond.rect.y + 30.5 + REFUGE_AREA_LINE_GAP_PX);
+    expect(canal.areaLine?.y).toBeCloseTo(canal.rect.y + 30.5 + REFUGE_AREA_LINE_GAP_PX + (40 - AREA_LINE_H) / 2);
+  });
+
+  it('reports an area line panel wider than a section', () => {
+    const measure: RefugeMeasure = { ...NAMED_MEASURE, areaLine: () => ({ w: REFUGE_SECTION_W + 1, h: AREA_LINE_H }) };
+    expect(refugeLayout(LARGE, fiveSections(0), measure).fits).toBe(false);
+    expect(refugeLayout(SMALL_LANDSCAPE, fiveSections(0), measure).fits).toBe(false);
+  });
+
+  it('reports an area line panel over the picture that ends below its top band', () => {
+    const tall = 8 + REFUGE_PICTURE_TOP_BAND_H;
+    const fitting: RefugeMeasure = { ...NAMED_MEASURE, areaLine: () => ({ w: 150, h: tall }) };
+    const fittingLayout = refugeLayout(SMALL_LANDSCAPE, fiveSections(0), fitting);
+    expect(fittingLayout.areaLineOnPicture).toBe(true);
+    expect(fittingLayout.fits).toBe(true);
+    const tooTall: RefugeMeasure = { ...NAMED_MEASURE, areaLine: () => ({ w: 150, h: tall + 1 }) };
+    const tooTallLayout = refugeLayout(SMALL_LANDSCAPE, fiveSections(0), tooTall);
+    expect(tooTallLayout.areaLineOnPicture).toBe(true);
+    expect(tooTallLayout.fits).toBe(false);
+  });
+
+  it('keeps the picture top band clear of the trash (picture y 25) and plants (picture y 22), with room for an 18 px area line', () => {
+    expect(REFUGE_PICTURE_TOP_BAND_H).toBe(20);
+    expect(REFUGE_PICTURE_TOP_BAND_H).toBeLessThanOrEqual(22);
+    expect(AREA_LINE_H - REFUGE_PART_GAP_PX).toBeLessThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+    expect(REFUGE_AREA_LINE_PAD_X).toBe(8);
+    expect(REFUGE_AREA_LINE_PAD_Y).toBe(2);
+    expect(REFUGE_AREA_LINE_GAP_PX).toBe(4);
+  });
+
   it('reports a hint panel too tall for its slot', () => {
     const measure: RefugeMeasure = { ...NAMED_MEASURE, hint: () => ({ w: 100, h: REFUGE_SLOT_H + 1 }) };
     expect(refugeLayout(LARGE, fiveSections(0), measure).fits).toBe(false);
@@ -336,6 +493,8 @@ describe('refugeLayout at the smallest canvases', () => {
     const layout = layoutOf(SMALL_LANDSCAPE, fiveSections(0));
     expect(layout.viewport).toEqual({ x: 0, y: 92, w: 460, h: 212 });
     expect(layout.sections[0].rect.h).toBeCloseTo(206.5);
+    expect(layout.areaLineOnPicture).toBe(true);
+    expect(layout.fits).toBe(true);
     expect(layout.panAtBottom).toBe(false);
     expect(layout.prev).toEqual({ x: 249, y: MARGIN, w: 118, h: 64 });
     expect(layout.next).toEqual({ x: 379, y: MARGIN, w: 65, h: 64 });
@@ -345,9 +504,31 @@ describe('refugeLayout at the smallest canvases', () => {
     expect(sectionShows(layout, 2, 0)).toBe(false);
   });
 
+  it('puts the area lines over the pictures at 460 x 320, straight under the names, within the top band', () => {
+    const entries = fiveSections(5);
+    const layout = layoutOf(SMALL_LANDSCAPE, entries);
+    expect(layout.viewport).toEqual({ x: 0, y: 92, w: 460, h: 212 });
+    expect(layout.areaLineOnPicture).toBe(true);
+    expect(layout.fits).toBe(true);
+    for (const section of layout.sections) {
+      expect(section.rect.h).toBeCloseTo(SECTION_H);
+      const areaLine = section.areaLine;
+      if (areaLine === null) throw new Error(`expected an area line on ${section.id}`);
+      expect(areaLine.y).toBeCloseTo(section.picture.y - REFUGE_PART_GAP_PX);
+      expect(areaLine.h).toBeCloseTo(26.5);
+      expect(areaLine.y + areaLine.h - section.picture.y).toBeCloseTo(18.5);
+      expect(areaLine.y + areaLine.h - section.picture.y).toBeLessThanOrEqual(REFUGE_PICTURE_TOP_BAND_H);
+    }
+  });
+
   it('shows one whole section at 320 x 440: viewport 320 x 256, pan tiles in a bottom row', () => {
     const layout = layoutOf(SMALL_PORTRAIT, fiveSections(0));
     expect(layout.viewport).toEqual({ x: 0, y: 92, w: 320, h: 256 });
+    expect(layout.areaLineOnPicture).toBe(false);
+    expect(layout.sections[0].rect.h).toBeCloseTo(237);
+    expect(layout.sections[0].rect.h).toBeLessThanOrEqual(256);
+    expect(layout.sections[0].areaLine).not.toBeNull();
+    expect(layout.sections[1].areaLine).toBeNull();
     expect(layout.panAtBottom).toBe(true);
     expect(layout.prev).toEqual({ x: 62.5, y: 360, w: 118, h: 64 });
     expect(layout.next).toEqual({ x: 192.5, y: 360, w: 65, h: 64 });
