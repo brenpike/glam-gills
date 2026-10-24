@@ -5,7 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_CARP, CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
 import { createEncounter } from './encounter';
+import { shapeDistance } from './hazards';
 import { meetsThreatRiskRule, routeDistance, turnDistance, zoneThreats } from './hiding';
+import { movingHazardSweep } from './movingHazards';
+import { routeLoopDistance, type PredatorTuning } from './predators';
 import {
   DT,
   EXTRA_SEEDS,
@@ -25,6 +28,12 @@ const chinampa = fairnessZone(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED));
 
 /** Ms each whole-seed sweep may take: every pool spot under nine chasing threats and two poles (issue #119, ND-10). */
 const SEED_SWEEP_TIMEOUT = 120_000;
+
+/** How far a safe start must be from a predator's loop: its leash plus the larger of its sight and its lunge range (issue #119). */
+function chaseBand(tuning: PredatorTuning): number {
+  if (!tuning.chase) throw new Error('chaseBand: every Area 4 predator chases');
+  return tuning.chase.leash + Math.max(tuning.chase.sight, tuning.lungeRange);
+}
 
 describe('risk fairness on the default Area 4 zone', () => {
   const { zone, ctx, longestLoop, startWindow, lastStartIndex, parkSteps } = chinampa;
@@ -57,9 +66,24 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
-  it.each(spots)('finds a safe start outside the Area 4 lunge range for $id', (spot) => {
+  it('clears a chasing tilapia by its leash plus its sight, 400 px, and the carp by its leash plus its sight, 340 px', () => {
+    expect(chaseBand(CHINAMPA_TILAPIA)).toBe(400);
+    expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
+    expect(zone.predatorRoutes[0].species.tuning).toEqual(CHINAMPA_CARP.tuning);
+    expect(chaseBand(CHINAMPA_CARP.tuning)).toBe(340);
+    expect((zone.movingHazards ?? []).map((pole) => pole.type.id)).toEqual(['punting-pole', 'punting-pole']);
+  });
+
+  it.each(spots)('finds a safe start outside the Area 4 lunge range, every chase band and every pole danger zone for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(CHINAMPA_TILAPIA.lungeRange);
+    expect(routeDistance(start, zone.tilapiaRoutes), 'tilapia chase band').toBeGreaterThan(chaseBand(CHINAMPA_TILAPIA));
+    for (const route of zone.predatorRoutes) {
+      expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(chaseBand(route.species.tuning));
+    }
+    for (const pole of zone.movingHazards ?? []) {
+      expect(shapeDistance(start, movingHazardSweep(pole)), pole.id).toBeGreaterThan(pole.type.touchReach);
+    }
   });
 
   it.each(spots)('lets the axolotl grab $id without a hit for some start time', (spot) => {
