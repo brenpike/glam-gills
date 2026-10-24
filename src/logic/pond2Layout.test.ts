@@ -1,22 +1,55 @@
 import { describe, expect, it } from 'vitest';
 import { POND_2_AREA, POND_AREA } from './areas';
 import { POND_2_TREASURES, RARITIES } from './catalogue';
-import { createCollectibles, snackDriftMaxSpeed, snackX, snackY, type SnackFrame } from './collectibles';
+import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
+import { longestQuietStretch, meetsRampDangerBar } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { hazardCentre, shapeDistance } from './hazards';
-import { PAST_CURRENT_DEPTH, coversAt, routeDistance, spotMatchesLabels, turnDistance, underPad, zoneThreats } from './hiding';
+import {
+  PAST_CURRENT_DEPTH,
+  RISK_COMMON_MARGIN,
+  coversAt,
+  routeDistance,
+  spotMatchesLabels,
+  turnDistance,
+  underPad,
+  zoneThreats,
+} from './hiding';
 import { legSwimTuning } from './legs';
+import {
+  meetsSnackRamp,
+  mobileSnackAvoid,
+  mobileSnackClear,
+  mobileSnackShare,
+  oneTimeDarts,
+  shrimpBox,
+  snackMagnetSpeed,
+  tadpoleLaneBox,
+  type MobileSnackMix,
+} from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { PLASTIC_WORM } from './plasticWorms';
-import { HERON_STRETCH_Y, POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
+import { HERON_STRETCH_Y, POND_2_AREA_ID, POND_2_LAYOUT, POND_2_TILAPIA } from './pond2Layout';
 import { POND_LAYOUT } from './pondLayout';
-import { HERON_SPECIES, routeLoopDistance } from './predators';
-import { SNACK_DART, createSnackDarts, snackDarterIds, stepSnackDarts, type SnackDartAvoid } from './snackDart';
+import { HERON_SPECIES, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies } from './predators';
+import { SNACK_DART } from './snackDart';
 import { stepSwim, type SwimState } from './swimPhysics';
-import { FINDS, HERON, LEGS, PLASTIC_WORMS, RISK, SNACK_REACH, SWIM, TILAPIA, tripTreasureTuning } from './tuning';
+import {
+  FINDS,
+  HERON,
+  LEGS,
+  PLASTIC_WORMS,
+  RISK,
+  SNACK_REACH,
+  SWIM,
+  TILAPIA,
+  TILAPIA_RAMP_CHASE,
+  tripTreasureTuning,
+} from './tuning';
 import { normalize } from './vec';
 import {
   DEFAULT_ZONE_SEED,
+  SCREEN_W,
   SNACK_HAZARD_CLEARANCE,
   SPOT_MIN_SPACING,
   SURF,
@@ -61,7 +94,10 @@ const FRAME = 1 / 60;
 const BEAT_MAX_SECONDS = 180;
 const WAYPOINT_REACH = 8;
 const LANE_STEP = 4;
-const DART_ANGLES = 72;
+/** Directions tried for a shrimp's flick target: every 45 degrees. */
+const FLICK_DIRECTIONS = 8;
+/** Longest stretch of the main path with no moving threat in reach, measured (issue #120, ND-7). */
+const QUIET_STRETCH = 369;
 
 const zone = buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED);
 const pond1 = buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED);
@@ -155,28 +191,20 @@ function oneLegSeconds(from: Point, targets: readonly Point[], layout: ZoneLayou
   return Infinity;
 }
 
-/** Everything a darted snack must stay out of in this zone, with the worms at their spawn places. */
-function dartAvoid(layout: ZoneLayout): SnackDartAvoid {
-  return {
-    bounds: swimBounds(layout),
-    homeSpot: layout.homeSpot,
-    safeArea: layout.safeArea,
-    currents: layout.currents,
-    worms: wormCentres(layout),
-  };
+/** Area 3's mobile snacks from its data; throws when it has none. */
+function pond2Mix(): Readonly<MobileSnackMix> {
+  const mix = POND_2_LAYOUT.mobileSnacks;
+  if (!mix) throw new Error('Area 3 has no mobile snacks');
+  return mix;
 }
 
-/** Whether the snack at `index` darts when the head comes at it from some direction, at drift time 0. */
-function darterCanLand(layout: ZoneLayout, index: number): boolean {
-  const items = createCollectibles(layout.collectibles);
-  const frame: SnackFrame = { driftT: 0, bobT: 0, bobbing: true, drift: POND_2_AREA.snackDrift, bounds: swimBounds(layout) };
-  const state = createSnackDarts([items[index]], { ...SNACK_DART, darters: 1 });
-  const drawn = { x: snackX(items[index], index, 0, frame.drift, frame.bounds), y: snackY(items[index], index, 0, frame.drift, frame.bounds) };
-  for (let i = 0; i < DART_ANGLES; i++) {
-    const angle = (i * 2 * Math.PI) / DART_ANGLES;
-    const head = { x: drawn.x + SNACK_DART.triggerRadius * 0.5 * Math.cos(angle), y: drawn.y + SNACK_DART.triggerRadius * 0.5 * Math.sin(angle) };
-    const step = stepSnackDarts(items, head, frame, state, true, dartAvoid(layout), FRAME);
-    if (step && step.state.waiting.length === 0) return true;
+/** Whether a shrimp at `spot` has a flick target `distance` px away, in some of FLICK_DIRECTIONS, whose box is clear. */
+function shrimpCanFlick(layout: ZoneLayout, spot: Point, distance: number): boolean {
+  const avoid = mobileSnackAvoid(layout);
+  for (let i = 0; i < FLICK_DIRECTIONS; i++) {
+    const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
+    const target = { x: spot.x + distance * Math.cos(angle), y: spot.y + distance * Math.sin(angle) };
+    if (mobileSnackClear(shrimpBox(target, POND_2_AREA.snackDrift), avoid)) return true;
   }
   return false;
 }
@@ -197,14 +225,23 @@ describe('POND_2_LAYOUT', () => {
     expect(Object.isFrozen(POND_2_LAYOUT.predatorRoutes)).toBe(true);
     expect(Object.isFrozen(POND_2_LAYOUT.predatorRoutes[0].waypoints)).toBe(true);
     expect(Object.isFrozen(POND_2_LAYOUT.elements)).toBe(true);
+    expect(Object.isFrozen(POND_2_LAYOUT.mobileSnacks)).toBe(true);
+    expect(Object.isFrozen(pond2Mix().lanes)).toBe(true);
+    expect(Object.isFrozen(pond2Mix().spots)).toBe(true);
+    expect(pond2Mix().lanes.every((lane) => Object.isFrozen(lane))).toBe(true);
+    expect(pond2Mix().spots.every((spot) => Object.isFrozen(spot))).toBe(true);
+    expect(Object.isFrozen(POND_2_TILAPIA)).toBe(true);
+    expect(Object.isFrozen(POND_2_TILAPIA.chase)).toBe(true);
   });
 
-  it('has 24 snacks, 5 plastic worms, 4 tilapia, two herons and 8 treasure slots', () => {
+  it('has 24 snacks (10 worms, 6 bugs, 4 tadpoles and 4 shrimp), 5 plastic worms, 4 tilapia, two herons and 8 treasure slots', () => {
     for (const seed of ALL_SEEDS) {
       const layout = pond2(seed);
       expect(layout.collectibles).toHaveLength(24);
-      expect(layout.collectibles.filter((snack) => snack.kind === 'worm')).toHaveLength(14);
-      expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(10);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'worm')).toHaveLength(10);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(6);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'tadpole')).toHaveLength(4);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'shrimp')).toHaveLength(4);
       expect(layout.tilapiaRoutes).toHaveLength(4);
       expect(layout.predatorRoutes).toHaveLength(2);
     }
@@ -288,6 +325,24 @@ describe('Area 3 hiding spots', () => {
       const band = spot.rarity === 'legendary' ? [-Infinity, HERON.lungeRange / 2] : [HERON.lungeRange / 2, HERON.lungeRange];
       expect(heronDistance(spot), spot.id).toBeGreaterThan(band[0]);
       expect(heronDistance(spot), spot.id).toBeLessThanOrEqual(band[1]);
+    }
+  });
+
+  it('puts the deep Rare reeds and the Rare pad in heron-1\'s Rare band, right of the root arch and beyond every tilapia chase (issue #120, ND-8)', () => {
+    const [, heron1] = herons;
+    const chase = POND_2_TILAPIA.chase;
+    const farSpots = zone.spots.filter((spot) => spot.rarity === 'rare' && spot.x > zone.cave.x1);
+    expect(farSpots.map((spot) => [spot.id, spot.cover, spot.x, spot.y])).toEqual([
+      ['pond-2/spot-reeds-2-2604-deep', 'reeds', 2604, 256],
+      ['pond-2/spot-reeds-2-2660-deep', 'reeds', 2660, 256],
+      ['pond-2/spot-reeds-2-2716-deep', 'reeds', 2716, 256],
+      ['pond-2/spot-pad-b', 'pad', 2775, 100],
+    ]);
+    expect(chase).toBeDefined();
+    for (const spot of farSpots) {
+      expect(routeLoopDistance(spot, heron1.waypoints), spot.id).toBeGreaterThan(HERON.lungeRange);
+      expect(routeLoopDistance(spot, heron1.waypoints), spot.id).toBeLessThanOrEqual(HERON.lungeRange + RISK_COMMON_MARGIN);
+      expect(routeDistance(spot, zone.tilapiaRoutes), spot.id).toBeGreaterThan((chase?.leash ?? 0) + Math.max(chase?.sight ?? 0, TILAPIA.lungeRange));
     }
   });
 
@@ -542,25 +597,110 @@ describe('Area 3 snacks', () => {
     expect(snackDriftMaxSpeed(drift)).toBeLessThanOrEqual(SNACK_MAGNET_PULL_SPEED / 2);
   });
 
-  it('make 3 snacks dart with the shared dart rule', () => {
+  it('keep the shared dart rule in the area data, and the shrimp turn the darters off (issue #120, ND-4)', () => {
     expect(POND_2_AREA.snackDart).toBe(SNACK_DART);
     expect(SNACK_DART.darters).toBe(3);
     expect(POND_AREA.snackDart).toBeUndefined();
   });
 
-  it.each(ALL_SEEDS)('give every darter a hop target it can land on for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('have no one-time darters, because the shrimp replace them, for seed %i', (seed) => {
+    expect(POND_2_AREA.snackDart).toBe(SNACK_DART);
+    expect(oneTimeDarts(POND_2_AREA, pond2(seed))).toBeNull();
+  });
+
+  it('meet the Area 3 snack ramp: a third of the snacks swim, tadpoles at 35 px/s (issue #120, ND-4)', () => {
+    const mix = pond2Mix();
+    expect(meetsSnackRamp(3, POND_2_LAYOUT)).toBe(true);
+    expect(mobileSnackShare(POND_2_LAYOUT)).toBeCloseTo(8 / 24, 9);
+    expect(mix.tadpole).toEqual({ speed: 35 });
+    expect(mix.shrimp).toEqual({ triggerRadius: 60, restFor: 1.7, flickDistance: 44, flickSpeed: 115 });
+  });
+
+  it('put four tadpoles on 120 px lanes, each a quarter of the lane loop out of step, and four shrimp', () => {
+    const mix = pond2Mix();
+    const loop = (2 * 120) / 35;
+    expect(mix.lanes.map((lane) => [lane.x, lane.y, lane.dx, lane.dy])).toEqual([
+      [320, 210, 120, 0],
+      [560, 100, 120, 0],
+      [1655, 140, 0, 120],
+      [2420, 280, 120, 0],
+    ]);
+    mix.lanes.forEach((lane, i) => {
+      expect(Math.hypot(lane.dx, lane.dy), `lane ${i + 1}`).toBe(120);
+      expect(lane.offset, `lane ${i + 1}`).toBeCloseTo((i * loop) / 4, 9);
+    });
+    expect(mix.spots.map((spot) => [spot.x, spot.y])).toEqual([
+      [860, 106],
+      [1230, 106],
+      [2320, 280],
+      [2760, 140],
+    ]);
+  });
+
+  it.each(ALL_SEEDS)('keep every tadpole lane and shrimp box clear of the threats, worms, stream and safe area for seed %i', (seed) => {
     const layout = pond2(seed);
-    const darters = snackDarterIds(layout.collectibles, SNACK_DART.darters);
-    expect(darters).toHaveLength(3);
-    for (const id of darters) {
-      const index = layout.collectibles.findIndex((snack) => snack.id === id);
-      expect(darterCanLand(layout, index), id).toBe(true);
+    const avoid = mobileSnackAvoid(layout);
+    const mix = layout.mobileSnacks;
+    expect(mix).toBeDefined();
+    for (const [index, lane] of (mix?.lanes ?? []).entries()) {
+      expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane ${index + 1}`).toBe(true);
     }
+    for (const [index, spot] of (mix?.spots ?? []).entries()) {
+      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp ${index + 1}`).toBe(true);
+    }
+  });
+
+  it.each(ALL_SEEDS)('give every shrimp a clear 44 px flick target in some direction for seed %i', (seed) => {
+    const layout = pond2(seed);
+    const flick = pond2Mix().shrimp?.flickDistance ?? 0;
+    expect(flick).toBe(44);
+    for (const [index, spot] of pond2Mix().spots.entries()) {
+      expect(shrimpCanFlick(layout, spot, flick), `shrimp ${index + 1}`).toBe(true);
+    }
+  });
+
+  it('pull with the Snack magnet at 42 px/s, 1.2 times the 35 px/s tadpole', () => {
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(42);
+  });
+});
+
+describe('Area 3 ramp bar (issue #120, ND-1, ND-2, ND-7)', () => {
+  it('gives the tilapia the ramp chase, sight 200, leash 80 and speed 115, with every other value TILAPIA\'s', () => {
+    expect(POND_2_LAYOUT.tilapia).toBe(POND_2_TILAPIA);
+    expect(POND_2_TILAPIA.chase).toBe(TILAPIA_RAMP_CHASE);
+    expect(POND_2_TILAPIA.chase).toEqual({ sight: 200, leash: 80, speed: 115 });
+    const { chase, ...rest } = POND_2_TILAPIA;
+    expect(chase).toBeDefined();
+    expect(rest).toEqual(TILAPIA);
+    expect(() => tunedSpecies(TILAPIA_SPECIES, POND_2_TILAPIA)).not.toThrow();
+    for (const seed of ALL_SEEDS) {
+      expect(pond2(seed).tilapia).toEqual(POND_2_TILAPIA);
+    }
+  });
+
+  it('keeps the herons without a chase', () => {
+    for (const route of herons) {
+      expect(route.species, route.id).toBe(HERON_SPECIES);
+      expect(route.species.tuning.chase, route.id).toBeUndefined();
+    }
+  });
+
+  it('adds no moving hazard and no predator beyond the four tilapia and two herons', () => {
+    expect(POND_2_LAYOUT.movingHazards).toBeUndefined();
+    expect(POND_2_LAYOUT.tilapiaRoutes).toHaveLength(4);
+    expect(POND_2_LAYOUT.predatorRoutes).toHaveLength(2);
+  });
+
+  it.each(ALL_SEEDS)('meets the Area 3 ramp danger bar, with a quiet stretch of 369 px, for seed %i', (seed) => {
+    const layout = pond2(seed);
+    expect(longestQuietStretch(layout)).toBe(QUIET_STRETCH);
+    expect(QUIET_STRETCH).toBeLessThanOrEqual(SCREEN_W);
+    expect(meetsRampDangerBar(3, layout)).toBe(true);
   });
 });
 
 describe('Area 3 difficulty', () => {
-  it('is a little longer and harder than Area 2: wider, more snacks, faster drift, a stronger stream, more slots, darters and two herons', () => {
+  it('is a little longer and harder than Area 2: wider, more snacks, faster drift, a stronger stream, more slots, shrimp and two herons', () => {
     const strength = (layout: ZoneLayout) => Math.max(...layout.currents.map((current) => Math.hypot(current.force.x, current.force.y)));
     expect(zone.width).toBeGreaterThan(pond1.width);
     expect(zone.tilapiaRoutes.length).toBeGreaterThanOrEqual(pond1.tilapiaRoutes.length);
@@ -571,6 +711,7 @@ describe('Area 3 difficulty', () => {
     expect(pond1.predatorRoutes).toHaveLength(0);
     expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['heron', 'heron']);
     expect(zone.hazards.length).toBeGreaterThan(0);
+    expect(zone.collectibles.some((snack) => snack.kind === 'shrimp')).toBe(true);
   });
 });
 
@@ -587,7 +728,8 @@ describe('beating Area 3', () => {
 
   it.each(ALL_SEEDS)('puts every snack the exit needs in the swim bounds for seed %i', (seed) => {
     const layout = pond2(seed);
-    expect(layout.collectibles).toHaveLength(POND_2_LAYOUT.snackWorms + POND_2_LAYOUT.snackBugs);
+    const mobile = pond2Mix().lanes.length + pond2Mix().spots.length;
+    expect(layout.collectibles).toHaveLength(POND_2_LAYOUT.snackWorms + POND_2_LAYOUT.snackBugs + mobile);
     for (const snack of layout.collectibles) {
       expect(inBounds(snack, layout), snack.id).toBe(true);
     }
