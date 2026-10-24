@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-24
+
+### Added
+
+- Tadpoles and freshwater shrimp swim in Area 3, a little quicker than in Area 2. Tadpoles swim back and forth, and shrimp flick away when you get close, then rest (#120).
+
+### Changed
+
+- Area 3's tilapia now follow you a short way, then go back (#120).
+- Area 3's snacks no longer do the old one-time dart; its shrimp flick instead (#120).
+- Area 3 has 10 worms and 6 bugs, plus 4 tadpoles and 4 shrimp (#120).
+- The Snack magnet pulls a little harder in Area 3, so it still catches a tadpole (#120).
+- Some Rare treasure spots in Area 3 moved to the far end of the pond, near the second heron (#120).
+
 ## [0.35.0] - 2026-10-24
 
 ### Added
