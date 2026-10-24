@@ -5,6 +5,7 @@ import { CHINAMPA_AREA_ID, CHINAMPA_CARP, CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } fr
 import { createCollectibles, drawnSnackX, drawnSnackY, snackDriftMaxSpeed, snackX, snackY, type Collectible, type SnackFrame } from './collectibles';
 import { longestQuietStretch, meetsFullDangerBar, movingHazardTypeCount, movingThreatCount, predatorTypeCount } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
+import { CARP_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT } from './factCards';
 import { GHOST_NET } from './ghostNets';
 import { hazardCentre, hazardShapeAt, hazardSweep, shapeDistance, type HazardShape } from './hazards';
 import {
@@ -339,6 +340,15 @@ describe('CHINAMPA_LAYOUT', () => {
     const expected = ['tilapia', 'carp', 'ghost-net', 'punting-pole', 'tadpole', 'shrimp'];
     expect(sourceFactCards(CHINAMPA_LAYOUT).ids).toEqual(expected);
     expect(sourceFactCards(zone).ids).toEqual(expected);
+  });
+
+  it('gives its fact cards in order: tilapia, carp, ghost net, punting pole, tadpole, shrimp, from its data or its zone', () => {
+    const expected = {
+      ids: ['tilapia', 'carp', 'ghost-net', 'punting-pole', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, CARP_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, TADPOLE_FACT, SHRIMP_FACT],
+    };
+    expect(sourceFactCards(CHINAMPA_LAYOUT)).toEqual(expected);
+    expect(sourceFactCards(zone)).toEqual(expected);
   });
 });
 
