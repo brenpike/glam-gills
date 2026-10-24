@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { POND_2_AREA, POND_AREA } from './areas';
 import { POND_2_TREASURES, RARITIES } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
-import { longestQuietStretch, meetsRampDangerBar } from './dangerBar';
+import { longestQuietStretch, meetsRampDangerBar, movingHazardTypeCount } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { hazardCentre, shapeDistance } from './hazards';
 import {
@@ -563,11 +563,13 @@ describe('Area 3 snacks', () => {
     }
   });
 
-  it.each(ALL_SEEDS)('put at least 4 snacks in the stream for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('put at least 4 snacks in the stream, every one a worm or a bug, for seed %i', (seed) => {
     const layout = pond2(seed);
     const inStream = layout.collectibles.filter((snack) => isInsideCurrent(snack, layout.currents[0]));
+    const inAnyCurrent = layout.collectibles.filter((snack) => layout.currents.some((current) => isInsideCurrent(snack, current)));
     expect(POND_2_LAYOUT.snacksInCurrent).toBe(4);
     expect(inStream.length).toBeGreaterThanOrEqual(POND_2_LAYOUT.snacksInCurrent);
+    expect(inAnyCurrent.map((snack) => snack.kind).filter((kind) => kind !== 'worm' && kind !== 'bug')).toEqual([]);
   });
 
   it.each(ALL_SEEDS)('stay in the water and out of the ring while drifting for seed %i', (seed) => {
@@ -689,6 +691,12 @@ describe('Area 3 ramp bar (issue #120, ND-1, ND-2, ND-7)', () => {
     expect(POND_2_LAYOUT.movingHazards).toBeUndefined();
     expect(POND_2_LAYOUT.tilapiaRoutes).toHaveLength(4);
     expect(POND_2_LAYOUT.predatorRoutes).toHaveLength(2);
+  });
+
+  it.each(ALL_SEEDS)('builds a zone with no moving hazards key and no moving hazard type for seed %i', (seed) => {
+    const layout = pond2(seed);
+    expect(layout).not.toHaveProperty('movingHazards');
+    expect(movingHazardTypeCount(layout)).toBe(0);
   });
 
   it.each(ALL_SEEDS)('meets the Area 3 ramp danger bar, with a quiet stretch of 369 px, for seed %i', (seed) => {
