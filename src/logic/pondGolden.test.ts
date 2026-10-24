@@ -53,6 +53,8 @@ function pickGoldenProjection(zone: ZoneLayout) {
     hazards: zone.hazards,
     predatorRoutes: zone.predatorRoutes,
     elements: zone.elements,
+    tilapia: zone.tilapia,
+    mobileSnacks: zone.mobileSnacks,
   };
 }
 
