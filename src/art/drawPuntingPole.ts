@@ -319,3 +319,59 @@ export function paintPuntingShaft(ctx: CanvasRenderingContext2D): void {
   ctx.stroke(line(-2, -POLE_SHAFT_LENGTH + 12, -2, -NODE_FIRST + 4));
   ctx.restore();
 }
+
+// ---------------------------------------------------------------------------
+// Shaft pieces (issue #118, ND-4)
+// ---------------------------------------------------------------------------
+
+/**
+ * The lowest art row a stacked shaft piece copies, px above the tip: midway between the first two
+ * node rings, inside the wood and the shine and above the worn end and its cap.
+ */
+export const POLE_TILE_FROM = NODE_FIRST + POLE_NODE_SPACING / 2;
+/**
+ * The highest art row a shaft piece shows when the pole is stacked, px above the tip: five node
+ * spacings above POLE_TILE_FROM, so it is also midway between two rings, and under the shine's top
+ * and the wood's top cap. The stacked copies repeat every POLE_TILE_TO - POLE_TILE_FROM px, a whole
+ * number of node spacings, so they join with no seam and the rings keep their spacing.
+ */
+export const POLE_TILE_TO = POLE_TILE_FROM + 5 * POLE_NODE_SPACING;
+
+/**
+ * Where the shaft is drawn in pieces for a spawn whose own depth needs more art than
+ * POLE_SHAFT_LENGTH (issue #118, ND-4). `length` is the drawn length from the tip up, px;
+ * `fullLength` is the spawn's longest drawn length (its depth plus the px above the surface).
+ *
+ * A pole whose full length fits the art is one piece: the art cropped at the length, as before.
+ * A longer pole is the art's bottom (the tip and the worn end) up to POLE_TILE_TO, then copies of
+ * the rows POLE_TILE_FROM to POLE_TILE_TO, piece k drawn k x (POLE_TILE_TO - POLE_TILE_FROM) px
+ * above the logic tip, while a piece still has rows to show. A piece's rows are px above the tip in
+ * the art; its lift is px above the logic tip where its anchor is drawn. Count and per-piece bounds
+ * are separate functions, so a view places its pieces with no allocation.
+ */
+export function poleShaftPieceCount(length: number, fullLength: number): number {
+  if (fullLength <= POLE_SHAFT_LENGTH) return 1;
+  let count = 1;
+  while (poleShaftPieceTo(count, length, fullLength) > POLE_TILE_FROM) count++;
+  return count;
+}
+
+/** The lowest art row piece `index` shows, px above the tip: 0 for the base piece. */
+export function poleShaftPieceFrom(index: number): number {
+  return index === 0 ? 0 : POLE_TILE_FROM;
+}
+
+/** Px above the logic tip where piece `index` has its anchor: 0 for the base piece. */
+export function poleShaftPieceLift(index: number): number {
+  return index * (POLE_TILE_TO - POLE_TILE_FROM);
+}
+
+/**
+ * The highest art row piece `index` shows, px above the tip. The one piece of a pole that fits the
+ * art is cropped at the length (0 to POLE_SHAFT_LENGTH); a stacked piece shows up to POLE_TILE_TO
+ * or the length, which is held to 0 to `fullLength`.
+ */
+export function poleShaftPieceTo(index: number, length: number, fullLength: number): number {
+  if (index === 0 && fullLength <= POLE_SHAFT_LENGTH) return Math.min(POLE_SHAFT_LENGTH, Math.max(0, length));
+  return Math.min(POLE_TILE_TO, Math.min(fullLength, Math.max(0, length)) - poleShaftPieceLift(index));
+}
