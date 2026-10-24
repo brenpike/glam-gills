@@ -57,7 +57,7 @@ const WORM_CURRENT_CLEARANCE =
 const FRAME = 1 / 60;
 const BEAT_MAX_SECONDS = 180;
 const WAYPOINT_REACH = 8;
-/** The pond's longest main path stretch with no chasing tilapia in reach, in px (issue #121, ND-3). */
+/** The pond's longest main path stretch with no chasing tilapia in reach, in px (issue #121, ND-2). */
 const QUIET_STRETCH = 390;
 
 const zone = buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED);
