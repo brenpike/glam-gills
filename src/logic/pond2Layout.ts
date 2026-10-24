@@ -4,14 +4,43 @@
  * the bank beyond them is the cave. Two herons wade short stretches near the surface at the far end
  * (issue #111): `heron-0` over the spots past the stream and `heron-1` over the root arch, so the Epic
  * and Legendary spots there sit where a heron can strike. The water below their reach stays open.
+ * For the ramp bar (issue #120, ND-1, ND-4) its tilapia chase on a short leash, and a third of its
+ * snacks swim: tadpoles on fixed lanes and shrimp that flick away, which replace the darters. Each
+ * Rare spot keeps a safe start beyond the chase (ND-8), so the deep Rare reeds and the Rare pad sit
+ * at the far end, just past `heron-1`'s reach.
  */
 import { POND_2_TREASURES } from './catalogue';
 import type { HazardSpawn } from './hazards';
+import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule, type TadpoleLane } from './mobileSnacks';
 import { PLASTIC_WORM } from './plasticWorms';
 import { HERON_SPECIES, type PredatorRoute } from './predators';
+import { TILAPIA, TILAPIA_RAMP_CHASE, type TilapiaTuning } from './tuning';
 import { BED_TOP, SURF, type AreaLayoutData, type Point } from './zone';
 
 export const POND_2_AREA_ID = 'pond-2';
+
+/**
+ * Area 3's tilapia (issue #120, ND-1): TILAPIA with the ramp-bar chase, sight 200, leash 80 and
+ * speed 115. Every other value, and so every risk band, stays TILAPIA's. The herons do not chase.
+ */
+export const POND_2_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({ ...TILAPIA, chase: TILAPIA_RAMP_CHASE });
+
+/** Area 3's tadpole rule (issue #120, ND-4): 35 px/s. */
+const POND_2_TADPOLE = tadpoleRule(35);
+
+/** Area 3's shrimp rule (issue #120, ND-4): trigger 60 px, rest 1.7 s, flick 44 px at 115 px/s. */
+const POND_2_SHRIMP = shrimpRule(60, 1.7, 44, 115);
+
+/** Length in px of each tadpole lane. */
+const POND_2_LANE_LENGTH = 120;
+
+/** Seconds a tadpole takes there and back along its lane: 2L / speed. */
+const POND_2_LANE_LOOP = (2 * POND_2_LANE_LENGTH) / POND_2_TADPOLE.speed;
+
+/** Tadpole lane `n` (1 to 4) from (x, y), `n - 1` quarters of the lane loop ahead (issue #120, ND-4). */
+function pond2Lane(n: number, x: number, y: number, dx: number, dy: number): Readonly<TadpoleLane> {
+  return tadpoleLane(POND_2_TADPOLE, x, y, dx, dy, ((n - 1) * POND_2_LANE_LOOP) / 4);
+}
 
 /**
  * y of each heron's stretch, the line of its beak's rest point. A heron reaches HERON.lungeRange
@@ -46,6 +75,10 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   start: Object.freeze({ x: 120, y: 200 }),
   safeArea: Object.freeze({ x0: 40, x1: 300, y0: SURF, y1: BED_TOP }),
   homeSpotRadius: 72,
+  /**
+   * Common reeds just past the safe area, Rare reeds near the surface above the main path, and deep
+   * Rare reeds below `heron-1`'s stretch, past its reach and right of the root arch (issue #120, ND-8).
+   */
   reedBeds: Object.freeze([
     Object.freeze({
       columns: Object.freeze([316, 372, 428, 484]),
@@ -59,8 +92,8 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
       rows: Object.freeze([Object.freeze({ y: 110, rarity: 'rare', tag: 'top' })]),
     }),
     Object.freeze({
-      columns: Object.freeze([1420, 1476, 1532]),
-      rows: Object.freeze([Object.freeze({ y: 292, rarity: 'rare', tag: 'deep' })]),
+      columns: Object.freeze([2604, 2660, 2716]),
+      rows: Object.freeze([Object.freeze({ y: 256, rarity: 'rare', tag: 'deep' })]),
     }),
   ]),
   /**
@@ -87,8 +120,7 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   ]),
   /**
    * The stream, in the art's stream band (y 120 to 280), flowing left a little faster than Area 2's.
-   * It starts past the 13th of the 20 snack stripes and ends before the 17th, so the snack darters
-   * (snackDarterIds) never start in it.
+   * The shrimp replace the one-time darters (issue #120, ND-4), so no snack stripe needs to miss it.
    */
   currents: Object.freeze([
     Object.freeze({ id: 'current-0', x0: 1880, x1: 2240, y0: 120, y1: 280, force: Object.freeze({ x: -74, y: 0 }) }),
@@ -96,9 +128,9 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** The root arch under the bank: its hollow, from just under the surface. */
   cave: Object.freeze({ id: `${POND_2_AREA_ID}/cave`, x0: 2432, x1: 2568, y0: 96, y1: 200 }),
   /**
-   * Four fixed patrol loops, left to right along the pond, all before the herons' stretches. The
-   * closest two, `tilapia-0` and `tilapia-1`, are 290 px apart, more than twice the lunge range of
-   * 140 px.
+   * Four fixed patrol loops, left to right along the pond, all before the herons' stretches, each
+   * chasing on POND_2_TILAPIA's short leash. The closest two, `tilapia-0` and `tilapia-1`, are 290 px
+   * apart, more than twice the lunge range of 140 px.
    */
   tilapiaRoutes: Object.freeze([
     Object.freeze([
@@ -157,8 +189,9 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /**
    * Fixed stranding places (PRD C2), left to right: above the first reeds, on the bed between the
    * first two tilapia, in the open water before the deep reeds, near the surface before the last
-   * tilapia, on the bed under the root arch, and near the surface before the exit. Every place is
-   * at least 80 px from every tilapia route and heron stretch, and out of every heron's reach.
+   * tilapia, on the bed under the root arch, and in mid-water before the exit, clear of the Rare pad
+   * (issue #120, ND-8). Every place is at least 80 px from every tilapia route and heron stretch,
+   * and out of every heron's reach.
    */
   strandingPlaces: Object.freeze([
     Object.freeze({ id: `${POND_2_AREA_ID}/strand-1`, x: 320, y: 110 }),
@@ -166,22 +199,23 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: `${POND_2_AREA_ID}/strand-3`, x: 1340, y: 220 }),
     Object.freeze({ id: `${POND_2_AREA_ID}/strand-4`, x: 1700, y: 140 }),
     Object.freeze({ id: `${POND_2_AREA_ID}/strand-5`, x: 2400, y: 290 }),
-    Object.freeze({ id: `${POND_2_AREA_ID}/strand-6`, x: 2780, y: 140 }),
+    Object.freeze({ id: `${POND_2_AREA_ID}/strand-6`, x: 2720, y: 180 }),
   ]),
   treasures: POND_2_TREASURES,
-  snackWorms: 14,
-  snackBugs: 10,
+  snackWorms: 10,
+  snackBugs: 6,
   snacksInCurrent: 4,
   padCount: 0,
   padSpotIndex: null,
   padSpotY: 100,
   /**
-   * The Common pad over the main path and the Rare pad above it, both far from the herons'
-   * stretches, then pads that only decorate. No pad sits above a plastic worm.
+   * The Common pad over the main path, far from the herons' stretches, and the Rare pad near the
+   * exit, just past `heron-1`'s reach (issue #120, ND-8), then pads that only decorate. No pad sits
+   * above a plastic worm.
    */
   fixedPads: Object.freeze([
     Object.freeze({ x: 915, rx: 24, flower: true, spot: Object.freeze({ y: 100, rarity: 'common', tag: 'a' }) }),
-    Object.freeze({ x: 1240, rx: 23, flower: false, spot: Object.freeze({ y: 100, rarity: 'rare', tag: 'b' }) }),
+    Object.freeze({ x: 2775, rx: 23, flower: false, spot: Object.freeze({ y: 100, rarity: 'rare', tag: 'b' }) }),
     Object.freeze({ x: 190, rx: 24, flower: true }),
     Object.freeze({ x: 640, rx: 22, flower: false }),
     Object.freeze({ x: 1390, rx: 25, flower: true }),
@@ -192,4 +226,25 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** The bank over the root arch. */
   bankChunks: Object.freeze([5]),
   sunChunk: 0,
+  tilapia: POND_2_TILAPIA,
+  /**
+   * Four tadpoles on 120 px lanes, each a quarter of the lane loop out of step (issue #120, ND-4),
+   * and four shrimp, every lane and shrimp box clear of the threats, worms and the stream.
+   */
+  mobileSnacks: mobileSnackMix({
+    tadpole: POND_2_TADPOLE,
+    lanes: [
+      pond2Lane(1, 320, 210, POND_2_LANE_LENGTH, 0),
+      pond2Lane(2, 560, 100, POND_2_LANE_LENGTH, 0),
+      pond2Lane(3, 1655, 140, 0, POND_2_LANE_LENGTH),
+      pond2Lane(4, 2420, 280, POND_2_LANE_LENGTH, 0),
+    ],
+    shrimp: POND_2_SHRIMP,
+    spots: [
+      { x: 860, y: 106 },
+      { x: 1230, y: 106 },
+      { x: 2320, y: 280 },
+      { x: 2760, y: 140 },
+    ],
+  }),
 } satisfies AreaLayoutData);

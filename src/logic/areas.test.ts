@@ -242,7 +242,7 @@ describe('POND_2_AREA', () => {
     expect(special?.pool.length).toBeGreaterThan(0);
   });
 
-  it('makes 3 of its snacks dart; the earlier areas have no darters and no look of their own', () => {
+  it('keeps the shared dart rule in its data, and its shrimp turn the darters off; the earlier areas have no darters and no look of their own', () => {
     expect(POND_2_AREA.snackDart).toBe(SNACK_DART);
     expect(POND_2_AREA.snackDart?.darters).toBe(3);
     expect(CANAL_AREA.snackDart).toBeUndefined();
