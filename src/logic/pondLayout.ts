@@ -148,7 +148,8 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   treasures: POND_TREASURES,
   /**
    * 10 worms and 6 bugs (issue #121, ND-4): 4 fewer than before, for the 2 tadpoles and 2 shrimp,
-   * so the pond keeps 20 snacks, 4 of them in the stream.
+   * so the pond keeps 20 snacks. snacksInCurrent places 4 worms or bugs in the stream on purpose;
+   * it is a floor, since stripe snacks may also start there (ADR 0022).
    */
   snackWorms: 10,
   snackBugs: 6,

@@ -62,7 +62,7 @@ The one treasure per area that earns a star when the area is beaten with it owne
 A worm, a bug or a **Mobile snack** the axolotl eats by touching it with its head; not a trip find, it speeds up regrowth while a leg is missing, and every snack must be eaten to open the exit. In some areas a few snacks dart a short hop away when the axolotl gets close, each at most once per **Trip** (3 in Area 3); darting is part of the growth rule (N2), not a new **Timing element**.
 
 **Mobile snack**:
-A **Snack** that moves on its own: a **Tadpole** or a **Freshwater shrimp**. It counts as one snack, like a worm or a bug, for the counter, the last-3 **Hint sparkle**, opening the **Exit**, speeding up **Regrowth**, and starting over when **Carried home**. Mobile snacks are fixed area data, never placed by chance, and each is eaten, pulled by the Snack magnet, and met where it is drawn. A mobile snack is not a **Hazard** or a **Timing element**, so the one-new-thing rule and the **Danger bar** never count it. No real area has mobile snacks yet; the **Snack ramp** brings them in from Area 2 (the danger pass, phase 2), and only the dev area `'dev-danger-area'` shows them now.
+A **Snack** that moves on its own: a **Tadpole** or a **Freshwater shrimp**. It counts as one snack, like a worm or a bug, for the counter, the last-3 **Hint sparkle**, opening the **Exit**, speeding up **Regrowth**, and starting over when **Carried home**. Mobile snacks are fixed area data, never placed by chance, and each is eaten, pulled by the Snack magnet, and met where it is drawn. A mobile snack is not a **Hazard** or a **Timing element**, so the one-new-thing rule and the **Danger bar** never count it. Which areas have them is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: prey, moving food
 
 **Tadpole**:
@@ -116,7 +116,7 @@ A kind of **Hazard**: an animal that hunts, with a visible warning before every 
 _Avoid_: monster
 
 **Chase rule**:
-The shared rule (`chase` in a predator's tuning) by which a **Predator** on patrol swims toward an exposed axolotl within its sight, at a chase speed between the 2-leg and 4-leg top speeds, and stops at its strike reach, where it warns, or waits while another predator warns or lunges. It never goes farther than its **Leash** from its patrol route, and when the axolotl is out of sight or in the safe area it swims back along its route. Chasing is not attacking: any number of predators may chase at once. There is no extra cue, and **Tail Dash** always outruns a chaser. A predator chases only when its area's data gives it a chase; no real area does yet (the danger pass, phase 2).
+The shared rule (`chase` in a predator's tuning) by which a **Predator** on patrol swims toward an exposed axolotl within its sight, at a chase speed between the 2-leg and 4-leg top speeds, and stops at its strike reach, where it warns, or waits while another predator warns or lunges. It never goes farther than its **Leash** from its patrol route, and when the axolotl is out of sight or in the safe area it swims back along its route. Chasing is not attacking: any number of predators may chase at once. There is no extra cue, and **Tail Dash** always outruns a chaser. A predator chases only when its area's data gives it a chase; which areas do is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: aggro, hunt mode
 
 **Leash**:
@@ -145,7 +145,7 @@ The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in
 _Avoid_: monster
 
 **Common carp**:
-A big, round, bronze-gold invasive fish with two short barbels (`'carp'` in code), a **Predator** on the shared rules with no special rules, and a **Danger part**. It roots along the bed. Before its strike it tips its nose down and puffs a small mud cloud, then makes a slow, wide tail sweep along the aim fixed at the end of its warning. A touch is a gentle bump that costs no leg. Its mouth is closed and it has no teeth; it never bites or holds the axolotl. Its fact card is "Meet the carp". No real area has a carp yet (the danger pass, phase 2).
+A big, round, bronze-gold invasive fish with two short barbels (`'carp'` in code), a **Predator** on the shared rules with no special rules, and a **Danger part**. It roots along the bed. Before its strike it tips its nose down and puffs a small mud cloud, then makes a slow, wide tail sweep along the aim fixed at the end of its warning. A touch is a gentle bump that costs no leg. Its mouth is closed and it has no teeth; it never bites or holds the axolotl. Its fact card is "Meet the carp". Which areas have a carp is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: monster, koi
 
 **Plastic worm**:
@@ -161,7 +161,7 @@ A torn, loose, old fishing net anchored in the water of the Chinampa gardens, a 
 _Avoid_: trap; net alone in docs (say **Ghost net**)
 
 **Drifting ghost net**:
-A **Ghost net** that drifts slowly back and forth along a short straight path, at most 200 px, on a 16 s cycle, slowing at each end, laid along the flow of a nearby **Current**. It snags where it is now, like any **Ghost net**, and never costs a leg. Everything placed in an area keeps clear of its whole drift path. Under reduced motion it still drifts. No real area has one yet (the danger pass, phase 2).
+A **Ghost net** that drifts slowly back and forth along a short straight path, at most 200 px, on a 16 s cycle, slowing at each end, laid along the flow of a nearby **Current**. It snags where it is now, like any **Ghost net**, and never costs a leg. Everything placed in an area keeps clear of its whole drift path. Under reduced motion it still drifts. Which areas have one is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: moving net, floating net
 
 **Snagged**:
@@ -173,7 +173,7 @@ A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, wi
 _Avoid_: trap, obstacle
 
 **Punting pole**:
-The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". No real area has one yet (the danger pass, phase 2).
+The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: oar, stick
 
 **Telegraph**:

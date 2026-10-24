@@ -121,7 +121,7 @@ function expectZoneInvariants(zone: ZoneLayout): void {
     }
   }
   const inCurrent = snacks.filter((snack) => isInsideCurrent(snack, zone.currents[0]));
-  expect(inCurrent.length).toBeGreaterThanOrEqual(3);
+  expect(inCurrent.length).toBeGreaterThanOrEqual(CANAL_LAYOUT.snacksInCurrent);
 
   expect(zone.pads).toHaveLength(6);
   expect(zone.pads.some((pad) => pad.flower)).toBe(true);
