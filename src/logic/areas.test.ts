@@ -407,16 +407,17 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, plastic worm, tadpole, shrimp, heron, ghost net, garter snake, punting pole and water hyacinth cards, for the shipped areas', () => {
+  it('gives the tilapia, plastic worm, tadpole, shrimp, heron, carp, ghost net, punting pole, garter snake and water hyacinth cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       PLASTIC_WORM_FACT,
       TADPOLE_FACT,
       SHRIMP_FACT,
       HERON_FACT,
+      CARP_FACT,
       GHOST_NET_FACT,
-      GARTER_SNAKE_FACT,
       PUNTING_POLE_FACT,
+      GARTER_SNAKE_FACT,
       WATER_HYACINTH_FACT,
     ]);
   });
@@ -570,9 +571,10 @@ describe('bookFactCards', () => {
       TADPOLE_FACT,
       SHRIMP_FACT,
       HERON_FACT,
+      CARP_FACT,
       GHOST_NET_FACT,
-      GARTER_SNAKE_FACT,
       PUNTING_POLE_FACT,
+      GARTER_SNAKE_FACT,
       WATER_HYACINTH_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
