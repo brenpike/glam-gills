@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { POND_2_AREA, POND_AREA } from './areas';
+import { POND_2_AREA, POND_AREA, sourceFactCards } from './areas';
 import { POND_2_TREASURES, RARITIES } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
 import { longestQuietStretch, meetsRampDangerBar, movingHazardTypeCount } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
+import { HERON_FACT, PLASTIC_WORM_FACT, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT } from './factCards';
 import { hazardCentre, shapeDistance } from './hazards';
 import {
   PAST_CURRENT_DEPTH,
@@ -704,6 +705,17 @@ describe('Area 3 ramp bar (issue #120, ND-1, ND-2, ND-7)', () => {
     expect(longestQuietStretch(layout)).toBe(QUIET_STRETCH);
     expect(QUIET_STRETCH).toBeLessThanOrEqual(SCREEN_W);
     expect(meetsRampDangerBar(3, layout)).toBe(true);
+  });
+});
+
+describe('Area 3 fact cards', () => {
+  it('gives Area 3 its threat cards, then the tadpole and shrimp cards, from its data or its zone', () => {
+    const expected = {
+      ids: ['tilapia', 'heron', 'plastic-worm', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, HERON_FACT, PLASTIC_WORM_FACT, TADPOLE_FACT, SHRIMP_FACT],
+    };
+    expect(sourceFactCards(POND_2_LAYOUT)).toEqual(expected);
+    expect(sourceFactCards(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
   });
 });
 

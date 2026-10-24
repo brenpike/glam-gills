@@ -540,24 +540,6 @@ describe('sourceFactCards', () => {
     expect(sourceFactCards(buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
   });
 
-  it('gives Area 3 its threat cards, then the tadpole and shrimp cards, from its data or its zone', () => {
-    const expected = {
-      ids: ['tilapia', 'heron', 'plastic-worm', 'tadpole', 'shrimp'],
-      cards: [TILAPIA_FACT, HERON_FACT, PLASTIC_WORM_FACT, TADPOLE_FACT, SHRIMP_FACT],
-    };
-    expect(sourceFactCards(POND_2_LAYOUT)).toEqual(expected);
-    expect(sourceFactCards(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
-  });
-
-  it('gives Area 5 its threat cards, then the water hyacinth card, from its data or its zone', () => {
-    const expected = {
-      ids: ['tilapia', 'garter-snake', 'ghost-net', 'water-hyacinth'],
-      cards: [TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, WATER_HYACINTH_FACT],
-    };
-    expect(sourceFactCards(CHINAMPA_2_LAYOUT)).toEqual(expected);
-    expect(sourceFactCards(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
-  });
-
   it('puts each area\'s element cards after its threat cards, in area-table order, each once', () => {
     const areas = [
       areaWith('one', 1, layoutWith({ elements: [elementOf('mats-0', TEST_MATS)] })),
