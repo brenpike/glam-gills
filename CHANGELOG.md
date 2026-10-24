@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-24
+
+### Added
+
+- Area 4 has a common carp that chases you, and two trajinera punting poles that jab down into the water (#119).
+- Tadpoles and freshwater shrimp swim in Area 4: half its snacks now move. The shrimp replace its darting snacks (#119).
+- The Collection Book has a new fact card for Area 4: "Meet the carp". It now holds 13 fact cards (#119).
+
+### Changed
+
+- Area 4 is more dangerous: it has 6 tilapia, and they follow you a short way, then let go (#119).
+- Two ghost nets in Area 4 now drift with the current (#119).
+- The Snack magnet pulls harder in Area 4, because its snacks move (#119).
+- The "Trajineras" card is now listed after "Lost fishing nets" in the Collection Book, because you can meet the punting poles in Area 4 first (#119).
+
 ## [0.36.0] - 2026-10-24
 
 ### Added

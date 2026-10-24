@@ -3,9 +3,12 @@
  * gardens, with the shared harness in riskFairness.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
+import { CHINAMPA_CARP, CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
 import { createEncounter } from './encounter';
+import { shapeDistance } from './hazards';
 import { meetsThreatRiskRule, routeDistance, turnDistance, zoneThreats } from './hiding';
+import { movingHazardSweep } from './movingHazards';
+import { routeLoopDistance, type PredatorTuning } from './predators';
 import {
   DT,
   EXTRA_SEEDS,
@@ -23,6 +26,15 @@ import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const chinampa = fairnessZone(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED));
 
+/** Ms each whole-seed sweep may take: every pool spot under nine chasing threats and two poles (issue #119, ND-10). */
+const SEED_SWEEP_TIMEOUT = 120_000;
+
+/** How far a safe start must be from a predator's loop: its leash plus the larger of its sight and its lunge range (issue #119). */
+function chaseBand(tuning: PredatorTuning): number {
+  if (!tuning.chase) throw new Error('chaseBand: every Area 4 predator chases');
+  return tuning.chase.leash + Math.max(tuning.chase.sight, tuning.lungeRange);
+}
+
 describe('risk fairness on the default Area 4 zone', () => {
   const { zone, ctx, longestLoop, startWindow, lastStartIndex, parkSteps } = chinampa;
   const spots = poolSpots(zone);
@@ -33,7 +45,7 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(longestLoop).toBe(Math.max(...zone.tilapiaRoutes.map((route) => loopSeconds(route, CHINAMPA_TILAPIA.patrolSpeed))));
     expect(startWindow).toBe(longestLoop);
     expect(lastStartIndex).toBe(Math.floor(startWindow / START_STEP));
-    expect(parkSteps).toBe(tailSteps(CHINAMPA_TILAPIA));
+    expect(parkSteps).toBe(Math.max(tailSteps(CHINAMPA_TILAPIA), tailSteps(CHINAMPA_CARP.tuning)));
     expect(zone.hazards.length).toBeGreaterThan(0);
     expect(zone.hazards.every((hazard) => !hazard.type.costsLeg)).toBe(true);
     expect(ctx.bounds).toEqual(swimBounds(zone));
@@ -54,9 +66,24 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
-  it.each(spots)('finds a safe start outside the Area 4 lunge range for $id', (spot) => {
+  it('clears a chasing tilapia by its leash plus its sight, 400 px, and the carp by its leash plus its sight, 340 px', () => {
+    expect(chaseBand(CHINAMPA_TILAPIA)).toBe(400);
+    expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
+    expect(zone.predatorRoutes[0].species.tuning).toEqual(CHINAMPA_CARP.tuning);
+    expect(chaseBand(CHINAMPA_CARP.tuning)).toBe(340);
+    expect((zone.movingHazards ?? []).map((pole) => pole.type.id)).toEqual(['punting-pole', 'punting-pole']);
+  });
+
+  it.each(spots)('finds a safe start outside the Area 4 lunge range, every chase band and every pole danger zone for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(CHINAMPA_TILAPIA.lungeRange);
+    expect(routeDistance(start, zone.tilapiaRoutes), 'tilapia chase band').toBeGreaterThan(chaseBand(CHINAMPA_TILAPIA));
+    for (const route of zone.predatorRoutes) {
+      expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(chaseBand(route.species.tuning));
+    }
+    for (const pole of zone.movingHazards ?? []) {
+      expect(shapeDistance(start, movingHazardSweep(pole)), pole.id).toBeGreaterThan(pole.type.touchReach);
+    }
   });
 
   it.each(spots)('lets the axolotl grab $id without a hit for some start time', (spot) => {
@@ -69,9 +96,11 @@ describe('risk fairness on the default Area 4 zone', () => {
 });
 
 describe('Area 4 risk fairness on other seeds', () => {
-  it.each(EXTRA_SEEDS)('keeps every spot, route, net and the tilapia tuning identical to the default seed for seed %i', (seed) => {
+  it.each(EXTRA_SEEDS)('keeps every spot, route, predator route, net, punting pole and the tilapia tuning identical to the default seed for seed %i', (seed) => {
     const layout = buildZone(CHINAMPA_LAYOUT, seed);
     expect(layout.tilapiaRoutes).toEqual(chinampa.zone.tilapiaRoutes);
+    expect(layout.predatorRoutes).toEqual(chinampa.zone.predatorRoutes);
+    expect(layout.movingHazards).toEqual(chinampa.zone.movingHazards);
     expect(layout.tilapia).toEqual(chinampa.zone.tilapia);
     expect(layout.spots).toEqual(chinampa.zone.spots);
     expect(layout.hazards).toEqual(chinampa.zone.hazards);
@@ -82,5 +111,5 @@ describe('Area 4 risk fairness on other seeds', () => {
     for (const spot of poolSpots(fair.zone)) {
       expect(firstFairStart(spot, fair), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
     }
-  });
+  }, SEED_SWEEP_TIMEOUT);
 });
