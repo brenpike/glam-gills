@@ -34,12 +34,13 @@ describe('risk fairness on the default Area 5 zone', () => {
     return (2 * Math.hypot(end.x - start.x, end.y - start.y)) / GARTER_SNAKE.patrolSpeed;
   });
 
-  it('plays its own tilapia tuning and two garter snakes: start times over the longest loop and stretch, waiting out the longest strike', () => {
+  it('plays its own tilapia tuning and three garter snakes: start times over the longest loop and stretch, waiting out the longest strike', () => {
     expect(zone.tilapia).toEqual(CHINAMPA_2_TILAPIA);
     expect(createEncounter(zone).tilapia).toEqual(CHINAMPA_2_TILAPIA);
     expect(snakes.map((route) => [route.id, route.species.id])).toEqual([
       ['garter-snake-0', 'garter-snake'],
       ['garter-snake-1', 'garter-snake'],
+      ['garter-snake-2', 'garter-snake'],
     ]);
     expect(longestLoop).toBe(Math.max(...zone.tilapiaRoutes.map((route) => loopSeconds(route, CHINAMPA_2_TILAPIA.patrolSpeed))));
     expect(startWindow).toBeCloseTo(Math.max(longestLoop, ...swimSeconds), 9);
@@ -61,7 +62,7 @@ describe('risk fairness on the default Area 5 zone', () => {
 
   it.each(spots)('bands $id by S = 150 for the tilapia and S = 110 for the garter snakes', (spot) => {
     const threats = zoneThreats({ tilapiaRoutes: zone.tilapiaRoutes, tilapia: zone.tilapia, predatorRoutes: zone.predatorRoutes });
-    expect(threats.map((threat) => threat.strike)).toEqual([150, 150, 110, 110]);
+    expect(threats.map((threat) => threat.strike)).toEqual([150, 150, 150, 110, 110, 110]);
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
@@ -92,10 +93,15 @@ describe('Area 5 risk fairness on other seeds', () => {
     expect(layout.hazards).toEqual(chinampa2.zone.hazards);
   });
 
-  it.each(EXTRA_SEEDS)('lets the axolotl grab every pool spot without a hit for seed %i', (seed) => {
-    const fair = fairnessZone(buildZone(CHINAMPA_2_LAYOUT, seed));
-    for (const spot of poolSpots(fair.zone)) {
-      expect(firstFairStart(spot, fair), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
-    }
-  });
+  // Three chasing tilapia and five poles make this search slower (issue #118, ND-14); the timeout only gives headroom, the check is unchanged.
+  it.each(EXTRA_SEEDS)(
+    'lets the axolotl grab every pool spot without a hit for seed %i',
+    (seed) => {
+      const fair = fairnessZone(buildZone(CHINAMPA_2_LAYOUT, seed));
+      for (const spot of poolSpots(fair.zone)) {
+        expect(firstFairStart(spot, fair), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
+      }
+    },
+    20_000,
+  );
 });

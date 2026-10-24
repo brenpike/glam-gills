@@ -1,20 +1,31 @@
 /**
  * The chinampa gardens, Area 5 (issue #103), as area data: 7 screens across, 2 down, the first
  * U-turn area. The Home Spot is top left and the exit straight under it, bottom left. The main
- * path runs right along the top row, under the banks and deep under the two garter snakes'
+ * path runs right along the top row, under the banks and deep under the three garter snakes'
  * stretches, through the first water hyacinth channel; it goes down in the rightmost screen column,
  * then runs back left along the bottom row, through the gap current, under the first channel's
  * mats, between two ghost nets and through the second channel to the exit. Each mat pair gates
  * its row, and the way round it, through the other row, passes a ghost net. The bank in the top
- * right, beside the second snake and the last tilapia, and the root tangle in the bottom row are
- * dead ends that hold treasure spots.
+ * right, beside the snakes and the tilapia there, and the root tangle in the bottom row are dead
+ * ends that hold treasure spots. It meets the full danger bar (issue #118, ND-3): three chasing
+ * tilapia, three chasing garter snakes and five punting poles that jab down across both rows of
+ * the main path in the west half, with tadpoles and shrimp among its snacks (issue #118, ND-12).
  */
 import { CHINAMPA_2_TREASURES } from './catalogue';
 import { GHOST_NET } from './ghostNets';
 import type { ElementSpawn, HazardSpawn, MatPair } from './hazards';
 import { hyacinthMatSpawn } from './hyacinthMats';
-import { GARTER_SNAKE_SPECIES, type PredatorRoute } from './predators';
-import { HYACINTH_MATS, TILAPIA, type TilapiaTuning } from './tuning';
+import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
+import { GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
+import {
+  GARTER_SNAKE,
+  GARTER_SNAKE_CHASE,
+  HYACINTH_MATS,
+  TILAPIA,
+  TILAPIA_CHASE,
+  type TilapiaTuning,
+} from './tuning';
 import { SURF, WORLD_H, areaSize, type AreaLayoutData, type BankOverhang, type Point } from './zone';
 
 export const CHINAMPA_2_AREA_ID = 'chinampa-2';
@@ -33,18 +44,29 @@ const BANK_UNDER_Y = 140;
 export const SNAKE_STRETCH_Y = 100;
 
 /**
- * Area 5's tilapia, one more step up the predator ladder (#32): Area 4's 0.85 s warning, with a
- * faster and longer strike, a shorter cooldown and a quicker patrol. The 0.8 s warning floor, the
- * strike time and every other value stay TILAPIA's.
+ * Area 5's tilapia, one more step up the predator ladder (#32): a 0.825 s warning, one step under
+ * Area 4's 0.85 s and over the 0.8 s floor (issue #118, ND-2), with a faster and longer strike, a
+ * shorter cooldown and a quicker patrol, and the full-bar chase (issue #118, ND-1). The strike
+ * time and every other value stay TILAPIA's.
  */
 export const CHINAMPA_2_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({
   ...TILAPIA,
-  windup: 0.85,
+  windup: 0.825,
   lungeSpeed: 420,
   lungeRange: 150,
   cooldown: 2,
   patrolSpeed: 55,
+  chase: TILAPIA_CHASE,
 });
+
+/** Area 5's garter snake: the garter snake with its chase default, so it chases along its stretch (issue #118, ND-1). */
+export const CHINAMPA_2_SNAKE: Readonly<PredatorSpecies> = tunedSpecies(
+  GARTER_SNAKE_SPECIES,
+  Object.freeze({ ...GARTER_SNAKE, chase: GARTER_SNAKE_CHASE }),
+);
+
+/** Area 5's tadpole rule (issue #118, ND-12): 60 px/s. */
+const CHINAMPA_2_TADPOLE = tadpoleRule(60);
 
 /** One ghost net: a rect at a fixed place, id `chinampa-2/ghost-net-<n>`. */
 function ghostNetAt(index: number, x0: number, x1: number, y0: number, y1: number): Readonly<HazardSpawn> {
@@ -63,7 +85,15 @@ function bankOverhangOf(column: number): Readonly<BankOverhang> {
 /** One garter snake's route: a straight stretch from `x0` to `x1` at SNAKE_STRETCH_Y, two waypoints. */
 function snakeStretch(id: string, x0: number, x1: number): Readonly<PredatorRoute> {
   const waypoints: Point[] = [Object.freeze({ x: x0, y: SNAKE_STRETCH_Y }), Object.freeze({ x: x1, y: SNAKE_STRETCH_Y })];
-  return Object.freeze({ id, waypoints: Object.freeze(waypoints) as Point[], species: GARTER_SNAKE_SPECIES });
+  return Object.freeze({ id, waypoints: Object.freeze(waypoints) as Point[], species: CHINAMPA_2_SNAKE });
+}
+
+/**
+ * One punting pole, id `chinampa-2/punting-pole-<n>`, at `x`, its cycle starting at `offset`
+ * seconds, its tip reaching `depth` px below the surface (issue #118, ND-6).
+ */
+function puntingPoleAt(index: number, x: number, offset: number, depth: number): Readonly<MovingHazardSpawn> {
+  return Object.freeze(movingHazardSpawn(`${CHINAMPA_2_AREA_ID}/punting-pole-${index}`, PUNTING_POLE, x, offset, depth));
 }
 
 /**
@@ -118,14 +148,15 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** The tangle of ahuejote roots on the bed of the bottom row, a dead end below the main path. */
   cave: Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/cave`, x0: 1920, x1: 2100, y0: 560, y1: CHINAMPA_2_BED_TOP }),
   /**
-   * Two fixed patrol loops: `tilapia-0` low in the bottom row, between the root tangle and the
-   * spots past the current, and `tilapia-1` in the top right, under the bank there.
+   * Three fixed patrol loops: `tilapia-0` up and down beside the root tangle, from the bottom-row
+   * path down to the spots past the current, `tilapia-1` in the top right, under the bank there,
+   * and `tilapia-2` low in the bottom right corner (issue #118, ND-3).
    */
   tilapiaRoutes: Object.freeze([
     Object.freeze([
-      Object.freeze([2160, 560] as const),
-      Object.freeze([2260, 560] as const),
-      Object.freeze([2260, 620] as const),
+      Object.freeze([2160, 330] as const),
+      Object.freeze([2250, 330] as const),
+      Object.freeze([2250, 620] as const),
       Object.freeze([2160, 620] as const),
     ]),
     Object.freeze([
@@ -134,9 +165,34 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
       Object.freeze([3250, 320] as const),
       Object.freeze([3140, 320] as const),
     ]),
+    Object.freeze([
+      Object.freeze([3140, 625] as const),
+      Object.freeze([3250, 625] as const),
+      Object.freeze([3250, 650] as const),
+      Object.freeze([3140, 650] as const),
+    ]),
   ]),
-  /** Two garter snakes, each on its own 200 px stretch at the surface in open top-row water. */
-  predatorRoutes: Object.freeze([snakeStretch('garter-snake-0', 1040, 1240), snakeStretch('garter-snake-1', 2600, 2800)]),
+  /**
+   * Three chasing garter snakes, each on its own 160 px stretch at the surface in open top-row
+   * water: one in the third column, two in the sixth (issue #118, ND-3).
+   */
+  predatorRoutes: Object.freeze([
+    snakeStretch('garter-snake-0', 1080, 1240),
+    snakeStretch('garter-snake-1', 2700, 2860),
+    snakeStretch('garter-snake-2', 2525, 2685),
+  ]),
+  /**
+   * Five punting poles jabbing down from the surface across both rows of the main path in the west
+   * half, each in a column with no bank, each sweep farther than every predator's strike reach plus
+   * its chase leash from its loop, clear of the mats, 2 s out of step with the next (issue #118, ND-6).
+   */
+  movingHazards: Object.freeze([
+    puntingPoleAt(1, 476, 0, 440),
+    puntingPoleAt(2, 964, 2, 400),
+    puntingPoleAt(3, 1400, 0, 360),
+    puntingPoleAt(4, 1760, 2, 340),
+    puntingPoleAt(5, 1840, 0, 340),
+  ]),
   /**
    * Five ghost nets: one in the top row over the second mat pair, two in the bottom row with the
    * main path between them, one in the bottom row under the first mat pair, and one in the bottom
@@ -169,7 +225,7 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ x: 120, y: 200 }),
     Object.freeze({ x: 440, y: 150 }),
     Object.freeze({ x: 820, y: 150 }),
-    Object.freeze({ x: 1000, y: 300 }),
+    Object.freeze({ x: 1100, y: 300 }),
     Object.freeze({ x: 1300, y: 300 }),
     Object.freeze({ x: 1440, y: 220 }),
     Object.freeze({ x: 1740, y: 220 }),
@@ -189,19 +245,21 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * Fixed stranding places (PRD C2): in the open water past the safe area, on the bed past the
    * second channel, in the top row past the first channel, under the second bank, on the bed past
    * the current and in the bottom right corner. Every place is at least 80 px from every tilapia
-   * route and snake stretch, and out of every snake's reach.
+   * route and snake stretch, out of every snake's reach and clear of every pole sweep by the touch
+   * and rescue reach (issue #118, ND-6).
    */
   strandingPlaces: Object.freeze([
     Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-1`, x: 360, y: 300 }),
     Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-2`, x: 900, y: 600 }),
-    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-3`, x: 1820, y: 310 }),
-    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-4`, x: 2200, y: 280 }),
+    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-3`, x: 1980, y: 300 }),
+    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-4`, x: 2200, y: 230 }),
     Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-5`, x: 2800, y: 520 }),
-    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-6`, x: 3200, y: 560 }),
+    Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-6`, x: 3200, y: 470 }),
   ]),
   treasures: CHINAMPA_2_TREASURES,
-  snackWorms: 18,
-  snackBugs: 14,
+  /** 13 worms and bugs to 19 mobile snacks, Area 5's row of the snack ramp (issue #118, ND-12). */
+  snackWorms: 7,
+  snackBugs: 6,
   snacksInCurrent: 4,
   padCount: 0,
   padSpotIndex: null,
@@ -213,8 +271,9 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   bankOverhangs: Object.freeze([1, 4, 6].map(bankOverhangOf)),
   /**
    * Under the banks: Common spots along the main path under the first two banks; Rare spots off it,
-   * at the right end of the first bank, within the first snake's strike band, and in the dead end
-   * under the bank in the top right, within the second snake's or `tilapia-1`'s strike band.
+   * at the right end of the first bank, within the second pole's strike band, at the right end of
+   * the second bank, within the third snake's, and in the dead end under the bank in the top right,
+   * within the second snake's or `tilapia-1`'s strike band (issue #118, ND-6).
    */
   bankSpots: Object.freeze([
     Object.freeze([560, 110, 'common', false] as const),
@@ -223,13 +282,44 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([2020, 110, 'common', false] as const),
     Object.freeze([2140, 110, 'common', false] as const),
     Object.freeze([2260, 110, 'common', false] as const),
-    Object.freeze([873, 110, 'rare', false] as const),
+    Object.freeze([2375, 110, 'rare', false] as const),
     Object.freeze([929, 110, 'rare', false] as const),
-    Object.freeze([2911, 110, 'rare', false] as const),
-    Object.freeze([2967, 110, 'rare', false] as const),
+    Object.freeze([2980, 110, 'rare', false] as const),
+    Object.freeze([3030, 138, 'rare', false] as const),
     Object.freeze([3080, 110, 'rare', false] as const),
     Object.freeze([3140, 110, 'rare', false] as const),
     Object.freeze([3200, 110, 'rare', false] as const),
     Object.freeze([3260, 110, 'rare', false] as const),
   ]),
+  /**
+   * Ten tadpoles on 120 px lanes, each 0.4 s further on its 4 s there-and-back cycle than the last,
+   * and nine shrimp, with Area 5's rules, all in open water clear of every threat (issue #118, ND-12).
+   */
+  mobileSnacks: mobileSnackMix({
+    tadpole: CHINAMPA_2_TADPOLE,
+    lanes: [
+      tadpoleLane(CHINAMPA_2_TADPOLE, 350, 120, 0, 120, 0),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 600, 130, 120, 0, 0.4),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 840, 200, 0, 120, 0.8),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 1100, 250, 120, 0, 1.2),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 1265, 500, 0, 120, 1.6),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 1520, 630, 120, 0, 2),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 1740, 600, 120, 0, 2.4),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 2040, 140, 120, 0, 2.8),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 2560, 250, 120, 0, 3.2),
+      tadpoleLane(CHINAMPA_2_TADPOLE, 2730, 450, 0, 120, 3.6),
+    ],
+    shrimp: shrimpRule(60, 1.2, 60, 145),
+    spots: [
+      { x: 180, y: 470 },
+      { x: 300, y: 600 },
+      { x: 760, y: 120 },
+      { x: 960, y: 630 },
+      { x: 1290, y: 420 },
+      { x: 1900, y: 520 },
+      { x: 2440, y: 290 },
+      { x: 2780, y: 340 },
+      { x: 3060, y: 115 },
+    ],
+  }),
 } satisfies AreaLayoutData);

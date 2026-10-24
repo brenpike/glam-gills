@@ -441,7 +441,7 @@ describe('snackTopSpeed and snackMagnetSpeed (ND-28)', () => {
   it('pulls at exactly the base with no mobile snacks', () => {
     expect(SNACK_MAGNET_PULL_SPEED).toBe(40);
     expect(snackMagnetSpeed(40, {})).toBe(40);
-    for (const area of AREAS) {
+    for (const area of AREAS.filter((each) => each.layout.mobileSnacks === undefined)) {
       for (const seed of SEEDS) expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, buildZone(area.layout, seed))).toBe(40);
     }
   });
@@ -523,12 +523,13 @@ describe('oneTimeDarts (ND-27)', () => {
     expect(AREAS.filter((each) => !each.snackDart).map((each) => each.number)).toEqual([1, 2]);
   });
 
-  it.each(SEEDS)('gives Areas 3, 4 and 5 exactly today\'s darters for seed %i', (seed) => {
+  it.each(SEEDS)('gives Areas 3, 4 and 5 exactly today\'s darters, or none once the area has shrimp, for seed %i', (seed) => {
     const darted = AREAS.filter((each) => each.snackDart);
     expect(darted.map((each) => each.number)).toEqual([3, 4, 5]);
     for (const area of darted) {
       const zone = buildZone(area.layout, seed);
-      expect(oneTimeDarts(area, zone)).toEqual(createSnackDarts(zone.collectibles, SNACK_DART));
+      const hasShrimp = (area.layout.mobileSnacks?.spots.length ?? 0) > 0;
+      expect(oneTimeDarts(area, zone)).toEqual(hasShrimp ? null : createSnackDarts(zone.collectibles, SNACK_DART));
     }
   });
 
