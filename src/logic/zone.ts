@@ -288,7 +288,10 @@ export interface AreaLayoutData {
   readonly treasures: readonly Treasure[];
   readonly snackWorms: number;
   readonly snackBugs: number;
-  /** How many snacks start inside the first current; 0 when the area has no current. */
+  /**
+   * How many snacks are placed inside the first current on purpose; 0 when the area has no current.
+   * A floor, not an exact count: stripe snacks may also start there (ADR 0022).
+   */
   readonly snacksInCurrent: number;
   /** How many seeded pads; 0 makes none and no rand() draws. */
   readonly padCount: number;
@@ -570,6 +573,7 @@ function pickSnackSpot(
 /**
  * Where each snack is picked: `snacksInCurrent` in the first current, then one vertical stripe of
  * the swim bounds per remaining snack. An area with no current puts every snack in a stripe.
+ * The stripes span the full swim height, so a stripe may cross a current.
  */
 function snackAreas(data: AreaLayoutData, current: CurrentZone | undefined, bounds: SwimBounds): SwimBounds[] {
   const inCurrentCount = current ? data.snacksInCurrent : 0;

@@ -2,15 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { CANAL_AREA, POND_AREA } from './areas';
 import { POND_TREASURES, RARITIES } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
+import { longestQuietStretch, meetsRampDangerBar, movingHazardTypeCount } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { hazardCentre, shapeDistance } from './hazards';
 import { spotMatchesLabels, turnDistance, underPad } from './hiding';
 import { legSwimTuning } from './legs';
+import {
+  meetsSnackRamp,
+  mobileSnackAvoid,
+  mobileSnackClear,
+  oneTimeDarts,
+  shrimpBox,
+  snackMagnetSpeed,
+  tadpoleLaneBox,
+} from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { PLASTIC_WORM } from './plasticWorms';
-import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
+import { POND_AREA_ID, POND_LAYOUT, POND_TILAPIA } from './pondLayout';
+import { TILAPIA_SPECIES, tunedSpecies } from './predators';
 import { stepSwim, type SwimState } from './swimPhysics';
-import { FINDS, LEGS, PLASTIC_WORMS, RISK, SNACK_REACH, SWIM, TILAPIA, tripTreasureTuning } from './tuning';
+import { FINDS, LEGS, PLASTIC_WORMS, RISK, SNACK_REACH, SWIM, TILAPIA, TILAPIA_RAMP_CHASE, tripTreasureTuning } from './tuning';
 import { normalize } from './vec';
 import {
   DEFAULT_ZONE_SEED,
@@ -46,6 +57,8 @@ const WORM_CURRENT_CLEARANCE =
 const FRAME = 1 / 60;
 const BEAT_MAX_SECONDS = 180;
 const WAYPOINT_REACH = 8;
+/** The pond's longest main path stretch with no chasing tilapia in reach, in px (issue #121, ND-2). */
+const QUIET_STRETCH = 390;
 
 const zone = buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED);
 
@@ -141,8 +154,15 @@ describe('POND_LAYOUT', () => {
     for (const seed of ALL_SEEDS) {
       const layout = pond(seed);
       expect(layout.collectibles).toHaveLength(20);
-      expect(layout.collectibles.filter((snack) => snack.kind === 'worm')).toHaveLength(12);
-      expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(8);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'worm')).toHaveLength(10);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(6);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'tadpole')).toHaveLength(2);
+      expect(layout.collectibles.filter((snack) => snack.kind === 'shrimp')).toHaveLength(2);
+      // At least the 4 placed in the stream; a stripe snack may also start there. Every one is a
+      // worm or a bug, never a tadpole or a shrimp (ND-4).
+      const inStream = layout.collectibles.filter((snack) => layout.currents.some((current) => isInsideCurrent(snack, current)));
+      expect(inStream.length).toBeGreaterThanOrEqual(4);
+      expect(inStream.map((snack) => snack.kind).filter((kind) => kind !== 'worm' && kind !== 'bug')).toEqual([]);
       expect(layout.tilapiaRoutes).toHaveLength(4);
     }
     expect(zone.hazards.map((hazard) => hazard.id)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `pond-1/plastic-worm-${n}`));
@@ -387,9 +407,79 @@ describe('beating the pond', () => {
 
   it.each(ALL_SEEDS)('puts every snack the exit needs in the swim bounds for seed %i', (seed) => {
     const layout = pond(seed);
-    expect(layout.collectibles).toHaveLength(POND_LAYOUT.snackWorms + POND_LAYOUT.snackBugs);
+    const mobile = (POND_LAYOUT.mobileSnacks?.lanes.length ?? 0) + (POND_LAYOUT.mobileSnacks?.spots.length ?? 0);
+    expect(layout.collectibles).toHaveLength(POND_LAYOUT.snackWorms + POND_LAYOUT.snackBugs + mobile);
     for (const snack of layout.collectibles) {
       expect(inBounds(snack, layout), snack.id).toBe(true);
     }
+  });
+});
+
+describe('pond tilapia chase (issue #121, ND-1)', () => {
+  it('is TILAPIA with the ramp chase on a 60 px leash, the shortest of any area', () => {
+    expect(POND_LAYOUT.tilapia).toBe(POND_TILAPIA);
+    expect(POND_TILAPIA.chase).toEqual({ sight: 200, leash: 60, speed: 115 });
+    const { chase, ...rest } = POND_TILAPIA;
+    expect(chase).toBeDefined();
+    expect(rest).toEqual(TILAPIA);
+    expect(() => tunedSpecies(TILAPIA_SPECIES, POND_TILAPIA)).not.toThrow();
+    expect(POND_TILAPIA.chase?.leash).toBeLessThan(TILAPIA_RAMP_CHASE.leash);
+    expect(Object.isFrozen(POND_TILAPIA)).toBe(true);
+    expect(Object.isFrozen(POND_TILAPIA.chase)).toBe(true);
+  });
+
+  it.each(ALL_SEEDS)('plays in the zone for seed %i', (seed) => {
+    expect(pond(seed).tilapia).toEqual(POND_TILAPIA);
+  });
+});
+
+describe('pond ramp danger bar (issue #121, ND-2, ND-3)', () => {
+  it.each(ALL_SEEDS)('meets the Area 2 ramp bar with 4 chasing tilapia and no moving hazards for seed %i', (seed) => {
+    const layout = pond(seed);
+    expect(meetsRampDangerBar(2, layout)).toBe(true);
+    expect(longestQuietStretch(layout)).toBe(QUIET_STRETCH);
+    expect(movingHazardTypeCount(layout)).toBe(0);
+    expect(layout.movingHazards ?? []).toHaveLength(0);
+    expect(layout.tilapiaRoutes).toHaveLength(4);
+  });
+});
+
+describe('pond mobile snacks (issue #121, ND-4 to ND-6)', () => {
+  const mix = POND_LAYOUT.mobileSnacks;
+
+  it('meets the Area 2 snack ramp', () => {
+    expect(meetsSnackRamp(2, POND_LAYOUT)).toBe(true);
+  });
+
+  it('has 25 px/s tadpoles on two lanes and two shrimp', () => {
+    expect(mix?.tadpole).toEqual({ speed: 25 });
+    expect(mix?.lanes).toEqual([
+      { x: 320, y: 210, dx: 120, dy: 0, offset: 0 },
+      { x: 1744, y: 140, dx: 0, dy: 120, offset: 4.8 },
+    ]);
+    expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 2, flickDistance: 36, flickSpeed: 100 });
+    expect(mix?.spots).toEqual([
+      { x: 860, y: 106 },
+      { x: 2320, y: 130 },
+    ]);
+  });
+
+  it.each(ALL_SEEDS)('keeps every lane and shrimp clear of what a mobile snack avoids for seed %i', (seed) => {
+    const layout = pond(seed);
+    const avoid = mobileSnackAvoid(layout);
+    for (const lane of mix?.lanes ?? []) {
+      expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane at ${lane.x}, ${lane.y}`).toBe(true);
+    }
+    for (const spot of mix?.spots ?? []) {
+      expect(mobileSnackClear(shrimpBox(spot, POND_AREA.snackDrift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
+    }
+  });
+
+  it('keeps the Snack magnet pull at 40 px/s (ND-5)', () => {
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(40);
+  });
+
+  it.each(ALL_SEEDS)('has no one-time darters (ND-6) for seed %i', (seed) => {
+    expect(oneTimeDarts(POND_AREA, pond(seed))).toBeNull();
   });
 });

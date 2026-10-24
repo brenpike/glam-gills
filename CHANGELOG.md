@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-24
+
+### Added
+
+- Tadpoles and freshwater shrimp swim in Area 2. Tadpoles swim back and forth, and shrimp flick away when you get close (#121).
+- The Collection Book has two new fact cards: "Meet the tadpole" and "Freshwater shrimp" (#121).
+
+### Changed
+
+- Area 2's tilapia now follow you a short way, then let go (#121).
+- The Collection Book's fact card heading now reads "Facts", so it fits on small screens (#124).
+
 ## [0.33.0] - 2026-10-24
 
 ### Added

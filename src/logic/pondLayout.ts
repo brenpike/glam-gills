@@ -4,10 +4,24 @@
  */
 import { POND_TREASURES } from './catalogue';
 import type { HazardSpawn } from './hazards';
+import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
 import { PLASTIC_WORM } from './plasticWorms';
+import { TILAPIA, TILAPIA_RAMP_CHASE, type TilapiaTuning } from './tuning';
 import { BED_TOP, SURF, type AreaLayoutData } from './zone';
 
 export const POND_AREA_ID = 'pond-1';
+
+/**
+ * Area 2's tilapia (issue #121, ND-1): TILAPIA with the ramp chase, sight 200 and speed 115, on a
+ * leash of 60 px, the shortest leash of any area. Every other value stays TILAPIA's.
+ */
+export const POND_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({
+  ...TILAPIA,
+  chase: Object.freeze({ ...TILAPIA_RAMP_CHASE, leash: 60 }),
+});
+
+/** Area 2's tadpoles (issue #121, ND-4): 25 px/s, the bottom of the ramp's 20 to 30 px/s. */
+const POND_TADPOLE = tadpoleRule(25);
 
 /** One plastic worm: a circle of radius 0 at a fixed place, id `pond-1/plastic-worm-<n>`. */
 function plasticWormAt(index: number, x: number, y: number): Readonly<HazardSpawn> {
@@ -132,19 +146,25 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: `${POND_AREA_ID}/strand-5`, x: 2310, y: 296 }),
   ]),
   treasures: POND_TREASURES,
-  snackWorms: 12,
-  snackBugs: 8,
+  /**
+   * 10 worms and 6 bugs (issue #121, ND-4): 4 fewer than before, for the 2 tadpoles and 2 shrimp,
+   * so the pond keeps 20 snacks. snacksInCurrent places 4 worms or bugs in the stream on purpose;
+   * it is a floor, since stripe snacks may also start there (ADR 0022).
+   */
+  snackWorms: 10,
+  snackBugs: 6,
   snacksInCurrent: 4,
   padCount: 0,
   padSpotIndex: null,
   padSpotY: 100,
   /**
-   * The Common pad over the main path and the Rare pad above it, then pads that only decorate. No
-   * pad sits above a plastic worm.
+   * The Common pad over the main path, and the Rare pad between the hollow log and the stream, then
+   * pads that only decorate. No pad sits above a plastic worm. The Rare pad moved here from x 1240
+   * (issue #121, ND-8): with the chase on, no start there was safe and fair, and here one is.
    */
   fixedPads: Object.freeze([
     Object.freeze({ x: 915, rx: 24, flower: true, spot: Object.freeze({ y: 100, rarity: 'common', tag: 'a' }) }),
-    Object.freeze({ x: 1240, rx: 23, flower: false, spot: Object.freeze({ y: 100, rarity: 'rare', tag: 'b' }) }),
+    Object.freeze({ x: 1760, rx: 23, flower: false, spot: Object.freeze({ y: 100, rarity: 'rare', tag: 'b' }) }),
     Object.freeze({ x: 190, rx: 24, flower: true }),
     Object.freeze({ x: 640, rx: 22, flower: false }),
     Object.freeze({ x: 1390, rx: 25, flower: true }),
@@ -153,4 +173,19 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   ]),
   bankChunks: Object.freeze([]),
   sunChunk: 0,
+  tilapia: POND_TILAPIA,
+  /**
+   * Mobile snacks (issue #121, ND-4): a tadpole across the first reeds and one up and down beside
+   * the stream, half a lap ahead, then a shrimp by the Common pad and one past the stream. The
+   * Snack magnet pull stays 40 px/s (ND-5), and the shrimp turn the one-time darters off (ND-6).
+   */
+  mobileSnacks: mobileSnackMix({
+    tadpole: POND_TADPOLE,
+    lanes: Object.freeze([
+      tadpoleLane(POND_TADPOLE, 320, 210, 120, 0, 0),
+      tadpoleLane(POND_TADPOLE, 1744, 140, 0, 120, (2 * 120) / 25 / 2),
+    ]),
+    shrimp: shrimpRule(60, 2.0, 36, 100),
+    spots: Object.freeze([Object.freeze({ x: 860, y: 106 }), Object.freeze({ x: 2320, y: 130 })]),
+  }),
 } satisfies AreaLayoutData);
