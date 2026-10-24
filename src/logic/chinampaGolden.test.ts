@@ -1,8 +1,8 @@
 /**
  * Golden guard for the chinampa gardens, Area 4 ('chinampa-1'): its built zone, its trip placements,
- * and the encounter and trip rules, its tilapia tuning, bank cover, gap current and ghost nets
- * included, played along a fixed scripted swim. Any change here means a shared rule changed
- * chinampa-1 behaviour.
+ * and the encounter and trip rules, its tilapia tuning, carp, bank cover, gap current, drifting
+ * ghost nets, punting poles and mobile snacks included, played along a fixed scripted swim. Any
+ * change here means a shared rule changed chinampa-1 behaviour.
  */
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_TREASURES } from './catalogue';
@@ -11,10 +11,12 @@ import { createEncounter, createEncounterContext, stepEncounter, type EncounterS
 import { isSnagged } from './ghostNets';
 import { hazardCentre, hazardTouches } from './hazards';
 import { legSwimTuning } from './legs';
+import { movingHazardDepth, movingHazardSweep } from './movingHazards';
 import { createTrip, createTripContext, newTrip, stepTrip, type TripEvent, type TripState } from './trip';
 import { LEGS } from './tuning';
 import {
   DEFAULT_ZONE_SEED,
+  SURF,
   buildZone,
   swimBounds,
   type BankOverhang,
@@ -32,7 +34,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 150;
+const TRACE_SECONDS = 260;
 const MIN_TRACE_SECONDS = 120;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
@@ -75,6 +77,8 @@ function pickGoldenProjection(zone: ZoneLayout) {
     elements: zone.elements,
     tilapia: zone.tilapia,
     bankOverhangs: zone.bankOverhangs,
+    movingHazards: zone.movingHazards,
+    mobileSnacks: zone.mobileSnacks,
   };
 }
 
@@ -150,14 +154,37 @@ function lastOverhang(zone: ZoneLayout): BankOverhang {
   return overhangs[overhangs.length - 1];
 }
 
+/** True when `pos` is inside the rect or on its edge. */
+function isInRect(pos: Point, rect: { x0: number; x1: number; y0: number; y1: number }): boolean {
+  return pos.x >= rect.x0 && pos.x <= rect.x1 && pos.y >= rect.y0 && pos.y <= rect.y1;
+}
+
+/** Axolotl centre after each frame of a cruise along the whole main path from its first point. */
+function listMainPathPositions(zone: ZoneLayout): Point[] {
+  const positions: Point[] = [{ ...zone.mainPath[0] }];
+  for (const at of zone.mainPath.slice(1)) positions.push(...swimPositions(positions[positions.length - 1], at));
+  return positions;
+}
+
+/** The tip at full depth of each punting pole whose sweep the main path never enters. */
+function listUncrossedPoleTips(zone: ZoneLayout): Point[] {
+  const pathPositions = listMainPathPositions(zone);
+  return (zone.movingHazards ?? [])
+    .filter((spawn) => !pathPositions.some((pos) => isInRect(pos, movingHazardSweep(spawn))))
+    .map((spawn) => ({ x: spawn.x, y: SURF + movingHazardDepth(spawn) }));
+}
+
 /**
- * The scripted swim's stops: the main path, each tilapia's route centre (parked), under the last
+ * The scripted swim's stops: the main path, the tip of each pole the main path does not cross,
+ * each tilapia's route centre (parked), each predator's route centre (parked), under the last
  * bank (parked), then through each ghost net centre, right to left.
  */
 function listScriptStops(zone: ZoneLayout): ScriptStop[] {
   return [
     ...zone.mainPath.slice(1).map((at): ScriptStop => ({ at, park: false })),
+    ...listUncrossedPoleTips(zone).map((at): ScriptStop => ({ at, park: false })),
     ...zone.tilapiaRoutes.map((route): ScriptStop => ({ at: routeCentre(route), park: true })),
+    ...zone.predatorRoutes.map((route): ScriptStop => ({ at: routeCentre(route), park: true })),
     { at: overhangCentre(lastOverhang(zone)), park: true },
     ...[...zone.hazards].reverse().map((hazard): ScriptStop => ({ at: hazardCentre(hazard.shape), park: false })),
   ];
@@ -288,23 +315,31 @@ describe('chinampa-1 golden', () => {
     expect(summaries).toMatchSnapshot();
   });
 
-  it('scripts a swim of at least 120 s that parks by every tilapia and under the last bank', () => {
+  it('scripts a swim of at least 120 s that parks by every tilapia, the carp and under the last bank', () => {
     expect(positions.length / FRAMES_PER_SECOND).toBeGreaterThanOrEqual(MIN_TRACE_SECONDS);
+    expect(defaultZone.tilapiaRoutes).toHaveLength(6);
+    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
     const parkedFrames = [
       ...defaultZone.tilapiaRoutes.map(routeCentre),
+      ...defaultZone.predatorRoutes.map(routeCentre),
       overhangCentre(lastOverhang(defaultZone)),
     ].map((at) => countFramesAt(positions, at));
     for (const frames of parkedFrames) expect(frames).toBeGreaterThanOrEqual(PARK_FRAMES);
   });
 
   it('scripts a swim that runs through the gap current and touches every ghost net', () => {
-    const current = defaultZone.currents[0];
-    const inCurrent = positions.some(
-      (pos) => pos.x >= current.x0 && pos.x <= current.x1 && pos.y >= current.y0 && pos.y <= current.y1,
-    );
-    expect(inCurrent).toBe(true);
+    expect(positions.some((pos) => isInRect(pos, defaultZone.currents[0]))).toBe(true);
+    expect(defaultZone.hazards).toHaveLength(5);
     for (const hazard of defaultZone.hazards) {
       expect(positions.some((pos) => hazardTouches(hazard, pos))).toBe(true);
+    }
+  });
+
+  it('scripts a swim that enters every punting pole sweep', () => {
+    const poles = defaultZone.movingHazards ?? [];
+    expect(poles.map((spawn) => spawn.type.id)).toEqual(['punting-pole', 'punting-pole']);
+    for (const spawn of poles) {
+      expect(positions.some((pos) => isInRect(pos, movingHazardSweep(spawn)))).toBe(true);
     }
   });
 
