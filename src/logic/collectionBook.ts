@@ -82,7 +82,7 @@ export type BookMorphSection = BookSectionOf<'morph', BookMorphEntry>;
 /** The Dream colours section, heading 'Dream colours'. */
 export type BookDreamColourSection = BookSectionOf<'dreamColour', BookDreamColourEntry>;
 
-/** The Fact cards section, heading e.g. 'Fact cards: 2 of 2 found'. */
+/** The Fact cards section, heading e.g. 'Facts: 2 of 2 found', short so a two-digit count stays on one line (PRD C14). */
 export type BookFactCardSection = BookSectionOf<'factCard', BookFactCardEntry>;
 
 /** Any Collection Book section. */
@@ -152,7 +152,7 @@ const MORPHS_HEADING = 'Morphs';
 
 const DREAM_COLOURS_HEADING = 'Dream colours';
 
-const FACT_CARDS_HEADING = 'Fact cards';
+const FACT_CARDS_HEADING = 'Facts';
 
 /** Ids of the fact cards with Book art: the only cards that show a picture once found. */
 const BOOK_ART_FACT_CARD_IDS: ReadonlySet<string> = new Set([TILAPIA_FACT.id]);

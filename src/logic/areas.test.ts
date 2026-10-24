@@ -406,8 +406,17 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, plastic worm, heron, ghost net, garter snake and water hyacinth cards, for the shipped areas', () => {
-    expect(areaFactCards()).toEqual([TILAPIA_FACT, PLASTIC_WORM_FACT, HERON_FACT, GHOST_NET_FACT, GARTER_SNAKE_FACT, WATER_HYACINTH_FACT]);
+  it('gives the tilapia, plastic worm, tadpole, shrimp, heron, ghost net, garter snake and water hyacinth cards, for the shipped areas', () => {
+    expect(areaFactCards()).toEqual([
+      TILAPIA_FACT,
+      PLASTIC_WORM_FACT,
+      TADPOLE_FACT,
+      SHRIMP_FACT,
+      HERON_FACT,
+      GHOST_NET_FACT,
+      GARTER_SNAKE_FACT,
+      WATER_HYACINTH_FACT,
+    ]);
   });
 
   it('names the tilapia, the garter snake and the ghost net for Area 5, from its data or its zone', () => {
@@ -526,6 +535,15 @@ describe('sourceFactCards', () => {
     expect(sourceFactCards(buildZone(area.layout, DEFAULT_ZONE_SEED))).toEqual(expected);
   });
 
+  it('gives Area 2 its threat cards, then the tadpole and shrimp cards, from its data or its zone', () => {
+    const expected = {
+      ids: ['tilapia', 'plastic-worm', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, PLASTIC_WORM_FACT, TADPOLE_FACT, SHRIMP_FACT],
+    };
+    expect(sourceFactCards(POND_LAYOUT)).toEqual(expected);
+    expect(sourceFactCards(buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
+  });
+
   it('gives Area 5 its threat cards, then the water hyacinth card, from its data or its zone', () => {
     const expected = {
       ids: ['tilapia', 'garter-snake', 'ghost-net', 'water-hyacinth'],
@@ -562,6 +580,8 @@ describe('bookFactCards', () => {
     expect(bookFactCards()).toEqual([
       TILAPIA_FACT,
       PLASTIC_WORM_FACT,
+      TADPOLE_FACT,
+      SHRIMP_FACT,
       HERON_FACT,
       GHOST_NET_FACT,
       GARTER_SNAKE_FACT,

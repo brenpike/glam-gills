@@ -439,10 +439,12 @@ describe('card copy fit', () => {
 });
 
 describe('area fact card copy fit', () => {
-  it('checks every area fact card: the tilapia, the plastic worm, the heron, the ghost net, the garter snake and the water hyacinth', () => {
+  it('checks every area fact card: the tilapia, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the garter snake and the water hyacinth', () => {
     expect(AREA_FACT_CARDS.map((card) => card.id)).toEqual([
       'tilapia',
       'plastic-worm',
+      'tadpole',
+      'shrimp',
       'heron',
       'ghost-net',
       'garter-snake',
@@ -483,14 +485,14 @@ describe('area fact card copy fit', () => {
     },
   );
 
-  it('wraps every fact card body at the body width, except the heron and the water hyacinth at 320 x 440, which use the tight width', () => {
+  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440, which use the tight width', () => {
     const tightBodies = supportedCanvases().flatMap((canvas) =>
       AREA_FACT_CARDS.flatMap((card) => {
         const combination = factCardCombination(card, canvas);
         return fitCard(combination.availH, combination.sections).bodyVariant === 0 ? [] : [combination.label];
       }),
     );
-    expect(tightBodies).toEqual(['heron fact 320x440', 'water-hyacinth fact 320x440']);
+    expect(tightBodies).toEqual(['shrimp fact 320x440', 'heron fact 320x440', 'water-hyacinth fact 320x440']);
   });
 
   it.each(['heron', 'water-hyacinth'])('fits the %s body at 320 x 440 only at the tight width', (id) => {
