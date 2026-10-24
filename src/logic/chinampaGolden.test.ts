@@ -5,7 +5,7 @@
  * change here means a shared rule changed chinampa-1 behaviour. Its coverage checks read the
  * traces themselves: every moving part named in the layout data must act in them.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { CHINAMPA_AREA } from './areas';
 import { CHINAMPA_TREASURES } from './catalogue';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
@@ -45,12 +45,32 @@ const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
 const EVENT_DECIMALS = 100;
 
+/**
+ * Ms the one-time trace setup and the determinism re-run may each take: one encounter, trip and
+ * snack trace of TRACE_SECONDS at FRAMES_PER_SECOND, about 3 s unloaded, sized for a loaded CI
+ * machine (issue #119).
+ */
+const GOLDEN_TRACE_TIMEOUT = 60_000;
+
 const cruiseSpeed = legSwimTuning(LEGS.count).maxSpeed;
 
 /** One stop of the scripted swim: where to swim to, and whether to park there PARK_SECONDS. */
 interface ScriptStop {
   at: Point;
   park: boolean;
+}
+
+/** A trip trace's lines, and the id of every ghost net whose reach held the axolotl on some frame. */
+interface TripTrace {
+  lines: string[];
+  netsTouched: Set<string>;
+}
+
+/** The scripted swim's encounter, trip and snack traces, built once per suite and read by every check. */
+interface GoldenTraces {
+  encounter: string[];
+  trip: TripTrace;
+  snacks: string[];
 }
 
 function pickGoldenProjection(zone: ZoneLayout) {
@@ -363,52 +383,53 @@ function describeTrip(state: TripState): string {
   return `${state.phase} legsLost=${state.legsLost} snagged=${isSnagged(state.ghostNets)} met=${state.met.join('+')}`;
 }
 
-/**
- * The id of every ghost net whose reach held the axolotl on some frame of the trip along
- * `positions`: each net where it is at the trip's element time, as the trip itself checks it, so
- * a drifting net counts only where it has drifted to. An ended trip starts the next with `newTrip`.
- */
-function listNetsTouched(zone: ZoneLayout, positions: readonly Point[]): Set<string> {
-  const ctx = createTripContext({ encounter: createEncounterContext({ bounds: swimBounds(zone) }) });
-  const touched = new Set<string>();
-  let state = createTrip(zone);
-  for (const pos of positions) {
-    state = stepTrip(state, { axolotlPos: pos, reduced: false, dashing: false }, DT, ctx).state;
-    for (const id of state.ghostNets.inReach) touched.add(id);
-    if (state.phase === 'ended') state = newTrip(state);
-  }
-  return touched;
-}
-
 function listSnagLines(frame: number, events: readonly TripEvent[]): string[] {
   return events.flatMap((event) => (event.type === 'snagged' ? [`${frame}: snagged ${event.id}`] : []));
 }
 
 /**
  * The trip's phase, legsLost, snag and met once per second, and each new snag by frame; an ended
- * trip starts the next with `newTrip`.
+ * trip starts the next with `newTrip`. Also records the id of every ghost net whose reach held the
+ * axolotl on some frame: each net where it is at the trip's element time, as the trip itself
+ * checks it, so a drifting net counts only where it has drifted to.
  */
-function traceTrip(zone: ZoneLayout, positions: readonly Point[]): string[] {
+function traceTrip(zone: ZoneLayout, positions: readonly Point[]): TripTrace {
   const ctx = createTripContext({ encounter: createEncounterContext({ bounds: swimBounds(zone) }) });
   const lines: string[] = [];
+  const netsTouched = new Set<string>();
   let state = createTrip(zone);
   positions.forEach((pos, index) => {
     const frame = index + 1;
     const result = stepTrip(state, { axolotlPos: pos, reduced: false, dashing: false }, DT, ctx);
     lines.push(...listSnagLines(frame, result.events));
     state = result.state;
+    for (const id of state.ghostNets.inReach) netsTouched.add(id);
     if (state.phase === 'ended') {
       lines.push(`${frame}: ended, new trip`);
       state = newTrip(state);
     }
     if (frame % FRAMES_PER_SECOND === 0) lines.push(`${frame / FRAMES_PER_SECOND}s ${describeTrip(state)}`);
   });
-  return lines;
+  return { lines, netsTouched };
+}
+
+/** Every scripted-swim trace of `zone` along `positions`, each simulated once. */
+function traceGolden(zone: ZoneLayout, positions: readonly Point[]): GoldenTraces {
+  return {
+    encounter: traceEncounter(zone, positions),
+    trip: traceTrip(zone, positions),
+    snacks: traceSnacks(zone, positions),
+  };
 }
 
 describe('chinampa-1 golden', () => {
   const defaultZone = buildChinampaZone(DEFAULT_ZONE_SEED);
   const positions = listScriptedPositions(defaultZone);
+  let traces: GoldenTraces;
+
+  beforeAll(() => {
+    traces = traceGolden(defaultZone, positions);
+  }, GOLDEN_TRACE_TIMEOUT);
 
   it('keeps the default zone projection', () => {
     expect(pickGoldenProjection(defaultZone)).toMatchSnapshot();
@@ -462,8 +483,7 @@ describe('chinampa-1 golden', () => {
     expect(PARK_SECONDS).toBeGreaterThan(DRIFTING_NETS.period);
     const netIds = CHINAMPA_LAYOUT.hazards.map((hazard) => hazard.id);
     expect(defaultZone.hazards.map((hazard) => hazard.id)).toEqual(netIds);
-    const touched = listNetsTouched(defaultZone, positions);
-    for (const id of netIds) expect(touched.has(id), id).toBe(true);
+    for (const id of netIds) expect(traces.trip.netsTouched.has(id), id).toBe(true);
   });
 
   it('hits the axolotl with every punting pole in the encounter trace', () => {
@@ -474,7 +494,7 @@ describe('chinampa-1 golden', () => {
       expect(PARK_SECONDS).toBeGreaterThan(movingHazardPeriod(spawn.type));
       expect(positions.some((pos) => isInRect(pos, movingHazardSweep(spawn))), spawn.id).toBe(true);
     }
-    const hitIds = listEventSourceIds(traceEncounter(defaultZone, positions), 'hit');
+    const hitIds = listEventSourceIds(traces.encounter, 'hit');
     for (const spawn of poles) expect(hitIds.has(spawn.id), spawn.id).toBe(true);
   });
 
@@ -484,7 +504,7 @@ describe('chinampa-1 golden', () => {
     expect(defaultZone.predatorRoutes.map((route) => route.id)).toEqual(predatorIds);
     const routeIds = [...defaultZone.tilapiaRoutes.map((route) => route.id), ...predatorIds];
     expect(routeIds).toHaveLength(7);
-    const lines = traceEncounter(defaultZone, positions);
+    const lines = traces.encounter;
     for (const type of ['telegraph', 'lunge']) {
       const sourceIds = listEventSourceIds(lines, type);
       for (const id of routeIds) expect(sourceIds.has(id), `${type} ${id}`).toBe(true);
@@ -499,7 +519,7 @@ describe('chinampa-1 golden', () => {
     expect(shrimpIds).toHaveLength(mix?.spots.length ?? 0);
     expect(tadpoleIds).toHaveLength(7);
     expect(shrimpIds).toHaveLength(7);
-    const lines = traceSnacks(defaultZone, positions);
+    const lines = traces.snacks;
     const places = listSnackPlaces(lines);
     expect([...places.keys()]).toEqual([...tadpoleIds, ...shrimpIds]);
     for (const id of tadpoleIds) expect(places.get(id)?.size ?? 0, id).toBeGreaterThan(1);
@@ -509,16 +529,16 @@ describe('chinampa-1 golden', () => {
   });
 
   it('keeps the encounter trace along the scripted swim', () => {
-    const lines = traceEncounter(defaultZone, positions);
+    const lines = traces.encounter;
     expect({ events: countEventTypes(lines), ...summarizeText(lines.join('\n')) }).toMatchSnapshot();
   });
 
   it('keeps the trip trace of met, snags, legsLost and phase along the scripted swim', () => {
-    expect(traceTrip(defaultZone, positions)).toMatchSnapshot();
+    expect(traces.trip.lines).toMatchSnapshot();
   });
 
   it('keeps the snack trace of tadpole and shrimp places and shrimp flicks along the scripted swim', () => {
-    const lines = traceSnacks(defaultZone, positions);
+    const lines = traces.snacks;
     const flicks = lines.filter((line) => /^\d+: flick /.test(line));
     expect({ flicks, ...summarizeText(lines.join('\n')) }).toMatchSnapshot();
   });
@@ -526,8 +546,11 @@ describe('chinampa-1 golden', () => {
   it('is deterministic across repeated builds and runs', () => {
     expect(summarizeProjection(buildChinampaZone(DEFAULT_ZONE_SEED))).toEqual(summarizeProjection(defaultZone));
     const rerun = listScriptedPositions(buildChinampaZone(DEFAULT_ZONE_SEED));
-    expect(traceEncounter(defaultZone, rerun)).toEqual(traceEncounter(defaultZone, positions));
-    expect(traceTrip(defaultZone, rerun)).toEqual(traceTrip(defaultZone, positions));
-    expect(traceSnacks(defaultZone, rerun)).toEqual(traceSnacks(defaultZone, positions));
-  });
+    expect(rerun).toEqual(positions);
+    const retraced = traceGolden(defaultZone, rerun);
+    expect(retraced.encounter).toEqual(traces.encounter);
+    expect(retraced.trip.lines).toEqual(traces.trip.lines);
+    expect(retraced.trip.netsTouched).toEqual(traces.trip.netsTouched);
+    expect(retraced.snacks).toEqual(traces.snacks);
+  }, GOLDEN_TRACE_TIMEOUT);
 });
