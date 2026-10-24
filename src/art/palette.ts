@@ -540,8 +540,8 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   'firefly-gold': dreamSlots('#ffd52a', '#e6c02f', '#ffe67f', '#ffec9f', ['#e08214', '#e79e48'], ['#ce781a', '#d89449']),
   // Chinampa Area 4 Dream colour (issue #76). Body #e8402f (hue 5, relative luminance 0.210) is 3.57:1 with ink and 4.03:1 with white, so both clear the 3:1 cue floor.
   'poppy-red': dreamSlots('#e8402f', '#d13d33', '#f18c82', '#f5a9a1', ['#ffb02e', '#ffc15c'], ['#eaa231', '#eeb45b']),
-  // Chinampa Area 5 Dream colour (issue #103). Body #f68aec (red-purple, relative luminance 0.438) is 6.69:1 with ink, so 2.59:1 worst case; ink clears the 3:1 cue floor.
-  plum: dreamSlots('#f68aec', '#de7ed9', '#fab9f4', '#fbcaf6', ['#b24fb0', '#c376c1'], ['#a54ba6', '#b76fb8']),
+  // Chinampa Area 5 Dream colour (issue #118, ND-11). Body #933f93 is a deep plum (relative luminance 0.119): 6.23:1 with white and 2.31:1 with ink, so it follows the dark-body rules (white spots, eye ring, rim light).
+  plum: dreamSlots('#933f93', '#873c8b', '#be8cbe', '#cea9ce', ['#f2a0ee', '#f5b5f2'], ['#de94de', '#e5a9e5']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -559,9 +559,9 @@ export const DREAM_RIM_LIGHT: MorphRim = { colour: '#cec9f0', width: 2, fin: tru
 export const DREAM_EYE_RING: MorphEyeRing = { colour: '#cec9f0', width: 1.5 };
 
 /** The dark Dream bodies (guide 3f): the morph eye is under 3:1 on them, so they get the eye ring and white spots. */
-const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy'];
+const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum'];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
-const DREAM_RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy'];
+const DREAM_RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum'];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';
 /** Guide 3b spot table: ink at 0.30 on Dream bodies of relative luminance 0.2 or more. */

@@ -57,8 +57,8 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'poppy-red',
   'plum',
 ];
-const DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy'];
-const RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy'];
+const DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum'];
+const RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum'];
 const SWIM_SAMPLES = Array.from({ length: 13 }, (_, i) => (i / 12) * TAU);
 const TAIL_AMPS = [1, 1.6] as const;
 /** Guide 10 cue floor. */
@@ -211,7 +211,7 @@ describe('Dream colour slots (guide 3f)', () => {
       'tie-dye-galaxy': [7.93, 0.598],
       'lily-green': [1.15, 0.079],
       'poppy-red': [2.84, 0.333],
-      plum: [1.52, 0.323],
+      plum: [4.39, 0.473],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -265,7 +265,7 @@ describe('Dream colour slots (guide 3f)', () => {
       'tie-dye-galaxy': [2.79, 0.37],
       'lily-green': [3.27, 0.393],
       'firefly-gold': [2.84, 0.333],
-      plum: [1.88, 0.251],
+      plum: [1.54, 0.221],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -276,28 +276,32 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(closest).toBe('rainbow');
   });
 
-  it('gives Plum the 3f mixes of its two picks, a body over the 0.2 spot line, 3:1 ink cue and a plain swatch (issue #103)', () => {
+  it('gives Plum the 3f mixes of its two picks, a dark body under the 0.2 spot line, the white edge over 3:1 and a dark plain swatch (issue #118, ND-11)', () => {
     const s = DREAM_SLOTS.plum;
-    expect([s.body, s.gillNearStem]).toEqual(['#f68aec', '#b24fb0']);
+    expect([s.body, s.gillNearStem]).toEqual(['#933f93', '#f2a0ee']);
     expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
     expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
     expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
     expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
     expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
     expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
-    // Guide 10 cue floor: the ink reaches 3:1 or more against the body; the white edge does not.
-    expect(contrastRatio(s.body, INK)).toBeCloseTo(6.69, 2);
-    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(CUE_RATIO);
-    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeCloseTo(2.59, 2);
-    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(2.15, 2);
-    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(8.1, 2);
-    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(2.11, 2);
-    expect(relativeLuminance(s.body)).toBeCloseTo(0.44, 2);
-    expect(DREAM_SWATCH.plum).toEqual({ body: '#f68aec', pattern: 'plain', marks: [], dark: false });
-    expect(dreamPalette(MORPH_PALETTES.leucistic, 'plum').extras).toEqual({ spot: 'rgba(43,35,80,0.30)' });
+    // Guide 10 cue floor: a dark body, so the white edge reaches 3:1 or more and the ink does not.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(2.31, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(6.23, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeGreaterThanOrEqual(CUE_RATIO);
+    // The morph eye bead is under 3:1 on the body, so the Dream eye ring carries it.
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(2.8, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(3.27, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.12, 2);
+    expect(DREAM_SWATCH.plum).toEqual({ body: '#933f93', pattern: 'plain', marks: [], dark: true });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'plum').extras).toEqual({
+      spot: 'rgba(255,255,255,0.45)',
+      rim: DREAM_RIM_LIGHT,
+      eyeRing: DREAM_EYE_RING,
+    });
   });
 
-  it('keeps Plum apart from every other Dream colour in greyscale and in colour, Lavender and Poppy red most of all (PRD F15)', () => {
+  it('keeps Plum apart from every other Dream colour in greyscale and in colour, Poppy red and Midnight blue most of all (PRD F15)', () => {
     const body = DREAM_SLOTS.plum.body;
     const separation = Object.fromEntries(
       DREAM_IDS.filter((id) => id !== 'plum').map((id) => [
@@ -309,29 +313,30 @@ describe('Dream colour slots (guide 3f)', () => {
       ]),
     );
     expect(separation).toEqual({
-      mint: [1.64, 0.285],
-      'sky-blue': [1.41, 0.21],
-      lavender: [1.36, 0.138],
-      'sunset-orange': [1.36, 0.214],
-      bubblegum: [1.36, 0.118],
-      'midnight-blue': [4.6, 0.42],
-      hearts: [1.88, 0.288],
-      'tie-dye': [1.79, 0.28],
-      iridescent: [1.43, 0.154],
-      rainbow: [1.29, 0.173],
-      galaxy: [5.45, 0.456],
-      'tie-dye-galaxy': [5.23, 0.438],
-      'lily-green': [1.74, 0.345],
-      'firefly-gold': [1.52, 0.323],
-      'poppy-red': [1.88, 0.251],
+      mint: [4.75, 0.455],
+      'sky-blue': [4.07, 0.386],
+      lavender: [3.94, 0.358],
+      'sunset-orange': [3.93, 0.392],
+      bubblegum: [3.94, 0.358],
+      'midnight-blue': [1.59, 0.181],
+      hearts: [5.45, 0.49],
+      'tie-dye': [5.18, 0.477],
+      iridescent: [4.14, 0.374],
+      rainbow: [2.24, 0.255],
+      galaxy: [1.88, 0.205],
+      'tie-dye-galaxy': [1.81, 0.182],
+      'lily-green': [5.05, 0.506],
+      'firefly-gold': [4.39, 0.473],
+      'poppy-red': [1.54, 0.221],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(grey, `${id} greyscale margin`).toBeGreaterThanOrEqual(1.5);
       expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
     }
-    // Plum sits between Rainbow and the light solids in value, so Rainbow is the closest in greyscale.
+    // Plum is a deep body between Midnight blue and Rainbow in value, so Poppy red is the closest in greyscale.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
-    expect(closest).toBe('rainbow');
+    expect(closest).toBe('poppy-red');
   });
 });
 
@@ -355,7 +360,7 @@ describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
     }
   });
 
-  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy and Tie-dye galaxy', () => {
+  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy and Plum', () => {
     for (const [name, id, palette] of everyPair()) {
       if (RIM_IDS.includes(id)) expect(palette.extras?.rim, name).toEqual(DREAM_RIM_LIGHT);
       else expect(palette.extras?.rim, name).toBeUndefined();

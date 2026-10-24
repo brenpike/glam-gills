@@ -327,7 +327,7 @@ const CHEEK_HEART_CONTRAST: Readonly<Record<string, readonly [number, number, nu
   'dream lily-green': [1.23, 11.67, 2.35],
   'dream firefly-gold': [1.42, 10.15, 2.04],
   'dream poppy-red': [4.03, 3.57, 1.39],
-  'dream plum': [2.15, 6.69, 1.35],
+  'dream plum': [6.23, 2.31, 2.15],
 };
 
 /** An rgba(r,g,b,a) colour laid over an opaque #rrggbb colour, as #rrggbb. */
