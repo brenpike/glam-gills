@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHINAMPA_2_AREA, CHINAMPA_AREA, CHINAMPA_HABITAT, newThingsByArea } from './areas';
+import { CHINAMPA_2_AREA, CHINAMPA_AREA, CHINAMPA_HABITAT, newThingsByArea, sourceFactCards, threatFactCards, threatIds } from './areas';
 import { CHINAMPA_2_TREASURES, RARITIES } from './catalogue';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT, CHINAMPA_2_SNAKE, CHINAMPA_2_TILAPIA, SNAKE_STRETCH_Y } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
@@ -7,6 +7,15 @@ import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collec
 import { longestQuietStretch, meetsFullDangerBar, movingHazardTypeCount, movingThreatCount, predatorTypeCount } from './dangerBar';
 import { createEncounter, createEncounterContext, stepEncounter, type EncounterEvent, type EncounterState } from './encounter';
 import { currentAt, reedDragAt } from './environment';
+import {
+  GARTER_SNAKE_FACT,
+  GHOST_NET_FACT,
+  PUNTING_POLE_FACT,
+  SHRIMP_FACT,
+  TADPOLE_FACT,
+  TILAPIA_FACT,
+  WATER_HYACINTH_FACT,
+} from './factCards';
 import { GHOST_NET } from './ghostNets';
 import { elementSweep, hazardCentre, shapeDistance, type ElementSpawn, type HazardRect, type HazardShape } from './hazards';
 import {
@@ -508,6 +517,21 @@ describe('CHINAMPA_2_LAYOUT', () => {
       threats: ['garter-snake'],
       elements: ['water-hyacinth'],
     });
+  });
+
+  it('names the tilapia, the garter snake, the ghost net and the punting pole as its threats, from its data or its zone (issue #118)', () => {
+    expect(threatIds(CHINAMPA_2_LAYOUT)).toEqual(['tilapia', 'garter-snake', 'ghost-net', 'punting-pole']);
+    expect(threatIds(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'garter-snake', 'ghost-net', 'punting-pole']);
+    expect(threatFactCards(CHINAMPA_2_LAYOUT)).toEqual([TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT]);
+  });
+
+  it('gives its threat cards, then the water hyacinth card, then the tadpole and shrimp cards, from its data or its zone (issue #118)', () => {
+    const expected = {
+      ids: ['tilapia', 'garter-snake', 'ghost-net', 'punting-pole', 'water-hyacinth', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, WATER_HYACINTH_FACT, TADPOLE_FACT, SHRIMP_FACT],
+    };
+    expect(sourceFactCards(CHINAMPA_2_LAYOUT)).toEqual(expected);
+    expect(sourceFactCards(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
   });
 
   it('is in the chinampa gardens habitat, numbered 5, with the Piñata as its special treasure, no look of its own and no stranded chance of its own', () => {
@@ -1190,10 +1214,13 @@ describe('Area 5 snacks', () => {
     }
   });
 
-  it.each(ALL_SEEDS)('put at least 4 snacks in the current for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('put at least snacksInCurrent (4) snacks in the first current, and only worms and bugs in any current, for seed %i (ADR 0022)', (seed) => {
     const layout = chinampa2(seed);
     expect(CHINAMPA_2_LAYOUT.snacksInCurrent).toBe(4);
-    expect(layout.collectibles.filter((snack) => isInsideCurrent(snack, layout.currents[0])).length).toBeGreaterThanOrEqual(4);
+    const inFirst = layout.collectibles.filter((snack) => isInsideCurrent(snack, layout.currents[0]));
+    expect(inFirst.length).toBeGreaterThanOrEqual(CHINAMPA_2_LAYOUT.snacksInCurrent);
+    const inAny = layout.collectibles.filter((snack) => layout.currents.some((current) => isInsideCurrent(snack, current)));
+    expect(inAny.map((snack) => snack.kind).filter((kind) => kind !== 'worm' && kind !== 'bug')).toEqual([]);
   });
 
   it.each(ALL_SEEDS)('stay in the water, out of the ring and out of every mat while drifting for seed %i', (seed) => {

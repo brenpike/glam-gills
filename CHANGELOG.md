@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-24
+
+### Added
+
+- Area 5 now has a third garter snake and a third tilapia (#118).
+- Five trajinera punting poles jab down through both rows of Area 5 (#118).
+- Tadpoles (10) and freshwater shrimp (9) now live in Area 5 too. They take the place of some bobbing snacks and the one-time darters (#118).
+- The Collection Book holds the punting pole card, "Trajineras". It now has 12 fact cards (#118).
+
+### Changed
+
+- Area 5 meets the full danger bar. Its tilapia and garter snakes now chase you on a leash, and it has 11 moving threats (#118).
+- Area 5's tadpoles swim at 60 px/s, and the Snack magnet pulls at 72 px/s there (#118).
+- Area 5's tilapia warn a little faster: 0.825 s, down from 0.85 s (#118).
+- Plum has a new, deeper colour (#933f93) that stands apart from the other Dream colours in greyscale (#118).
+
+### Fixed
+
+- A deep punting pole now draws its whole shaft up to its boat (#118).
+
 ## [0.34.0] - 2026-10-24
 
 ### Added

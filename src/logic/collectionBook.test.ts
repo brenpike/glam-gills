@@ -97,7 +97,7 @@ const ALL_MORPHS: readonly RealMorphId[] = REAL_MORPHS.map((morph) => morph.id);
 /**
  * Every hazard, predator, element and mobile snack met that has an area fact card: the canal's
  * tilapia, the pond's plastic worm, tadpole and shrimp, Area 3's heron, Area 4's ghost net, and
- * Area 5's garter snake and water hyacinth.
+ * Area 5's garter snake, punting pole and water hyacinth.
  */
 const ALL_AREA_MET: readonly string[] = [
   'tilapia',
@@ -107,6 +107,7 @@ const ALL_AREA_MET: readonly string[] = [
   'heron',
   'ghost-net',
   'garter-snake',
+  'punting-pole',
   'water-hyacinth',
 ];
 
@@ -303,17 +304,17 @@ describe('bookListing', () => {
     expect(sections.map((section) => section.heading)).toEqual([
       'Morphs: 0 of 8 found',
       'Dream colours',
-      'Facts: 1 of 11 found',
+      'Facts: 1 of 12 found',
     ]);
   });
 
   it('counts found morphs and fact cards in the headings', () => {
     const [morphs, , factCards] = bookListing(['wild', 'melanoid', 'wild'], ['tilapia']);
     expect(morphs.heading).toBe('Morphs: 2 of 8 found');
-    expect(factCards.heading).toBe('Facts: 2 of 11 found');
-    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 9 of 11 found');
-    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 11 found');
-    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 11 of 11 found');
+    expect(factCards.heading).toBe('Facts: 2 of 12 found');
+    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 10 of 12 found');
+    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 12 found');
+    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 12 of 12 found');
     expect(bookListing(ALL_MORPHS, ['tilapia'])[0].heading).toBe('Morphs: 8 of 8 found');
   });
 
@@ -499,15 +500,34 @@ describe('bookListing', () => {
 
   it('holds the garter snake and water hyacinth cards only once met, never with a picture (C14)', () => {
     const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries.slice(6, 8)).toEqual([
+    expect([met.entries[6], met.entries[8]]).toEqual([
       { id: 'garter-snake', found: true, name: 'Garter snake', text: GARTER_SNAKE_FACT.body, hasPicture: false },
       { id: 'water-hyacinth', found: true, name: 'Water hyacinth', text: WATER_HYACINTH_FACT.body, hasPicture: false },
     ]);
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole', 'shrimp', 'heron', 'ghost-net']);
-    expect(notMet.entries.slice(6, 8)).toEqual([
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole', 'shrimp', 'heron', 'ghost-net', 'punting-pole']);
+    expect([notMet.entries[6], notMet.entries[8]]).toEqual([
       { id: 'garter-snake', found: false, name: '???', text: 'Explore the chinampa gardens to find this card.', hasPicture: false },
       { id: 'water-hyacinth', found: false, name: '???', text: 'Explore the chinampa gardens to find this card.', hasPicture: false },
     ]);
+  });
+
+  it('holds the punting pole card only once met, never with a picture (C14)', () => {
+    const [, , met] = bookListing([], ALL_MET);
+    expect(met.entries[7]).toEqual({
+      id: 'punting-pole',
+      found: true,
+      name: 'Punting pole',
+      text: PUNTING_POLE_FACT.body,
+      hasPicture: false,
+    });
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole', 'shrimp', 'heron', 'ghost-net', 'garter-snake']);
+    expect(notMet.entries[7]).toEqual({
+      id: 'punting-pole',
+      found: false,
+      name: '???',
+      text: 'Explore the chinampa gardens to find this card.',
+      hasPicture: false,
+    });
   });
 
   it('hints each unfound area card with the habitat of the first area that has it', () => {
@@ -521,6 +541,7 @@ describe('bookListing', () => {
       ['heron', 'Explore the lily pad pond to find this card.'],
       ['ghost-net', 'Explore the chinampa gardens to find this card.'],
       ['garter-snake', 'Explore the chinampa gardens to find this card.'],
+      ['punting-pole', 'Explore the chinampa gardens to find this card.'],
       ['water-hyacinth', 'Explore the chinampa gardens to find this card.'],
       ['axolotl-refuges', 'Visit the refuge to find this card.'],
       ['canal-clean-ups', 'Beat an area, then visit the refuge to find this card.'],
@@ -530,13 +551,13 @@ describe('bookListing', () => {
 
   it('holds the refuge cards after the area cards, found once found, with their own hint and never a picture (C14)', () => {
     const [, , found] = bookListing([], ALL_MET);
-    expect(found.entries.slice(8, 10)).toEqual([
+    expect(found.entries.slice(9, 11)).toEqual([
       { id: 'axolotl-refuges', found: true, name: 'Axolotl refuges', text: AXOLOTL_REFUGES_FACT.body, hasPicture: false },
       { id: 'canal-clean-ups', found: true, name: 'Canal clean-ups', text: CANAL_CLEAN_UPS_FACT.body, hasPicture: false },
     ]);
     const [, , refugeOnly] = bookListing([], ['axolotl-refuges']);
-    expect(refugeOnly.entries[8].found).toBe(true);
-    expect(refugeOnly.entries[9]).toEqual({
+    expect(refugeOnly.entries[9].found).toBe(true);
+    expect(refugeOnly.entries[10]).toEqual({
       id: 'canal-clean-ups',
       found: false,
       name: '???',
@@ -574,12 +595,13 @@ describe('bookListing', () => {
         'heron',
         'ghost-net',
         'garter-snake',
+        'punting-pole',
         'water-hyacinth',
         'axolotl-refuges',
         'canal-clean-ups',
         'boyOrGirl',
       ]);
-      expect(factCards.entries[10]).toEqual(boyOrGirl);
+      expect(factCards.entries[11]).toEqual(boyOrGirl);
     }
   });
 
@@ -617,6 +639,7 @@ describe('bookPages', () => {
       ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
+      ['factCard', 1],
     ]);
     const pageEntries: readonly BookEntry[] = pages.flatMap((page): readonly BookEntry[] => page.entries);
     const sectionEntries: readonly BookEntry[] = sections.flatMap((section): readonly BookEntry[] => section.entries);
@@ -625,7 +648,7 @@ describe('bookPages', () => {
 
   it('puts every Dream colour on its own page at one row per page', () => {
     expect(DREAM_COLOURS).toHaveLength(16);
-    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 16 + 11);
+    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 16 + 12);
   });
 
   it('gives an empty section one page', () => {
@@ -902,7 +925,7 @@ describe('collection book fit', () => {
     },
   );
 
-  it('hides the title only for the found plastic worm, shrimp, heron and water hyacinth pages, and only below 520 x 360', () => {
+  it('hides the title only for the found plastic worm, shrimp, heron, punting pole and water hyacinth pages, and only below 520 x 360', () => {
     const hidden = supportedCanvases().flatMap((view) =>
       featuredEntries()
         .filter((entry) => !featurePageOf(view, entry).page.showsTitle)
@@ -912,16 +935,19 @@ describe('collection book fit', () => {
       '320x440 plastic-worm found=true',
       '320x440 shrimp found=true',
       '320x440 heron found=true',
+      '320x440 punting-pole found=true',
       '320x440 water-hyacinth found=true',
       '340x440 shrimp found=true',
       '340x440 heron found=true',
       '460x320 plastic-worm found=true',
       '460x320 shrimp found=true',
       '460x320 heron found=true',
+      '460x320 punting-pole found=true',
       '460x320 water-hyacinth found=true',
       '460x340 plastic-worm found=true',
       '460x340 shrimp found=true',
       '460x340 heron found=true',
+      '460x340 punting-pole found=true',
       '460x340 water-hyacinth found=true',
       '480x320 shrimp found=true',
       '480x320 heron found=true',

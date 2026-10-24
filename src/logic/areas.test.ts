@@ -43,6 +43,7 @@ import {
   GHOST_NET_FACT,
   HERON_FACT,
   PLASTIC_WORM_FACT,
+  PUNTING_POLE_FACT,
   SHRIMP_FACT,
   TADPOLE_FACT,
   TILAPIA_FACT,
@@ -314,7 +315,7 @@ describe('CHINAMPA_2_AREA', () => {
     expect(special?.pool.length).toBeGreaterThan(0);
   });
 
-  it('makes 3 of its snacks dart with the shared dart rule, as Areas 3 and 4 do', () => {
+  it('keeps the shared dart rule in its data; its shrimp turn the one-time darters off (#118, ND-27)', () => {
     expect(CHINAMPA_2_AREA.snackDart).toBe(SNACK_DART);
   });
 
@@ -406,7 +407,7 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, plastic worm, tadpole, shrimp, heron, ghost net, garter snake and water hyacinth cards, for the shipped areas', () => {
+  it('gives the tilapia, plastic worm, tadpole, shrimp, heron, ghost net, garter snake, punting pole and water hyacinth cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       PLASTIC_WORM_FACT,
@@ -415,14 +416,9 @@ describe('threats', () => {
       HERON_FACT,
       GHOST_NET_FACT,
       GARTER_SNAKE_FACT,
+      PUNTING_POLE_FACT,
       WATER_HYACINTH_FACT,
     ]);
-  });
-
-  it('names the tilapia, the garter snake and the ghost net for Area 5, from its data or its zone', () => {
-    expect(threatIds(CHINAMPA_2_LAYOUT)).toEqual(['tilapia', 'garter-snake', 'ghost-net']);
-    expect(threatIds(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'garter-snake', 'ghost-net']);
-    expect(threatFactCards(CHINAMPA_2_LAYOUT)).toEqual([TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT]);
   });
 
   it('names the tilapia and the ghost net for Area 4, from its data or its zone', () => {
@@ -544,15 +540,6 @@ describe('sourceFactCards', () => {
     expect(sourceFactCards(buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
   });
 
-  it('gives Area 5 its threat cards, then the water hyacinth card, from its data or its zone', () => {
-    const expected = {
-      ids: ['tilapia', 'garter-snake', 'ghost-net', 'water-hyacinth'],
-      cards: [TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, WATER_HYACINTH_FACT],
-    };
-    expect(sourceFactCards(CHINAMPA_2_LAYOUT)).toEqual(expected);
-    expect(sourceFactCards(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
-  });
-
   it('puts each area\'s element cards after its threat cards, in area-table order, each once', () => {
     const areas = [
       areaWith('one', 1, layoutWith({ elements: [elementOf('mats-0', TEST_MATS)] })),
@@ -585,6 +572,7 @@ describe('bookFactCards', () => {
       HERON_FACT,
       GHOST_NET_FACT,
       GARTER_SNAKE_FACT,
+      PUNTING_POLE_FACT,
       WATER_HYACINTH_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
