@@ -5,12 +5,14 @@
 import { describe, expect, it } from 'vitest';
 import { createEncounter } from './encounter';
 import { routeDistance, turnDistance } from './hiding';
-import { POND_LAYOUT } from './pondLayout';
+import { POND_LAYOUT, POND_TILAPIA } from './pondLayout';
 import { DT, EXTRA_SEEDS, fairnessZone, firstFairStart, nearestSafeStart, pathHits, poolSpots } from './riskFairness';
-import { RISK, TILAPIA } from './tuning';
+import { RISK } from './tuning';
 import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const pond = fairnessZone(buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED));
+/** A safe start's clearance from every tilapia loop: leash plus max(sight, lungeRange) (ND-17). */
+const CHASE_REACH = 260;
 
 describe('risk fairness on the default pond zone', () => {
   const { zone, ctx, longestLoop, lastStartIndex } = pond;
@@ -33,9 +35,15 @@ describe('risk fairness on the default pond zone', () => {
     }
   });
 
-  it.each(spots)('finds a safe start outside lunge range for $id', (spot) => {
+  it('reaches 260 pixels with the chase: the 60 pixel leash plus the 200 pixel sight (ND-17)', () => {
+    expect(POND_TILAPIA.chase).toBeDefined();
+    const chase = POND_TILAPIA.chase ?? { leash: 0, sight: 0 };
+    expect(chase.leash + Math.max(chase.sight, POND_TILAPIA.lungeRange)).toBe(CHASE_REACH);
+  });
+
+  it.each(spots)('finds a safe start outside chase reach for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
-    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(TILAPIA.lungeRange);
+    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(CHASE_REACH);
   });
 
   it.each(spots)('lets the axolotl grab $id without a hit for some start time', (spot) => {
