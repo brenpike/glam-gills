@@ -158,7 +158,11 @@ describe('POND_LAYOUT', () => {
       expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(6);
       expect(layout.collectibles.filter((snack) => snack.kind === 'tadpole')).toHaveLength(2);
       expect(layout.collectibles.filter((snack) => snack.kind === 'shrimp')).toHaveLength(2);
-      expect(layout.collectibles.filter((snack) => isInsideCurrent(snack, layout.currents[0])).length).toBeGreaterThanOrEqual(4);
+      // At least the 4 placed in the stream; a stripe snack may also start there. Every one is a
+      // worm or a bug, never a tadpole or a shrimp (ND-4).
+      const inStream = layout.collectibles.filter((snack) => layout.currents.some((current) => isInsideCurrent(snack, current)));
+      expect(inStream.length).toBeGreaterThanOrEqual(4);
+      expect(inStream.map((snack) => snack.kind).filter((kind) => kind !== 'worm' && kind !== 'bug')).toEqual([]);
       expect(layout.tilapiaRoutes).toHaveLength(4);
     }
     expect(zone.hazards.map((hazard) => hazard.id)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `pond-1/plastic-worm-${n}`));
