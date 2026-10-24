@@ -9,11 +9,11 @@ import { CHINAMPA_TREASURES } from './catalogue';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
 import { createEncounter, createEncounterContext, stepEncounter, type EncounterState } from './encounter';
 import { isSnagged } from './ghostNets';
-import { hazardCentre, hazardTouches } from './hazards';
+import { hazardCentre } from './hazards';
 import { legSwimTuning } from './legs';
 import { movingHazardDepth, movingHazardSweep } from './movingHazards';
 import { createTrip, createTripContext, newTrip, stepTrip, type TripEvent, type TripState } from './trip';
-import { LEGS } from './tuning';
+import { DRIFTING_NETS, LEGS } from './tuning';
 import {
   DEFAULT_ZONE_SEED,
   SURF,
@@ -34,7 +34,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 260;
+const TRACE_SECONDS = 300;
 const MIN_TRACE_SECONDS = 120;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
@@ -177,7 +177,8 @@ function listUncrossedPoleTips(zone: ZoneLayout): Point[] {
 /**
  * The scripted swim's stops: the main path, the tip of each pole the main path does not cross,
  * each tilapia's route centre (parked), each predator's route centre (parked), under the last
- * bank (parked), then through each ghost net centre, right to left.
+ * bank (parked), then through each ghost net's starting centre, right to left, parked at each
+ * drifting one: PARK_SECONDS is longer than DRIFTING_NETS.period, so the net drifts back over it.
  */
 function listScriptStops(zone: ZoneLayout): ScriptStop[] {
   return [
@@ -186,13 +187,16 @@ function listScriptStops(zone: ZoneLayout): ScriptStop[] {
     ...zone.tilapiaRoutes.map((route): ScriptStop => ({ at: routeCentre(route), park: true })),
     ...zone.predatorRoutes.map((route): ScriptStop => ({ at: routeCentre(route), park: true })),
     { at: overhangCentre(lastOverhang(zone)), park: true },
-    ...[...zone.hazards].reverse().map((hazard): ScriptStop => ({ at: hazardCentre(hazard.shape), park: false })),
+    ...[...zone.hazards]
+      .reverse()
+      .map((hazard): ScriptStop => ({ at: hazardCentre(hazard.shape), park: hazard.drift !== undefined })),
   ];
 }
 
 /**
  * The scripted swim, one axolotl centre per frame at four-leg cruise along listScriptStops, parked
- * PARK_SECONDS at each parked stop, then parked at the last stop until TRACE_SECONDS.
+ * PARK_SECONDS at each parked stop, then parked at the last stop until TRACE_SECONDS. Throws when
+ * the stops take longer than TRACE_SECONDS, so no stop is ever cut off.
  */
 function listScriptedPositions(zone: ZoneLayout): Point[] {
   const positions: Point[] = [{ ...zone.mainPath[0] }];
@@ -200,9 +204,12 @@ function listScriptedPositions(zone: ZoneLayout): Point[] {
     positions.push(...swimPositions(positions[positions.length - 1], stop.at));
     if (stop.park) positions.push(...Array.from({ length: PARK_FRAMES }, () => ({ ...stop.at })));
   }
+  if (positions.length > TRACE_FRAMES) {
+    throw new RangeError(`listScriptedPositions: the stops take ${positions.length / FRAMES_PER_SECOND} s, over TRACE_SECONDS`);
+  }
   const last = positions[positions.length - 1];
   while (positions.length < TRACE_FRAMES) positions.push({ ...last });
-  return positions.slice(0, TRACE_FRAMES);
+  return positions;
 }
 
 function countFramesAt(positions: readonly Point[], at: Point): number {
@@ -253,6 +260,23 @@ function countEventTypes(lines: readonly string[]): Record<string, number> {
 
 function describeTrip(state: TripState): string {
   return `${state.phase} legsLost=${state.legsLost} snagged=${isSnagged(state.ghostNets)} met=${state.met.join('+')}`;
+}
+
+/**
+ * The id of every ghost net whose reach held the axolotl on some frame of the trip along
+ * `positions`: each net where it is at the trip's element time, as the trip itself checks it, so
+ * a drifting net counts only where it has drifted to. An ended trip starts the next with `newTrip`.
+ */
+function listNetsTouched(zone: ZoneLayout, positions: readonly Point[]): Set<string> {
+  const ctx = createTripContext({ encounter: createEncounterContext({ bounds: swimBounds(zone) }) });
+  const touched = new Set<string>();
+  let state = createTrip(zone);
+  for (const pos of positions) {
+    state = stepTrip(state, { axolotlPos: pos, reduced: false, dashing: false }, DT, ctx).state;
+    for (const id of state.ghostNets.inReach) touched.add(id);
+    if (state.phase === 'ended') state = newTrip(state);
+  }
+  return touched;
 }
 
 function listSnagLines(frame: number, events: readonly TripEvent[]): string[] {
@@ -327,12 +351,16 @@ describe('chinampa-1 golden', () => {
     for (const frames of parkedFrames) expect(frames).toBeGreaterThanOrEqual(PARK_FRAMES);
   });
 
-  it('scripts a swim that runs through the gap current and touches every ghost net', () => {
+  it('scripts a swim that runs through the gap current and touches every ghost net where it has drifted to', () => {
     expect(positions.some((pos) => isInRect(pos, defaultZone.currents[0]))).toBe(true);
     expect(defaultZone.hazards).toHaveLength(5);
-    for (const hazard of defaultZone.hazards) {
-      expect(positions.some((pos) => hazardTouches(hazard, pos))).toBe(true);
-    }
+    expect(defaultZone.hazards.filter((hazard) => hazard.drift).map((hazard) => hazard.id)).toEqual([
+      'chinampa-1/ghost-net-1',
+      'chinampa-1/ghost-net-2',
+    ]);
+    expect(PARK_SECONDS).toBeGreaterThan(DRIFTING_NETS.period);
+    const touched = listNetsTouched(defaultZone, positions);
+    for (const hazard of defaultZone.hazards) expect(touched.has(hazard.id), hazard.id).toBe(true);
   });
 
   it('scripts a swim that enters every punting pole sweep', () => {
