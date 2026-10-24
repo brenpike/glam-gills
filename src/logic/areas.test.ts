@@ -281,7 +281,7 @@ describe('CHINAMPA_AREA', () => {
     expect(special?.pool.length).toBeGreaterThan(0);
   });
 
-  it('makes 3 of its snacks dart with the shared dart rule, as Area 3 does', () => {
+  it('keeps the shared 3-darter rule, as Area 3 does, which its shrimp turn off', () => {
     expect(CHINAMPA_AREA.snackDart).toBe(SNACK_DART);
     expect(CHINAMPA_AREA.snackDart?.darters).toBe(3);
   });
@@ -421,10 +421,10 @@ describe('threats', () => {
     ]);
   });
 
-  it('names the tilapia and the ghost net for Area 4, from its data or its zone', () => {
-    expect(threatIds(CHINAMPA_LAYOUT)).toEqual(['tilapia', 'ghost-net']);
-    expect(threatIds(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'ghost-net']);
-    expect(threatFactCards(CHINAMPA_LAYOUT)).toEqual([TILAPIA_FACT, GHOST_NET_FACT]);
+  it('names the tilapia, the carp, the ghost net and the punting pole for Area 4, from its data or its zone', () => {
+    expect(threatIds(CHINAMPA_LAYOUT)).toEqual(['tilapia', 'carp', 'ghost-net', 'punting-pole']);
+    expect(threatIds(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'carp', 'ghost-net', 'punting-pole']);
+    expect(threatFactCards(CHINAMPA_LAYOUT)).toEqual([TILAPIA_FACT, CARP_FACT, GHOST_NET_FACT, PUNTING_POLE.fact]);
   });
 
   it('names the tilapia, the heron and the plastic worm for Area 3, from its data or its zone', () => {

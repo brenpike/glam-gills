@@ -3,7 +3,7 @@
  * gardens, with the shared harness in riskFairness.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
+import { CHINAMPA_CARP, CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
 import { createEncounter } from './encounter';
 import { meetsThreatRiskRule, routeDistance, turnDistance, zoneThreats } from './hiding';
 import {
@@ -23,6 +23,9 @@ import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const chinampa = fairnessZone(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED));
 
+/** Ms each whole-seed sweep may take: every pool spot under nine chasing threats and two poles (issue #119, ND-10). */
+const SEED_SWEEP_TIMEOUT = 120_000;
+
 describe('risk fairness on the default Area 4 zone', () => {
   const { zone, ctx, longestLoop, startWindow, lastStartIndex, parkSteps } = chinampa;
   const spots = poolSpots(zone);
@@ -33,7 +36,7 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(longestLoop).toBe(Math.max(...zone.tilapiaRoutes.map((route) => loopSeconds(route, CHINAMPA_TILAPIA.patrolSpeed))));
     expect(startWindow).toBe(longestLoop);
     expect(lastStartIndex).toBe(Math.floor(startWindow / START_STEP));
-    expect(parkSteps).toBe(tailSteps(CHINAMPA_TILAPIA));
+    expect(parkSteps).toBe(Math.max(tailSteps(CHINAMPA_TILAPIA), tailSteps(CHINAMPA_CARP.tuning)));
     expect(zone.hazards.length).toBeGreaterThan(0);
     expect(zone.hazards.every((hazard) => !hazard.type.costsLeg)).toBe(true);
     expect(ctx.bounds).toEqual(swimBounds(zone));
@@ -82,5 +85,5 @@ describe('Area 4 risk fairness on other seeds', () => {
     for (const spot of poolSpots(fair.zone)) {
       expect(firstFairStart(spot, fair), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
     }
-  });
+  }, SEED_SWEEP_TIMEOUT);
 });
