@@ -96,9 +96,11 @@ describe('risk fairness on the default Area 4 zone', () => {
 });
 
 describe('Area 4 risk fairness on other seeds', () => {
-  it.each(EXTRA_SEEDS)('keeps every spot, route, net and the tilapia tuning identical to the default seed for seed %i', (seed) => {
+  it.each(EXTRA_SEEDS)('keeps every spot, route, predator route, net, punting pole and the tilapia tuning identical to the default seed for seed %i', (seed) => {
     const layout = buildZone(CHINAMPA_LAYOUT, seed);
     expect(layout.tilapiaRoutes).toEqual(chinampa.zone.tilapiaRoutes);
+    expect(layout.predatorRoutes).toEqual(chinampa.zone.predatorRoutes);
+    expect(layout.movingHazards).toEqual(chinampa.zone.movingHazards);
     expect(layout.tilapia).toEqual(chinampa.zone.tilapia);
     expect(layout.spots).toEqual(chinampa.zone.spots);
     expect(layout.hazards).toEqual(chinampa.zone.hazards);

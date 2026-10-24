@@ -511,7 +511,7 @@ describe('chinampa-1 golden', () => {
     }
   });
 
-  it('moves every tadpole along its lane and flicks a shrimp in the snack trace', () => {
+  it('traces every tadpole drawn in more than one place and at least one shrimp flick, with only tadpoles and shrimp in the snack trace', () => {
     const mix = CHINAMPA_LAYOUT.mobileSnacks;
     const tadpoleIds = listSnackIdsOfKind(defaultZone, 'tadpole');
     const shrimpIds = listSnackIdsOfKind(defaultZone, 'shrimp');
