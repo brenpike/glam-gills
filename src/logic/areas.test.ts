@@ -520,7 +520,7 @@ describe('sourceFactCards', () => {
     expect(sourceFactCards(layout)).toEqual({ ids: [], cards: [] });
   });
 
-  it.each(AREAS.filter((area) => area.layout.elements.length === 0).map((area) => [area.id, area] as const))('gives the threat cards alone for %s, which has no elements, from its data or its zone', (_id, area) => {
+  it.each(AREAS.filter((area) => area.layout.elements.length === 0 && area.layout.mobileSnacks === undefined).map((area) => [area.id, area] as const))('gives the threat cards alone for %s, which has no elements and no mobile snacks, from its data or its zone', (_id, area) => {
     const expected = { ids: threatIds(area.layout), cards: threatFactCards(area.layout) };
     expect(sourceFactCards(area.layout)).toEqual(expected);
     expect(sourceFactCards(buildZone(area.layout, DEFAULT_ZONE_SEED))).toEqual(expected);

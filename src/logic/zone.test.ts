@@ -904,16 +904,20 @@ describe('existing layouts', () => {
     ['canal', CANAL_LAYOUT],
     ['pond-1', POND_LAYOUT],
     ['pond-2', POND_2_LAYOUT],
-  ] as const)('%s has no tilapia tuning, bank overhangs or bank spots, so its zone has none', (_, layout) => {
-    expect(layout.tilapia).toBeUndefined();
+  ] as const)('%s has no bank overhangs or bank spots, and its zone copies its tilapia tuning only when it has one', (_, layout) => {
     expect(layout.bankOverhangs).toBeUndefined();
     expect(layout.bankSpots).toBeUndefined();
     for (const seed of ALL_SEEDS) {
       const zone = buildZone(layout, seed);
-      expect(zone).not.toHaveProperty('tilapia');
+      if (layout.tilapia === undefined) expect(zone).not.toHaveProperty('tilapia');
+      else expect(zone.tilapia).toEqual(layout.tilapia);
       expect(zone).not.toHaveProperty('bankOverhangs');
       expect(zone.spots.some((spot) => spot.cover === 'bank')).toBe(false);
     }
+  });
+
+  it('keeps the canal free of tilapia tuning', () => {
+    expect(CANAL_LAYOUT.tilapia).toBeUndefined();
   });
 });
 
@@ -1051,15 +1055,20 @@ describe('mobile snacks in the layout (ND-22, ND-23)', () => {
     ['pond-2', POND_2_LAYOUT],
     ['chinampa-1', CHINAMPA_LAYOUT],
     ['chinampa-2', CHINAMPA_2_LAYOUT],
-  ] as const)('%s has no moving hazards or mobile snacks, so its zone has no key for them', (_, layout) => {
-    expect(layout.movingHazards).toBeUndefined();
-    expect(layout.mobileSnacks).toBeUndefined();
+  ] as const)('%s gives its zone keys for moving hazards and mobile snacks only when its data has them', (_, layout) => {
     for (const seed of ALL_SEEDS) {
       const zone = buildZone(layout, seed);
-      expect(zone).not.toHaveProperty('movingHazards');
-      expect(zone).not.toHaveProperty('mobileSnacks');
-      expect(zone.collectibles.every((snack) => snack.kind === 'worm' || snack.kind === 'bug')).toBe(true);
-      expect(zone.collectibles.every((snack) => !('lane' in snack))).toBe(true);
+      expect('movingHazards' in zone).toBe(layout.movingHazards !== undefined);
+      expect('mobileSnacks' in zone).toBe(layout.mobileSnacks !== undefined);
+      if (layout.mobileSnacks === undefined) {
+        expect(zone.collectibles.every((snack) => snack.kind === 'worm' || snack.kind === 'bug')).toBe(true);
+        expect(zone.collectibles.every((snack) => !('lane' in snack))).toBe(true);
+      }
     }
+  });
+
+  it('keeps the canal free of moving hazards and mobile snacks', () => {
+    expect(CANAL_LAYOUT.movingHazards).toBeUndefined();
+    expect(CANAL_LAYOUT.mobileSnacks).toBeUndefined();
   });
 });
