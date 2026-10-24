@@ -288,5 +288,5 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
   'lily-green': { body: '#ddf274', pattern: 'plain', marks: [], dark: false },
   'firefly-gold': { body: '#ffd52a', pattern: 'plain', marks: [], dark: false },
   'poppy-red': { body: '#e8402f', pattern: 'plain', marks: [], dark: false },
-  plum: { body: '#f68aec', pattern: 'plain', marks: [], dark: false },
+  plum: { body: '#933f93', pattern: 'plain', marks: [], dark: true },
 };

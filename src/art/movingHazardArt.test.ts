@@ -22,6 +22,8 @@ import {
   POLE_SHAFT_LENGTH,
   POLE_SHAFT_W,
   POLE_SHINE,
+  POLE_TILE_FROM,
+  POLE_TILE_TO,
   POLE_WOOD,
   PUNTING_BOW_TEX,
   PUNTING_RING_INNER_RX,
@@ -38,6 +40,10 @@ import {
   paintPuntingRing,
   paintPuntingShadow,
   paintPuntingShaft,
+  poleShaftPieceCount,
+  poleShaftPieceFrom,
+  poleShaftPieceLift,
+  poleShaftPieceTo,
 } from './drawPuntingPole';
 import { habitatLook } from './habitatLook';
 import {
@@ -793,5 +799,75 @@ describe('the pole in the world', () => {
     expect(PUNTING_POLE.depth).toBe(PUNTING_POLES.depth);
     // at full depth the art's top is still above the surface by more than the bow's deck
     expect(POLE_SHAFT_LENGTH - PUNTING_POLE.depth).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe('the shaft in pieces at a spawn\'s own depth (issue #118, ND-4)', () => {
+  const { ops } = record(paintPuntingShaft);
+  /** Px of shaft above the surface: what MovingHazardView draws over the water at every depth. */
+  const aboveSurface = POLE_SHAFT_LENGTH - PUNTING_POLE.depth;
+
+  /** The pieces for a drawn length, as [from, to, lift]. */
+  function piecesFor(length: number, fullLength: number): [number, number, number][] {
+    const pieces: [number, number, number][] = [];
+    for (let i = 0; i < poleShaftPieceCount(length, fullLength); i++) {
+      pieces.push([poleShaftPieceFrom(i), poleShaftPieceTo(i, length, fullLength), poleShaftPieceLift(i)]);
+    }
+    return pieces;
+  }
+
+  it('is one piece cropped at the length, as before, when the full length fits the art (the default depth)', () => {
+    expect(PUNTING_POLE.depth + aboveSurface).toBe(POLE_SHAFT_LENGTH);
+    for (let length = 0; length <= POLE_SHAFT_LENGTH; length++) {
+      expect(piecesFor(length, POLE_SHAFT_LENGTH)).toEqual([[0, Math.min(POLE_SHAFT_LENGTH, length), 0]]);
+    }
+  });
+
+  it('copies rows midway between node rings, inside the wood and the shine, a whole number of node spacings apart', () => {
+    const nodes = ops.filter((op) => isStroke(op) && op.strokeStyle === POLE_NODE);
+    const nodeRows = nodes.map((op) => -(cmdsOf(op)[0].slice(1) as number[])[1]);
+    for (const row of [POLE_TILE_FROM, POLE_TILE_TO]) {
+      for (const [i, node] of nodes.entries()) {
+        expect(Math.abs(row - nodeRows[i])).toBeGreaterThan(node.lineWidth / 2);
+      }
+    }
+    const worn = tubePairs(ops).find(({ colour }) => colour.strokeStyle === POLE_FERRULE)?.colour as Op;
+    const shine = ops.find((op) => isStroke(op) && op.strokeStyle === POLE_SHINE) as Op;
+    const shinePath = tightBounds(cmdsOf(shine));
+    expect(POLE_TILE_FROM).toBeGreaterThanOrEqual(-opBounds(worn).minY);
+    expect(POLE_TILE_FROM).toBeGreaterThanOrEqual(-shinePath.maxY);
+    expect(POLE_TILE_TO).toBeLessThanOrEqual(-shinePath.minY);
+    expect(POLE_TILE_TO).toBeLessThan(POLE_SHAFT_LENGTH - POLE_SHAFT_W / 2);
+    expect(POLE_TILE_TO).toBeGreaterThan(POLE_TILE_FROM);
+    expect((POLE_TILE_TO - POLE_TILE_FROM) % POLE_NODE_SPACING).toBe(0);
+  });
+
+  it('stacks pieces that run from the tip to the length with no gap or overlap, each lifted by whole node spacings', () => {
+    for (const depth of [340, 360, 400, 440]) {
+      const fullLength = depth + aboveSurface;
+      for (const length of [fullLength, fullLength - 1, fullLength - 100, 300, 200, 40, 10, 0]) {
+        const pieces = piecesFor(length, fullLength);
+        expect(pieces[0][0]).toBe(0);
+        expect(pieces[0][2]).toBe(0);
+        for (let i = 1; i < pieces.length; i++) {
+          expect(pieces[i][2] + pieces[i][0]).toBe(pieces[i - 1][2] + pieces[i - 1][1]);
+        }
+        const last = pieces[pieces.length - 1];
+        expect(last[2] + last[1]).toBe(length);
+        for (const [from, to, lift] of pieces) {
+          expect(lift % POLE_NODE_SPACING).toBe(0);
+          expect(from).toBeGreaterThanOrEqual(0);
+          expect(to).toBeLessThanOrEqual(POLE_SHAFT_LENGTH);
+          expect(to).toBeGreaterThanOrEqual(from);
+          if (pieces.length > 1) expect(to).toBeGreaterThan(from);
+        }
+      }
+    }
+  });
+
+  it('draws a 440 px deep pole in three pieces', () => {
+    const fullLength = 440 + aboveSurface;
+    expect(poleShaftPieceCount(fullLength, fullLength)).toBe(3);
+    expect(piecesFor(fullLength, fullLength)).toHaveLength(3);
   });
 });

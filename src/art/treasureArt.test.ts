@@ -291,12 +291,12 @@ const CHINAMPA_SWATCH_DIGEST = '59cc1a40f1f204b4:20';
  * purpose.
  */
 const CHINAMPA_2_ICON_DIGESTS: Readonly<Record<number, string>> = {
-  28: '193e7af773aa4b1b:265',
-  32: '036f5a5e9b9f56ba:265',
-  48: 'e108a78396ba355f:265',
-  80: '28a050c994cc5105:265',
+  28: '92f2ec228dd8f7ee:265',
+  32: '786ef47e186e3b02:265',
+  48: '7b52381e12f6843a:265',
+  80: 'ae1c2d49a3e3277d:265',
 };
-const CHINAMPA_2_SWATCH_DIGEST = 'ff8b8631eefdfd9d:20';
+const CHINAMPA_2_SWATCH_DIGEST = '283dbca78aec2213:21';
 const EPS = 1e-9;
 
 // ---------------------------------------------------------------------------
@@ -2373,9 +2373,9 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
     const shell = CHINAMPA_2_TREASURES.find((treasure) => treasure.category === 'paintShell');
     expect(shell?.category === 'paintShell' ? shell.dreamColour : undefined).toBe('plum');
     expect(treasureSlug(shell?.id ?? '')).toBe('paint-shell-plum');
-    expect(DREAM_SWATCH.plum).toEqual({ body: '#f68aec', pattern: 'plain', marks: [], dark: false });
-    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-plum', 48))).toContain('#f68aec');
-    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'plum', 32))).toContain('#f68aec');
+    expect(DREAM_SWATCH.plum).toEqual({ body: '#933f93', pattern: 'plain', marks: [], dark: true });
+    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-plum', 48))).toContain('#933f93');
+    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'plum', 32))).toContain('#933f93');
     bakes.length = 0;
     const tex = bakeTreasureTextures({} as never, 2);
     expect(tex.swatches.plum.key).toBe('dream-swatch-plum-32');

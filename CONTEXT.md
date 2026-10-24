@@ -141,7 +141,7 @@ The wading bird that hunts in Area 3 (N3), the first **Predator** whose warning 
 _Avoid_: monster, bird alone
 
 **Garter snake**:
-The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in code). Two snakes swim slowly along short straight stretches with their heads at y 100, in a gentle S-wiggle. When the axolotl comes within 110 px of a snake's head, it stops and ripple rings spread from its head for 0.8 seconds, then it darts in a straight line, so swimming away or swimming deep during the rings dodges it. It warns only while its head is on its stretch, so repeated darts never walk it deeper: its hits reach no deeper than about y 254, and the water below y 260, the whole bottom row included, is safe. Cover does not hide the axolotl from it. A touch is a gentle bump that costs no leg. Its mouth is always closed, and it never bites, holds or eats the axolotl.
+The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in code). Three snakes swim slowly along short straight stretches with their heads at y 100, in a gentle S-wiggle. When the axolotl comes within 110 px of a snake's head, it stops and ripple rings spread from its head for 0.8 seconds, then it darts in a straight line, so swimming away or swimming deep during the rings dodges it. It warns only while its head is on its stretch, so repeated darts never walk it deeper: its hits reach no deeper than about y 254, and the water below y 260, the whole bottom row included, is safe. Cover does not hide the axolotl from it. A touch is a gentle bump that costs no leg. Its mouth is always closed, and it never bites, holds or eats the axolotl.
 _Avoid_: monster
 
 **Common carp**:
@@ -298,7 +298,7 @@ _Avoid_: slot (a Slot is where a Wearable goes)
 The in-game book of morphs and fact cards, nicknamed the Axolotl-dex in game.
 
 **Fun-fact card**:
-A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 9 fact cards, in this order: the tilapia card, "Plastic is not food" (the **Plastic worm**), the heron card, "Lost fishing nets" (the **Ghost net**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
+A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 12 fact cards, in this order: the tilapia card, "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Meet garter snakes" (the **Garter snake**), "Trajineras" (the **Punting pole**), "Water hyacinth" (the **Water hyacinth mats**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
 
 **Save**:
 Progress kept in device storage by itself: banked treasures, the axolotls, the tank, the Collection Book, stars, the last chosen area, and the fact cards found (`metHazards`: the hazards, predators and timing elements met, then the refuge fact cards found); never anything from a trip in progress, and never the refuge's pending clean-ups and milestones.

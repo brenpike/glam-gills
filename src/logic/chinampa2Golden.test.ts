@@ -1,8 +1,9 @@
 /**
  * Golden guard for the chinampa gardens, Area 5 ('chinampa-2'): its built zone, its trip
- * placements, and the encounter and trip rules, its tilapia tuning, garter snakes, water hyacinth
- * mats, gap current and ghost nets included, played along a fixed scripted swim. Any change here
- * means a shared rule changed chinampa-2 behaviour.
+ * placements, and the encounter and trip rules, its tilapia tuning, chasing tilapia and garter
+ * snakes, punting poles, mobile snacks, water hyacinth mats, gap current and ghost nets included,
+ * played along a fixed scripted swim (issue #118, ND-13). Any change here means a shared rule
+ * changed chinampa-2 behaviour.
  */
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_2_TREASURES } from './catalogue';
@@ -11,6 +12,7 @@ import { createEncounter, createEncounterContext, stepEncounter, type EncounterS
 import { isSnagged } from './ghostNets';
 import { hazardCentre, shapeDistance } from './hazards';
 import { matPhase } from './hyacinthMats';
+import { movingHazardSweep } from './movingHazards';
 import { legSwimTuning } from './legs';
 import { createTrip, createTripContext, newTrip, stepTrip, type TripEvent, type TripState } from './trip';
 import { LEGS } from './tuning';
@@ -25,7 +27,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 180;
+const TRACE_SECONDS = 240;
 const MIN_TRACE_SECONDS = 120;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
@@ -69,6 +71,8 @@ function pickGoldenProjection(zone: ZoneLayout) {
     elements: zone.elements,
     tilapia: zone.tilapia,
     bankOverhangs: zone.bankOverhangs,
+    movingHazards: zone.movingHazards,
+    mobileSnacks: zone.mobileSnacks,
   };
 }
 
@@ -289,8 +293,12 @@ describe('chinampa-2 golden', () => {
   });
 
   it('scripts a swim that parks at every tilapia route centre and every snake stretch middle', () => {
-    expect(defaultZone.tilapiaRoutes).toHaveLength(2);
-    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual(['garter-snake', 'garter-snake']);
+    expect(defaultZone.tilapiaRoutes).toHaveLength(3);
+    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual([
+      'garter-snake',
+      'garter-snake',
+      'garter-snake',
+    ]);
     const parkSpots = [...defaultZone.tilapiaRoutes, ...defaultZone.predatorRoutes].map(routeCentre);
     for (const at of parkSpots) expect(countFramesAt(positions, at)).toBeGreaterThanOrEqual(PARK_FRAMES);
   });
@@ -304,6 +312,14 @@ describe('chinampa-2 golden', () => {
     expect(defaultZone.hazards).toHaveLength(5);
     for (const hazard of defaultZone.hazards) {
       expect(positions.some((pos) => shapeDistance(pos, hazard.shape) === 0)).toBe(true);
+    }
+  });
+
+  it("scripts a swim that runs through every punting pole's sweep", () => {
+    const spawns = defaultZone.movingHazards ?? [];
+    expect(spawns).toHaveLength(5);
+    for (const spawn of spawns) {
+      expect(positions.some((pos) => shapeDistance(pos, movingHazardSweep(spawn)) === 0)).toBe(true);
     }
   });
 
