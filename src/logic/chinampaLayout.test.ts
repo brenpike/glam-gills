@@ -738,11 +738,14 @@ describe('Area 4 snacks', () => {
     }
   });
 
-  it.each(ALL_SEEDS)('put at least 4 snacks in the current for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('put at least 4 snacks in the current, every one a worm or a bug, for seed %i', (seed) => {
     const layout = chinampa(seed);
-    const inCurrent = layout.collectibles.filter((snack) => isInsideCurrent(snack, layout.currents[0]));
+    const inCurrent = layout.collectibles.filter((snack) => layout.currents.some((current) => isInsideCurrent(snack, current)));
     expect(CHINAMPA_LAYOUT.snacksInCurrent).toBe(4);
     expect(inCurrent.length).toBeGreaterThanOrEqual(CHINAMPA_LAYOUT.snacksInCurrent);
+    for (const snack of inCurrent) {
+      expect(['worm', 'bug'], snack.id).toContain(snack.kind);
+    }
   });
 
   it.each(ALL_SEEDS)('stay in the water and out of the ring while drifting or swimming their lanes for seed %i', (seed) => {
