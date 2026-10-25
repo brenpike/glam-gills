@@ -431,10 +431,10 @@ describe('threats', () => {
     expect(threatFactCards(CHINAMPA_LAYOUT)).toEqual([TILAPIA_FACT, CARP_FACT, GHOST_NET_FACT, PUNTING_POLE.fact]);
   });
 
-  it('names the tilapia, the heron and the plastic worm for Area 3, from its data or its zone', () => {
-    expect(threatIds(POND_2_LAYOUT)).toEqual(['tilapia', 'heron', 'plastic-worm']);
-    expect(threatIds(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'heron', 'plastic-worm']);
-    expect(threatFactCards(POND_2_LAYOUT)).toEqual([TILAPIA_FACT, HERON_FACT, PLASTIC_WORM_FACT]);
+  it('names the tilapia, the heron, the carp and the plastic worm for Area 3, from its data or its zone', () => {
+    expect(threatIds(POND_2_LAYOUT)).toEqual(['tilapia', 'heron', 'carp', 'plastic-worm']);
+    expect(threatIds(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'heron', 'carp', 'plastic-worm']);
+    expect(threatFactCards(POND_2_LAYOUT)).toEqual([TILAPIA_FACT, HERON_FACT, CARP_FACT, PLASTIC_WORM_FACT]);
   });
 
   it('names the tilapia, the carp and the plastic worm for the pond, from its data or its zone', () => {

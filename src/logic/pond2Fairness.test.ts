@@ -1,12 +1,12 @@
 /**
- * Risk ladder fairness (B10, issue #70; PRD open question 264, ND-17) on Area 3, with its herons,
- * using the shared harness in riskFairness.ts.
+ * Risk ladder fairness (B10, issue #70; PRD open question 264, ND-17) on Area 3, with its herons and
+ * carp (issue #133, ND-8), using the shared harness in riskFairness.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { createEncounter } from './encounter';
 import { inSightCover, routeDistance, turnDistance } from './hiding';
 import { POND_2_LAYOUT } from './pond2Layout';
-import { routeLoopDistance } from './predators';
+import { CARP_SPECIES, HERON_SPECIES, routeLoopDistance } from './predators';
 import {
   DT,
   EXTRA_SEEDS,
@@ -16,38 +16,51 @@ import {
   heronWaitPoint,
   inPredatorReach,
   nearestSafeStart,
+  loopSeconds,
   pathHits,
   poolSpots,
   tailSteps,
+  tilapiaOf,
 } from './riskFairness';
-import { HERON, RISK, TILAPIA } from './tuning';
+import { CARP, HERON, RISK, TILAPIA } from './tuning';
 import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const TAIL_STEPS = tailSteps(TILAPIA);
+/** Least px from a safe start to every tilapia loop: a lunge plus Area 3's 100 px leash (issue #133, ND-8). */
+const TILAPIA_START_CLEARANCE = TILAPIA.lungeRange + 100;
+/** Least px from a safe start to every carp loop: a carp lunge plus its 80 px leash (issue #133, ND-8). */
+const CARP_START_CLEARANCE = CARP.lungeRange + 80;
 
 const pond2 = fairnessZone(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED));
 
 describe('risk fairness on the default Area 3 zone', () => {
   const { zone, ctx, longestLoop, startWindow, lastStartIndex, parkSteps } = pond2;
   const spots = poolSpots(zone);
-  const herons = zone.predatorRoutes;
+  const herons = zone.predatorRoutes.filter((route) => route.species.id === HERON_SPECIES.id);
+  const carps = zone.predatorRoutes.filter((route) => route.species.id === CARP_SPECIES.id);
   /** Seconds a heron takes to wade there and back along its two-point stretch. */
   const wadeSeconds = herons.map((route) => {
     const [start, end] = route.waypoints;
     return (2 * Math.hypot(end.x - start.x, end.y - start.y)) / HERON.patrolSpeed;
   });
+  /** Seconds a carp takes round its patrol loop (issue #133, ND-8). */
+  const carpLoopSeconds = carps.map((route) => loopSeconds(route, route.species.tuning.patrolSpeed));
 
-  it('has pool spots, two herons, start times over the longest tilapia loop and heron wade, and hazards that never hit', () => {
+  it('has pool spots, two herons and two carp, start times over the longest tilapia loop and every heron and carp wade, and hazards that never hit', () => {
     expect(spots.length).toBeGreaterThan(0);
-    expect(herons.map((route) => [route.id, route.species.id])).toEqual([
+    expect(zone.predatorRoutes.map((route) => [route.id, route.species.id])).toEqual([
       ['heron-0', 'heron'],
       ['heron-1', 'heron'],
+      ['carp-0', 'carp'],
+      ['carp-1', 'carp'],
     ]);
-    expect(startWindow).toBeCloseTo(Math.max(longestLoop, ...wadeSeconds), 9);
+    expect(startWindow).toBeCloseTo(Math.max(longestLoop, ...wadeSeconds, ...carpLoopSeconds), 9);
     expect(startWindow).toBeGreaterThan(longestLoop);
+    expect(startWindow).toBeGreaterThanOrEqual(Math.max(...wadeSeconds, ...carpLoopSeconds));
     expect(lastStartIndex).toBe(Math.floor(startWindow / START_STEP));
-    expect(parkSteps).toBe(Math.max(TAIL_STEPS, tailSteps(HERON)));
+    expect(parkSteps).toBe(Math.max(TAIL_STEPS, tailSteps(HERON), ...carps.map((route) => tailSteps(route.species.tuning))));
     expect(parkSteps * DT).toBeGreaterThanOrEqual(HERON.windup + HERON.lungeDuration);
+    expect(parkSteps * DT).toBeGreaterThanOrEqual(CARP.windup + CARP.lungeDuration);
     expect(zone.hazards.length).toBeGreaterThan(0);
     expect(zone.hazards.every((hazard) => !hazard.type.costsLeg)).toBe(true);
     expect(ctx.bounds).toEqual(swimBounds(zone));
@@ -66,9 +79,15 @@ describe('risk fairness on the default Area 3 zone', () => {
     }
   });
 
-  it.each(spots)('finds a safe start outside tilapia lunge range and every heron reach for $id', (spot) => {
+  it.each(spots)('finds a safe start more than 240 px from every tilapia loop, more than 200 px from every carp loop and out of every heron reach for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
-    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(TILAPIA.lungeRange);
+    expect(tilapiaOf(zone).chase?.leash).toBe(100);
+    expect([TILAPIA_START_CLEARANCE, CARP_START_CLEARANCE]).toEqual([240, 200]);
+    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(TILAPIA_START_CLEARANCE);
+    for (const route of carps) {
+      expect(route.species.tuning.chase?.leash, route.id).toBe(80);
+      expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(CARP_START_CLEARANCE);
+    }
     for (const route of herons) {
       expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(HERON.lungeRange);
     }
