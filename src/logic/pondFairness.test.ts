@@ -5,14 +5,17 @@
 import { describe, expect, it } from 'vitest';
 import { createEncounter } from './encounter';
 import { routeDistance, turnDistance } from './hiding';
-import { POND_LAYOUT, POND_TILAPIA } from './pondLayout';
+import { routeLoopDistance } from './predators';
+import { POND_CARP, POND_LAYOUT, POND_TILAPIA } from './pondLayout';
 import { DT, EXTRA_SEEDS, fairnessZone, firstFairStart, nearestSafeStart, pathHits, poolSpots } from './riskFairness';
 import { RISK } from './tuning';
 import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const pond = fairnessZone(buildZone(POND_LAYOUT, DEFAULT_ZONE_SEED));
-/** A safe start's clearance from every tilapia loop: lungeRange plus leash (issue #130, ND-11). */
-const CHASE_REACH = 200;
+/** A safe start's clearance from every tilapia loop: lungeRange plus leash (issue #130, ND-11; issue #132, ND-1). */
+const CHASE_REACH = 220;
+/** A safe start's clearance from every carp loop: lungeRange plus leash (issue #130, ND-11; issue #132, ND-3). */
+const CARP_REACH = 180;
 
 describe('risk fairness on the default pond zone', () => {
   const { zone, ctx, longestLoop, lastStartIndex } = pond;
@@ -35,23 +38,33 @@ describe('risk fairness on the default pond zone', () => {
     }
   });
 
-  it('reaches 200 pixels with the chase: the 140 pixel lunge range plus the 60 pixel leash (issue #130, ND-11)', () => {
+  it('reaches 220 pixels with the chase: the 140 pixel lunge range plus the 80 pixel leash (issue #130, ND-11)', () => {
     expect(POND_TILAPIA.chase).toBeDefined();
     const chase = POND_TILAPIA.chase ?? { leash: 0 };
     expect(POND_TILAPIA.lungeRange + chase.leash).toBe(CHASE_REACH);
   });
 
+  it('reaches 180 pixels with the carp chase: the 120 pixel lunge range plus the 60 pixel leash (issue #132, ND-3)', () => {
+    expect(POND_CARP.tuning.chase).toBeDefined();
+    const chase = POND_CARP.tuning.chase ?? { leash: 0 };
+    expect(POND_CARP.tuning.lungeRange + chase.leash).toBe(CARP_REACH);
+    expect(zone.predatorRoutes.map((route) => route.species)).toEqual([POND_CARP, POND_CARP]);
+  });
+
   it.each(spots)('finds a safe start outside lunge range plus leash for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(CHASE_REACH);
+    for (const route of zone.predatorRoutes) {
+      expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(CARP_REACH);
+    }
   });
 
   it.each(spots)('lets the axolotl grab $id without a hit for some start time', (spot) => {
     expect(firstFairStart(spot, pond), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
   });
 
-  it.each(spots)('keeps $id at least the turn clearance from every waypoint', (spot) => {
-    expect(turnDistance(spot, zone.tilapiaRoutes)).toBeGreaterThanOrEqual(RISK.turnClearance);
+  it.each(spots)('keeps $id at least the turn clearance from every tilapia and carp waypoint', (spot) => {
+    expect(turnDistance(spot, [...zone.tilapiaRoutes, ...zone.predatorRoutes])).toBeGreaterThanOrEqual(RISK.turnClearance);
   });
 });
 
@@ -59,6 +72,7 @@ describe('pond risk fairness on other seeds', () => {
   it.each(EXTRA_SEEDS)('keeps every spot and route identical to the default seed for seed %i', (seed) => {
     const layout = buildZone(POND_LAYOUT, seed);
     expect(layout.tilapiaRoutes).toEqual(pond.zone.tilapiaRoutes);
+    expect(layout.predatorRoutes).toEqual(pond.zone.predatorRoutes);
     expect(layout.spots).toEqual(pond.zone.spots);
     expect(layout.hazards).toEqual(pond.zone.hazards);
   });

@@ -21,7 +21,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 120;
+const TRACE_SECONDS = 240;
 const MIN_TRACE_SECONDS = 90;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const EVENT_DECIMALS = 100;
@@ -110,7 +110,7 @@ function swimPositions(from: Point, to: Point): Point[] {
   return positions;
 }
 
-/** Mean of a route's waypoints: inside the tilapia's lunge range wherever it is on its loop. */
+/** Mean of a route's waypoints: inside the tilapia's or carp's lunge range wherever it is on its loop. */
 function routeCentre(route: TilapiaRoute): Point {
   const count = route.waypoints.length;
   const sumX = route.waypoints.reduce((total, point) => total + point.x, 0);
@@ -120,12 +120,17 @@ function routeCentre(route: TilapiaRoute): Point {
 
 /**
  * The scripted swim, one axolotl centre per frame: the main path at four-leg cruise, then to each
- * tilapia's route centre in turn, parked there PARK_SECONDS, then parked at the last one until
- * TRACE_SECONDS.
+ * tilapia's route centre in turn, then to each predator's (carp's) route centre in turn, parked at
+ * each centre PARK_SECONDS, then parked at the last one until TRACE_SECONDS. Throws when the stops
+ * take longer than TRACE_SECONDS, so no stop is ever cut off.
  */
 function listScriptedPositions(zone: ZoneLayout): Point[] {
   const positions: Point[] = [{ ...zone.mainPath[0] }];
-  const stops = [...zone.mainPath.slice(1), ...zone.tilapiaRoutes.map(routeCentre)];
+  const stops = [
+    ...zone.mainPath.slice(1),
+    ...zone.tilapiaRoutes.map(routeCentre),
+    ...zone.predatorRoutes.map(routeCentre),
+  ];
   const parkFrom = zone.mainPath.length - 1;
   stops.forEach((stop, index) => {
     positions.push(...swimPositions(positions[positions.length - 1], stop));
@@ -133,6 +138,9 @@ function listScriptedPositions(zone: ZoneLayout): Point[] {
       positions.push(...Array.from({ length: PARK_SECONDS * FRAMES_PER_SECOND }, () => ({ ...stop })));
     }
   });
+  if (positions.length > TRACE_FRAMES) {
+    throw new RangeError(`listScriptedPositions: the stops take ${positions.length / FRAMES_PER_SECOND} s, over TRACE_SECONDS`);
+  }
   const last = positions[positions.length - 1];
   while (positions.length < TRACE_FRAMES) positions.push({ ...last });
   return positions.slice(0, TRACE_FRAMES);
@@ -235,9 +243,10 @@ describe('pond golden', () => {
     expect(summaries).toMatchSnapshot();
   });
 
-  it('scripts a swim of at least 90 s that parks inside every tilapia lunge range', () => {
+  it('scripts a swim of at least 90 s that parks inside every tilapia and carp lunge range', () => {
     expect(positions.length / FRAMES_PER_SECOND).toBeGreaterThanOrEqual(MIN_TRACE_SECONDS);
-    const parkedFrames = defaultZone.tilapiaRoutes.map((route) => {
+    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp', 'carp']);
+    const parkedFrames = [...defaultZone.tilapiaRoutes, ...defaultZone.predatorRoutes].map((route) => {
       const centre = routeCentre(route);
       return positions.filter((pos) => pos.x === centre.x && pos.y === centre.y).length;
     });

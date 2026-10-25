@@ -743,7 +743,6 @@ describe('Area 3 difficulty', () => {
     expect(snackDriftMaxSpeed(POND_2_AREA.snackDrift)).toBeGreaterThan(snackDriftMaxSpeed(POND_AREA.snackDrift));
     expect(strength(zone)).toBeGreaterThan(strength(pond1));
     expect(tripTreasureTuning(POND_2_AREA_ID).slots).toBeGreaterThan(tripTreasureTuning(POND_AREA.id).slots);
-    expect(pond1.predatorRoutes).toHaveLength(0);
     expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['heron', 'heron']);
     expect(zone.hazards.length).toBeGreaterThan(0);
     expect(zone.collectibles.some((snack) => snack.kind === 'shrimp')).toBe(true);
