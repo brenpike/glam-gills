@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-25
+
+### Added
+
+- Area 5 has five meaner carp that swim at every depth, so the floor is no longer safe. Tadpoles wander around their home and shrimp hop (#135).
+
+### Changed
+
+- Tilapia in Area 5 now patrol at every depth (#135).
+- Some ghost nets and a mat pair in Area 5's bottom row moved. Staying deep still dodges the garter snakes (#135).
+
 ## [0.39.0] - 2026-10-25
 
 ### Added
