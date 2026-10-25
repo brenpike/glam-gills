@@ -26,7 +26,7 @@ import { DEFAULT_ZONE_SEED, buildZone, swimBounds } from './zone';
 
 const chinampa = fairnessZone(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED));
 
-/** Ms each whole-seed sweep may take: every pool spot under nine chasing threats and two poles (issue #119, ND-10). */
+/** Ms each whole-seed sweep may take: every pool spot under eight chasing threats and two poles (issue #119, ND-10; issue #134, ND-7). */
 const SEED_SWEEP_TIMEOUT = 120_000;
 
 /** How far a safe start must be from a predator's loop: its lunge range plus its leash (issue #130, ND-11). */
@@ -66,10 +66,10 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
-  it('clears a chasing tilapia by its lunge range plus its leash, 305 px, and the carp by its lunge range plus its leash, 240 px', () => {
+  it('clears a chasing tilapia by its lunge range plus its leash, 305 px, and each of the 4 carp by its lunge range plus its leash, 240 px', () => {
     expect(chaseBand(CHINAMPA_TILAPIA)).toBe(305);
-    expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
-    expect(zone.predatorRoutes[0].species.tuning).toEqual(CHINAMPA_CARP.tuning);
+    expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp', 'carp', 'carp', 'carp']);
+    for (const route of zone.predatorRoutes) expect(route.species.tuning, route.id).toEqual(CHINAMPA_CARP.tuning);
     expect(chaseBand(CHINAMPA_CARP.tuning)).toBe(240);
     expect((zone.movingHazards ?? []).map((pole) => pole.type.id)).toEqual(['punting-pole', 'punting-pole']);
   });

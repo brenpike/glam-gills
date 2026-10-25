@@ -5,16 +5,16 @@
  * the bottom row; the bottom-row way runs past the root tangle and between two more nets. Both
  * meet at the gap between two chinampas, where the current flows, and the main path leaves it by a
  * lane along the bed to the exit. The root tangle in the bottom left and the bank in the top right
- * are dead ends that hold treasure spots. Six chasing tilapia, a carp and two punting poles keep
- * every screen of the main path in some threat's reach, and half the snacks are tadpoles and
- * shrimp (issue #119, ND-2 to ND-8).
+ * are dead ends that hold treasure spots. Four chasing tilapia, four carp and two punting poles keep
+ * all the water in some threat's reach, at every depth (issue #134, ND-1 to ND-3), and half the
+ * snacks are tadpoles that wander and shrimp that hop (issue #134, ND-6).
  */
 import { CHINAMPA_TREASURES } from './catalogue';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, NetDrift } from './hazards';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
-import { CARP_SPECIES, tunedSpecies, type PredatorSpecies } from './predators';
+import { CARP_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import { CARP, CARP_CHASE, DRIFTING_NETS, TILAPIA, TILAPIA_CHASE, type TilapiaTuning } from './tuning';
 import { SURF, areaSize, type AreaLayoutData, type BankOverhang, type Point } from './zone';
 
@@ -50,11 +50,21 @@ const CHINAMPA_TADPOLE = tadpoleRule(60);
 /** Area 4's shrimp rule (issue #119, ND-8): trigger 60 px, rest 1.4 s, flick 52 px at 130 px/s. */
 const CHINAMPA_SHRIMP = shrimpRule(60, 1.4, 52, 130);
 
-/** Px of each leg of every tadpole's 2-point wander loop, sideways (issue #119, ND-8; issue #131, ND-14). */
-const LEG_LENGTH = 120;
-
-/** How many tadpoles there are; each starts one seventh of its lap after the one before (issue #119, ND-8; issue #131, ND-14). */
-const TADPOLE_COUNT = 7;
+/**
+ * The tadpoles' wander loops (issue #134, ND-6): four in the top row, from the top left to the
+ * top right, then three in the bottom row, from the bottom left to the bottom right. Each home is
+ * 320 to 480 px wide and at least 150 px tall, with uneven legs of 90 to 300 px, and at least half
+ * of each loop, in one stretch, is out of every strike.
+ */
+const CHINAMPA_WANDER_LOOPS: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
+  Object.freeze([[350, 110], [470, 100], [690, 118], [610, 255], [400, 240]] as const),
+  Object.freeze([[800, 110], [980, 100], [1140, 130], [1130, 290], [950, 300], [830, 240]] as const),
+  Object.freeze([[1060, 110], [1220, 100], [1380, 120], [1300, 180], [1160, 250], [1060, 230]] as const),
+  Object.freeze([[2215, 110], [2400, 100], [2535, 105], [2420, 180], [2260, 250]] as const),
+  Object.freeze([[302, 503], [310, 650], [450, 654], [624, 652], [470, 560]] as const),
+  Object.freeze([[1745, 315], [1850, 300], [1962, 457], [2095, 500], [1935, 580], [2095, 645], [1900, 470]] as const),
+  Object.freeze([[2400, 648], [2560, 655], [2770, 640], [2690, 500], [2540, 580]] as const),
+]);
 
 /** One ghost net, id `chinampa-1/ghost-net-<n>`: a rect at a fixed place, drifting when `drift` is set (issue #119, ND-5). */
 function ghostNetAt(index: number, x0: number, x1: number, y0: number, y1: number, drift?: Readonly<NetDrift>): Readonly<HazardSpawn> {
@@ -66,18 +76,38 @@ function ghostNetAt(index: number, x0: number, x1: number, y0: number, y1: numbe
   });
 }
 
+/** Carp `carp-<n>` on a rect patrol loop from x0 to x1 and y0 to y1, with CHINAMPA_CARP (issue #134, ND-2). */
+function carpAt(index: number, x0: number, x1: number, y0: number, y1: number): Readonly<PredatorRoute> {
+  return Object.freeze({
+    id: `carp-${index}`,
+    waypoints: Object.freeze([
+      Object.freeze({ x: x0, y: y0 }),
+      Object.freeze({ x: x1, y: y0 }),
+      Object.freeze({ x: x1, y: y1 }),
+      Object.freeze({ x: x0, y: y1 }),
+    ]) as Point[],
+    species: CHINAMPA_CARP,
+  });
+}
+
 /** One punting pole, id `chinampa-1/punting-pole-<n>`, at `x`, its cycle starting at `offset` s, reaching `depth` px (issue #119, ND-4). */
 function puntingPoleAt(index: number, x: number, offset: number, depth: number): Readonly<MovingHazardSpawn> {
   return Object.freeze(movingHazardSpawn(`${CHINAMPA_AREA_ID}/punting-pole-${index}`, PUNTING_POLE, x, offset, depth));
 }
 
-/**
- * Tadpole `n` of TADPOLE_COUNT on a 2-point wander loop from (x, y) to LEG_LENGTH px to the right and
- * back, `(n - 1)` sevenths of its 4 s lap ahead (issue #119, ND-8; issue #131, ND-14).
- */
-function wanderAt(n: number, x: number, y: number): Readonly<TadpoleWander> {
-  const lapSeconds = (2 * LEG_LENGTH) / CHINAMPA_TADPOLE.speed;
-  return tadpoleWander(CHINAMPA_TADPOLE, [[x, y], [x + LEG_LENGTH, y]], ((n - 1) * lapSeconds) / TADPOLE_COUNT);
+/** Seconds a tadpole takes round the closed loop through `points` at Area 4's tadpole speed. */
+function chinampaLapSeconds(points: readonly (readonly [number, number])[]): number {
+  let length = 0;
+  points.forEach(([x, y], i) => {
+    const [nextX, nextY] = points[(i + 1) % points.length];
+    length += Math.hypot(nextX - x, nextY - y);
+  });
+  return length / CHINAMPA_TADPOLE.speed;
+}
+
+/** Tadpole n of 7 (from 0) on its wander loop, offset n x lap / 7 so the seven are out of step (issue #134, ND-6). */
+function chinampaWander(points: readonly (readonly [number, number])[], index: number): Readonly<TadpoleWander> {
+  return tadpoleWander(CHINAMPA_TADPOLE, points, (index * chinampaLapSeconds(points)) / CHINAMPA_WANDER_LOOPS.length);
 }
 
 /** The water under the bank of top-row screen `column`, from the surface to BANK_UNDER_Y, inset 20 px. */
@@ -104,7 +134,7 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([500, 626, 'epic', false] as const),
     Object.freeze([560, 626, 'epic', false] as const),
   ]),
-  /** Just past the gap current, beside the last tilapia: Legendary pots nearer it, Epic spots farther. */
+  /** Just past the gap current, beside `tilapia-1`: Legendary pots nearer it, Epic spots farther. */
   currentSpots: Object.freeze([
     Object.freeze([2430, 420, 'legendary', true] as const),
     Object.freeze([2430, 480, 'legendary', true] as const),
@@ -122,78 +152,64 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** The tangle of ahuejote roots on the bed of the bottom left, a dead end. */
   cave: Object.freeze({ id: `${CHINAMPA_AREA_ID}/cave`, x0: 410, x1: 590, y0: 560, y1: CHINAMPA_BED_TOP }),
   /**
-   * Six fixed patrol loops: `tilapia-0` over the root tangle, and `tilapia-1`, a tall loop from the
-   * top row down into the bottom row, beside the spots past the current and under the bank in the
-   * top right; then `tilapia-2` in the open water between the nets, and `tilapia-3` to `tilapia-5`
-   * low over the bottom-row bed, the last under the current (issue #119, ND-2). Every two are more
-   * than twice the lunge range of 145 px apart.
+   * Four fixed patrol loops (issue #134, ND-1): `tilapia-0` over the root tangle; `tilapia-1`, a
+   * slanting loop from the surface band down beside the spots past the current, under the bank in
+   * the top right; `tilapia-2`, a tall narrow loop between the bottom-row nets and the main path's
+   * dive; and `tilapia-3` at the right edge of the top right. Each reaches 24 px or more into two
+   * depth bands, and `tilapia-1` and `tilapia-3` reach the surface band, where no Common spot is
+   * near. Every two are more than twice the lunge range of 145 px apart.
    */
   tilapiaRoutes: Object.freeze([
     Object.freeze([
-      Object.freeze([420, 460] as const),
-      Object.freeze([580, 460] as const),
-      Object.freeze([580, 500] as const),
-      Object.freeze([420, 500] as const),
+      Object.freeze([465, 330] as const),
+      Object.freeze([685, 330] as const),
+      Object.freeze([685, 500] as const),
+      Object.freeze([465, 500] as const),
     ]),
     Object.freeze([
-      Object.freeze([2500, 300] as const),
-      Object.freeze([2660, 300] as const),
-      Object.freeze([2660, 470] as const),
-      Object.freeze([2500, 470] as const),
+      Object.freeze([2522, 256] as const),
+      Object.freeze([2532, 256] as const),
+      Object.freeze([2502, 480] as const),
+      Object.freeze([2495, 480] as const),
     ]),
     Object.freeze([
-      Object.freeze([1155, 320] as const),
-      Object.freeze([1240, 320] as const),
-      Object.freeze([1240, 334] as const),
-      Object.freeze([1155, 334] as const),
+      Object.freeze([1265, 330] as const),
+      Object.freeze([1270, 330] as const),
+      Object.freeze([1270, 600] as const),
+      Object.freeze([1265, 600] as const),
     ]),
     Object.freeze([
-      Object.freeze([1170, 630] as const),
-      Object.freeze([1240, 630] as const),
-      Object.freeze([1240, 648] as const),
-      Object.freeze([1170, 648] as const),
+      Object.freeze([2823, 256] as const),
+      Object.freeze([2840, 256] as const),
+      Object.freeze([2840, 430] as const),
+      Object.freeze([2823, 430] as const),
     ]),
-    Object.freeze([
-      Object.freeze([1535, 630] as const),
-      Object.freeze([1600, 630] as const),
-      Object.freeze([1600, 648] as const),
-      Object.freeze([1535, 648] as const),
-    ]),
-    Object.freeze([
-      Object.freeze([2210, 630] as const),
-      Object.freeze([2250, 630] as const),
-      Object.freeze([2250, 648] as const),
-      Object.freeze([2210, 648] as const),
-    ]),
-  ]),
-  /** `carp-0` rooting along the bottom-row bed before the current (issue #119, ND-3). */
-  predatorRoutes: Object.freeze([
-    Object.freeze({
-      id: 'carp-0',
-      waypoints: Object.freeze([
-        Object.freeze({ x: 1870, y: 600 }),
-        Object.freeze({ x: 1940, y: 600 }),
-        Object.freeze({ x: 1940, y: 640 }),
-        Object.freeze({ x: 1870, y: 640 }),
-      ]) as Point[],
-      species: CHINAMPA_CARP,
-    }),
   ]),
   /**
+   * Four carp on tall narrow loops (issue #134, ND-2), left to right: `carp-0` under the main path's
+   * dive and `carp-1` beyond it, from the middle band down to the floor; `carp-2` in the top row
+   * between the fourth and sixth plots, from the surface band down to the middle, so its reach
+   * covers the top row under the banks beside it; and `carp-3` in the current, from the middle band
+   * down to the floor. Each is more than its lunge plus the Area 4 lunge from every tilapia route
+   * and more than twice its lunge from every other carp, and each lap is shorter than the longest
+   * tilapia lap.
+   */
+  predatorRoutes: Object.freeze([carpAt(0, 1550, 1560, 444, 600), carpAt(1, 1801, 1806, 444, 600), carpAt(2, 2003, 2008, 150, 306), carpAt(3, 2224, 2229, 444, 600)]),
+  /**
    * Five ghost nets, left to right: two in the bottom row with the bottom-row way between them, two
-   * in the top row with the main path's dive between them, and one at the surface at the way into
-   * the bank in the top right. The two bottom-row nets drift 120 px sideways in step, along the
-   * current's flow, so the way between them stays 100 px tall (issue #119, ND-5). Each, by its whole
-   * drift path, is more than a lunge plus its reach and the safe passing width from every tilapia
-   * route and the carp's, and at least 190.5 px from the current, so a snag ends before a snagged
-   * axolotl reaches it.
+   * at the top of the main path's dive with the dive between them, and one at the surface beyond
+   * the dive, under the bank of the fourth plot. The two bottom-row nets drift 120 px sideways in
+   * step, along the current's flow, so the way between them stays 100 px tall (issue #119, ND-5).
+   * Each, by its whole drift path, is more than a lunge plus its reach and the safe passing width
+   * from every tilapia and carp route, and at least 190.5 px from the current, so a snag ends
+   * before a snagged axolotl reaches it (issue #134, ND-5).
    */
   hazards: Object.freeze([
-    ghostNetAt(1, 905, 965, 400, 470, netDrift(-120, 0, DRIFTING_NETS.period, 0)),
-    ghostNetAt(2, 905, 965, 570, 640, netDrift(-120, 0, DRIFTING_NETS.period, 0)),
-    ghostNetAt(3, 1460, 1510, 260, 360),
-    ghostNetAt(4, 1610, 1660, 260, 360),
-    ghostNetAt(5, 2200, 2260, 94, 170),
+    ghostNetAt(1, 1005, 1065, 400, 470, netDrift(-120, 0, DRIFTING_NETS.period, 0)),
+    ghostNetAt(2, 1005, 1065, 570, 640, netDrift(-120, 0, DRIFTING_NETS.period, 0)),
+    ghostNetAt(3, 1460, 1510, 170, 270),
+    ghostNetAt(4, 1610, 1660, 170, 270),
+    ghostNetAt(5, 1745, 1805, 94, 170),
   ]),
   elements: Object.freeze([]),
   /**
@@ -212,15 +228,16 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   ]),
   /**
    * Fixed stranding places (PRD C2), left to right: above the root tangle, on the bed past it, in
-   * the open water below the banks, beyond the top row nets, on the bed before the current, and in
-   * the top right corner. Every place is at least 80 px from every tilapia route and the carp's,
-   * and clear of every net's drift path and every pole sweep by the rescue reach (issue #119, ND-2).
+   * the open water below the banks, below the top of the dive between `carp-0` and `carp-1`, on the
+   * bed before the current, and in the top right corner. Every place is at least 80 px from every
+   * tilapia and carp route, and clear of every net's drift path and every pole sweep by the rescue
+   * reach (issue #119, ND-2; issue #134, ND-5).
    */
   strandingPlaces: Object.freeze([
     Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-1`, x: 360, y: 300 }),
     Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-2`, x: 690, y: 640 }),
     Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-3`, x: 1000, y: 250 }),
-    Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-4`, x: 1800, y: 250 }),
+    Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-4`, x: 1700, y: 380 }),
     Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-5`, x: 2120, y: 650 }),
     Object.freeze({ id: `${CHINAMPA_AREA_ID}/strand-6`, x: 2800, y: 140 }),
   ]),
@@ -238,7 +255,8 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   bankOverhangs: Object.freeze([1, 2, 3, 5].map(bankOverhangOf)),
   /**
    * Under the banks: Common spots in the first two plots, along the main path, then Rare spots under
-   * the bank in the top right, a dead end off the path, within reach of `tilapia-1`'s strike band.
+   * the bank in the top right, a dead end off the path, within reach of the strike bands of
+   * `tilapia-1` and `tilapia-3`.
    */
   bankSpots: Object.freeze([
     Object.freeze([560, 110, 'common', false] as const),
@@ -254,32 +272,29 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([2670, 110, 'rare', false] as const),
     Object.freeze([2730, 110, 'rare', false] as const),
   ]),
-  /** Two punting poles in top-row screen columns with no bank, 2 s out of step (issue #119, ND-4). */
-  movingHazards: Object.freeze([puntingPoleAt(1, 420, 0, 180), puntingPoleAt(2, 2075, 2, 350)]),
   /**
-   * Seven tadpoles on 2-point wander loops out of step and seven shrimp on 1-spot homes, half of the
-   * 28 snacks (issue #119, ND-8; issue #131, ND-14).
+   * Two punting poles in top-row screen columns with no bank, 2 s out of step (issue #119, ND-4):
+   * a short one by the Home Spot's column, clear of `tilapia-0`, and one between `carp-2` and the
+   * bank in the top right (issue #134, ND-3).
+   */
+  movingHazards: Object.freeze([puntingPoleAt(1, 324, 0, 100), puntingPoleAt(2, 2190, 2, 180)]),
+  /**
+   * Seven tadpoles on wander loops (CHINAMPA_WANDER_LOOPS), out of step, and seven shrimp on homes of
+   * 3 or 4 hop spots, four of each in the top row and three in the bottom row, half of the 28 snacks
+   * (issue #134, ND-6).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: CHINAMPA_TADPOLE,
-    wanders: [
-      wanderAt(1, 520, 200),
-      wanderAt(2, 700, 280),
-      wanderAt(3, 880, 200),
-      wanderAt(4, 1310, 180),
-      wanderAt(5, 1720, 420),
-      wanderAt(6, 1740, 180),
-      wanderAt(7, 2540, 650),
-    ],
+    wanders: CHINAMPA_WANDER_LOOPS.map(chinampaWander),
     shrimp: CHINAMPA_SHRIMP,
     homes: [
-      shrimpHome([[640, 280]]),
-      shrimpHome([[980, 290]]),
-      shrimpHome([[1380, 480]]),
-      shrimpHome([[1960, 300]]),
-      shrimpHome([[2440, 640]]),
-      shrimpHome([[2320, 250]]),
-      shrimpHome([[1100, 160]]),
+      shrimpHome([[390, 120], [470, 110], [520, 160], [430, 170]]),
+      shrimpHome([[1150, 112], [1230, 108], [1290, 150], [1200, 160]]),
+      shrimpHome([[2265, 120], [2335, 112], [2380, 165], [2300, 175]]),
+      shrimpHome([[2600, 110], [2680, 105], [2760, 120], [2700, 135]]),
+      shrimpHome([[2430, 630], [2500, 645], [2570, 640]]),
+      shrimpHome([[1950, 460], [2030, 450], [2070, 560], [1990, 600]]),
+      shrimpHome([[2650, 620], [2720, 645], [2800, 610], [2740, 590]]),
     ],
   }),
 } satisfies AreaLayoutData);

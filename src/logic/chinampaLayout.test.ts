@@ -3,7 +3,19 @@ import { CHINAMPA_AREA, CHINAMPA_HABITAT, POND_2_AREA, newThingsByArea, sourceFa
 import { CHINAMPA_TREASURES, RARITIES } from './catalogue';
 import { CHINAMPA_AREA_ID, CHINAMPA_CARP, CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
 import { createCollectibles, drawnSnackX, drawnSnackY, snackDriftMaxSpeed, snackX, snackY, type Collectible, type SnackFrame } from './collectibles';
-import { longestQuietStretch, meetsFullDangerBar, movingHazardTypeCount, movingThreatCount, predatorTypeCount } from './dangerBar';
+import {
+  carpCount,
+  carpTarget,
+  depthBands,
+  floorQuietStretch,
+  hasSurfaceDanger,
+  longestQuietSwim,
+  meetsDepthRule,
+  meetsWholeWaterDangerBar,
+  movingHazardTypeCount,
+  movingThreatCount,
+  predatorTypeCount,
+} from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { CARP_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT } from './factCards';
 import { GHOST_NET } from './ghostNets';
@@ -21,23 +33,25 @@ import {
 import { NET_CURRENT_CLEARANCE, SAFE_PASSING_WIDTH, gapsOf, loopSamples, narrowestPathGap } from './layoutGaps';
 import { legSwimTuning } from './legs';
 import {
+  meetsSnackMotion,
   meetsSnackRamp,
   mobileSnackAvoid,
   mobileSnackClear,
   mobileSnackShare,
-  mobileLegBoxes,
+  oneLegCatchesTadpole,
   oneTimeDarts,
   shrimpBox,
   shrimpHomeClear,
   snackMagnetSpeed,
   tadpoleWanderClear,
 } from './mobileSnacks';
-import { PUNTING_POLE, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
+import { PUNTING_POLE, movingHazardPeriod, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { placeTreasures } from './placement';
 import { CARP_SPECIES, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies } from './predators';
 import { POND_2_LAYOUT } from './pond2Layout';
 import { RESCUE } from './rescue';
+import { loopSeconds } from './riskFairness';
 import { SNACK_DART } from './snackDart';
 import { stepSwim, type SwimState } from './swimPhysics';
 import {
@@ -48,7 +62,9 @@ import {
   GHOST_NETS,
   LEGS,
   RISK,
+  SHRIMP,
   SWIM,
+  TADPOLES,
   TILAPIA,
   TILAPIA_CHASE,
   tripTreasureTuning,
@@ -90,8 +106,20 @@ const STRAND_NET_CLEARANCE = GHOST_NET.reach + RESCUE.reachRadius;
 const STRAND_POLE_CLEARANCE = PUNTING_POLE.touchReach + RESCUE.reachRadius;
 /** Lowest y of the overhanging banks. */
 const BANK_UNDER_Y = 140;
-/** The measured longest stretch of the main path with no moving threat in reach (issue #119, ND-6). */
-const LONGEST_QUIET_STRETCH = 459;
+/** The measured longest quiet swim in the whole water, and where it starts and ends (issue #134, ND-5). */
+const LONGEST_QUIET_SWIM = { length: 365.019335983756, from: { x: 1456, y: 102 }, to: { x: 1768, y: 214 } };
+/** The measured longest stretch of the floor lane with no predator in reach (issue #134, ND-5). */
+const FLOOR_QUIET_STRETCH = 19;
+/** The measured moving threats: 4 tilapia, 4 carp and 2 punting poles (issue #134, ND-1 to ND-3). */
+const MOVING_THREATS = 10;
+/** How far in px a loop reaches into a depth band to count there (issue #130, ND-5). */
+const BAND_REACH = 24;
+/** Fewest px between two tadpole home centres (issue #134, ND-6). */
+const HOME_CENTRE_SPACING = 240;
+/** Fewest tadpole and shrimp homes in each screen row (issue #134, ND-6). */
+const HOMES_PER_ROW = 3;
+/** Shortest and longest tadpole leg in px at 60 px/s: 1.5 s to 5 s (issue #134, ND-6). */
+const LEG_PX = { min: 90, max: 300 };
 const FRAME = 1 / 60;
 const BEAT_MAX_SECONDS = 180;
 const WAYPOINT_REACH = 8;
@@ -206,6 +234,40 @@ function rectsOverlap(first: { x0: number; x1: number; y0: number; y1: number },
   return first.x1 >= second.x0 && first.x0 <= second.x1 && first.y1 >= second.y0 && first.y0 <= second.y1;
 }
 
+/** A span of y from `top` down to `bottom` in px, as depthBands gives each band. */
+type YSpan = ReturnType<typeof depthBands>[number];
+
+/** The y span of a loop's waypoints. */
+function loopSpan(route: TilapiaRoute): YSpan {
+  const ys = route.waypoints.map((point) => point.y);
+  return { top: Math.min(...ys), bottom: Math.max(...ys) };
+}
+
+/** Px of `band` the span covers. */
+function bandOverlap(span: YSpan, band: YSpan): number {
+  return Math.max(0, Math.min(span.bottom, band.bottom) - Math.max(span.top, band.top));
+}
+
+/** The box round the points, edges included. */
+function boxOf(points: readonly Point[]): { x0: number; x1: number; y0: number; y1: number } {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+/** The screen row of a box, 0 for the top row, from its centre y against WORLD_H. */
+function rowOf(box: { y0: number; y1: number }): number {
+  return Math.floor((box.y0 + box.y1) / 2 / WORLD_H);
+}
+
+/** Px of each leg of the closed loop through `points`. */
+function legLengths(points: readonly Point[]): number[] {
+  return points.map((point, i) => {
+    const next = points[(i + 1) % points.length];
+    return Math.hypot(next.x - point.x, next.y - point.y);
+  });
+}
+
 /** Whether a shrimp at `spot` has a clear place to flick to in at least one of FLICK_DIRECTIONS directions. */
 function hasClearFlick(layout: ZoneLayout, spot: Point): boolean {
   const avoid = mobileSnackAvoid(layout);
@@ -239,7 +301,7 @@ describe('CHINAMPA_LAYOUT', () => {
     expect(Object.isFrozen(CHINAMPA_CARP)).toBe(true);
   });
 
-  it('has 28 snacks (8 worms, 6 bugs, 7 tadpoles and 7 shrimp), 5 ghost nets, 6 tilapia, a carp, 2 punting poles and 9 treasure slots, and no reeds, pads, plastic worms or heron', () => {
+  it('has 28 snacks (8 worms, 6 bugs, 7 tadpoles and 7 shrimp), 5 ghost nets, 4 tilapia, 4 carp, 2 punting poles and 9 treasure slots, and no reeds, pads, plastic worms or heron', () => {
     for (const seed of ALL_SEEDS) {
       const layout = chinampa(seed);
       expect(layout.collectibles).toHaveLength(28);
@@ -247,8 +309,8 @@ describe('CHINAMPA_LAYOUT', () => {
       expect(layout.collectibles.filter((snack) => snack.kind === 'bug')).toHaveLength(6);
       expect(layout.collectibles.filter((snack) => snack.kind === 'tadpole')).toHaveLength(7);
       expect(layout.collectibles.filter((snack) => snack.kind === 'shrimp')).toHaveLength(7);
-      expect(layout.tilapiaRoutes.map((route) => route.id)).toEqual([0, 1, 2, 3, 4, 5].map((n) => `tilapia-${n}`));
-      expect(layout.predatorRoutes.map((route) => route.id)).toEqual(['carp-0']);
+      expect(layout.tilapiaRoutes.map((route) => route.id)).toEqual([0, 1, 2, 3].map((n) => `tilapia-${n}`));
+      expect(layout.predatorRoutes.map((route) => route.id)).toEqual([0, 1, 2, 3].map((n) => `carp-${n}`));
       expect(layout.movingHazards?.map((spawn) => spawn.id)).toEqual([1, 2].map((n) => `chinampa-1/punting-pole-${n}`));
       expect(layout.reeds).toEqual([]);
       expect(layout.reedPatches).toEqual([]);
@@ -281,14 +343,14 @@ describe('CHINAMPA_LAYOUT', () => {
     }
   });
 
-  it('plays the common carp with its chase default, a danger part with B10 S = 120', () => {
+  it('plays every common carp with its chase default, a danger part with B10 S = 120', () => {
     expect(CHINAMPA_CARP.id).toBe(CARP_SPECIES.id);
     expect(CHINAMPA_CARP.id).toBe('carp');
     expect(CHINAMPA_CARP.tuning).toEqual({ ...CARP, chase: CARP_CHASE });
     expect(CHINAMPA_CARP.dangerPart).toBe(true);
-    expect(zone.predatorRoutes[0].species).toBe(CHINAMPA_CARP);
+    for (const route of zone.predatorRoutes) expect(route.species, route.id).toBe(CHINAMPA_CARP);
     const carp = zoneThreats(zone).filter((threat) => threat.kind === 'route' && !threat.tilapia);
-    expect(carp.map((threat) => threat.strike)).toEqual([120]);
+    expect(carp.map((threat) => threat.strike)).toEqual([120, 120, 120, 120]);
   });
 
   it('is shaped down and right: the Home Spot in the top left screen and the exit in the bottom right screen', () => {
@@ -495,11 +557,29 @@ describe('Area 4 tilapia, carp, current and stranding places', () => {
     }
   });
 
-  it('keeps the carp loop farther than its lunge plus the Area 4 lunge from every tilapia route', () => {
-    const [carp] = zone.predatorRoutes;
-    for (const route of zone.tilapiaRoutes) {
-      expect(routeGap(carp, route), route.id).toBeGreaterThan(CARP_STRIKE + STRIKE);
+  it('keeps every carp loop farther than its lunge plus the Area 4 lunge from every tilapia route', () => {
+    expect(zone.predatorRoutes).toHaveLength(4);
+    for (const carp of zone.predatorRoutes) {
+      for (const route of zone.tilapiaRoutes) {
+        expect(routeGap(carp, route), `${carp.id} to ${route.id}`).toBeGreaterThan(CARP_STRIKE + STRIKE);
+      }
     }
+  });
+
+  it('keeps every two carp loops more than twice the carp lunge range apart', () => {
+    for (const [i, first] of zone.predatorRoutes.entries()) {
+      for (const second of zone.predatorRoutes.slice(i + 1)) {
+        expect(routeGap(first, second), `${first.id} to ${second.id}`).toBeGreaterThan(2 * CARP_STRIKE);
+      }
+    }
+  });
+
+  it('keeps every carp lap and pole cycle no longer than the longest tilapia lap (issue #134, ND-2)', () => {
+    const longestTilapiaLap = Math.max(...zone.tilapiaRoutes.map((route) => loopSeconds(route, CHINAMPA_TILAPIA.patrolSpeed)));
+    for (const carp of zone.predatorRoutes) {
+      expect(loopSeconds(carp, carp.species.tuning.patrolSpeed), carp.id).toBeLessThanOrEqual(longestTilapiaLap);
+    }
+    for (const pole of polesOf(zone)) expect(movingHazardPeriod(pole.type), pole.id).toBeLessThanOrEqual(longestTilapiaLap);
   });
 
   it('keeps the tilapia and carp routes in the water and out of the safe area, by their body radius', () => {
@@ -671,14 +751,14 @@ describe('Area 4 gaps (the level layout ladder)', () => {
 });
 
 describe('Area 4 danger bar', () => {
-  it.each(ALL_SEEDS)('meets the full danger bar for seed %i', (seed) => {
-    expect(meetsFullDangerBar(chinampa(seed))).toBe(true);
+  it.each(ALL_SEEDS)('meets the full danger bar with the whole-water test for seed %i (issue #134, ND-5)', (seed) => {
+    expect(meetsWholeWaterDangerBar(chinampa(seed))).toBe(true);
   });
 
-  it('has 9 moving threats over its 12 screens, 2 predator species, 1 moving hazard type, and every predator chases', () => {
+  it('has 10 moving threats over its 12 screens, 2 predator species, 1 moving hazard type, and every predator chases', () => {
     const screens = (zone.width / SCREEN_W) * (zone.height / WORLD_H);
     expect(screens).toBe(12);
-    expect(movingThreatCount(zone)).toBe(9);
+    expect(movingThreatCount(zone)).toBe(MOVING_THREATS);
     expect(movingThreatCount(zone)).toBeGreaterThanOrEqual(Math.ceil(0.75 * screens));
     expect(predatorTypeCount(zone)).toBe(2);
     expect(movingHazardTypeCount(zone)).toBe(1);
@@ -686,9 +766,68 @@ describe('Area 4 danger bar', () => {
     expect(zone.predatorRoutes.every((route) => route.species.tuning.chase !== undefined)).toBe(true);
   });
 
-  it('leaves no stretch of the main path longer than one screen with no moving threat in reach', () => {
-    expect(longestQuietStretch(zone)).toBeCloseTo(LONGEST_QUIET_STRETCH, 6);
-    expect(longestQuietStretch(zone)).toBeLessThanOrEqual(SCREEN_W);
+  it('leaves no quiet swim in the whole water longer than one screen across', () => {
+    const swim = longestQuietSwim(zone);
+    expect(swim?.length).toBeCloseTo(LONGEST_QUIET_SWIM.length, 6);
+    expect(swim?.from).toEqual(LONGEST_QUIET_SWIM.from);
+    expect(swim?.to).toEqual(LONGEST_QUIET_SWIM.to);
+    expect(swim?.length).toBeLessThanOrEqual(SCREEN_W);
+  });
+
+  it('splits its swim water into three depth bands: surface, middle and floor', () => {
+    const bands = depthBands(zone);
+    expect(bands).toHaveLength(3);
+    expect(bands[0].top).toBe(94);
+    expect(bands[0].bottom).toBeCloseTo(281.33, 2);
+    expect(bands[1].top).toBeCloseTo(281.33, 2);
+    expect(bands[1].bottom).toBeCloseTo(468.67, 2);
+    expect(bands[2].top).toBeCloseTo(468.67, 2);
+    expect(bands[2].bottom).toBe(656);
+  });
+
+  it('patrols at every depth: each tilapia and carp loop reaches two bands, and each species all three (issue #134, ND-1, ND-2)', () => {
+    const bands = depthBands(zone);
+    expect(meetsDepthRule(zone)).toBe(true);
+    for (const routes of [zone.tilapiaRoutes, zone.predatorRoutes]) {
+      for (const route of routes) {
+        const reached = bands.filter((band) => bandOverlap(loopSpan(route), band) >= BAND_REACH);
+        expect(reached.length, route.id).toBeGreaterThanOrEqual(2);
+      }
+      for (const [index, band] of bands.entries()) {
+        const deepest = Math.max(...routes.map((route) => bandOverlap(loopSpan(route), band)));
+        expect(deepest, `${routes[0].id} species in band ${index}`).toBeGreaterThanOrEqual(BAND_REACH);
+      }
+    }
+  });
+
+  it('reaches the surface band with a tilapia where no Common spot is near', () => {
+    const surface = depthBands(zone)[0];
+    const commons = zone.spots.filter((spot) => spot.rarity === 'common');
+    const atSurface = zone.tilapiaRoutes.filter((route) => bandOverlap(loopSpan(route), surface) >= BAND_REACH);
+    expect(atSurface.map((route) => route.id)).toEqual(['tilapia-1', 'tilapia-3']);
+    for (const route of atSurface) {
+      for (const spot of commons) expect(routeDistance(spot, [route]), `${spot.id} to ${route.id}`).toBeGreaterThan(STRIKE + 60);
+    }
+  });
+
+  it('has danger from the surface, so its floor lane keeps a quiet stretch of at most one screen across', () => {
+    expect(hasSurfaceDanger(zone)).toBe(true);
+    expect(floorQuietStretch(zone)).toBe(FLOOR_QUIET_STRETCH);
+    expect(floorQuietStretch(zone)).toBeLessThanOrEqual(SCREEN_W);
+  });
+
+  it('has 4 carp, the carp rule for its 12 screens', () => {
+    expect(carpTarget(12)).toBe(4);
+    expect(carpCount(zone)).toBe(4);
+    expect(carpCount(zone)).toBeGreaterThanOrEqual(carpTarget(12));
+  });
+
+  it.each(EXTRA_SEEDS)('builds the same tilapia, carp and poles for seed %i', (seed) => {
+    const layout = chinampa(seed);
+    expect(layout.tilapiaRoutes).toEqual(zone.tilapiaRoutes);
+    expect(layout.predatorRoutes).toEqual(zone.predatorRoutes);
+    expect(layout.movingHazards).toEqual(zone.movingHazards);
+    expect(layout.tilapia).toEqual(zone.tilapia);
   });
 
   it('puts each pole in a top-row screen column with no bank, its danger zone out of the safe area and every overhang', () => {
@@ -704,8 +843,8 @@ describe('Area 4 danger bar', () => {
       }
     }
     expect(polesOf(zone).map((pole) => [pole.x, pole.offset, pole.depth])).toEqual([
-      [420, 0, 180],
-      [2075, 2, 350],
+      [324, 0, 100],
+      [2190, 2, 180],
     ]);
     expect(polesOf(zone).every((pole) => pole.type === PUNTING_POLE)).toBe(true);
   });
@@ -794,29 +933,83 @@ describe('Area 4 snacks', () => {
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 1.4, flickDistance: 52, flickSpeed: 130 });
   });
 
-  it('gives each tadpole a 2-point wander loop 120 px along the flow, tadpole n (n - 1) sevenths of its 4 s lap ahead (issue #131, ND-14)', () => {
-    const lapSeconds = (2 * 120) / 60;
-    expect(lapSeconds).toBe(4);
-    for (const [index, wander] of (mix?.wanders ?? []).entries()) {
-      const [start, end] = wander.points;
-      expect(wander.points, `tadpole ${index + 1}`).toHaveLength(2);
-      expect(end.x - start.x, `tadpole ${index + 1}`).toBe(120);
-      expect(end.y, `tadpole ${index + 1}`).toBe(start.y);
-      expect(wander.offset, `tadpole ${index + 1}`).toBeCloseTo((index * lapSeconds) / 7, 9);
-    }
-    expect((mix?.homes ?? []).every((home) => home.points.length === 1)).toBe(true);
+  it('moves its tadpoles and shrimp as the snack motion rules ask (meetsSnackMotion; issue #134, ND-6)', () => {
+    expect(meetsSnackMotion(CHINAMPA_LAYOUT)).toBe(true);
+    expect(meetsSnackMotion({ screensWide: zone.chunks, screensTall: zone.rows, mobileSnacks: zone.mobileSnacks })).toBe(true);
   });
 
-  it.each(ALL_SEEDS)('keeps every tadpole leg and shrimp clear (mobileSnackClear) for seed %i', (seed) => {
-    const layout = chinampa(seed);
-    const avoid = mobileSnackAvoid(layout);
-    for (const box of mobileLegBoxes(layout)) {
-      expect(mobileSnackClear(box, avoid), `leg at (${box.x0}, ${box.y0})`).toBe(true);
+  it('gives each tadpole a wander loop of 4 to 8 points with uneven legs of 90 to 300 px and a lap of at most 40 s, tadpole n (n - 1) sevenths of its lap ahead', () => {
+    for (const [index, wander] of (mix?.wanders ?? []).entries()) {
+      const label = `tadpole ${index + 1}`;
+      const legs = legLengths(wander.points);
+      const lapSeconds = legs.reduce((sum, leg) => sum + leg, 0) / 60;
+      expect(wander.points.length, label).toBeGreaterThanOrEqual(TADPOLES.minLoopPoints);
+      expect(wander.points.length, label).toBeLessThanOrEqual(TADPOLES.maxLoopPoints);
+      for (const leg of legs) {
+        expect(leg, label).toBeGreaterThanOrEqual(LEG_PX.min);
+        expect(leg, label).toBeLessThanOrEqual(LEG_PX.max);
+      }
+      expect(new Set(legs.map(Math.round)).size, `${label} legs are uneven`).toBeGreaterThan(1);
+      expect(lapSeconds, label).toBeLessThanOrEqual(TADPOLES.maxLapSeconds);
+      expect(wander.offset, label).toBeCloseTo((index * lapSeconds) / 7, 9);
     }
-    for (const home of layout.mobileSnacks?.homes ?? []) {
-      const spot = home.points[0];
-      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at (${spot.x}, ${spot.y})`).toBe(true);
+  });
+
+  it('gives each tadpole a home 320 to 480 px wide and 150 to 360 px tall, at least 3 in each screen row, centres 240 px apart', () => {
+    const boxes = (mix?.wanders ?? []).map((wander) => boxOf(wander.points));
+    for (const [index, box] of boxes.entries()) {
+      expect(box.x1 - box.x0, `tadpole ${index + 1}`).toBeGreaterThanOrEqual(TADPOLES.minHomeWidth);
+      expect(box.x1 - box.x0, `tadpole ${index + 1}`).toBeLessThanOrEqual(TADPOLES.maxHomeWidth);
+      expect(box.y1 - box.y0, `tadpole ${index + 1}`).toBeGreaterThanOrEqual(TADPOLES.minHomeHeight);
+      expect(box.y1 - box.y0, `tadpole ${index + 1}`).toBeLessThanOrEqual(TADPOLES.maxHomeHeight);
     }
+    expect(TADPOLES.minHomeWidth).toBe(320);
+    expect(TADPOLES.maxHomeWidth).toBe(480);
+    expect(TADPOLES.minHomeHeight).toBe(150);
+    expect(TADPOLES.maxHomeHeight).toBe(360);
+    for (const row of [0, 1]) expect(boxes.filter((box) => rowOf(box) === row).length, `row ${row}`).toBeGreaterThanOrEqual(HOMES_PER_ROW);
+    const centres = boxes.map((box) => ({ x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 }));
+    for (const [i, first] of centres.entries()) {
+      for (const [j, second] of centres.entries()) {
+        if (j <= i) continue;
+        expect(Math.hypot(first.x - second.x, first.y - second.y), `tadpoles ${i + 1} and ${j + 1}`).toBeGreaterThanOrEqual(HOME_CENTRE_SPACING);
+      }
+    }
+  });
+
+  it('keeps every tadpole home out of the current and at least 80 px from every ghost net drift path', () => {
+    const [current] = zone.currents;
+    expect(rectOf(current)).toEqual({ kind: 'rect', x0: 2140, x1: 2340, y0: 380, y1: 600 });
+    for (const [index, wander] of (mix?.wanders ?? []).entries()) {
+      const home: HazardShape = { kind: 'rect', ...boxOf(wander.points) };
+      expect(rectsOverlap(boxOf(wander.points), current), `tadpole ${index + 1}`).toBe(false);
+      for (const net of netShapes(zone)) {
+        expect(rectDistance(home, net), `tadpole ${index + 1}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
+      }
+    }
+    expect(SNACK_HAZARD_CLEARANCE).toBe(80);
+  });
+
+  it('lets a one-leg axolotl catch every tadpole (the one-leg catch proof)', () => {
+    const rule = mix?.tadpole;
+    if (!rule) throw new Error('Area 4 has a tadpole rule');
+    expect(mix?.wanders).toHaveLength(7);
+    for (const [index, wander] of (mix?.wanders ?? []).entries()) {
+      expect(oneLegCatchesTadpole(rule, wander, swimBounds(zone)), `tadpole ${index + 1}`).toBe(true);
+    }
+  });
+
+  it('gives each shrimp a home of 3 to 6 hop spots in a box at most 200 x 160 px, at least 3 in each screen row', () => {
+    const boxes = (mix?.homes ?? []).map((home) => boxOf(home.points));
+    for (const [index, home] of (mix?.homes ?? []).entries()) {
+      const box = boxes[index];
+      expect(home.points.length, `shrimp ${index + 1}`).toBeGreaterThanOrEqual(SHRIMP.minHomeSpots);
+      expect(home.points.length, `shrimp ${index + 1}`).toBeLessThanOrEqual(SHRIMP.maxHomeSpots);
+      expect(box.x1 - box.x0, `shrimp ${index + 1}`).toBeLessThanOrEqual(SHRIMP.maxHomeWidth);
+      expect(box.y1 - box.y0, `shrimp ${index + 1}`).toBeLessThanOrEqual(SHRIMP.maxHomeHeight);
+    }
+    expect([SHRIMP.minHomeSpots, SHRIMP.maxHomeSpots, SHRIMP.maxHomeWidth, SHRIMP.maxHomeHeight]).toEqual([3, 6, 200, 160]);
+    for (const row of [0, 1]) expect(boxes.filter((box) => rowOf(box) === row).length, `row ${row}`).toBeGreaterThanOrEqual(HOMES_PER_ROW);
   });
 
   it.each(ALL_SEEDS)('passes tadpoleWanderClear and shrimpHomeClear for every tadpole and shrimp for seed %i (issue #131, ND-7)', (seed) => {
@@ -839,11 +1032,12 @@ describe('Area 4 snacks', () => {
     expect(oneTimeDarts(CHINAMPA_AREA, chinampa(seed))).toBeNull();
   });
 
-  it.each(ALL_SEEDS)('gives every shrimp a clear flick target in at least one of 8 directions for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('gives every shrimp hop spot a clear flick target in at least one of 8 directions for seed %i', (seed) => {
     const layout = chinampa(seed);
     for (const home of layout.mobileSnacks?.homes ?? []) {
-      const spot = home.points[0];
-      expect(hasClearFlick(layout, spot), `shrimp at (${spot.x}, ${spot.y})`).toBe(true);
+      for (const spot of home.points) {
+        expect(hasClearFlick(layout, spot), `shrimp at (${spot.x}, ${spot.y})`).toBe(true);
+      }
     }
   });
 });

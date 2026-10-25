@@ -1,9 +1,10 @@
 /**
  * Golden guard for the chinampa gardens, Area 4 ('chinampa-1'): its built zone, its trip placements,
- * and the encounter and trip rules, its tilapia tuning, carp, bank cover, gap current, drifting
- * ghost nets, punting poles and mobile snacks included, played along a fixed scripted swim. Any
- * change here means a shared rule changed chinampa-1 behaviour. Its coverage checks read the
- * traces themselves: every moving part named in the layout data must act in them.
+ * and the encounter and trip rules, its tilapia tuning, 4 tilapia, 4 carp, bank cover, gap current,
+ * drifting ghost nets, punting poles and mobile snacks (wandering tadpoles, flicking and hopping
+ * shrimp) included, played along a fixed scripted swim. Any change here means a shared rule
+ * changed chinampa-1 behaviour. Its coverage checks read the traces themselves: every moving part
+ * named in the layout data must act in them.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { CHINAMPA_AREA } from './areas';
@@ -39,7 +40,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 360;
+const TRACE_SECONDS = 400;
 const MIN_TRACE_SECONDS = 120;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
@@ -322,8 +323,15 @@ function listFlickLines(frame: number, before: ShrimpFlickState, after: ShrimpFl
     .map((flick) => `${frame}: flick ${flick.id}`);
 }
 
+/** A `<frame>: hop <id>` line for each shrimp whose hop is under way in `after` but not in `before`. */
+function listHopLines(frame: number, before: ShrimpFlickState, after: ShrimpFlickState): string[] {
+  return after.hops
+    .filter((hop) => !before.hops.some((was) => was.id === hop.id))
+    .map((hop) => `${frame}: hop ${hop.id}`);
+}
+
 /**
- * Each mobile snack's drawn place once per second and each new shrimp flick by frame, along
+ * Each mobile snack's drawn place once per second and each new shrimp flick and hop by frame, along
  * `positions`, in the scene's frame order: the drift clock moves on, then stepShrimpFlicks runs
  * at the head reach centre (headPoint, facing the way the swim last stepped). Nothing is eaten,
  * so every snack stays in play. Throws when the zone has no shrimp rule.
@@ -346,7 +354,7 @@ function traceSnacks(zone: ZoneLayout, positions: readonly Point[]): string[] {
     const head = headPoint({ x: pos.x, y: pos.y, facing, rotation: 0 });
     const step = stepShrimpFlicks(items, head, snackFrame, flicks, false, avoid, DT);
     if (step !== null) {
-      lines.push(...listFlickLines(frame, flicks, step.state));
+      lines.push(...listFlickLines(frame, flicks, step.state), ...listHopLines(frame, flicks, step.state));
       items = step.items;
       flicks = step.state;
     }
@@ -355,11 +363,12 @@ function traceSnacks(zone: ZoneLayout, positions: readonly Point[]): string[] {
   return lines;
 }
 
-/** The id of every shrimp that starts a flick in a snack trace, read back from the trace's own lines. */
-function listFlickedIds(lines: readonly string[]): Set<string> {
+/** The id of every shrimp that starts a `move` (flick or hop) in a snack trace, read back from the trace's own lines. */
+function listMovedIds(lines: readonly string[], move: 'flick' | 'hop'): Set<string> {
+  const pattern = new RegExp(`^\\d+: ${move} (\\S+)$`);
   const ids = new Set<string>();
   for (const line of lines) {
-    const match = /^\d+: flick (\S+)$/.exec(line);
+    const match = pattern.exec(line);
     if (match !== null) ids.add(match[1]);
   }
   return ids;
@@ -461,10 +470,10 @@ describe('chinampa-1 golden', () => {
     expect(summaries).toMatchSnapshot();
   });
 
-  it('scripts a swim of at least 120 s that parks by every tilapia, the carp and under the last bank', () => {
+  it('scripts a swim of at least 120 s that parks by all 4 tilapia, all 4 carp and under the last bank', () => {
     expect(positions.length / FRAMES_PER_SECOND).toBeGreaterThanOrEqual(MIN_TRACE_SECONDS);
-    expect(defaultZone.tilapiaRoutes).toHaveLength(6);
-    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
+    expect(defaultZone.tilapiaRoutes).toHaveLength(4);
+    expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp', 'carp', 'carp', 'carp']);
     const parkedFrames = [
       ...defaultZone.tilapiaRoutes.map(routeCentre),
       ...defaultZone.predatorRoutes.map(routeCentre),
@@ -498,12 +507,12 @@ describe('chinampa-1 golden', () => {
     for (const spawn of poles) expect(hitIds.has(spawn.id), spawn.id).toBe(true);
   });
 
-  it('warns and lunges with every tilapia and the carp in the encounter trace', () => {
+  it('warns and lunges with all 4 tilapia and all 4 carp in the encounter trace', () => {
     expect(defaultZone.tilapiaRoutes).toHaveLength(CHINAMPA_LAYOUT.tilapiaRoutes.length);
     const predatorIds = CHINAMPA_LAYOUT.predatorRoutes.map((route) => route.id);
     expect(defaultZone.predatorRoutes.map((route) => route.id)).toEqual(predatorIds);
     const routeIds = [...defaultZone.tilapiaRoutes.map((route) => route.id), ...predatorIds];
-    expect(routeIds).toHaveLength(7);
+    expect(routeIds).toHaveLength(8);
     const lines = traces.encounter;
     for (const type of ['telegraph', 'lunge']) {
       const sourceIds = listEventSourceIds(lines, type);
@@ -511,7 +520,7 @@ describe('chinampa-1 golden', () => {
     }
   });
 
-  it('traces every tadpole drawn in more than one place and at least one shrimp flick, with only tadpoles and shrimp in the snack trace', () => {
+  it('traces every tadpole drawn in more than one place, at least one shrimp flick and at least one shrimp hop, with only tadpoles and shrimp in the snack trace', () => {
     const mix = CHINAMPA_LAYOUT.mobileSnacks;
     const tadpoleIds = listSnackIdsOfKind(defaultZone, 'tadpole');
     const shrimpIds = listSnackIdsOfKind(defaultZone, 'shrimp');
@@ -523,9 +532,12 @@ describe('chinampa-1 golden', () => {
     const places = listSnackPlaces(lines);
     expect([...places.keys()]).toEqual([...tadpoleIds, ...shrimpIds]);
     for (const id of tadpoleIds) expect(places.get(id)?.size ?? 0, id).toBeGreaterThan(1);
-    const flicked = listFlickedIds(lines);
+    const flicked = listMovedIds(lines, 'flick');
     expect(flicked.size).toBeGreaterThan(0);
     for (const id of flicked) expect(shrimpIds).toContain(id);
+    const hopped = listMovedIds(lines, 'hop');
+    expect(hopped.size).toBeGreaterThan(0);
+    for (const id of hopped) expect(shrimpIds).toContain(id);
   });
 
   it('keeps the encounter trace along the scripted swim', () => {
