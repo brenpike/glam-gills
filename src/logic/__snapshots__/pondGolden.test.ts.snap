@@ -202,11 +202,24 @@ exports[`pond golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-1",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
         "offset": 0,
-        "speed": 25,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 40,
       },
       "x": 320,
       "y": 210,
@@ -214,22 +227,47 @@ exports[`pond golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-2",
       "kind": "tadpole",
-      "lane": {
-        "dx": 0,
-        "dy": 120,
-        "offset": 4.8,
-        "speed": 25,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 3,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 0,
+            "y": 120,
+          },
+        ],
+        "speed": 40,
       },
       "x": 1744,
       "y": 140,
     },
     {
+      "home": [
+        {
+          "x": 860,
+          "y": 106,
+        },
+      ],
       "id": "snack-shrimp-1",
       "kind": "shrimp",
       "x": 860,
       "y": 106,
     },
     {
+      "home": [
+        {
+          "x": 2320,
+          "y": 130,
+        },
+      ],
       "id": "snack-shrimp-2",
       "kind": "shrimp",
       "x": 2320,
@@ -567,20 +605,22 @@ exports[`pond golden > keeps the default zone projection 1`] = `
     },
   ],
   "mobileSnacks": {
-    "lanes": [
+    "homes": [
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 0,
-        "x": 320,
-        "y": 210,
+        "points": [
+          {
+            "x": 860,
+            "y": 106,
+          },
+        ],
       },
       {
-        "dx": 0,
-        "dy": 120,
-        "offset": 4.8,
-        "x": 1744,
-        "y": 140,
+        "points": [
+          {
+            "x": 2320,
+            "y": 130,
+          },
+        ],
       },
     ],
     "shrimp": {
@@ -589,19 +629,37 @@ exports[`pond golden > keeps the default zone projection 1`] = `
       "restFor": 2,
       "triggerRadius": 60,
     },
-    "spots": [
+    "tadpole": {
+      "speed": 40,
+    },
+    "wanders": [
       {
-        "x": 860,
-        "y": 106,
+        "offset": 0,
+        "points": [
+          {
+            "x": 320,
+            "y": 210,
+          },
+          {
+            "x": 440,
+            "y": 210,
+          },
+        ],
       },
       {
-        "x": 2320,
-        "y": 130,
+        "offset": 3,
+        "points": [
+          {
+            "x": 1744,
+            "y": 140,
+          },
+          {
+            "x": 1744,
+            "y": 260,
+          },
+        ],
       },
     ],
-    "tadpole": {
-      "speed": 25,
-    },
   },
   "pads": [
     {
@@ -1411,36 +1469,36 @@ exports[`pond golden > keeps the placements of every extra zone seed 1`] = `
 exports[`pond golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 2164592617,
-    "length": 17786,
+    "fnv1a": 935193899,
+    "length": 18010,
   },
   "1234": {
-    "fnv1a": 3383642380,
-    "length": 17822,
+    "fnv1a": 3638182750,
+    "length": 18046,
   },
   "2": {
-    "fnv1a": 2742812905,
-    "length": 17750,
+    "fnv1a": 797728299,
+    "length": 17974,
   },
   "3": {
-    "fnv1a": 2918967081,
-    "length": 17816,
+    "fnv1a": 2094877547,
+    "length": 18040,
   },
   "305419896": {
-    "fnv1a": 3284337607,
-    "length": 18095,
+    "fnv1a": 1987400545,
+    "length": 18319,
   },
   "3735928559": {
-    "fnv1a": 334387311,
-    "length": 17308,
+    "fnv1a": 3200422281,
+    "length": 17532,
   },
   "42": {
-    "fnv1a": 104352344,
-    "length": 17541,
+    "fnv1a": 2391154490,
+    "length": 17765,
   },
   "987654321": {
-    "fnv1a": 3928555313,
-    "length": 17310,
+    "fnv1a": 43515123,
+    "length": 17534,
   },
 }
 `;

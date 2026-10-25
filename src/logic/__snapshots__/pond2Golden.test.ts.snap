@@ -204,11 +204,24 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-1",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
         "offset": 0,
-        "speed": 35,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 50,
       },
       "x": 320,
       "y": 210,
@@ -216,11 +229,24 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-2",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 1.7142857142857142,
-        "speed": 35,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 1.2,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 50,
       },
       "x": 560,
       "y": 100,
@@ -228,11 +254,24 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-3",
       "kind": "tadpole",
-      "lane": {
-        "dx": 0,
-        "dy": 120,
-        "offset": 3.4285714285714284,
-        "speed": 35,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 2.4,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 0,
+            "y": 120,
+          },
+        ],
+        "speed": 50,
       },
       "x": 1655,
       "y": 140,
@@ -240,34 +279,71 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-4",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 5.142857142857142,
-        "speed": 35,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 3.5999999999999996,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 50,
       },
       "x": 2420,
       "y": 280,
     },
     {
+      "home": [
+        {
+          "x": 860,
+          "y": 106,
+        },
+      ],
       "id": "snack-shrimp-1",
       "kind": "shrimp",
       "x": 860,
       "y": 106,
     },
     {
+      "home": [
+        {
+          "x": 1230,
+          "y": 106,
+        },
+      ],
       "id": "snack-shrimp-2",
       "kind": "shrimp",
       "x": 1230,
       "y": 106,
     },
     {
+      "home": [
+        {
+          "x": 2320,
+          "y": 280,
+        },
+      ],
       "id": "snack-shrimp-3",
       "kind": "shrimp",
       "x": 2320,
       "y": 280,
     },
     {
+      "home": [
+        {
+          "x": 2760,
+          "y": 140,
+        },
+      ],
       "id": "snack-shrimp-4",
       "kind": "shrimp",
       "x": 2760,
@@ -571,34 +647,38 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
     },
   ],
   "mobileSnacks": {
-    "lanes": [
+    "homes": [
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 0,
-        "x": 320,
-        "y": 210,
+        "points": [
+          {
+            "x": 860,
+            "y": 106,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 1.7142857142857142,
-        "x": 560,
-        "y": 100,
+        "points": [
+          {
+            "x": 1230,
+            "y": 106,
+          },
+        ],
       },
       {
-        "dx": 0,
-        "dy": 120,
-        "offset": 3.4285714285714284,
-        "x": 1655,
-        "y": 140,
+        "points": [
+          {
+            "x": 2320,
+            "y": 280,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 5.142857142857142,
-        "x": 2420,
-        "y": 280,
+        "points": [
+          {
+            "x": 2760,
+            "y": 140,
+          },
+        ],
       },
     ],
     "shrimp": {
@@ -607,27 +687,63 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
       "restFor": 1.7,
       "triggerRadius": 60,
     },
-    "spots": [
+    "tadpole": {
+      "speed": 50,
+    },
+    "wanders": [
       {
-        "x": 860,
-        "y": 106,
+        "offset": 0,
+        "points": [
+          {
+            "x": 320,
+            "y": 210,
+          },
+          {
+            "x": 440,
+            "y": 210,
+          },
+        ],
       },
       {
-        "x": 1230,
-        "y": 106,
+        "offset": 1.2,
+        "points": [
+          {
+            "x": 560,
+            "y": 100,
+          },
+          {
+            "x": 680,
+            "y": 100,
+          },
+        ],
       },
       {
-        "x": 2320,
-        "y": 280,
+        "offset": 2.4,
+        "points": [
+          {
+            "x": 1655,
+            "y": 140,
+          },
+          {
+            "x": 1655,
+            "y": 260,
+          },
+        ],
       },
       {
-        "x": 2760,
-        "y": 140,
+        "offset": 3.5999999999999996,
+        "points": [
+          {
+            "x": 2420,
+            "y": 280,
+          },
+          {
+            "x": 2540,
+            "y": 280,
+          },
+        ],
       },
     ],
-    "tadpole": {
-      "speed": 35,
-    },
   },
   "pads": [
     {
@@ -1420,36 +1536,36 @@ exports[`pond-2 golden > keeps the placements of every extra zone seed 1`] = `
 exports[`pond-2 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 3063810346,
-    "length": 16940,
+    "fnv1a": 2827677942,
+    "length": 17337,
   },
   "1234": {
-    "fnv1a": 762737483,
-    "length": 16953,
+    "fnv1a": 3513915825,
+    "length": 17350,
   },
   "2": {
-    "fnv1a": 2861996853,
-    "length": 16894,
+    "fnv1a": 3358405051,
+    "length": 17291,
   },
   "3": {
-    "fnv1a": 243701440,
-    "length": 16957,
+    "fnv1a": 3777422988,
+    "length": 17354,
   },
   "305419896": {
-    "fnv1a": 2362656308,
-    "length": 17227,
+    "fnv1a": 608871808,
+    "length": 17624,
   },
   "3735928559": {
-    "fnv1a": 2198754635,
-    "length": 16699,
+    "fnv1a": 1892941745,
+    "length": 17096,
   },
   "42": {
-    "fnv1a": 1920115170,
-    "length": 16943,
+    "fnv1a": 4228548750,
+    "length": 17340,
   },
   "987654321": {
-    "fnv1a": 3231556272,
-    "length": 16701,
+    "fnv1a": 768403612,
+    "length": 17098,
   },
 }
 `;
