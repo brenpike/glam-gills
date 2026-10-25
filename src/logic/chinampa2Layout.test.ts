@@ -54,10 +54,11 @@ import {
 } from './layoutGaps';
 import { legSwimTuning } from './legs';
 import {
+  meetsSnackMotion,
   meetsSnackRamp,
-  mobileLegBoxes,
   mobileSnackAvoid,
   mobileSnackClear,
+  oneLegCatchesTadpole,
   oneTimeDarts,
   shrimpBox,
   shrimpHomeClear,
@@ -89,7 +90,9 @@ import {
   HYACINTH_MATS,
   LEGS,
   RISK,
+  SHRIMP,
   SWIM,
+  TADPOLES,
   TILAPIA,
   TILAPIA_CHASE,
   tripTreasureTuning,
@@ -275,6 +278,34 @@ function pathSamples(path: readonly Point[], step: number): Point[] {
     const from = path[i];
     const count = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / step));
     return Array.from({ length: count + 1 }, (_, k) => ({ x: from.x + ((to.x - from.x) * k) / count, y: from.y + ((to.y - from.y) * k) / count }));
+  });
+}
+
+/** The box round the points, edges included: a tadpole's home box or a shrimp home's box. */
+function homeBoxOf(points: readonly Point[]): HazardRect {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return { kind: 'rect', x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+/** The middle of a home box. */
+function homeCentreOf(points: readonly Point[]): Point {
+  const box = homeBoxOf(points);
+  return { x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 };
+}
+
+/** The screen row (0 for the top, 1 for the bottom) a home box sits wholly in, or -1 when it crosses the line between them. */
+function homeRowOf(points: readonly Point[]): number {
+  const box = homeBoxOf(points);
+  if (box.y1 <= WORLD_H) return 0;
+  return box.y0 >= WORLD_H ? 1 : -1;
+}
+
+/** The length of each leg of the closed loop through `points`, leg i from points[i] to the next. */
+function loopLegLengths(points: readonly Point[]): number[] {
+  return points.map((point, i) => {
+    const next = points[(i + 1) % points.length];
+    return Math.hypot(next.x - point.x, next.y - point.y);
   });
 }
 
@@ -1422,34 +1453,77 @@ describe('Area 5 mobile snacks (issue #118, ND-12; issue #131, ND-14)', () => {
     expect((mix?.wanders.length ?? 0) + (mix?.homes.length ?? 0)).toBe(19);
   });
 
-  it('swims ten tadpoles on 2-point wander loops 120 px long, each a tenth of its 240 / 70 s lap further on than the last', () => {
+  it('moves its tadpoles and shrimp as the snack motion rules ask (meetsSnackMotion, issue #131, ND-2, ND-3, ND-5)', () => {
+    expect(meetsSnackMotion(CHINAMPA_2_LAYOUT)).toBe(true);
+    expect(meetsSnackMotion({ screensWide: zone.chunks, screensTall: zone.rows, mobileSnacks: zone.mobileSnacks })).toBe(true);
+  });
+
+  it('swims ten tadpoles on wander loops of 4 to 8 points, legs 105 to 350 px, a lap of at most 40 s, each a tenth of its own lap further on than the last (issue #131, ND-2, ND-3; issue #135, ND-5)', () => {
     const wanders = mix?.wanders ?? [];
-    const lap = 240 / 70;
+    const speed = mix?.tadpole?.speed ?? 0;
     expect(wanders).toHaveLength(10);
     for (const [index, wander] of wanders.entries()) {
-      const [start, end] = wander.points;
-      expect(wander.points, `tadpole at ${start.x}, ${start.y}`).toHaveLength(2);
-      expect(Math.hypot(end.x - start.x, end.y - start.y), `tadpole at ${start.x}, ${start.y}`).toBe(120);
-      expect(wander.offset, `tadpole at ${start.x}, ${start.y}`).toBeCloseTo((index * lap) / 10, 9);
+      const label = `loop at ${wander.points[0].x}, ${wander.points[0].y}`;
+      expect(wander.points.length, label).toBeGreaterThanOrEqual(TADPOLES.minLoopPoints);
+      expect(wander.points.length, label).toBeLessThanOrEqual(TADPOLES.maxLoopPoints);
+      const legs = loopLegLengths(wander.points);
+      for (const leg of legs) {
+        expect(leg, label).toBeGreaterThanOrEqual(105);
+        expect(leg, label).toBeLessThanOrEqual(350);
+      }
+      const lapSeconds = legs.reduce((sum, leg) => sum + leg, 0) / speed;
+      expect(lapSeconds, label).toBeLessThanOrEqual(TADPOLES.maxLapSeconds);
+      expect(wander.offset, label).toBeCloseTo((index * lapSeconds) / 10, 9);
     }
   });
 
-  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s, on 1-spot homes", () => {
+  it('gives every tadpole a home box 320 to 480 px wide and 150 to 360 px tall, wholly in one screen row, at least 4 in each row, no two centres closer than 240 px (issue #131, ND-2; issue #135, ND-5)', () => {
+    const wanders = mix?.wanders ?? [];
+    for (const wander of wanders) {
+      const label = `loop at ${wander.points[0].x}, ${wander.points[0].y}`;
+      const box = homeBoxOf(wander.points);
+      expect(box.x1 - box.x0, label).toBeGreaterThanOrEqual(TADPOLES.minHomeWidth);
+      expect(box.x1 - box.x0, label).toBeLessThanOrEqual(TADPOLES.maxHomeWidth);
+      expect(box.y1 - box.y0, label).toBeGreaterThanOrEqual(TADPOLES.minHomeHeight);
+      expect(box.y1 - box.y0, label).toBeLessThanOrEqual(TADPOLES.maxHomeHeight);
+      expect(homeRowOf(wander.points), label).not.toBe(-1);
+    }
+    const rows = wanders.map((wander) => homeRowOf(wander.points));
+    expect(rows.filter((row) => row === 0).length).toBeGreaterThanOrEqual(4);
+    expect(rows.filter((row) => row === 1).length).toBeGreaterThanOrEqual(4);
+    const centres = wanders.map((wander) => homeCentreOf(wander.points));
+    for (let i = 0; i < centres.length; i++) {
+      for (let j = i + 1; j < centres.length; j++) {
+        expect(Math.hypot(centres[i].x - centres[j].x, centres[i].y - centres[j].y), `loops ${i} and ${j}`).toBeGreaterThanOrEqual(240);
+      }
+    }
+  });
+
+  it('lets a one-leg axolotl catch every tadpole (the one-leg catch proof, issue #131, ND-8)', () => {
+    const rule = mix?.tadpole;
+    expect(rule).toBeDefined();
+    const wanders = mix?.wanders ?? [];
+    expect(wanders).toHaveLength(10);
+    for (const wander of wanders) {
+      expect(rule && oneLegCatchesTadpole(rule, wander, bounds), `loop at ${wander.points[0].x}, ${wander.points[0].y}`).toBe(true);
+    }
+  });
+
+  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s, on homes of 3 to 6 hop spots in a box at most 200 x 160 px, at least 4 in each row (issue #131, ND-5; issue #135, ND-5)", () => {
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 1.2, flickDistance: 60, flickSpeed: 145 });
-    expect(mix?.homes).toHaveLength(9);
-    expect((mix?.homes ?? []).every((home) => home.points.length === 1)).toBe(true);
-  });
-
-  it.each(ALL_SEEDS)('keeps every tadpole leg and shrimp clear (mobileSnackClear) for seed %i', (seed) => {
-    const layout = chinampa2(seed);
-    const avoid = mobileSnackAvoid(layout);
-    for (const box of mobileLegBoxes(layout)) {
-      expect(mobileSnackClear(box, avoid), `leg at ${box.x0}, ${box.y0}`).toBe(true);
+    const homes = mix?.homes ?? [];
+    expect(homes).toHaveLength(9);
+    for (const home of homes) {
+      const label = `home at ${home.points[0].x}, ${home.points[0].y}`;
+      expect(home.points.length, label).toBeGreaterThanOrEqual(SHRIMP.minHomeSpots);
+      expect(home.points.length, label).toBeLessThanOrEqual(SHRIMP.maxHomeSpots);
+      const box = homeBoxOf(home.points);
+      expect(box.x1 - box.x0, label).toBeLessThanOrEqual(SHRIMP.maxHomeWidth);
+      expect(box.y1 - box.y0, label).toBeLessThanOrEqual(SHRIMP.maxHomeHeight);
     }
-    for (const home of layout.mobileSnacks?.homes ?? []) {
-      const spot = home.points[0];
-      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
-    }
+    const rows = homes.map((home) => homeRowOf(home.points));
+    expect(rows.filter((row) => row === 0).length).toBeGreaterThanOrEqual(4);
+    expect(rows.filter((row) => row === 1).length).toBeGreaterThanOrEqual(4);
   });
 
   it.each(ALL_SEEDS)('passes tadpoleWanderClear and shrimpHomeClear for every tadpole and shrimp for seed %i (issue #131, ND-7)', (seed) => {

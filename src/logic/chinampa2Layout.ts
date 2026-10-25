@@ -82,15 +82,43 @@ export const CHINAMPA_2_CARP: Readonly<PredatorSpecies> = tunedSpecies(
 /** Area 5's tadpole rule (issue #131, ND-9): 70 px/s. */
 const CHINAMPA_2_TADPOLE = tadpoleRule(70);
 
-/** Seconds a tadpole takes round its 2-point wander loop of two 120 px legs: 240 / 70 (issue #131, ND-14). */
-const CHINAMPA_2_LAP = (2 * 120) / CHINAMPA_2_TADPOLE.speed;
+/**
+ * The ten tadpole wander loops' turn points (issue #131, ND-2, ND-3, ND-7; issue #135, ND-5), six in
+ * the top row and four in the bottom row, each round open water beside the threats: in the top row
+ * by the first pole, over the first net, under the first snake between the second and third poles,
+ * past the last pole, between `tilapia-0` and the third snake, and under the bank in the top right;
+ * in the bottom row beside the exit, under `carp-1`, past the current and beside `tilapia-2`, the
+ * last two under the fifth net.
+ */
+const CHINAMPA_2_LOOPS: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
+  Object.freeze([[305, 250], [305, 98], [625, 98], [440, 145], [440, 252]] as const),
+  Object.freeze([[560, 105], [910, 105], [910, 260], [740, 260], [740, 150]] as const),
+  Object.freeze([[995, 260], [1100, 225], [1360, 225], [1360, 100], [1180, 150]] as const),
+  Object.freeze([[1870, 280], [1870, 105], [2195, 105], [2020, 175], [2000, 280]] as const),
+  Object.freeze([[2115, 100], [2435, 100], [2420, 260], [2290, 170]] as const),
+  Object.freeze([[2990, 105], [3315, 105], [3315, 280], [3210, 280]] as const),
+  Object.freeze([[45, 370], [215, 370], [365, 510], [215, 650], [45, 650]] as const),
+  Object.freeze([[965, 650], [1020, 555], [857, 467], [695, 380], [695, 650]] as const),
+  Object.freeze([[2670, 470], [2780, 640], [3000, 650], [2700, 648]] as const),
+  Object.freeze([[2960, 650], [3080, 645], [3040, 455], [3170, 455], [3315, 560], [3170, 650]] as const),
+]);
+
+/** Seconds a tadpole takes round the closed loop through `points` at Area 5's tadpole speed. */
+function chinampa2LapSeconds(points: readonly (readonly [number, number])[]): number {
+  let length = 0;
+  points.forEach(([x, y], i) => {
+    const [nextX, nextY] = points[(i + 1) % points.length];
+    length += Math.hypot(nextX - x, nextY - y);
+  });
+  return length / CHINAMPA_2_TADPOLE.speed;
+}
 
 /**
- * Tadpole `n` (1 to 10) on a 2-point wander loop from (x, y) to (x + dx, y + dy) and back, `n - 1`
- * tenths of its lap ahead (issue #118, ND-12; issue #131, ND-14).
+ * Tadpole n of 10 (from 0) on its wander loop, n tenths of its own lap ahead, so the ten are out of
+ * step (issue #118, ND-12; issue #131, ND-14).
  */
-function wanderAt(n: number, x: number, y: number, dx: number, dy: number): Readonly<TadpoleWander> {
-  return tadpoleWander(CHINAMPA_2_TADPOLE, [[x, y], [x + dx, y + dy]], ((n - 1) * CHINAMPA_2_LAP) / 10);
+function chinampa2Wander(points: readonly (readonly [number, number])[], index: number): Readonly<TadpoleWander> {
+  return tadpoleWander(CHINAMPA_2_TADPOLE, points, (index * chinampa2LapSeconds(points)) / 10);
 }
 
 /** One ghost net: a rect at a fixed place, id `chinampa-2/ghost-net-<n>`. */
@@ -342,35 +370,26 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([3223, 138, 'rare', false] as const),
   ]),
   /**
-   * Ten tadpoles on 2-point wander loops 120 px long, each a tenth of its lap further on than the
-   * last, and nine shrimp on 1-spot homes, with Area 5's rules, all in open water clear of every
-   * threat (issue #118, ND-12; issue #131, ND-14).
+   * Ten tadpoles on wander loops (CHINAMPA_2_LOOPS), each a tenth of its own lap further on than
+   * the last, and nine shrimp on homes of 3 hop spots, five in the top row and four in the bottom
+   * row, with Area 5's rules; every loop and home passes tadpoleWanderClear() and shrimpHomeClear(),
+   * and each shrimp starts on a spot out of every threat's reach (issue #118, ND-12; issue #131,
+   * ND-14; issue #135, ND-5).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: CHINAMPA_2_TADPOLE,
-    wanders: [
-      wanderAt(1, 350, 120, 0, 120),
-      wanderAt(2, 600, 130, 120, 0),
-      wanderAt(3, 840, 200, 0, 120),
-      wanderAt(4, 1100, 250, 120, 0),
-      wanderAt(5, 1265, 500, 0, 120),
-      wanderAt(6, 1520, 630, 120, 0),
-      wanderAt(7, 1740, 600, 120, 0),
-      wanderAt(8, 2040, 140, 120, 0),
-      wanderAt(9, 2560, 250, 120, 0),
-      wanderAt(10, 2730, 450, 0, 120),
-    ],
+    wanders: CHINAMPA_2_LOOPS.map(chinampa2Wander),
     shrimp: shrimpRule(60, 1.2, 60, 145),
     homes: [
-      shrimpHome([[180, 470]]),
-      shrimpHome([[300, 600]]),
-      shrimpHome([[760, 120]]),
-      shrimpHome([[960, 630]]),
-      shrimpHome([[1290, 420]]),
-      shrimpHome([[1900, 520]]),
-      shrimpHome([[2440, 290]]),
-      shrimpHome([[2780, 340]]),
-      shrimpHome([[3060, 115]]),
+      shrimpHome([[350, 160], [420, 120], [430, 210]]),
+      shrimpHome([[780, 140], [860, 130], [820, 175]]),
+      shrimpHome([[2060, 130], [2140, 120], [2100, 170]]),
+      shrimpHome([[2300, 130], [2380, 140], [2340, 175]]),
+      shrimpHome([[3240, 150], [3300, 210], [3230, 250]]),
+      shrimpHome([[100, 420], [170, 470], [110, 520]]),
+      shrimpHome([[860, 644], [780, 640], [930, 615]]),
+      shrimpHome([[2700, 500], [2760, 560], [2700, 610]]),
+      shrimpHome([[3080, 480], [3130, 560], [3060, 620]]),
     ],
   }),
 } satisfies AreaLayoutData);
