@@ -96,16 +96,16 @@ const ALL_MORPHS: readonly RealMorphId[] = REAL_MORPHS.map((morph) => morph.id);
 
 /**
  * Every hazard, predator, element and mobile snack met that has an area fact card: the canal's
- * tilapia, the pond's plastic worm, tadpole and shrimp, Area 3's heron, Area 4's carp, ghost net
+ * tilapia, the pond's carp, plastic worm, tadpole and shrimp, Area 3's heron, Area 4's ghost net
  * and punting pole, and Area 5's garter snake and water hyacinth.
  */
 const ALL_AREA_MET: readonly string[] = [
   'tilapia',
+  'carp',
   'plastic-worm',
   'tadpole',
   'shrimp',
   'heron',
-  'carp',
   'ghost-net',
   'punting-pole',
   'garter-snake',
@@ -416,17 +416,30 @@ describe('bookListing', () => {
     });
   });
 
+  it('holds the carp card only once the carp is met, never with a picture (C14)', () => {
+    const [, , met] = bookListing([], ALL_MET);
+    expect(met.entries[1]).toEqual({ id: 'carp', found: true, name: 'Common carp', text: CARP_FACT.body, hasPicture: false });
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia']);
+    expect(notMet.entries[1]).toEqual({
+      id: 'carp',
+      found: false,
+      name: '???',
+      text: 'Explore the lily pad pond to find this card.',
+      hasPicture: false,
+    });
+  });
+
   it('holds the plastic worm card only once the plastic worm is met, never with a picture (C14)', () => {
     const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries[1]).toEqual({
+    expect(met.entries[2]).toEqual({
       id: 'plastic-worm',
       found: true,
       name: 'Plastic worm',
       text: PLASTIC_WORM_FACT.body,
       hasPicture: false,
     });
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia']);
-    expect(notMet.entries[1]).toEqual({
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'carp']);
+    expect(notMet.entries[2]).toEqual({
       id: 'plastic-worm',
       found: false,
       name: '???',
@@ -437,9 +450,9 @@ describe('bookListing', () => {
 
   it('holds the tadpole card only once the tadpole is met, never with a picture (C14)', () => {
     const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries[2]).toEqual({ id: 'tadpole', found: true, name: 'Tadpole', text: TADPOLE_FACT.body, hasPicture: false });
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm']);
-    expect(notMet.entries[2]).toEqual({
+    expect(met.entries[3]).toEqual({ id: 'tadpole', found: true, name: 'Tadpole', text: TADPOLE_FACT.body, hasPicture: false });
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'carp', 'plastic-worm']);
+    expect(notMet.entries[3]).toEqual({
       id: 'tadpole',
       found: false,
       name: '???',
@@ -450,15 +463,15 @@ describe('bookListing', () => {
 
   it('holds the shrimp card only once the shrimp is met, never with a picture (C14)', () => {
     const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries[3]).toEqual({
+    expect(met.entries[4]).toEqual({
       id: 'shrimp',
       found: true,
       name: 'Freshwater shrimp',
       text: SHRIMP_FACT.body,
       hasPicture: false,
     });
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole']);
-    expect(notMet.entries[3]).toEqual({
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'carp', 'plastic-worm', 'tadpole']);
+    expect(notMet.entries[4]).toEqual({
       id: 'shrimp',
       found: false,
       name: '???',
@@ -469,26 +482,13 @@ describe('bookListing', () => {
 
   it('holds the heron card only once the heron is met, never with a picture (C14)', () => {
     const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries[4]).toEqual({ id: 'heron', found: true, name: 'Heron', text: HERON_FACT.body, hasPicture: false });
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole', 'shrimp']);
-    expect(notMet.entries[4]).toEqual({
+    expect(met.entries[5]).toEqual({ id: 'heron', found: true, name: 'Heron', text: HERON_FACT.body, hasPicture: false });
+    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'carp', 'plastic-worm', 'tadpole', 'shrimp']);
+    expect(notMet.entries[5]).toEqual({
       id: 'heron',
       found: false,
       name: '???',
       text: 'Explore the lily pad pond to find this card.',
-      hasPicture: false,
-    });
-  });
-
-  it('holds the carp card only once the carp is met, never with a picture (C14)', () => {
-    const [, , met] = bookListing([], ALL_MET);
-    expect(met.entries[5]).toEqual({ id: 'carp', found: true, name: 'Common carp', text: CARP_FACT.body, hasPicture: false });
-    const [, , notMet] = bookListing(ALL_MORPHS, ['tilapia', 'plastic-worm', 'tadpole', 'shrimp', 'heron']);
-    expect(notMet.entries[5]).toEqual({
-      id: 'carp',
-      found: false,
-      name: '???',
-      text: 'Explore the chinampa gardens to find this card.',
       hasPicture: false,
     });
   });
@@ -558,11 +558,11 @@ describe('bookListing', () => {
     const hints = factCards.entries.filter((entry) => !entry.found).map((entry) => [entry.id, entry.text]);
     expect(hints).toEqual([
       ['tilapia', 'Explore the canal to find this card.'],
+      ['carp', 'Explore the lily pad pond to find this card.'],
       ['plastic-worm', 'Explore the lily pad pond to find this card.'],
       ['tadpole', 'Explore the lily pad pond to find this card.'],
       ['shrimp', 'Explore the lily pad pond to find this card.'],
       ['heron', 'Explore the lily pad pond to find this card.'],
-      ['carp', 'Explore the chinampa gardens to find this card.'],
       ['ghost-net', 'Explore the chinampa gardens to find this card.'],
       ['punting-pole', 'Explore the chinampa gardens to find this card.'],
       ['garter-snake', 'Explore the chinampa gardens to find this card.'],
@@ -613,11 +613,11 @@ describe('bookListing', () => {
     for (const [, , factCards] of everyListing()) {
       expect(factCards.entries.map((entry) => entry.id)).toEqual([
         'tilapia',
+        'carp',
         'plastic-worm',
         'tadpole',
         'shrimp',
         'heron',
-        'carp',
         'ghost-net',
         'punting-pole',
         'garter-snake',
