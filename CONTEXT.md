@@ -302,7 +302,7 @@ _Avoid_: slot (a Slot is where a Wearable goes)
 The in-game book of morphs and fact cards, nicknamed the Axolotl-dex in game.
 
 **Fun-fact card**:
-A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 13 fact cards, in this order: the tilapia card, "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Meet the carp" (the **Common carp**), "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
+A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 13 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
 
 **Save**:
 Progress kept in device storage by itself: banked treasures, the axolotls, the tank, the Collection Book, stars, the last chosen area, and the fact cards found (`metHazards`: the hazards, predators and timing elements met, then the refuge fact cards found); never anything from a trip in progress, and never the refuge's pending clean-ups and milestones.
