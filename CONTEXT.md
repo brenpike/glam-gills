@@ -126,11 +126,11 @@ How far in px a chasing **Predator** may go from its patrol route (`leash` in co
 A **Predator** or **Hazard** type added by the danger pass to make areas busier, which does not count toward an area's one new **Hazard** or **Predator** (N2): the **Common carp** and every **Moving hazard** type. The mark is on the species or type itself (`dangerPart` in code). A danger part still has its own **Fun-fact card** and is still met.
 
 **Danger bar**:
-The PRD's measure (N2) of how busy an area from Area 4 on must be: about one moving threat (each **Tilapia**, each other **Predator** and each **Moving hazard**) per screen, at least 2 **Predator** species and 1 **Moving hazard** type, every predator chasing, and no stretch of the main path longer than one screen (480 px) with no moving threat in reach. The gentle stakes stay (G2).
+The PRD's measure (N2) of how busy an area from Area 4 on must be: about one moving threat (each **Tilapia**, each other **Predator** and each **Moving hazard**) per screen, at least 2 **Predator** species and 1 **Moving hazard** type, every predator chasing, and no swim anywhere in the swim water, along the surface, along the floor or anywhere between, longer than one screen (480 px) with no moving threat in reach. Its depth rule has the **Tilapia** and the **Common carp** patrol at every depth, its floor rule puts predators on the floor when danger comes from the surface, and its carp rule asks for about one **Common carp** per 3 screens. The gentle stakes stay (G2).
 _Avoid_: difficulty
 
 **Ramp bar**:
-The gentler **Danger bar** for Area 2 and Area 3: the **Tilapia** chase with a short **Leash**, no quiet stretch of the main path longer than 480 px, and no **Moving hazard** in Area 2 and at most one type in Area 3. Area 1 stays gentle, with no chase and no moving hazard.
+The gentler **Danger bar** for Area 2 and Area 3: the **Tilapia** chase with a short **Leash**, no quiet swim anywhere in the swim water longer than 480 px, the same depth, floor and carp rules, and no **Moving hazard** in Area 2 and at most one type in Area 3. Area 1 stays gentle, with no chase and no moving hazard.
 
 **Tilapia**:
 The invasive fish that patrol the canal, the first **Predator**. From Area 4 on, each area's tilapia can be tuned as area data, one step tighter per area (the predator ladder): Area 4's warn a little more briefly and strike a little faster and farther. Areas 1 to 3 keep the first tuning.
@@ -145,7 +145,7 @@ The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in
 _Avoid_: monster
 
 **Common carp**:
-A big, round, bronze-gold invasive fish with two short barbels (`'carp'` in code), a **Predator** on the shared rules with no special rules, and a **Danger part**. It roots along the bed. Before its strike it tips its nose down and puffs a small mud cloud, then makes a slow, wide tail sweep along the aim fixed at the end of its warning. A touch is a gentle bump that costs no leg. Its mouth is closed and it has no teeth; it never bites or holds the axolotl. Its fact card is "Meet the carp". Which areas have a carp is in each area's danger pass paragraph in the PRD (N2).
+A big, round, bronze-gold invasive fish with two short barbels (`'carp'` in code), a **Predator** on the shared rules with no special rules, and a **Danger part**. It swims at every depth and digs in the mud on the bed. Before its strike it tips its nose down and puffs a small mud cloud, then makes a slow, wide tail sweep along the aim fixed at the end of its warning. A touch is a gentle bump that costs no leg. Its mouth is closed and it has no teeth; it never bites or holds the axolotl. Its fact card is "Meet the carp". Which areas have a carp is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: monster, koi
 
 **Plastic worm**:
