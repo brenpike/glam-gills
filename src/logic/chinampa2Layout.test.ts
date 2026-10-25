@@ -148,6 +148,8 @@ const POLE_MAT_CLEARANCE = SAFE_PASSING_WIDTH;
 const STRAND_POLE_CLEARANCE = PUNTING_POLE.touchReach + RESCUE.reachRadius;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends (issue #135, ND-6). */
 const LONGEST_QUIET_SWIM = { length: 457.23, from: { x: 1744, y: 406 }, to: { x: 1416, y: 94 } };
+/** One-leg seconds to the exit, as measured: from the mats' time 0, and least and most over the start times through the mat cycle (issue #135, ND-6). */
+const ONE_LEG_EXIT_SECONDS = { fromTimeZero: 82.9, min: 80.9, max: 88.4 };
 /** Longest quiet stretch of the floor lane in px, as measured (issue #135, ND-6). */
 const FLOOR_QUIET_STRETCH = 235;
 /** Least px from each carp loop to every tilapia loop, to every other carp loop and to every snake stretch (issue #135, ND-2). */
@@ -823,7 +825,7 @@ describe('Area 5 danger bar (issue #118, ND-3, ND-9; issue #135, ND-6)', () => {
 
   it('never leaves a quiet swim in the whole water longer than one screen across', () => {
     const swim = longestQuietSwim(zone);
-    expect(swim?.length).toBeCloseTo(LONGEST_QUIET_SWIM.length, 1);
+    expect(swim?.length).toBeCloseTo(LONGEST_QUIET_SWIM.length, 2);
     expect(swim?.from).toEqual(LONGEST_QUIET_SWIM.from);
     expect(swim?.to).toEqual(LONGEST_QUIET_SWIM.to);
     expect(swim?.length).toBeLessThanOrEqual(SCREEN_W);
@@ -1572,13 +1574,19 @@ describe('beating Area 5', () => {
     expect(home.seconds).toBeLessThan(BEAT_MAX_SECONDS);
   });
 
-  it('beats it whenever the swimmer sets off in the mat cycle, held at each channel while it is closed on some start', () => {
+  it('beats it whenever the swimmer sets off in the mat cycle, held at each channel while it is closed on some start, in 82.9 s from time 0 and 80.9 to 88.4 s over the cycle (issue #135, ND-6)', () => {
     const held = new Set<string>();
+    const seconds: number[] = [];
     for (let start = 0; start < HYACINTH_MATS.period; start += 0.5) {
       const beat = oneLegBeat(zone.start, zone.mainPath.slice(1), zone, (pos) => Math.hypot(pos.x - exit.x, pos.y - exit.y) <= exit.radius, start);
       expect(beat.seconds, `start ${start}`).toBeLessThan(BEAT_MAX_SECONDS);
+      seconds.push(beat.seconds);
       for (const id of beat.heldAt) held.add(id);
     }
     expect([...held].sort()).toEqual(zone.elements.map((element) => element.id));
+    expect(seconds).toHaveLength(16);
+    expect(seconds[0]).toBeCloseTo(ONE_LEG_EXIT_SECONDS.fromTimeZero, 1);
+    expect(Math.min(...seconds)).toBeCloseTo(ONE_LEG_EXIT_SECONDS.min, 1);
+    expect(Math.max(...seconds)).toBeCloseTo(ONE_LEG_EXIT_SECONDS.max, 1);
   });
 });
