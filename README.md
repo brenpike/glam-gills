@@ -6,7 +6,7 @@ It is mostly fun, with real axolotl facts along the way.
 
 ## What you can do now
 
-Version 0.39.0 is playable in five areas in three habitats, the canal, the Lily pad pond and the Chinampa gardens:
+Version 0.40.0 is playable in five areas in three habitats, the canal, the Lily pad pond and the Chinampa gardens:
 
 - Make your own axolotl the first time you play, one step at a time in 11 steps: colour (one of eight real morphs), boy or girl (with a boy or girl sign), eyes, mouth (eight to choose from), gills, spots, tail, body, age, size, and name. Every choice is a big picture button that shows it on your axolotl, and the preview changes as you pick. On the first step, Surprise me picks a whole new axolotl at random, with a name that fits. On the other steps, it picks something new for that step only. The other seven colours are the ones you rescue.
 - Type a name, or pick a suggested one that fits a boy or a girl, so typing is optional. Names stay on your device.
@@ -35,10 +35,11 @@ Version 0.39.0 is playable in five areas in three habitats, the canal, the Lily 
 - Area 4 is more dangerous. Its tilapia swim after you when they see you close by, then swim back. A common carp roots along the bed in the bottom row: when it tips its nose down and puffs up mud, swim away before its tail sweeps. Bright trajinera boats float on top, and each pushes a long pole down into the water. When a boat's shadow darkens and a ripple ring shows, its pole is about to jab down, so keep out from under it. A "Meet the carp" fact card and a "Trajineras" fact card tell you about them.
 - Half the snacks in Area 4 move: tadpoles swim back and forth, and freshwater shrimp flick away when you come close, then rest.
 - Beat Area 4 to unlock Area 5, the second chinampa gardens area. It is a U-turn: swim out along the top, then turn around and come back along the bottom to the exit at the left. It has 12 new treasures, including the Piñata and the Plum Dream colour, a deep plum purple.
-- Watch out for the three garter snakes in Area 5. They swim near the surface, and when you come close one slides along the surface after you. Ripple rings on the water warn you where one is about to dart. Swim away or stay deep to be safe. A "Meet garter snakes" fact card tells you about them.
-- Watch out for Area 5's three tilapia: when one sees you nearby, it chases you, then goes back to its loop. With three or four legs you can swim away, and Tail Dash always gets away.
+- Watch out for the three garter snakes in Area 5. They swim near the surface, and when you come close one slides along the surface after you. Ripple rings on the water warn you where one is about to dart. Swim away or stay deep, below its reach. A "Meet garter snakes" fact card tells you about them.
+- Watch out for Area 5's three tilapia: they swim at every depth, from near the top to the bottom row. When one sees you nearby, it chases you, then goes back to its loop. With three or four legs you can swim away, and Tail Dash always gets away.
+- Watch out for Area 5's five common carp. They are meaner than Area 4's carp: their warning is a little shorter, and their tails sweep faster and reach farther. They swim at every depth, the bottom row too, and chase you when you come close. When one tips its nose down and puffs up mud, swim away before its tail sweeps.
 - Watch out for the punting poles in Area 5. Five trajinera boats float at the surface, and each one jabs its long pole straight down, deep into the bottom row, every 4 seconds. When a boat's shadow darkens and its pole's tip dips to the water with a ripple ring, a jab is coming: get out from under it. A touch costs a leg. A "Trajineras" fact card tells you about them.
-- More of Area 5's snacks move than Area 2's: 10 tadpoles wiggle back and forth along short lanes, faster than Area 2's, and 9 freshwater shrimp flick backward when you get close, then rest and flick again.
+- More of Area 5's snacks move than Area 2's: 10 tadpoles wander around in loops, faster than Area 2's, and 9 freshwater shrimp hop from spot to spot, then flick backward when you get close, rest and flick again.
 - Water hyacinth mats float in Area 5. Each mat opens and closes on an 8 second cycle. A closed mat blocks the way, and a mat never traps you: wait for it to open, or swim around. A "Water hyacinth" fact card tells you about them.
 - Visit your Home Tank after the title and after every trip. A trip-end message tells you how the trip went.
 - Watch your axolotl swim around the Home Tank. With reduced motion it stays still.

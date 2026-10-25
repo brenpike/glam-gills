@@ -1,9 +1,9 @@
 /**
  * Golden guard for the chinampa gardens, Area 5 ('chinampa-2'): its built zone, its trip
- * placements, and the encounter and trip rules, its tilapia tuning, chasing tilapia and garter
- * snakes, punting poles, mobile snacks, water hyacinth mats, gap current and ghost nets included,
- * played along a fixed scripted swim (issue #118, ND-13). Any change here means a shared rule
- * changed chinampa-2 behaviour.
+ * placements, and the encounter and trip rules, its tilapia tuning, chasing tilapia, garter snakes
+ * and common carp, punting poles, mobile snacks, water hyacinth mats, gap current and ghost nets
+ * included, played along a fixed scripted swim that parks by every tilapia, snake and carp (issue
+ * #118, ND-13; issue #135, ND-8). Any change here means a shared rule changed chinampa-2 behaviour.
  */
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_2_TREASURES } from './catalogue';
@@ -27,7 +27,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 240;
+const TRACE_SECONDS = 360;
 const MIN_TRACE_SECONDS = 120;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const PARK_FRAMES = PARK_SECONDS * FRAMES_PER_SECOND;
@@ -129,8 +129,8 @@ function swimPositions(from: Point, to: Point): Point[] {
 }
 
 /**
- * Mean of a route's waypoints: a tilapia loop's centre, inside its lunge range wherever it is on
- * the loop, or the middle of a garter snake's two-waypoint stretch.
+ * Mean of a route's waypoints: a tilapia or carp loop's centre, inside its lunge range wherever it
+ * is on the loop, or the middle of a garter snake's two-waypoint stretch.
  */
 function routeCentre(route: { waypoints: readonly Point[] }): Point {
   const count = route.waypoints.length;
@@ -139,14 +139,17 @@ function routeCentre(route: { waypoints: readonly Point[] }): Point {
   return { x: sumX / count, y: sumY / count };
 }
 
-/** Every place the scripted swim parks: each snake stretch's middle, then each tilapia route's centre, right to left. */
+/**
+ * Every place the scripted swim parks, west to east from the main path's end: each snake stretch's
+ * middle, each carp loop's centre and each tilapia route's centre (issue #135, ND-8).
+ */
 function listParkSpots(zone: ZoneLayout): Point[] {
-  return [...zone.predatorRoutes.map(routeCentre), ...[...zone.tilapiaRoutes].reverse().map(routeCentre)];
+  return [...zone.predatorRoutes, ...zone.tilapiaRoutes].map(routeCentre).sort((first, second) => first.x - second.x);
 }
 
 /**
  * The scripted swim's stops: the main path, each parked spot of listParkSpots, then through each
- * ghost net centre, right to left.
+ * ghost net centre, last net first.
  */
 function listScriptStops(zone: ZoneLayout): ScriptStop[] {
   return [
@@ -292,12 +295,17 @@ describe('chinampa-2 golden', () => {
     }
   });
 
-  it('scripts a swim that parks at every tilapia route centre and every snake stretch middle', () => {
+  it('scripts a swim that parks at every tilapia route centre, snake stretch middle and carp loop centre', () => {
     expect(defaultZone.tilapiaRoutes).toHaveLength(3);
     expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual([
       'garter-snake',
       'garter-snake',
       'garter-snake',
+      'carp',
+      'carp',
+      'carp',
+      'carp',
+      'carp',
     ]);
     const parkSpots = [...defaultZone.tilapiaRoutes, ...defaultZone.predatorRoutes].map(routeCentre);
     for (const at of parkSpots) expect(countFramesAt(positions, at)).toBeGreaterThanOrEqual(PARK_FRAMES);
@@ -337,5 +345,5 @@ describe('chinampa-2 golden', () => {
     const rerun = listScriptedPositions(buildChinampa2Zone(DEFAULT_ZONE_SEED));
     expect(traceEncounter(defaultZone, rerun)).toEqual(traceEncounter(defaultZone, positions));
     expect(traceTrip(defaultZone, rerun)).toEqual(traceTrip(defaultZone, positions));
-  }, 30_000);
+  }, 60_000);
 });

@@ -145,7 +145,7 @@ The wading bird that hunts in Area 3 (N3), the first **Predator** whose warning 
 _Avoid_: monster, bird alone
 
 **Garter snake**:
-The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in code). Three snakes swim slowly along short straight stretches with their heads at y 100, in a gentle S-wiggle. When the axolotl comes within 110 px of a snake's head, it stops and ripple rings spread from its head for 0.8 seconds, then it darts in a straight line, so swimming away or swimming deep during the rings dodges it. It warns only while its head is on its stretch, so repeated darts never walk it deeper: its hits reach no deeper than about y 254, and the water below y 260, the whole bottom row included, is safe. Cover does not hide the axolotl from it. A touch is a gentle bump that costs no leg. Its mouth is always closed, and it never bites, holds or eats the axolotl.
+The striped snake that hunts in Area 5 (N3), at the surface (`'garter-snake'` in code). Three snakes swim slowly along short straight stretches with their heads at y 100, in a gentle S-wiggle. When the axolotl comes within 110 px of a snake's head, it stops and ripple rings spread from its head for 0.8 seconds, then it darts in a straight line, so swimming away or swimming deep during the rings dodges it. It warns only while its head is on its stretch, so repeated darts never walk it deeper: its hits reach no deeper than about y 254, and the water below y 260, the whole bottom row included, is out of its reach. Cover does not hide the axolotl from it. A touch is a gentle bump that costs no leg. Its mouth is always closed, and it never bites, holds or eats the axolotl.
 _Avoid_: monster
 
 **Common carp**:
