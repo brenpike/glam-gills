@@ -8,7 +8,7 @@ import { shapeDistance } from './hazards';
 import { inSightCover, routeDistance } from './hiding';
 import { legSwimTuning } from './legs';
 import { movingHazardPeriod, movingHazardSweep } from './movingHazards';
-import { routeLoopDistance, type PredatorTuning } from './predators';
+import { TILAPIA_SPECIES, routeLoopDistance, type PredatorRules, type PredatorTuning } from './predators';
 import { LEGS, SWIM, TILAPIA, type TilapiaTuning } from './tuning';
 import { inSafeArea, swimBounds, type HidingSpot, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
 
@@ -22,7 +22,6 @@ export const EXTRA_SEEDS: readonly number[] = Object.freeze([1, 2, 3, 42, 1234, 
 const STEPS_PER_START = Math.round(START_STEP / DT);
 const DASH_STEPS = Math.round(SWIM.dashDuration / DT);
 const SEARCH_ANGLES = 360;
-const SEARCH_MAX_RADIUS = 600;
 
 const cruiseSpeed = legSwimTuning(LEGS.count).maxSpeed;
 
@@ -86,18 +85,21 @@ export function poolSpots(layout: Pick<ZoneLayout, 'finds' | 'spots'>): HidingSp
 }
 
 /**
- * Distance in px from its loop past which a predator of this tuning never acts on a waiting
- * axolotl: its lungeRange, or for a chaser its leash plus the larger of its sight and lungeRange.
+ * Reach in px from a predator's patrol loop: its lungeRange plus its leash when it chases off its
+ * route. Mirrors dangerBar's predatorReach (issue #130, ND-11: the same reach as ND-3).
  */
-function startClearance(tuning: PredatorTuning): number {
-  return tuning.chase ? tuning.chase.leash + Math.max(tuning.chase.sight, tuning.lungeRange) : tuning.lungeRange;
+function predatorReach(tuning: Readonly<PredatorTuning>, rules: Readonly<PredatorRules> | undefined): number {
+  const leash = tuning.chase && !rules?.warnOnRoute ? tuning.chase.leash : 0;
+  return tuning.lungeRange + leash;
 }
 
-/** Whether a point is farther than each predator's start clearance from its loop, the tilapia's included. */
+/** Whether a point is farther than each predator's reach from its loop, the tilapia's (by the zone's tuning) included. */
 function clearOfPredators(point: Point, zone: ZoneLayout): boolean {
   return (
-    routeDistance(point, zone.tilapiaRoutes) > startClearance(tilapiaOf(zone)) &&
-    zone.predatorRoutes.every((route) => routeLoopDistance(point, route.waypoints) > startClearance(route.species.tuning))
+    routeDistance(point, zone.tilapiaRoutes) > predatorReach(tilapiaOf(zone), TILAPIA_SPECIES.rules) &&
+    zone.predatorRoutes.every(
+      (route) => routeLoopDistance(point, route.waypoints) > predatorReach(route.species.tuning, route.species.rules),
+    )
   );
 }
 
@@ -107,8 +109,9 @@ function clearOfMovingHazards(point: Point, zone: ZoneLayout): boolean {
 }
 
 /**
- * Whether the axolotl can wait at a point: in the zone's water, out of every predator's start
- * clearance of its loop (a chaser's covers its leash and sight) and clear of every moving hazard.
+ * Whether the axolotl can wait at a point (issue #130, ND-11): in the zone's water, farther than
+ * every predator's lungeRange plus its leash from its loop (sight not counted) and clear of every
+ * moving hazard.
  */
 export function isSafeStart(point: Point, zone: ZoneLayout): boolean {
   const bounds = swimBounds(zone);
@@ -129,14 +132,18 @@ export function ringPoints(centre: Point, radius: number): Point[] {
   });
 }
 
-/** The nearest safe start to a spot, searched ring by ring in 1 px steps; the spot itself when already safe. */
+/**
+ * The nearest safe start to a spot, searched ring by ring in 1 px steps out to the zone's diagonal
+ * so the whole area is covered (issue #130, ND-11); the spot itself when already safe.
+ */
 export function nearestSafeStart(spot: Point, zone: ZoneLayout): Point {
   if (isSafeStart(spot, zone)) return { x: spot.x, y: spot.y };
-  for (let radius = 1; radius <= SEARCH_MAX_RADIUS; radius++) {
+  const maxRadius = Math.ceil(Math.hypot(zone.width, zone.height));
+  for (let radius = 1; radius <= maxRadius; radius++) {
     const found = ringPoints(spot, radius).find((point) => isSafeStart(point, zone));
     if (found) return found;
   }
-  throw new Error(`nearestSafeStart: no safe start within ${SEARCH_MAX_RADIUS} px of (${spot.x}, ${spot.y})`);
+  throw new Error(`nearestSafeStart: no safe start in the area for (${spot.x}, ${spot.y})`);
 }
 
 /** Whether some predator route's species can warn at a point: within its lunge range of its route and outside the safe area. */

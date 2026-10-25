@@ -8,7 +8,7 @@ import { createEncounter } from './encounter';
 import { shapeDistance } from './hazards';
 import { routeDistance } from './hiding';
 import { PUNTING_POLE, movingHazardPeriod, movingHazardSpawn, movingHazardSweep } from './movingHazards';
-import { CARP_SPECIES, HERON_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute } from './predators';
+import { CARP_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import {
   DT,
   fairnessZone,
@@ -20,7 +20,7 @@ import {
   pathHits,
   tilapiaOf,
 } from './riskFairness';
-import { CARP, CARP_CHASE, PUNTING_POLES, TILAPIA, TILAPIA_CHASE } from './tuning';
+import { CARP, CARP_CHASE, GARTER_SNAKE, GARTER_SNAKE_CHASE, PUNTING_POLES, TILAPIA, TILAPIA_CHASE } from './tuning';
 import { buildCanalZone, swimBounds, type HidingSpot, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
 
 const BASE = buildCanalZone();
@@ -122,11 +122,11 @@ describe('fairness harness without a chase or a moving hazard', () => {
 });
 
 describe('fairness harness with a chase', () => {
-  const tilapiaReach = TILAPIA_CHASE.leash + Math.max(TILAPIA_CHASE.sight, TILAPIA.lungeRange);
-  const carpReach = CARP_CHASE.leash + Math.max(CARP_CHASE.sight, CARP.lungeRange);
+  const tilapiaReach = TILAPIA.lungeRange + TILAPIA_CHASE.leash;
+  const carpReach = CARP.lungeRange + CARP_CHASE.leash;
   const chasing = madeUpZone({ tilapia: { ...TILAPIA, chase: TILAPIA_CHASE } });
 
-  it('keeps a safe start farther than leash plus sight from a chasing tilapia loop', () => {
+  it('keeps a safe start farther than lungeRange plus leash from a chasing tilapia loop', () => {
     const inside = { x: 1040 + tilapiaReach, y: 200 };
     const outside = { x: 1040 + tilapiaReach + 1, y: 200 };
     expect(isSafeStart(inside, chasing)).toBe(false);
@@ -137,7 +137,7 @@ describe('fairness harness with a chase', () => {
     expect(routeDistance(start, chasing.tilapiaRoutes)).toBeLessThanOrEqual(tilapiaReach + 1);
   });
 
-  it('keeps a safe start farther than leash plus sight from a chasing predator loop, and only lungeRange from one that does not chase', () => {
+  it('keeps a safe start farther than lungeRange plus leash from a chasing predator loop, and only lungeRange from one that does not chase', () => {
     const chasingCarp = madeUpZone({ predatorRoutes: [CHASING_CARP_LOOP] });
     const stillCarp = madeUpZone({ predatorRoutes: [CARP_LOOP] });
     const inside = { x: 440 + carpReach, y: 260 };
@@ -196,5 +196,75 @@ describe('fairness harness with a moving hazard', () => {
     const fair = fairnessZone(poled);
     expect(fair.startWindow).toBe(Math.max(routeSeconds(LOOP), movingHazardPeriod(PUNTING_POLE)));
     expect(firstFairStart(spotAt('test/under-pole', POLE_X, 200), fair)).not.toBeNull();
+  });
+});
+
+describe('fairness harness with the relaxed safe start (issue #130, ND-11)', () => {
+  /** A made-up tilapia tuning that chases with this leash and sight. */
+  function chasingTilapia(leash: number, sight: number): ZoneLayout {
+    return madeUpZone({ tilapia: { ...TILAPIA, chase: { ...TILAPIA_CHASE, leash, sight } } });
+  }
+
+  /** A made-up route by LOOP's right end whose species plays the garter snake tuning with a 100 px leash. */
+  function leashedRoute(species: Readonly<PredatorSpecies>): PredatorRoute {
+    const tuning = { ...GARTER_SNAKE, chase: { ...GARTER_SNAKE_CHASE, leash: 100 } };
+    return { id: 'leashed-0', waypoints: CARP_LOOP.waypoints, species: tunedSpecies(species, tuning) };
+  }
+
+  it('does not count sight: a start past lungeRange plus leash is safe however far the chaser sees', () => {
+    const farSighted = chasingTilapia(60, 1000);
+    const reach = TILAPIA.lungeRange + 60;
+    expect(isSafeStart({ x: 1040 + reach, y: 200 }, farSighted)).toBe(false);
+    expect(isSafeStart({ x: 1040 + reach + 1, y: 200 }, farSighted)).toBe(true);
+  });
+
+  it('counts the leash: a longer leash pushes the safe start farther from the loop', () => {
+    for (const leash of [0, 50, 200]) {
+      const zone = chasingTilapia(leash, TILAPIA_CHASE.sight);
+      const reach = TILAPIA.lungeRange + leash;
+      expect(isSafeStart({ x: 1040 + reach, y: 200 }, zone), `leash ${leash}`).toBe(false);
+      expect(isSafeStart({ x: 1040 + reach + 1, y: 200 }, zone), `leash ${leash}`).toBe(true);
+      const start = nearestSafeStart({ x: 1040, y: 200 }, zone);
+      expect(routeDistance(start, zone.tilapiaRoutes), `leash ${leash}`).toBeGreaterThan(reach);
+      expect(routeDistance(start, zone.tilapiaRoutes), `leash ${leash}`).toBeLessThanOrEqual(reach + 1);
+    }
+  });
+
+  it('does not count the leash of a species with the warn-on-route rule', () => {
+    const snake = madeUpZone({ predatorRoutes: [leashedRoute(GARTER_SNAKE_SPECIES)] });
+    const free = madeUpZone({ predatorRoutes: [leashedRoute(CARP_SPECIES)] });
+    const end = CARP_LOOP.waypoints[1];
+    expect(isSafeStart({ x: end.x + GARTER_SNAKE.lungeRange, y: end.y }, snake)).toBe(false);
+    expect(isSafeStart({ x: end.x + GARTER_SNAKE.lungeRange + 1, y: end.y }, snake)).toBe(true);
+    expect(isSafeStart({ x: end.x + GARTER_SNAKE.lungeRange + 1, y: end.y }, free)).toBe(false);
+    expect(isSafeStart({ x: end.x + GARTER_SNAKE.lungeRange + 100 + 1, y: end.y }, free)).toBe(true);
+  });
+
+  it('finds a far safe start past 600 px and still takes the nearest one', () => {
+    const zone = chasingTilapia(560, TILAPIA_CHASE.sight);
+    const reach = TILAPIA.lungeRange + 560;
+    const spot = { x: 1040, y: 200 };
+    const start = nearestSafeStart(spot, zone);
+    expect(Math.hypot(start.x - spot.x, start.y - spot.y)).toBeGreaterThan(600);
+    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(reach);
+    expect(routeDistance(start, zone.tilapiaRoutes)).toBeLessThanOrEqual(reach + 1);
+  });
+
+  it('throws only when the whole area has no safe start', () => {
+    const zone = chasingTilapia(5000, TILAPIA_CHASE.sight);
+    expect(() => nearestSafeStart({ x: 1040, y: 200 }, zone)).toThrow('nearestSafeStart: no safe start in the area');
+  });
+
+  it('still keeps a safe start clear of every moving hazard', () => {
+    const zone = madeUpZone({ tilapia: { ...TILAPIA, chase: TILAPIA_CHASE }, movingHazards: [POLE] });
+    const sweep = movingHazardSweep(POLE);
+    const side = POLE_X + PUNTING_POLES.halfWidth + PUNTING_POLES.touchReach;
+    expect(routeDistance({ x: POLE_X, y: 200 }, zone.tilapiaRoutes)).toBeGreaterThan(TILAPIA.lungeRange + TILAPIA_CHASE.leash);
+    expect(isSafeStart({ x: POLE_X, y: 200 }, zone)).toBe(false);
+    expect(isSafeStart({ x: side, y: 200 }, zone)).toBe(false);
+    expect(isSafeStart({ x: side + 1, y: 200 }, zone)).toBe(true);
+    const start = nearestSafeStart({ x: POLE_X, y: 200 }, zone);
+    expect(shapeDistance(start, sweep)).toBeGreaterThan(PUNTING_POLES.touchReach);
+    expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(TILAPIA.lungeRange + TILAPIA_CHASE.leash);
   });
 });

@@ -437,10 +437,11 @@ export const GARTER_SNAKE: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
- * Provisional common carp values (PRD open question 253, ND-6); tune in play. The carp roots along
- * the bed at patrolSpeed, warns for 1.0 s, then sweeps its tail 200 x 0.6 = 120 px along the aim
- * locked at the end of the warning, and rests for the 2.5 s cooldown. Its hit, touch and body reach
- * are larger than the tilapia's because it is a bigger fish; the gentle bump is the tilapia's.
+ * Provisional common carp values (PRD open question 253, ND-6); tune in play. The carp patrols at
+ * every depth at patrolSpeed and digs in the mud on the bed (issue #130, ND-10). It warns for
+ * 1.0 s, then sweeps its tail 200 x 0.6 = 120 px along the aim locked at the end of the warning,
+ * and rests for the 2.5 s cooldown. Its hit, touch and body reach are larger than the tilapia's
+ * because it is a bigger fish; the gentle bump is the tilapia's.
  */
 export const CARP: Readonly<TilapiaTuning> = Object.freeze({
   minWindup: 0.8,
