@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Area 4 has four common carp now, not one. One swims from near the top down to the middle, and three swim from the middle down by the bed, so together they cover every depth. They still dig in the mud on the bed (#134).
+- Area 4 has four common carp now, not one. One swims from near the top down to the middle, and three swim from the middle down by the bed, so together they cover every depth. Wherever a carp swims, it still warns you by tipping its nose down and puffing up mud before its tail sweeps (#134).
 
 ### Changed
 
