@@ -7,14 +7,19 @@ import {
   type SnackDrift,
   type SnackFrame,
 } from './collectibles';
-import type { MobileSnackAvoid, ShrimpRule } from './mobileSnacks';
+import type { MobileSnackAvoid, ShrimpPoseState, ShrimpRule } from './mobileSnacks';
 import {
   createShrimpFlicks,
+  createShrimpPoseLookup,
   isShrimpFlicking,
+  isShrimpRestingAfterFlick,
+  readShrimpHopSign,
+  readShrimpPose,
   stepShrimpFlicks,
   type ShrimpFlickState,
   type ShrimpFlickStep,
 } from './shrimpFlick';
+import { SHRIMP as SHRIMP_TUNING, SNACK_REACH } from './tuning';
 import type { CollectibleKind, Point, SwimBounds } from './zone';
 
 const BOUNDS: SwimBounds = { minX: 40, maxX: 1880, minY: 94, maxY: 296 };
@@ -79,6 +84,7 @@ describe('createShrimpFlicks', () => {
     expect(state.resting.map((rest) => rest.id)).toEqual(['s1', 's4']);
     for (const rest of state.resting) expect(rest.readyAt).toBe(-Infinity);
     expect(state.flicks).toEqual([]);
+    expect(state.hops).toEqual([]);
     expect(isShrimpFlicking(state, 's1')).toBe(false);
   });
 
@@ -138,7 +144,7 @@ describe('stepShrimpFlicks', () => {
     expect(step.items[0]).toEqual({ ...items[0], x: 536, y: 200 });
     expect(step.items[1]).toBe(items[1]);
     expect(step.state.flicks).toEqual([]);
-    expect(step.state.resting).toEqual([{ id: 's0', readyAt: 3 + RULE.restFor }]);
+    expect(step.state.resting).toEqual([{ id: 's0', readyAt: 3 + RULE.restFor, next: 0, hopSign: 0, afterFlick: true }]);
     expect(items).toEqual(before);
   });
 
@@ -178,7 +184,7 @@ describe('stepShrimpFlicks', () => {
     const { items, state } = oneShrimp();
     const gliding = stepOrFail(items, HEAD, state, GLIDING, 0.2, frameAt(0));
     const landed = stepOrFail(gliding.items, HEAD, gliding.state, GLIDING, 0.2, frameAt(0.2));
-    expect(landed.state.resting).toEqual([{ id: 's0', readyAt: 0.2 + RULE.restFor }]);
+    expect(landed.state.resting).toEqual([{ id: 's0', readyAt: 0.2 + RULE.restFor, next: 0, hopSign: 0, afterFlick: true }]);
   });
 
   it('measures the trigger where the shrimp is drawn, drift and bob included', () => {
@@ -202,7 +208,7 @@ describe('stepShrimpFlicks', () => {
     const blocked: MobileSnackAvoid = { ...AVOID, worms: [{ x: target.x + 60, y: target.y }] };
     expect(stepShrimpFlicks(items, HEAD, STILL, state, REDUCED, blocked, 0.016)).toBeNull();
     expect(stepShrimpFlicks(items, HEAD, STILL, state, GLIDING, blocked, 0.016)).toBeNull();
-    expect(state.resting).toEqual([{ id: 's0', readyAt: -Infinity }]);
+    expect(state.resting).toEqual([{ id: 's0', readyAt: -Infinity, next: 0, hopSign: 0, afterFlick: false }]);
     const step = stepOrFail(items, HEAD, state, REDUCED, 0.016, STILL, AVOID);
     expect(step.items[0].x).toBeCloseTo(target.x, 9);
   });
@@ -246,7 +252,7 @@ describe('stepShrimpFlicks', () => {
     expect(pulled?.[0].x).toBeCloseTo(506, 9);
     const next = stepOrFail(pulled ?? gliding.items, HEAD, gliding.state, GLIDING, 0.1);
     expect(next.items[0].x).toBeCloseTo(516, 9);
-    expect(next.state.flicks).toEqual([{ id: 's0', restX: expect.closeTo(16, 9), restY: 0 }]);
+    expect(next.state.flicks).toEqual([{ id: 's0', restX: expect.closeTo(16, 9), restY: 0, next: 0, hopSign: 0 }]);
   });
 
   it('never moves an item that is not a shrimp', () => {
@@ -278,5 +284,435 @@ describe('stepShrimpFlicks', () => {
     expect(step.items[0]).toBe(items[0]);
     expect(isShrimpFlicking(step.state, 's0')).toBe(true);
     expect(stepShrimpFlicks(step.items, HEAD, STILL, step.state, GLIDING, AVOID, 0)).toBeNull();
+  });
+});
+
+/** The dev area's shrimp values (issue #131, ND-14 note): 40 px hops at about 97 px/s and a 0.9 s hop rest. */
+const HOP_RULE: ShrimpRule = { triggerRadius: 60, restFor: 1.2, flickDistance: 60, flickSpeed: 145 };
+const HOP_LENGTH = HOP_RULE.flickDistance * SHRIMP_TUNING.hopShare;
+const HOP_REST = HOP_RULE.restFor * SHRIMP_TUNING.hopRestShare;
+/** Farther than SHRIMP_TUNING.holdDistance from every hop spot used below. */
+const FAR_HEAD: Point = { x: 300, y: 200 };
+/** A 30 px square of hop spots, each one hop from the last. */
+const SQUARE: readonly Point[] = [
+  { x: 600, y: 200 },
+  { x: 630, y: 200 },
+  { x: 630, y: 230 },
+  { x: 600, y: 230 },
+];
+
+function shrimpWithHome(home: readonly Point[], index: number): Collectible {
+  return { ...snackOf('shrimp', home[0], index), home: home.map((spot) => ({ ...spot })) };
+}
+
+/** One hopping shrimp at its home's first spot, plus a far worm. */
+function oneHopper(home: readonly Point[] = SQUARE): { items: Collectible[]; state: ShrimpFlickState } {
+  const items = [shrimpWithHome(home, 0), snackOf('worm', { x: 1500, y: 200 }, 1)];
+  return { items, state: createShrimpFlicks(items, HOP_RULE) };
+}
+
+function placeOf(item: Collectible): Point {
+  return { x: item.x, y: item.y };
+}
+
+describe('shrimp hops (issue #131, ND-5, ND-6)', () => {
+  it('first rests shrimp n of N (n - 1) / N of a hop rest, and keeps every 1-spot shrimp ready now', () => {
+    const items = [
+      shrimpWithHome(SQUARE, 0),
+      shrimpWithHome([{ x: 900, y: 200 }], 1),
+      shrimpWithHome(SQUARE.map((spot) => ({ x: spot.x + 400, y: spot.y })), 2),
+      snackOf('worm', { x: 300, y: 200 }, 3),
+      shrimpWithHome(SQUARE.map((spot) => ({ x: spot.x + 800, y: spot.y })), 4),
+    ];
+    const state = createShrimpFlicks(items, HOP_RULE);
+    expect(state.resting.map((rest) => [rest.id, rest.readyAt])).toEqual([
+      ['s0', 0],
+      ['s1', -Infinity],
+      ['s2', expect.closeTo(HOP_REST / 3, 9)],
+      ['s4', expect.closeTo((2 * HOP_REST) / 3, 9)],
+    ]);
+    for (const rest of state.resting) expect(rest.afterFlick).toBe(false);
+    const head: Point = { x: 1800, y: 120 };
+    const atStart = stepOrFail(items, head, state, REDUCED, 0.016, frameAt(0));
+    expect(atStart.items[0]).not.toBe(items[0]);
+    expect(atStart.items[2]).toBe(items[2]);
+    expect(atStart.items[4]).toBe(items[4]);
+    const second = stepOrFail(atStart.items, head, atStart.state, REDUCED, 0.016, frameAt(HOP_REST / 3));
+    expect(second.items[2]).not.toBe(atStart.items[2]);
+    expect(second.items[4]).toBe(atStart.items[4]);
+  });
+
+  it('hops when its rest ends, then rests a hop rest before the next hop', () => {
+    let { items, state } = oneHopper();
+    let driftT = 0;
+    for (let hop = 1; hop <= 3; hop++) {
+      const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(driftT));
+      ({ items, state } = step);
+      expect(placeOf(items[0])).toEqual(SQUARE[hop]);
+      expect(state.resting).toEqual([{ id: 's0', readyAt: driftT + HOP_REST, next: (hop + 1) % 4, hopSign: expect.any(Number), afterFlick: false }]);
+      expect(stepShrimpFlicks(items, FAR_HEAD, frameAt(driftT + HOP_REST - 0.001), state, REDUCED, AVOID, 0.016)).toBeNull();
+      driftT += HOP_REST;
+    }
+  });
+
+  it('hops toward each next spot in turn and round again, landing on each', () => {
+    let { items, state } = oneHopper();
+    const landings: Point[] = [];
+    for (let hop = 0; hop < 6; hop++) {
+      ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(hop * HOP_REST)));
+      landings.push(placeOf(items[0]));
+    }
+    expect(landings).toEqual([SQUARE[1], SQUARE[2], SQUARE[3], SQUARE[0], SQUARE[1], SQUARE[2]]);
+  });
+
+  it('hops at most 2/3 of the flick distance, landing on a spot only once it is that close', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 700, y: 200 },
+    ];
+    let { items, state } = oneHopper(home);
+    const xs: number[] = [];
+    const nexts: number[] = [];
+    for (let hop = 0; hop < 4; hop++) {
+      ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(hop * HOP_REST)));
+      xs.push(items[0].x);
+      nexts.push(state.resting[0].next);
+    }
+    expect(HOP_LENGTH).toBe(40);
+    expect(xs[0]).toBeCloseTo(640, 9);
+    expect(xs[1]).toBeCloseTo(680, 9);
+    expect(xs[2]).toBeCloseTo(700, 9);
+    expect(xs[3]).toBeCloseTo(660, 9);
+    expect(nexts).toEqual([1, 1, 0, 0]);
+  });
+
+  it('glides a hop at 2/3 of the flick speed, facing the way it hops', () => {
+    const { items, state } = oneHopper();
+    expect(readShrimpHopSign(state, 's0')).toBe(0);
+    const gliding = stepOrFail(items, FAR_HEAD, state, GLIDING, 0.1);
+    expect(gliding.items[0].x).toBeCloseTo(600 + HOP_RULE.flickSpeed * SHRIMP_TUNING.hopShare * 0.1, 9);
+    expect(gliding.state.hops.map((hop) => hop.id)).toEqual(['s0']);
+    expect(gliding.state.resting).toEqual([]);
+    expect(isShrimpFlicking(gliding.state, 's0')).toBe(false);
+    expect(readShrimpHopSign(gliding.state, 's0')).toBe(1);
+    const landed = stepOrFail(gliding.items, FAR_HEAD, gliding.state, GLIDING, 0.5, frameAt(0.6));
+    expect(placeOf(landed.items[0])).toEqual(SQUARE[1]);
+    expect(landed.state.hops).toEqual([]);
+    expect(landed.state.resting).toEqual([{ id: 's0', readyAt: 0.6 + HOP_REST, next: 2, hopSign: 1, afterFlick: false }]);
+  });
+
+  it('gives the x sign of the last hop: 0 for a straight down hop and -1 for a hop left', () => {
+    let { items, state } = oneHopper();
+    ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(0)));
+    expect(readShrimpHopSign(state, 's0')).toBe(1);
+    ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(HOP_REST)));
+    expect(readShrimpHopSign(state, 's0')).toBe(0);
+    state = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(2 * HOP_REST)).state;
+    expect(readShrimpHopSign(state, 's0')).toBe(-1);
+    expect(readShrimpHopSign(state, 'unknown')).toBe(0);
+  });
+
+  it('skips a spot whose landing is not clear and hops toward the one after', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 560, y: 200 },
+      { x: 640, y: 200 },
+    ];
+    const { items, state } = oneHopper(home);
+    const wormNearSecond: MobileSnackAvoid = { ...AVOID, worms: [{ x: 490, y: 200 }] };
+    const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, wormNearSecond);
+    expect(placeOf(step.items[0])).toEqual(home[2]);
+    expect(step.state.resting[0].next).toBe(0);
+    const clear = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, AVOID);
+    expect(placeOf(clear.items[0])).toEqual(home[1]);
+  });
+
+  it('rests a hop rest again, without moving, when no spot is clear', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 560, y: 200 },
+      { x: 640, y: 200 },
+    ];
+    const { items, state } = oneHopper(home);
+    const wormOnHome: MobileSnackAvoid = { ...AVOID, worms: [{ x: 600, y: 200 }] };
+    const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(0.5), wormOnHome);
+    expect(step.items[0]).toBe(items[0]);
+    expect(step.state.hops).toEqual([]);
+    expect(step.state.resting).toEqual([{ id: 's0', readyAt: 0.5 + HOP_REST, next: 1, hopSign: 0, afterFlick: false }]);
+    expect(stepShrimpFlicks(step.items, FAR_HEAD, frameAt(0.5 + HOP_REST - 0.001), step.state, REDUCED, wormOnHome, 0.016)).toBeNull();
+  });
+
+  it('never hops through a current whose way it would cross, though both ends are clear: it tries the next spot', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 640, y: 200 },
+      { x: 600, y: 240 },
+    ];
+    const { items, state } = oneHopper(home);
+    const current = { id: 'current-0', x0: 618, x1: 622, y0: 150, y1: 215, force: { x: 0, y: 0 } };
+    const across: MobileSnackAvoid = { ...AVOID, currents: [current] };
+    const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, across);
+    expect(placeOf(step.items[0])).toEqual(home[2]);
+    expect(step.state.resting[0].next).toBe(0);
+    const clear = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, AVOID);
+    expect(placeOf(clear.items[0])).toEqual(home[1]);
+  });
+
+  it('rests a hop rest again, without moving, when every hop would cross a current', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 640, y: 200 },
+    ];
+    const { items, state } = oneHopper(home);
+    const current = { id: 'current-0', x0: 618, x1: 622, y0: 150, y1: 250, force: { x: 0, y: 0 } };
+    const across: MobileSnackAvoid = { ...AVOID, currents: [current] };
+    const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(0.5), across);
+    expect(step.items[0]).toBe(items[0]);
+    expect(step.state.resting).toEqual([{ id: 's0', readyAt: 0.5 + HOP_REST, next: 1, hopSign: 0, afterFlick: false }]);
+  });
+
+  it('never flicks through a current though the landing is clear, a hopping shrimp or a 1-spot one', () => {
+    const still = oneShrimp();
+    const pastStill: MobileSnackAvoid = { ...AVOID, currents: [{ id: 'current-0', x0: 515, x1: 520, y0: 150, y1: 250, force: { x: 0, y: 0 } }] };
+    expect(stepShrimpFlicks(still.items, HEAD, STILL, still.state, REDUCED, pastStill, 0.016)).toBeNull();
+    expect(stepShrimpFlicks(still.items, HEAD, STILL, still.state, GLIDING, pastStill, 0.016)).toBeNull();
+    expect(stepOrFail(still.items, HEAD, still.state, REDUCED, 0.016).items[0].x).toBeCloseTo(SHRIMP.x + RULE.flickDistance, 9);
+    const hopper = oneHopper();
+    const head: Point = { x: 650, y: 200 };
+    const pastHopper: MobileSnackAvoid = { ...AVOID, currents: [{ id: 'current-0', x0: 565, x1: 570, y0: 150, y1: 250, force: { x: 0, y: 0 } }] };
+    expect(stepShrimpFlicks(hopper.items, head, STILL, hopper.state, REDUCED, pastHopper, 0.016)).toBeNull();
+    expect(stepOrFail(hopper.items, head, hopper.state, REDUCED, 0.016).items[0].x).toBeCloseTo(600 - HOP_RULE.flickDistance, 9);
+  });
+
+  it('checks each landing with each plastic worm where it is now, by the hard rules only', () => {
+    const { items, state } = oneHopper();
+    const threatNear: MobileSnackAvoid = { ...AVOID, hazards: [], keepAway: [{ kind: 'circle', x: 630, y: 260, r: 10 }] };
+    const step = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, threatNear);
+    expect(placeOf(step.items[0])).toEqual(SQUARE[1]);
+    const wormNow: MobileSnackAvoid = { ...AVOID, worms: [{ x: 700, y: 200 }] };
+    const skipped = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, STILL, wormNow);
+    expect(placeOf(skipped.items[0])).toEqual(SQUARE[3]);
+  });
+
+  it('does not hop while the head is within 120 px, measured where the shrimp is drawn', () => {
+    const { items, state } = oneHopper();
+    expect(SHRIMP_TUNING.holdDistance).toBe(120);
+    const atHold: Point = { x: 600 - SHRIMP_TUNING.holdDistance, y: 200 };
+    expect(stepShrimpFlicks(items, atHold, STILL, state, REDUCED, AVOID, 0.016)).toBeNull();
+    expect(stepShrimpFlicks(items, { x: 600, y: 200 + 90 }, STILL, state, GLIDING, AVOID, 0.016)).toBeNull();
+    const beyond: Point = { x: atHold.x - 0.5, y: 200 };
+    expect(stepShrimpFlicks(items, beyond, STILL, state, REDUCED, AVOID, 0.016)).not.toBeNull();
+  });
+
+  it('rests the full restFor after a flick and 3/4 of it after a hop', () => {
+    let { items, state } = oneHopper();
+    ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(0)));
+    expect(state.resting[0].readyAt).toBeCloseTo(HOP_RULE.restFor * 0.75, 9);
+    expect(isShrimpRestingAfterFlick(state, 's0')).toBe(false);
+    const near: Point = { x: items[0].x, y: items[0].y + 50 };
+    state = stepOrFail(items, near, state, REDUCED, 0.016, frameAt(1)).state;
+    expect(state.resting[0].readyAt).toBeCloseTo(1 + HOP_RULE.restFor, 9);
+    expect(isShrimpRestingAfterFlick(state, 's0')).toBe(true);
+    expect(isShrimpRestingAfterFlick(state, 'unknown')).toBe(false);
+  });
+
+  it('flicks instead of hopping inside the trigger radius, landing inside the home box grown by the flick distance', () => {
+    const home: Point[] = [
+      { x: 600, y: 200 },
+      { x: 640, y: 200 },
+      { x: 640, y: 240 },
+    ];
+    let { items, state } = oneHopper(home);
+    ({ items, state } = stepOrFail(items, { x: 650, y: 200 }, state, REDUCED, 0.016, frameAt(0)));
+    expect(items[0].x).toBeCloseTo(600 - HOP_RULE.flickDistance, 9);
+    expect(state.resting[0]).toEqual({ id: 's0', readyAt: HOP_RULE.restFor, next: 1, hopSign: 0, afterFlick: true });
+    const pushOut: Point = { x: items[0].x + 50, y: 200 };
+    expect(stepShrimpFlicks(items, pushOut, frameAt(2), state, REDUCED, AVOID, 0.016)).toBeNull();
+    ({ items, state } = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(2)));
+    expect(items[0].x).toBeCloseTo(540 + HOP_LENGTH, 9);
+    expect(state.resting[0]).toEqual({ id: 's0', readyAt: 2 + HOP_REST, next: 1, hopSign: 1, afterFlick: false });
+  });
+
+  it('checks a hopping flick by the hard rules, and a 1-spot flick by mobileSnackClear', () => {
+    const threatNear: MobileSnackAvoid = { ...AVOID, hazards: [], keepAway: [{ kind: 'circle', x: 540, y: 260, r: 10 }] };
+    const head: Point = { x: 650, y: 200 };
+    const hopper = oneHopper();
+    const flicked = stepOrFail(hopper.items, head, hopper.state, REDUCED, 0.016, STILL, threatNear);
+    expect(flicked.items[0].x).toBeCloseTo(540, 9);
+    const still = oneHopper([{ x: 600, y: 200 }]);
+    expect(stepShrimpFlicks(still.items, head, STILL, still.state, REDUCED, threatNear, 0.016)).toBeNull();
+  });
+
+  it('keeps a 1-spot shrimp ready at once, never hopping, and flicking with no home limit', () => {
+    let { items, state } = oneHopper([{ x: 300, y: 200 }]);
+    expect(state.resting).toEqual([{ id: 's0', readyAt: -Infinity, next: 0, hopSign: 0, afterFlick: false }]);
+    expect(stepShrimpFlicks(items, { x: 1200, y: 200 }, frameAt(5), state, REDUCED, AVOID, 0.016)).toBeNull();
+    let driftT = 0;
+    for (let flick = 1; flick <= 4; flick++) {
+      ({ items, state } = stepOrFail(items, { x: items[0].x - 50, y: 200 }, state, REDUCED, 0.016, frameAt(driftT)));
+      expect(items[0].x).toBeCloseTo(300 + flick * HOP_RULE.flickDistance, 9);
+      expect(stepShrimpFlicks(items, { x: 1200, y: 200 }, frameAt(driftT + 10), state, REDUCED, AVOID, 0.016)).toBeNull();
+      driftT += HOP_RULE.restFor;
+    }
+    expect(readShrimpHopSign(state, 's0')).toBe(0);
+  });
+
+  it('keeps the catch limit: a one-leg axolotl closing at the catch speed reaches a flicked shrimp before it moves again', () => {
+    let { items, state } = oneHopper();
+    const startHead: Point = { x: 600 - HOP_RULE.triggerRadius, y: 200 };
+    ({ items, state } = stepOrFail(items, startHead, state, REDUCED, 0.016, frameAt(0)));
+    const landed = items[0].x;
+    expect(landed - startHead.x).toBeCloseTo(HOP_RULE.triggerRadius + HOP_RULE.flickDistance, 9);
+    for (let frame = 1; frame / 60 < HOP_RULE.restFor; frame++) {
+      const head: Point = { x: startHead.x + SHRIMP_TUNING.catchSpeed * (frame / 60), y: 200 };
+      expect(stepShrimpFlicks(items, head, frameAt(frame / 60), state, GLIDING, AVOID, 1 / 60)).toBeNull();
+    }
+    const closed = HOP_RULE.restFor * SHRIMP_TUNING.catchSpeed;
+    expect(landed - (startHead.x + closed)).toBeLessThanOrEqual(SNACK_REACH.radius + 1e-9);
+  });
+
+  it('under reduced motion lands a hop in the frame it starts, and a gliding hop at once', () => {
+    const { items, state } = oneHopper();
+    const landed = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016);
+    expect(placeOf(landed.items[0])).toEqual(SQUARE[1]);
+    expect(landed.state.hops).toEqual([]);
+    const gliding = stepOrFail(items, FAR_HEAD, state, GLIDING, 0.1);
+    const snapped = stepOrFail(gliding.items, FAR_HEAD, gliding.state, REDUCED, 0.016);
+    expect(placeOf(snapped.items[0])).toEqual(SQUARE[1]);
+    expect(snapped.state.hops).toEqual([]);
+  });
+
+  it('adds the magnet pull to a hop glide', () => {
+    const { items, state } = oneHopper();
+    const gliding = stepOrFail(items, FAR_HEAD, state, GLIDING, 0.1);
+    const moved = gliding.items[0].x - 600;
+    const pulled = pullSnacksToward(gliding.items, { x: 900, y: 200 }, 400, 40, 0.1, STILL);
+    expect(pulled?.[0].x).toBeCloseTo(600 + moved + 4, 9);
+    const next = stepOrFail(pulled ?? gliding.items, FAR_HEAD, gliding.state, GLIDING, 0.1);
+    expect(next.items[0].x).toBeCloseTo(600 + 2 * moved + 4, 9);
+  });
+
+  it('drops the hop of a shrimp eaten mid-glide', () => {
+    const { items, state } = oneHopper();
+    const gliding = stepOrFail(items, FAR_HEAD, state, GLIDING, 0.1);
+    const eaten = [{ ...gliding.items[0], collected: true }, gliding.items[1]];
+    expect(stepShrimpFlicks(eaten, FAR_HEAD, STILL, gliding.state, GLIDING, AVOID, 0.1)).toBeNull();
+    const withWorm = [...eaten, shrimpWithHome(SQUARE.map((spot) => ({ x: spot.x + 600, y: spot.y })), 2)];
+    const both = { ...gliding.state, resting: createShrimpFlicks([withWorm[2]], HOP_RULE).resting };
+    const next = stepOrFail(withWorm, FAR_HEAD, both, GLIDING, 0.1);
+    expect(next.items[0]).toBe(eaten[0]);
+    expect(next.state.hops.map((hop) => hop.id)).toEqual(['s2']);
+  });
+
+  it('returns null when nothing hops, flicks or glides, leaving the items alone', () => {
+    const { items, state } = oneHopper();
+    const before = structuredClone(items);
+    const between: Point = { x: 600 - 90, y: 200 };
+    expect(stepShrimpFlicks(items, between, STILL, state, GLIDING, AVOID, 0.016)).toBeNull();
+    const rested = stepOrFail(items, FAR_HEAD, state, REDUCED, 0.016, frameAt(0));
+    expect(stepShrimpFlicks(rested.items, FAR_HEAD, frameAt(0.5), rested.state, GLIDING, AVOID, 0.016)).toBeNull();
+    expect(items).toEqual(before);
+  });
+});
+
+/** Counts reads of the `id` of every object made by withCountedId. */
+interface IdReads {
+  count: number;
+}
+
+/** A copy of `source` whose `id` counts each read in `reads`. */
+function withCountedId<T extends { readonly id: string }>(source: T, reads: IdReads): T {
+  const { id, ...rest } = source;
+  const readId = (): string => {
+    reads.count += 1;
+    return id;
+  };
+  return Object.defineProperty({ ...rest }, 'id', { get: readId, enumerable: true }) as unknown as T;
+}
+
+/** `count` flick-only shrimp 40 px apart along y = 200 from x = 500, then as many far worms. */
+function manyShrimp(count: number): Collectible[] {
+  const shrimp = Array.from({ length: count }, (_, index) => snackOf('shrimp', { x: 500 + index * 40, y: 200 }, index));
+  const worms = Array.from({ length: count }, (_, index) => snackOf('worm', { x: 1800, y: 100 + index }, count + index));
+  return [...shrimp, ...worms];
+}
+
+describe('shrimp look-ups scale with the shrimp count (issue #131, ND-5)', () => {
+  it('reads each item id at most once per resting shrimp in a step where nothing starts', () => {
+    for (const count of [25, 200]) {
+      const plain = manyShrimp(count);
+      const state = createShrimpFlicks(plain, RULE);
+      const reads: IdReads = { count: 0 };
+      const items = plain.map((item) => withCountedId(item, reads));
+      expect(stepShrimpFlicks(items, { x: 100, y: 200 }, STILL, state, GLIDING, AVOID, 0.016)).toBeNull();
+      expect(reads.count).toBe(count);
+    }
+  });
+
+  it('reads a bounded number of item ids per gliding shrimp', () => {
+    for (const count of [25, 200]) {
+      const plain = manyShrimp(count);
+      const fresh = createShrimpFlicks(plain, RULE);
+      const flicks = fresh.resting.map((rest) => ({ id: rest.id, restX: 30, restY: 0, next: 0, hopSign: 0 as const }));
+      const state: ShrimpFlickState = { ...fresh, resting: [], flicks };
+      const reads: IdReads = { count: 0 };
+      const items = plain.map((item) => withCountedId(item, reads));
+      const step = stepOrFail(items, { x: 100, y: 200 }, state, GLIDING, 0.1);
+      expect(step.state.flicks).toHaveLength(count);
+      expect(reads.count).toBeLessThanOrEqual(2 * count + 1);
+    }
+  });
+
+  it('still finds a shrimp the state never indexed, and an item list in another order', () => {
+    const { items, state } = oneShrimp({ x: 480, y: 200 });
+    const unindexed: ShrimpFlickState = { ...state, indexById: new Map() };
+    expect(stepOrFail(items, HEAD, unindexed, REDUCED, 0.016).items[0].x).toBe(480 + RULE.flickDistance);
+    const reversed = [items[1], items[0]];
+    const step = stepOrFail(reversed, HEAD, state, REDUCED, 0.016);
+    expect(step.items[1].x).toBe(480 + RULE.flickDistance);
+    expect(step.items[0]).toBe(items[1]);
+  });
+});
+
+describe('readShrimpPose (issue #131, ND-10)', () => {
+  function readPose(state: ShrimpFlickState, id: string): ShrimpPoseState {
+    return {
+      flicking: isShrimpFlicking(state, id),
+      afterFlick: isShrimpRestingAfterFlick(state, id),
+      hopSign: readShrimpHopSign(state, id),
+    };
+  }
+
+  it('reads what isShrimpFlicking, isShrimpRestingAfterFlick and readShrimpHopSign read', () => {
+    const { state: fresh } = oneShrimp();
+    const states: ShrimpFlickState[] = [
+      fresh,
+      { ...fresh, resting: [{ id: 's0', readyAt: 5, next: 0, hopSign: 1, afterFlick: true }] },
+      { ...fresh, resting: [], hops: [{ id: 's0', restX: -10, restY: 0, next: 1, hopSign: -1 }] },
+      { ...fresh, resting: [], flicks: [{ id: 's0', restX: 30, restY: 0, next: 0, hopSign: -1 }] },
+    ];
+    const lookup = createShrimpPoseLookup();
+    const out: ShrimpPoseState = { flicking: false, afterFlick: false, hopSign: 0 };
+    for (const state of states) {
+      for (const id of ['s0', 'unknown']) {
+        expect(readShrimpPose(lookup, state, id, out)).toBe(out);
+        expect({ ...out }).toEqual(readPose(state, id));
+      }
+    }
+  });
+
+  it('indexes each state once, so posing every shrimp reads each record id a bounded number of times', () => {
+    const count = 200;
+    const reads: IdReads = { count: 0 };
+    const fresh = createShrimpFlicks(manyShrimp(count), RULE);
+    const resting = fresh.resting.map((rest) => withCountedId(rest, reads));
+    const state: ShrimpFlickState = { ...fresh, resting };
+    const lookup = createShrimpPoseLookup();
+    const out: ShrimpPoseState = { flicking: false, afterFlick: false, hopSign: 0 };
+    for (const rest of fresh.resting) readShrimpPose(lookup, state, rest.id, out);
+    expect(reads.count).toBeLessThanOrEqual(2 * count);
+    const afterFirst = reads.count;
+    for (const rest of fresh.resting) readShrimpPose(lookup, state, rest.id, out);
+    expect(reads.count).toBe(afterFirst);
   });
 });

@@ -269,14 +269,30 @@ export interface DriftingNetTuning {
   maxPath: number;
 }
 
-/** Tadpole limits: every area's tadpole rule and lanes stay inside them. */
+/** Tadpole limits: every area's tadpole rule and wander loops stay inside them (issue #131, ND-2, ND-3). */
 export interface TadpoleTuning {
   /** Highest tadpole speed in px/s. */
   maxSpeed: number;
-  /** Shortest lane length in px. */
-  laneMin: number;
-  /** Longest lane length in px. */
-  laneMax: number;
+  /** Fewest turn points a wander loop needs to count as wandering (meetsSnackMotion). */
+  minLoopPoints: number;
+  /** Most turn points a wander loop may have. */
+  maxLoopPoints: number;
+  /** Narrowest home area (the box around a wander loop) in px. */
+  minHomeWidth: number;
+  /** Widest home area in px: one screen. */
+  maxHomeWidth: number;
+  /** Shortest home area in px. */
+  minHomeHeight: number;
+  /** Tallest home area in px: one screen. */
+  maxHomeHeight: number;
+  /** Shortest leg, turn point to turn point, in seconds at the area's speed. */
+  minLegSeconds: number;
+  /** Longest leg in seconds at the area's speed. */
+  maxLegSeconds: number;
+  /** Longest lap in seconds. */
+  maxLapSeconds: number;
+  /** Share of the loop its longest stretch out of every threat's reach must be at least. */
+  safeLoopShare: number;
 }
 
 /** Freshwater shrimp limits: every area's shrimp rule stays inside them. */
@@ -291,6 +307,22 @@ export interface ShrimpTuning {
   maxFlickSpeed: number;
   /** Speed in px/s a one-leg axolotl is counted to close on a landed shrimp, for the catch limit. */
   catchSpeed: number;
+  /** A hop's share of the flick distance (its longest hop) and of the flick speed (its hop speed). */
+  hopShare: number;
+  /** The rest after a hop, as a share of the rest after a flick. */
+  hopRestShare: number;
+  /** Px from the head within which a shrimp does not hop. */
+  holdDistance: number;
+  /** Widest home (the box around its hop spots) in px. */
+  maxHomeWidth: number;
+  /** Tallest home in px. */
+  maxHomeHeight: number;
+  /** Fewest hop spots a home needs to count as hopping (meetsSnackMotion). */
+  minHomeSpots: number;
+  /** Most hop spots a home may have. */
+  maxHomeSpots: number;
+  /** Share of a home's hop spots that must be out of every threat's reach. */
+  safeSpotShare: number;
 }
 
 /** Treasure hint sparkle tuning. */
@@ -663,20 +695,35 @@ export const DRIFTING_NETS: Readonly<DriftingNetTuning> = Object.freeze({
 });
 
 /**
- * Tadpole limits (PRD open questions 269 and 271, ND-22 and ND-24); limits only, with no per-area
- * values. maxSpeed is 0.8 x a one-leg axolotl's 90 px/s, so a one-leg axolotl always swims faster.
+ * Tadpole limits (PRD open questions 269 and 271, ND-22 and ND-24; issue #131, ND-2 and ND-3);
+ * limits only, with no per-area values. maxSpeed is 0.8 x a one-leg axolotl's 90 px/s, so a
+ * one-leg axolotl always swims faster. A wander loop has 4 to 8 turn points; its home area is 320
+ * to 480 px wide and at least 150 px tall, inside one 480 x 360 screen; each leg takes 1.5 to 5 s
+ * and a lap at most 40 s; and its longest stretch out of every threat's reach is at least half of
+ * it (ND-7).
  */
 export const TADPOLES: Readonly<TadpoleTuning> = Object.freeze({
   maxSpeed: 72,
-  laneMin: 80,
-  laneMax: 160,
+  minLoopPoints: 4,
+  maxLoopPoints: 8,
+  minHomeWidth: 320,
+  maxHomeWidth: 480,
+  minHomeHeight: 150,
+  maxHomeHeight: 360,
+  minLegSeconds: 1.5,
+  maxLegSeconds: 5,
+  maxLapSeconds: 40,
+  safeLoopShare: 0.5,
 });
 
 /**
  * Freshwater shrimp limits (PRD open questions 269 and 272, ND-22 and ND-25); limits only, with no
  * per-area values. maxFlickSpeed is a four-leg axolotl's top speed. catchSpeed is a one-leg
  * axolotl's 90 px/s less a 20 px/s allowance for drift, for the catch limit
- * restFor x catchSpeed >= triggerRadius + flickDistance - 36.
+ * restFor x catchSpeed >= triggerRadius + flickDistance - 36. A hop (issue #131, ND-5) is at most
+ * 2/3 of the flick distance at 2/3 of the flick speed and is followed by 3/4 of the rest; no hop
+ * starts within 120 px of the head. A home has 3 to 6 hop spots in a box at most 200 x 160 px, and
+ * at least half its spots are out of every threat's reach (ND-7).
  */
 export const SHRIMP: Readonly<ShrimpTuning> = Object.freeze({
   minRest: 1.0,
@@ -684,6 +731,14 @@ export const SHRIMP: Readonly<ShrimpTuning> = Object.freeze({
   maxFlick: 72,
   maxFlickSpeed: 150,
   catchSpeed: 70,
+  hopShare: 2 / 3,
+  hopRestShare: 3 / 4,
+  holdDistance: 120,
+  maxHomeWidth: 200,
+  maxHomeHeight: 160,
+  minHomeSpots: 3,
+  maxHomeSpots: 6,
+  safeSpotShare: 0.5,
 });
 
 /** Provisional hint values; rarer treasures get a subtler, shorter-range hint (PRD B7). */

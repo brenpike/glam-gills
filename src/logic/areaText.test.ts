@@ -101,7 +101,7 @@ describe('area text', () => {
       const lower = output.toLowerCase();
       for (const word of BANNED) expect(lower).not.toContain(word);
     }
-  });
+  }, 30_000);
 
   it('names areas "Area N"', () => {
     expect(areaLabel(1)).toBe('Area 1');

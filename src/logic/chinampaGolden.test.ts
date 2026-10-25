@@ -515,8 +515,8 @@ describe('chinampa-1 golden', () => {
     const mix = CHINAMPA_LAYOUT.mobileSnacks;
     const tadpoleIds = listSnackIdsOfKind(defaultZone, 'tadpole');
     const shrimpIds = listSnackIdsOfKind(defaultZone, 'shrimp');
-    expect(tadpoleIds).toHaveLength(mix?.lanes.length ?? 0);
-    expect(shrimpIds).toHaveLength(mix?.spots.length ?? 0);
+    expect(tadpoleIds).toHaveLength(mix?.wanders.length ?? 0);
+    expect(shrimpIds).toHaveLength(mix?.homes.length ?? 0);
     expect(tadpoleIds).toHaveLength(7);
     expect(shrimpIds).toHaveLength(7);
     const lines = traces.snacks;

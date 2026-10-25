@@ -283,12 +283,12 @@ function listElementCards(elements: readonly Readonly<ElementSpawn>[]): Threat[]
 
 /**
  * The card of each mobile snack type the area has, tadpole first (ND-29): the tadpole when it has a
- * tadpole lane, the shrimp when it has a shrimp spot.
+ * tadpole wander loop, the shrimp when it has a shrimp home (issue #131, ND-13).
  */
 function listSnackCards(mix: Readonly<MobileSnackMix> | undefined): Threat[] {
   if (mix === undefined) return [];
-  const tadpole: Threat[] = mix.lanes.length > 0 ? [{ id: TADPOLE_FACT.id, fact: TADPOLE_FACT }] : [];
-  const shrimp: Threat[] = mix.spots.length > 0 ? [{ id: SHRIMP_FACT.id, fact: SHRIMP_FACT }] : [];
+  const tadpole: Threat[] = mix.wanders.length > 0 ? [{ id: TADPOLE_FACT.id, fact: TADPOLE_FACT }] : [];
+  const shrimp: Threat[] = mix.homes.length > 0 ? [{ id: SHRIMP_FACT.id, fact: SHRIMP_FACT }] : [];
   return [...tadpole, ...shrimp];
 }
 

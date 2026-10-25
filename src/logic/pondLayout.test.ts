@@ -9,12 +9,14 @@ import { spotMatchesLabels, turnDistance, underPad } from './hiding';
 import { legSwimTuning } from './legs';
 import {
   meetsSnackRamp,
+  mobileLegBoxes,
   mobileSnackAvoid,
   mobileSnackClear,
   oneTimeDarts,
   shrimpBox,
+  shrimpHomeClear,
   snackMagnetSpeed,
-  tadpoleLaneBox,
+  tadpoleWanderClear,
 } from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { PLASTIC_WORM } from './plasticWorms';
@@ -407,7 +409,7 @@ describe('beating the pond', () => {
 
   it.each(ALL_SEEDS)('puts every snack the exit needs in the swim bounds for seed %i', (seed) => {
     const layout = pond(seed);
-    const mobile = (POND_LAYOUT.mobileSnacks?.lanes.length ?? 0) + (POND_LAYOUT.mobileSnacks?.spots.length ?? 0);
+    const mobile = (POND_LAYOUT.mobileSnacks?.wanders.length ?? 0) + (POND_LAYOUT.mobileSnacks?.homes.length ?? 0);
     expect(layout.collectibles).toHaveLength(POND_LAYOUT.snackWorms + POND_LAYOUT.snackBugs + mobile);
     for (const snack of layout.collectibles) {
       expect(inBounds(snack, layout), snack.id).toBe(true);
@@ -444,39 +446,47 @@ describe('pond ramp danger bar (issue #121, ND-2, ND-3)', () => {
   });
 });
 
-describe('pond mobile snacks (issue #121, ND-4 to ND-6)', () => {
+describe('pond mobile snacks (issue #121, ND-4 to ND-6; issue #131, ND-14)', () => {
   const mix = POND_LAYOUT.mobileSnacks;
 
   it('meets the Area 2 snack ramp', () => {
     expect(meetsSnackRamp(2, POND_LAYOUT)).toBe(true);
   });
 
-  it('has 25 px/s tadpoles on two lanes and two shrimp', () => {
-    expect(mix?.tadpole).toEqual({ speed: 25 });
-    expect(mix?.lanes).toEqual([
-      { x: 320, y: 210, dx: 120, dy: 0, offset: 0 },
-      { x: 1744, y: 140, dx: 0, dy: 120, offset: 4.8 },
+  it('has 40 px/s tadpoles on two 2-point wander loops, 6 s a lap with the second 3 s ahead, and two shrimp on 1-spot homes', () => {
+    expect(mix?.tadpole).toEqual({ speed: 40 });
+    expect(mix?.wanders).toEqual([
+      { points: [{ x: 320, y: 210 }, { x: 440, y: 210 }], offset: 0 },
+      { points: [{ x: 1744, y: 140 }, { x: 1744, y: 260 }], offset: 3 },
     ]);
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 2, flickDistance: 36, flickSpeed: 100 });
-    expect(mix?.spots).toEqual([
-      { x: 860, y: 106 },
-      { x: 2320, y: 130 },
-    ]);
+    expect(mix?.homes).toEqual([{ points: [{ x: 860, y: 106 }] }, { points: [{ x: 2320, y: 130 }] }]);
   });
 
-  it.each(ALL_SEEDS)('keeps every lane and shrimp clear of what a mobile snack avoids for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('keeps every tadpole leg and shrimp clear of what a mobile snack avoids for seed %i', (seed) => {
     const layout = pond(seed);
     const avoid = mobileSnackAvoid(layout);
-    for (const lane of mix?.lanes ?? []) {
-      expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane at ${lane.x}, ${lane.y}`).toBe(true);
+    for (const box of mobileLegBoxes(layout)) {
+      expect(mobileSnackClear(box, avoid), `leg at ${box.x0}, ${box.y0}`).toBe(true);
     }
-    for (const spot of mix?.spots ?? []) {
+    for (const home of mix?.homes ?? []) {
+      const spot = home.points[0];
       expect(mobileSnackClear(shrimpBox(spot, POND_AREA.snackDrift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
     }
   });
 
-  it('keeps the Snack magnet pull at 40 px/s (ND-5)', () => {
-    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(40);
+  it.each(ALL_SEEDS)('passes tadpoleWanderClear and shrimpHomeClear for every tadpole and shrimp for seed %i (issue #131, ND-7)', (seed) => {
+    const avoid = mobileSnackAvoid(pond(seed));
+    for (const wander of mix?.wanders ?? []) {
+      expect(tadpoleWanderClear(wander, avoid), `loop at ${wander.points[0].x}, ${wander.points[0].y}`).toBe(true);
+    }
+    for (const home of mix?.homes ?? []) {
+      expect(shrimpHomeClear(home, POND_AREA.snackDrift, avoid), `home at ${home.points[0].x}, ${home.points[0].y}`).toBe(true);
+    }
+  });
+
+  it('pulls with the Snack magnet at 48 px/s, 1.2 times the 40 px/s tadpole (issue #131, ND-8)', () => {
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(48);
   });
 
   it.each(ALL_SEEDS)('has no one-time darters (ND-6) for seed %i', (seed) => {

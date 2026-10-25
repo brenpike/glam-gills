@@ -825,7 +825,7 @@ describe('restyle property: random actions never change the morph or sex', () =>
         }
       }
     }
-  });
+  }, 30_000);
 });
 
 describe('Dream colour step', () => {

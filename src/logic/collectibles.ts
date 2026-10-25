@@ -1,8 +1,25 @@
-import type { SnackLane } from './mobileSnacks';
 import { SNACK_REACH, type SnackReachTuning } from './tuning';
 import type { CollectibleKind, CollectibleSpawn, Point, SwimBounds } from './zone';
 
 export const DEFAULT_COLLECT_RADIUS = 22;
+
+/**
+ * The wander loop a tadpole snack carries (issue #131, ND-1, ND-13): its turn points from the
+ * snack's stored x and y, the px along the loop at the end of each leg, the lap in px, its speed in
+ * px/s and its offset in seconds. Leg i runs from points[i] to points[i + 1], and the last leg back
+ * to points[0]. The stored x and y are the start, so the loop moves with them. Build it with
+ * snackWander().
+ */
+export interface SnackWander {
+  /** Turn points from the stored x and y in px; the first is (0, 0). */
+  readonly points: readonly Readonly<Point>[];
+  /** Px along the loop at the end of each leg, one per point; the last is `lap`. */
+  readonly legEnds: readonly number[];
+  /** Px once round the loop. */
+  readonly lap: number;
+  readonly speed: number;
+  readonly offset: number;
+}
 
 export interface Collectible {
   id: string;
@@ -10,8 +27,10 @@ export interface Collectible {
   x: number;
   y: number;
   collected: boolean;
-  /** A tadpole's lane from its stored x and y (ND-24); absent on every other snack. */
-  lane?: SnackLane;
+  /** A tadpole's wander loop from its stored x and y (issue #131, ND-13); absent on every other snack. */
+  wander?: SnackWander;
+  /** A shrimp's hop spots, in world px (issue #131, ND-13); absent on every other snack. */
+  home?: Point[];
 }
 
 export interface CollectResult {
@@ -19,12 +38,27 @@ export interface CollectResult {
   newly: Collectible[];
 }
 
-function createCollectible(spawn: CollectibleSpawn): Collectible {
-  const item: Collectible = { id: spawn.id, kind: spawn.kind, x: spawn.x, y: spawn.y, collected: false };
-  return spawn.lane ? { ...item, lane: { ...spawn.lane } } : item;
+/** A copy of the wander loop sharing no object with it. */
+function copySnackWander(wander: Readonly<SnackWander>): SnackWander {
+  return {
+    points: wander.points.map((point) => ({ x: point.x, y: point.y })),
+    legEnds: [...wander.legEnds],
+    lap: wander.lap,
+    speed: wander.speed,
+    offset: wander.offset,
+  };
 }
 
-/** Fresh, uncollected collectibles for each spawn; a lane is copied only when the spawn has one. */
+function createCollectible(spawn: CollectibleSpawn): Collectible {
+  const item: Collectible = { id: spawn.id, kind: spawn.kind, x: spawn.x, y: spawn.y, collected: false };
+  return {
+    ...item,
+    ...(spawn.wander ? { wander: copySnackWander(spawn.wander) } : {}),
+    ...(spawn.home ? { home: spawn.home.map((spot) => ({ x: spot.x, y: spot.y })) } : {}),
+  };
+}
+
+/** Fresh, uncollected collectibles for each spawn; a wander loop or home is copied only when the spawn has one. */
 export function createCollectibles(spawns: readonly CollectibleSpawn[]): Collectible[] {
   return spawns.map(createCollectible);
 }
@@ -201,44 +235,80 @@ export function snackBobY(index: number, bobT: number, bobbing: boolean): number
 }
 
 /**
- * Where a tadpole is on its there-and-back cycle at drift time `t` (s), as a share in [0, 1): s / 2L,
- * where s = ((t + offset) x speed) mod 2L and L is the lane length (ND-24). Under 0.5 it swims out
- * from the lane start; from 0.5 it swims back. 0 on a lane of length 0.
+ * The wander loop for a tadpole starting at `points[0]` (issue #131, ND-1, ND-12): the turn points
+ * from the start, with each leg's end along the loop worked out once here, so drawing it each frame
+ * is a short walk over the legs. `points` are in world px.
  */
-export function tadpoleLaneCycle(lane: Readonly<SnackLane>, t: number): number {
-  const loop = 2 * Math.hypot(lane.dx, lane.dy);
-  if (loop === 0) return 0;
-  const along = ((t + lane.offset) * lane.speed) % loop;
-  return (along < 0 ? along + loop : along) / loop;
+export function snackWander(points: readonly Readonly<Point>[], speed: number, offset: number): SnackWander {
+  const start = points[0];
+  const relative = points.map((point) => ({ x: point.x - start.x, y: point.y - start.y }));
+  const legEnds: number[] = [];
+  let along = 0;
+  for (let i = 0; i < relative.length; i++) {
+    const next = relative[(i + 1) % relative.length];
+    along += Math.hypot(next.x - relative[i].x, next.y - relative[i].y);
+    legEnds.push(along);
+  }
+  return { points: relative, legEnds, lap: along, speed, offset };
 }
 
-/** The tadpole's share of its lane at drift time `t`: d / L, where d = min(s, 2L - s). */
-function tadpoleLaneShare(lane: Readonly<SnackLane>, t: number): number {
-  const cycle = tadpoleLaneCycle(lane, t);
-  return 2 * Math.min(cycle, 1 - cycle);
+/** Px along the loop at drift time `t` (s): ((t + offset) x speed) mod lap, in [0, lap); 0 on a loop of length 0. */
+function wanderAlong(wander: Readonly<SnackWander>, t: number): number {
+  if (!(wander.lap > 0)) return 0;
+  const along = ((t + wander.offset) * wander.speed) % wander.lap;
+  return along < 0 ? along + wander.lap : along;
+}
+
+/** The leg holding `along` px: the first whose end is past it, else the last. */
+function legAtAlong(wander: Readonly<SnackWander>, along: number): number {
+  let leg = 0;
+  while (leg < wander.legEnds.length - 1 && along >= wander.legEnds[leg]) leg += 1;
+  return leg;
+}
+
+/** The leg a tadpole on this loop swims at drift time `t` (s) (issue #131, ND-1): leg i runs from points[i] to the next point. */
+export function wanderLegAt(wander: Readonly<SnackWander>, t: number): number {
+  return legAtAlong(wander, wanderAlong(wander, t));
+}
+
+/**
+ * The `axis` part, from the start, of the place `along` px round the loop (issue #131, ND-1),
+ * straight along its leg. Allocates nothing.
+ */
+export function wanderOffsetAlong(wander: Readonly<SnackWander>, along: number, axis: 'x' | 'y'): number {
+  const leg = legAtAlong(wander, along);
+  const legStart = leg === 0 ? 0 : wander.legEnds[leg - 1];
+  const length = wander.legEnds[leg] - legStart;
+  const share = length > 0 ? Math.min(1, Math.max(0, (along - legStart) / length)) : 0;
+  const from = wander.points[leg][axis];
+  const to = wander.points[(leg + 1) % wander.points.length][axis];
+  return from + (to - from) * share;
 }
 
 /**
  * Drawn x of the snack at `index` in `frame`: `snackX` at the frame's drift time. A tadpole (one with
- * a lane, ND-24) is drawn on its lane instead: its stored x plus dx x d / L, clamped to the frame's
- * bounds, with no drift, the same with and without reduced motion. Allocates nothing.
+ * a wander loop, issue #131, ND-1) is drawn on its loop instead: its stored x plus the loop's x
+ * part at along = ((t + offset) x speed) mod lap, clamped to the frame's bounds, with no drift, the
+ * same with and without reduced motion. Allocates nothing.
  */
 export function drawnSnackX(item: Collectible, index: number, frame: SnackFrame): number {
-  const lane = item.lane;
-  if (lane) {
-    return clamp(item.x + lane.dx * tadpoleLaneShare(lane, frame.driftT), frame.bounds.minX, frame.bounds.maxX);
+  const wander = item.wander;
+  if (wander) {
+    const along = wanderAlong(wander, frame.driftT);
+    return clamp(item.x + wanderOffsetAlong(wander, along, 'x'), frame.bounds.minX, frame.bounds.maxX);
   }
   return snackX(item, index, frame.driftT, frame.drift, frame.bounds);
 }
 
 /**
- * Drawn y of the snack at `index` in `frame`: `snackY` plus its bob. A tadpole is drawn on its lane
+ * Drawn y of the snack at `index` in `frame`: `snackY` plus its bob. A tadpole is drawn on its loop
  * as in drawnSnackX, with no drift and no bob. Allocates nothing.
  */
 export function drawnSnackY(item: Collectible, index: number, frame: SnackFrame): number {
-  const lane = item.lane;
-  if (lane) {
-    return clamp(item.y + lane.dy * tadpoleLaneShare(lane, frame.driftT), frame.bounds.minY, frame.bounds.maxY);
+  const wander = item.wander;
+  if (wander) {
+    const along = wanderAlong(wander, frame.driftT);
+    return clamp(item.y + wanderOffsetAlong(wander, along, 'y'), frame.bounds.minY, frame.bounds.maxY);
   }
   return snackY(item, index, frame.driftT, frame.drift, frame.bounds) + snackBobY(index, frame.bobT, frame.bobbing);
 }

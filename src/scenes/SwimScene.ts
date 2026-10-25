@@ -46,10 +46,10 @@ import { blockExplorer, type MatAvoid } from '../logic/hyacinthMats';
 import { legSwimTuning } from '../logic/legs';
 import {
   metSnackTypeIds,
+  mobileLegBoxes,
   mobileSnackAvoid,
   oneTimeDarts,
   snackMagnetSpeed,
-  tadpoleLaneBoxes,
   type MobileSnackAvoid,
   type MobileSnackPoseScene,
 } from '../logic/mobileSnacks';
@@ -194,7 +194,7 @@ function wrapInto(value: number, min: number, max: number): number {
 /** Whether the zone has any tadpole or shrimp. */
 function hasMobileSnacks(zone: Pick<ZoneLayout, 'mobileSnacks'>): boolean {
   const mix = zone.mobileSnacks;
-  return mix !== undefined && mix.lanes.length + mix.spots.length > 0;
+  return mix !== undefined && mix.wanders.length + mix.homes.length > 0;
 }
 
 /** How many mobile snack types (tadpole, shrimp) the snacks hold: 0, 1 or 2. */
@@ -509,7 +509,9 @@ export class SwimScene extends Phaser.Scene {
    * The Snack magnet's pull is worked out once per trip (snackMagnetSpeed), and is exactly the
    * perk's pull with no mobile snacks. The shrimp flick state, the meet count and the tadpole
    * `keepClear` boxes exist only in an area with shrimp or tadpoles. There, stepShrimpFlicks
-   * allocates nothing when no flick starts and none glides; while one glides it builds a new items
+   * allocates nothing when no flick starts and none glides, except that a ready shrimp whose flick
+   * landing is blocked reruns its landing check and builds two small objects each frame (known gap,
+   * issue #131, ND-12); while one glides it builds a new items
    * array, one object per moved shrimp and a new flick state, and setItems works the tally out
    * again: bounded by the shrimp count. Its avoid object is built again only when the plastic worms
    * move. metSnackTypeIds runs only while some snack type in the area is unmet, and returns a shared
@@ -642,8 +644,8 @@ export class SwimScene extends Phaser.Scene {
 
   /**
    * Works out the trip's mobile snack parts once per trip (ND-24 to ND-29): the Snack magnet's pull,
-   * and, only in an area with mobile snacks, the tadpole lane boxes a spat plastic worm keeps clear
-   * of, the shrimp flick state and the snack types to meet. An area with no mobile snacks gets
+   * and, only in an area with mobile snacks, the tadpole leg and shrimp hop leg boxes a spat plastic
+   * worm keeps clear of (issue #131, ND-7), the shrimp flick state and the snack types to meet. An area with no mobile snacks gets
    * exactly the perk's pull and nothing else.
    */
   private setUpMobileSnacks(): void {
@@ -651,8 +653,9 @@ export class SwimScene extends Phaser.Scene {
     this.magnetSpeed = snackMagnetSpeed(this.perks.snackMagnetSpeed, zone);
     const mix = zone.mobileSnacks;
     if (!mix) return;
-    if (mix.lanes.length > 0) this.spitAvoid = { ...this.spitAvoid, keepClear: tadpoleLaneBoxes(zone) };
-    if (mix.shrimp && mix.spots.length > 0) this.shrimpFlicks = createShrimpFlicks(zone.collectibles, mix.shrimp);
+    const legBoxes = mobileLegBoxes(zone);
+    if (legBoxes.length > 0) this.spitAvoid = { ...this.spitAvoid, keepClear: legBoxes };
+    if (mix.shrimp && mix.homes.length > 0) this.shrimpFlicks = createShrimpFlicks(zone.collectibles, mix.shrimp);
     this.snackTypesToMeet = countMobileSnackTypes(zone.collectibles);
   }
 

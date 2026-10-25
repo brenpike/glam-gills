@@ -15,7 +15,7 @@ import { CHINAMPA_2_TREASURES } from './catalogue';
 import { GHOST_NET } from './ghostNets';
 import type { ElementSpawn, HazardSpawn, MatPair } from './hazards';
 import { hyacinthMatSpawn } from './hyacinthMats';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
 import { GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import {
@@ -65,8 +65,19 @@ export const CHINAMPA_2_SNAKE: Readonly<PredatorSpecies> = tunedSpecies(
   Object.freeze({ ...GARTER_SNAKE, chase: GARTER_SNAKE_CHASE }),
 );
 
-/** Area 5's tadpole rule (issue #118, ND-12): 60 px/s. */
-const CHINAMPA_2_TADPOLE = tadpoleRule(60);
+/** Area 5's tadpole rule (issue #131, ND-9): 70 px/s. */
+const CHINAMPA_2_TADPOLE = tadpoleRule(70);
+
+/** Seconds a tadpole takes round its 2-point wander loop of two 120 px legs: 240 / 70 (issue #131, ND-14). */
+const CHINAMPA_2_LAP = (2 * 120) / CHINAMPA_2_TADPOLE.speed;
+
+/**
+ * Tadpole `n` (1 to 10) on a 2-point wander loop from (x, y) to (x + dx, y + dy) and back, `n - 1`
+ * tenths of its lap ahead (issue #118, ND-12; issue #131, ND-14).
+ */
+function wanderAt(n: number, x: number, y: number, dx: number, dy: number): Readonly<TadpoleWander> {
+  return tadpoleWander(CHINAMPA_2_TADPOLE, [[x, y], [x + dx, y + dy]], ((n - 1) * CHINAMPA_2_LAP) / 10);
+}
 
 /** One ghost net: a rect at a fixed place, id `chinampa-2/ghost-net-<n>`. */
 function ghostNetAt(index: number, x0: number, x1: number, y0: number, y1: number): Readonly<HazardSpawn> {
@@ -292,34 +303,35 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([3260, 110, 'rare', false] as const),
   ]),
   /**
-   * Ten tadpoles on 120 px lanes, each 0.4 s further on its 4 s there-and-back cycle than the last,
-   * and nine shrimp, with Area 5's rules, all in open water clear of every threat (issue #118, ND-12).
+   * Ten tadpoles on 2-point wander loops 120 px long, each a tenth of its lap further on than the
+   * last, and nine shrimp on 1-spot homes, with Area 5's rules, all in open water clear of every
+   * threat (issue #118, ND-12; issue #131, ND-14).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: CHINAMPA_2_TADPOLE,
-    lanes: [
-      tadpoleLane(CHINAMPA_2_TADPOLE, 350, 120, 0, 120, 0),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 600, 130, 120, 0, 0.4),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 840, 200, 0, 120, 0.8),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 1100, 250, 120, 0, 1.2),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 1265, 500, 0, 120, 1.6),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 1520, 630, 120, 0, 2),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 1740, 600, 120, 0, 2.4),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 2040, 140, 120, 0, 2.8),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 2560, 250, 120, 0, 3.2),
-      tadpoleLane(CHINAMPA_2_TADPOLE, 2730, 450, 0, 120, 3.6),
+    wanders: [
+      wanderAt(1, 350, 120, 0, 120),
+      wanderAt(2, 600, 130, 120, 0),
+      wanderAt(3, 840, 200, 0, 120),
+      wanderAt(4, 1100, 250, 120, 0),
+      wanderAt(5, 1265, 500, 0, 120),
+      wanderAt(6, 1520, 630, 120, 0),
+      wanderAt(7, 1740, 600, 120, 0),
+      wanderAt(8, 2040, 140, 120, 0),
+      wanderAt(9, 2560, 250, 120, 0),
+      wanderAt(10, 2730, 450, 0, 120),
     ],
     shrimp: shrimpRule(60, 1.2, 60, 145),
-    spots: [
-      { x: 180, y: 470 },
-      { x: 300, y: 600 },
-      { x: 760, y: 120 },
-      { x: 960, y: 630 },
-      { x: 1290, y: 420 },
-      { x: 1900, y: 520 },
-      { x: 2440, y: 290 },
-      { x: 2780, y: 340 },
-      { x: 3060, y: 115 },
+    homes: [
+      shrimpHome([[180, 470]]),
+      shrimpHome([[300, 600]]),
+      shrimpHome([[760, 120]]),
+      shrimpHome([[960, 630]]),
+      shrimpHome([[1290, 420]]),
+      shrimpHome([[1900, 520]]),
+      shrimpHome([[2440, 290]]),
+      shrimpHome([[2780, 340]]),
+      shrimpHome([[3060, 115]]),
     ],
   }),
 } satisfies AreaLayoutData);

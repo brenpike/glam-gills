@@ -1,6 +1,6 @@
 # ADR 0021: Danger pass shared parts: the chase rule, moving hazards and mobile snacks
 
-- Status: Accepted. Amended in part by [ADR 0022](0022-danger-pass-phase-2-seam-amendments.md) (#121) and [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (#130)
+- Status: Accepted. Amended in part by [ADR 0022](0022-danger-pass-phase-2-seam-amendments.md) (#121), [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (#130) and [ADR 0024](0024-mobile-snack-wander-loops-and-shrimp-hops.md) (#131)
 - Date: 2026-10-24
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (the new parts stay gentle, and the fact cards stay true), [ADR 0012](0012-save-on-device.md) (new ids under its additive rule), [ADR 0013](0013-axolotl-rig-and-frame-budget.md) (frame time with moving parts), [ADR 0014](0014-area-framework.md) (the framework this builds on), [ADR 0015](0015-multi-area-catalogue-and-slow-only-hazards.md) (the slow-only hazard model the drifting nets keep), [ADR 0016](0016-heron-timer-warnings-and-area-look-variants.md) (the snack dart rule), [ADR 0018](0018-chinampa-gardens-ghost-nets-and-predator-ladder.md) (ghost nets, per-area tilapia tuning and the predator ladder), [ADR 0019](0019-heron-wading-stalker.md) (shared species rules), [ADR 0020](0020-u-turn-areas-garter-snake-and-hyacinth-mats.md) (`warnOnRoute`, element fact cards and the mats)
 

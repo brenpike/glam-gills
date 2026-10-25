@@ -222,11 +222,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-1",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
         "offset": 0,
-        "speed": 48,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 520,
       "y": 200,
@@ -234,11 +247,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-2",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 0.7142857142857143,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 0.5714285714285714,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 700,
       "y": 280,
@@ -246,11 +272,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-3",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 1.4285714285714286,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 1.1428571428571428,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 880,
       "y": 200,
@@ -258,11 +297,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-4",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 2.142857142857143,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 1.7142857142857142,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 1310,
       "y": 180,
@@ -270,11 +322,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-5",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 2.857142857142857,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 2.2857142857142856,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 1720,
       "y": 420,
@@ -282,11 +347,24 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-6",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 3.5714285714285716,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 2.857142857142857,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 1740,
       "y": 180,
@@ -294,52 +372,107 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     {
       "id": "snack-tadpole-7",
       "kind": "tadpole",
-      "lane": {
-        "dx": 120,
-        "dy": 0,
-        "offset": 4.285714285714286,
-        "speed": 48,
+      "wander": {
+        "lap": 240,
+        "legEnds": [
+          120,
+          240,
+        ],
+        "offset": 3.4285714285714284,
+        "points": [
+          {
+            "x": 0,
+            "y": 0,
+          },
+          {
+            "x": 120,
+            "y": 0,
+          },
+        ],
+        "speed": 60,
       },
       "x": 2540,
       "y": 650,
     },
     {
+      "home": [
+        {
+          "x": 640,
+          "y": 280,
+        },
+      ],
       "id": "snack-shrimp-1",
       "kind": "shrimp",
       "x": 640,
       "y": 280,
     },
     {
+      "home": [
+        {
+          "x": 980,
+          "y": 290,
+        },
+      ],
       "id": "snack-shrimp-2",
       "kind": "shrimp",
       "x": 980,
       "y": 290,
     },
     {
+      "home": [
+        {
+          "x": 1380,
+          "y": 480,
+        },
+      ],
       "id": "snack-shrimp-3",
       "kind": "shrimp",
       "x": 1380,
       "y": 480,
     },
     {
+      "home": [
+        {
+          "x": 1960,
+          "y": 300,
+        },
+      ],
       "id": "snack-shrimp-4",
       "kind": "shrimp",
       "x": 1960,
       "y": 300,
     },
     {
+      "home": [
+        {
+          "x": 2440,
+          "y": 640,
+        },
+      ],
       "id": "snack-shrimp-5",
       "kind": "shrimp",
       "x": 2440,
       "y": 640,
     },
     {
+      "home": [
+        {
+          "x": 2320,
+          "y": 250,
+        },
+      ],
       "id": "snack-shrimp-6",
       "kind": "shrimp",
       "x": 2320,
       "y": 250,
     },
     {
+      "home": [
+        {
+          "x": 1100,
+          "y": 160,
+        },
+      ],
       "id": "snack-shrimp-7",
       "kind": "shrimp",
       "x": 1100,
@@ -656,55 +789,62 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     },
   ],
   "mobileSnacks": {
-    "lanes": [
+    "homes": [
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 0,
-        "x": 520,
-        "y": 200,
+        "points": [
+          {
+            "x": 640,
+            "y": 280,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 0.7142857142857143,
-        "x": 700,
-        "y": 280,
+        "points": [
+          {
+            "x": 980,
+            "y": 290,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 1.4285714285714286,
-        "x": 880,
-        "y": 200,
+        "points": [
+          {
+            "x": 1380,
+            "y": 480,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 2.142857142857143,
-        "x": 1310,
-        "y": 180,
+        "points": [
+          {
+            "x": 1960,
+            "y": 300,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 2.857142857142857,
-        "x": 1720,
-        "y": 420,
+        "points": [
+          {
+            "x": 2440,
+            "y": 640,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 3.5714285714285716,
-        "x": 1740,
-        "y": 180,
+        "points": [
+          {
+            "x": 2320,
+            "y": 250,
+          },
+        ],
       },
       {
-        "dx": 120,
-        "dy": 0,
-        "offset": 4.285714285714286,
-        "x": 2540,
-        "y": 650,
+        "points": [
+          {
+            "x": 1100,
+            "y": 160,
+          },
+        ],
       },
     ],
     "shrimp": {
@@ -713,39 +853,102 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
       "restFor": 1.4,
       "triggerRadius": 60,
     },
-    "spots": [
+    "tadpole": {
+      "speed": 60,
+    },
+    "wanders": [
       {
-        "x": 640,
-        "y": 280,
+        "offset": 0,
+        "points": [
+          {
+            "x": 520,
+            "y": 200,
+          },
+          {
+            "x": 640,
+            "y": 200,
+          },
+        ],
       },
       {
-        "x": 980,
-        "y": 290,
+        "offset": 0.5714285714285714,
+        "points": [
+          {
+            "x": 700,
+            "y": 280,
+          },
+          {
+            "x": 820,
+            "y": 280,
+          },
+        ],
       },
       {
-        "x": 1380,
-        "y": 480,
+        "offset": 1.1428571428571428,
+        "points": [
+          {
+            "x": 880,
+            "y": 200,
+          },
+          {
+            "x": 1000,
+            "y": 200,
+          },
+        ],
       },
       {
-        "x": 1960,
-        "y": 300,
+        "offset": 1.7142857142857142,
+        "points": [
+          {
+            "x": 1310,
+            "y": 180,
+          },
+          {
+            "x": 1430,
+            "y": 180,
+          },
+        ],
       },
       {
-        "x": 2440,
-        "y": 640,
+        "offset": 2.2857142857142856,
+        "points": [
+          {
+            "x": 1720,
+            "y": 420,
+          },
+          {
+            "x": 1840,
+            "y": 420,
+          },
+        ],
       },
       {
-        "x": 2320,
-        "y": 250,
+        "offset": 2.857142857142857,
+        "points": [
+          {
+            "x": 1740,
+            "y": 180,
+          },
+          {
+            "x": 1860,
+            "y": 180,
+          },
+        ],
       },
       {
-        "x": 1100,
-        "y": 160,
+        "offset": 3.4285714285714284,
+        "points": [
+          {
+            "x": 2540,
+            "y": 650,
+          },
+          {
+            "x": 2660,
+            "y": 650,
+          },
+        ],
       },
     ],
-    "tadpole": {
-      "speed": 48,
-    },
   },
   "movingHazards": [
     {
@@ -1291,36 +1494,36 @@ exports[`chinampa-1 golden > keeps the placements of every extra zone seed 1`] =
 exports[`chinampa-1 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 3470098071,
-    "length": 13270,
+    "fnv1a": 2528314185,
+    "length": 14070,
   },
   "1234": {
-    "fnv1a": 3308501050,
-    "length": 13277,
+    "fnv1a": 2991737396,
+    "length": 14077,
   },
   "2": {
-    "fnv1a": 2292992935,
-    "length": 13273,
+    "fnv1a": 1495459001,
+    "length": 14073,
   },
   "3": {
-    "fnv1a": 1173685952,
-    "length": 13273,
+    "fnv1a": 2066095842,
+    "length": 14073,
   },
   "305419896": {
-    "fnv1a": 4059736404,
-    "length": 13283,
+    "fnv1a": 3007976790,
+    "length": 14083,
   },
   "3735928559": {
-    "fnv1a": 3655020285,
-    "length": 13271,
+    "fnv1a": 1713822127,
+    "length": 14071,
   },
   "42": {
-    "fnv1a": 1105075562,
-    "length": 13278,
+    "fnv1a": 2013987908,
+    "length": 14078,
   },
   "987654321": {
-    "fnv1a": 49203017,
-    "length": 13274,
+    "fnv1a": 2942758283,
+    "length": 14074,
   },
 }
 `;
@@ -1336,7 +1539,7 @@ exports[`chinampa-1 golden > keeps the snack trace of tadpole and shrimp places 
     "9373: flick snack-shrimp-4",
     "18179: flick snack-shrimp-4",
   ],
-  "fnv1a": 850963123,
+  "fnv1a": 4191595803,
   "length": 144549,
 }
 `;

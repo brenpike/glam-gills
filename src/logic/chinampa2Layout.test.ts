@@ -41,12 +41,14 @@ import {
 import { legSwimTuning } from './legs';
 import {
   meetsSnackRamp,
+  mobileLegBoxes,
   mobileSnackAvoid,
   mobileSnackClear,
   oneTimeDarts,
   shrimpBox,
+  shrimpHomeClear,
   snackMagnetSpeed,
-  tadpoleLaneBox,
+  tadpoleWanderClear,
 } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardDepth, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
@@ -410,8 +412,8 @@ describe('CHINAMPA_2_LAYOUT', () => {
       CHINAMPA_2_LAYOUT.strandingPlaces,
       CHINAMPA_2_LAYOUT.movingHazards,
       CHINAMPA_2_LAYOUT.mobileSnacks,
-      CHINAMPA_2_LAYOUT.mobileSnacks?.lanes,
-      CHINAMPA_2_LAYOUT.mobileSnacks?.spots,
+      CHINAMPA_2_LAYOUT.mobileSnacks?.wanders,
+      CHINAMPA_2_LAYOUT.mobileSnacks?.homes,
       CHINAMPA_2_LAYOUT.mobileSnacks?.tadpole,
       CHINAMPA_2_LAYOUT.mobileSnacks?.shrimp,
     ]) {
@@ -419,8 +421,14 @@ describe('CHINAMPA_2_LAYOUT', () => {
       expect(Object.isFrozen(part)).toBe(true);
     }
     for (const spawn of polesOf(CHINAMPA_2_LAYOUT)) expect(Object.isFrozen(spawn), spawn.id).toBe(true);
-    for (const lane of CHINAMPA_2_LAYOUT.mobileSnacks?.lanes ?? []) expect(Object.isFrozen(lane), `lane at ${lane.x}`).toBe(true);
-    for (const spot of CHINAMPA_2_LAYOUT.mobileSnacks?.spots ?? []) expect(Object.isFrozen(spot), `shrimp at ${spot.x}`).toBe(true);
+    for (const wander of CHINAMPA_2_LAYOUT.mobileSnacks?.wanders ?? []) {
+      expect(Object.isFrozen(wander), `tadpole at ${wander.points[0].x}`).toBe(true);
+      for (const point of wander.points) expect(Object.isFrozen(point), `tadpole at ${wander.points[0].x}`).toBe(true);
+    }
+    for (const home of CHINAMPA_2_LAYOUT.mobileSnacks?.homes ?? []) {
+      expect(Object.isFrozen(home), `shrimp at ${home.points[0].x}`).toBe(true);
+      for (const spot of home.points) expect(Object.isFrozen(spot), `shrimp at ${spot.x}`).toBe(true);
+    }
     for (const net of CHINAMPA_2_LAYOUT.hazards) expect(Object.isFrozen(net.shape), net.id).toBe(true);
     for (const route of CHINAMPA_2_LAYOUT.predatorRoutes) {
       expect(Object.isFrozen(route), route.id).toBe(true);
@@ -1253,12 +1261,12 @@ describe('Area 5 snacks', () => {
     expect(oneTimeDarts(CHINAMPA_2_AREA, chinampa2(seed))).toBeNull();
   });
 
-  it.each(ALL_SEEDS)('gives every shrimp spot a clear place and a clear flick target in at least one of 8 directions, out of every mat sweep, for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('gives every shrimp a clear place and a clear flick target in at least one of 8 directions, out of every mat sweep, for seed %i', (seed) => {
     const layout = chinampa2(seed);
     const avoid = mobileSnackAvoid(layout);
     const rule = layout.mobileSnacks?.shrimp;
     expect(rule?.flickDistance).toBe(60);
-    const spots = layout.mobileSnacks?.spots ?? [];
+    const spots = (layout.mobileSnacks?.homes ?? []).map((home) => home.points[0]);
     expect(spots).toHaveLength(9);
     for (const spot of spots) {
       expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
@@ -1275,44 +1283,60 @@ describe('Area 5 snacks', () => {
   });
 });
 
-describe('Area 5 mobile snacks (issue #118, ND-12)', () => {
+describe('Area 5 mobile snacks (issue #118, ND-12; issue #131, ND-14)', () => {
   const mix = zone.mobileSnacks;
   const drift = CHINAMPA_2_AREA.snackDrift;
 
-  it("meets Area 5's row of the snack ramp: 19 of its 32 snacks mobile, its tadpoles at 60 px/s", () => {
+  it("meets Area 5's row of the snack ramp: 19 of its 32 snacks mobile, its tadpoles at 70 px/s (issue #131, ND-9)", () => {
     expect(meetsSnackRamp(5, CHINAMPA_2_LAYOUT)).toBe(true);
-    expect(mix?.tadpole).toEqual({ speed: 60 });
-    expect((mix?.lanes.length ?? 0) + (mix?.spots.length ?? 0)).toBe(19);
+    expect(mix?.tadpole).toEqual({ speed: 70 });
+    expect((mix?.wanders.length ?? 0) + (mix?.homes.length ?? 0)).toBe(19);
   });
 
-  it('swims ten tadpoles on 120 px lanes, each 0.4 s further on its cycle than the last', () => {
-    const lanes = mix?.lanes ?? [];
-    expect(lanes).toHaveLength(10);
-    for (const [index, lane] of lanes.entries()) {
-      expect(Math.hypot(lane.dx, lane.dy), `lane at ${lane.x}, ${lane.y}`).toBe(120);
-      expect(lane.offset, `lane at ${lane.x}, ${lane.y}`).toBeCloseTo(index * 0.4, 9);
+  it('swims ten tadpoles on 2-point wander loops 120 px long, each a tenth of its 240 / 70 s lap further on than the last', () => {
+    const wanders = mix?.wanders ?? [];
+    const lap = 240 / 70;
+    expect(wanders).toHaveLength(10);
+    for (const [index, wander] of wanders.entries()) {
+      const [start, end] = wander.points;
+      expect(wander.points, `tadpole at ${start.x}, ${start.y}`).toHaveLength(2);
+      expect(Math.hypot(end.x - start.x, end.y - start.y), `tadpole at ${start.x}, ${start.y}`).toBe(120);
+      expect(wander.offset, `tadpole at ${start.x}, ${start.y}`).toBeCloseTo((index * lap) / 10, 9);
     }
   });
 
-  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s", () => {
+  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s, on 1-spot homes", () => {
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 1.2, flickDistance: 60, flickSpeed: 145 });
-    expect(mix?.spots).toHaveLength(9);
+    expect(mix?.homes).toHaveLength(9);
+    expect((mix?.homes ?? []).every((home) => home.points.length === 1)).toBe(true);
   });
 
-  it.each(ALL_SEEDS)('keeps every tadpole lane and shrimp spot clear (mobileSnackClear) for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('keeps every tadpole leg and shrimp clear (mobileSnackClear) for seed %i', (seed) => {
     const layout = chinampa2(seed);
     const avoid = mobileSnackAvoid(layout);
-    for (const lane of layout.mobileSnacks?.lanes ?? []) {
-      expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane at ${lane.x}, ${lane.y}`).toBe(true);
+    for (const box of mobileLegBoxes(layout)) {
+      expect(mobileSnackClear(box, avoid), `leg at ${box.x0}, ${box.y0}`).toBe(true);
     }
-    for (const spot of layout.mobileSnacks?.spots ?? []) {
+    for (const home of layout.mobileSnacks?.homes ?? []) {
+      const spot = home.points[0];
       expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
     }
   });
 
-  it('pulls its snacks with the Snack magnet at 72 px/s', () => {
+  it.each(ALL_SEEDS)('passes tadpoleWanderClear and shrimpHomeClear for every tadpole and shrimp for seed %i (issue #131, ND-7)', (seed) => {
+    const layout = chinampa2(seed);
+    const avoid = mobileSnackAvoid(layout);
+    for (const wander of layout.mobileSnacks?.wanders ?? []) {
+      expect(tadpoleWanderClear(wander, avoid), `loop at ${wander.points[0].x}, ${wander.points[0].y}`).toBe(true);
+    }
+    for (const home of layout.mobileSnacks?.homes ?? []) {
+      expect(shrimpHomeClear(home, drift, avoid), `home at ${home.points[0].x}, ${home.points[0].y}`).toBe(true);
+    }
+  });
+
+  it('pulls its snacks with the Snack magnet at 84 px/s (issue #131, ND-8)', () => {
     expect(SNACK_MAGNET_PULL_SPEED).toBe(40);
-    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(72);
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(84);
   });
 });
 

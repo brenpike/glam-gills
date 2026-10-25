@@ -13,7 +13,7 @@ import {
   type HazardType,
 } from './hazards';
 import { coversAt, inReeds, isDeep, routeDistance, spotMatchesLabels, turnDistance } from './hiding';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
 import { POND_2_LAYOUT } from './pond2Layout';
 import { POND_LAYOUT } from './pondLayout';
@@ -998,16 +998,15 @@ describe('moving hazards in the layout (ND-8)', () => {
 const TADPOLE = tadpoleRule(60);
 const MIX = mobileSnackMix({
   tadpole: TADPOLE,
-  lanes: [tadpoleLane(TADPOLE, 400, 200, 120, 0, 0), tadpoleLane(TADPOLE, 1700, 240, 0, -100, 1.5)],
-  shrimp: shrimpRule(60, 1.2, 60, 145),
-  spots: [
-    { x: 560, y: 140 },
-    { x: 1250, y: 250 },
-    { x: 1800, y: 130 },
+  wanders: [
+    tadpoleWander(TADPOLE, [[400, 200], [520, 200], [520, 320], [400, 320]], 0),
+    tadpoleWander(TADPOLE, [[1700, 240], [1700, 140]], 1.5),
   ],
+  shrimp: shrimpRule(60, 1.2, 60, 145),
+  homes: [shrimpHome([[560, 140], [600, 160], [560, 180]]), shrimpHome([[1250, 250]]), shrimpHome([[1800, 130]])],
 });
 
-describe('mobile snacks in the layout (ND-22, ND-23)', () => {
+describe('mobile snacks in the layout (ND-22, ND-23; issue #131, ND-13)', () => {
   it.each(ALL_SEEDS)('keeps the seeded snacks and appends tadpoles then shrimp, with no rand() draw, for seed %i', (seed) => {
     const canal = buildCanalZone(seed);
     const zone = buildZone(canalWith({ mobileSnacks: MIX }), seed);
@@ -1015,11 +1014,29 @@ describe('mobile snacks in the layout (ND-22, ND-23)', () => {
     expect(mobileSnacks).toEqual(MIX);
     expect(collectibles.slice(0, canal.collectibles.length)).toEqual(canal.collectibles);
     expect(collectibles.slice(canal.collectibles.length)).toStrictEqual([
-      { id: 'snack-tadpole-1', kind: 'tadpole', x: 400, y: 200, lane: { dx: 120, dy: 0, speed: 60, offset: 0 } },
-      { id: 'snack-tadpole-2', kind: 'tadpole', x: 1700, y: 240, lane: { dx: 0, dy: -100, speed: 60, offset: 1.5 } },
-      { id: 'snack-shrimp-1', kind: 'shrimp', x: 560, y: 140 },
-      { id: 'snack-shrimp-2', kind: 'shrimp', x: 1250, y: 250 },
-      { id: 'snack-shrimp-3', kind: 'shrimp', x: 1800, y: 130 },
+      {
+        id: 'snack-tadpole-1',
+        kind: 'tadpole',
+        x: 400,
+        y: 200,
+        wander: {
+          points: [{ x: 0, y: 0 }, { x: 120, y: 0 }, { x: 120, y: 120 }, { x: 0, y: 120 }],
+          legEnds: [120, 240, 360, 480],
+          lap: 480,
+          speed: 60,
+          offset: 0,
+        },
+      },
+      {
+        id: 'snack-tadpole-2',
+        kind: 'tadpole',
+        x: 1700,
+        y: 240,
+        wander: { points: [{ x: 0, y: 0 }, { x: 0, y: -100 }], legEnds: [100, 200], lap: 200, speed: 60, offset: 1.5 },
+      },
+      { id: 'snack-shrimp-1', kind: 'shrimp', x: 560, y: 140, home: [{ x: 560, y: 140 }, { x: 600, y: 160 }, { x: 560, y: 180 }] },
+      { id: 'snack-shrimp-2', kind: 'shrimp', x: 1250, y: 250, home: [{ x: 1250, y: 250 }] },
+      { id: 'snack-shrimp-3', kind: 'shrimp', x: 1800, y: 130, home: [{ x: 1800, y: 130 }] },
     ]);
     const { collectibles: canalSnacks, ...canalRest } = canal;
     expect(canalSnacks).toHaveLength(16);
@@ -1031,22 +1048,38 @@ describe('mobile snacks in the layout (ND-22, ND-23)', () => {
     expect(zone.mobileSnacks).not.toBe(MIX);
     expect(zone.mobileSnacks?.tadpole).not.toBe(MIX.tadpole);
     expect(zone.mobileSnacks?.shrimp).not.toBe(MIX.shrimp);
-    expect(zone.mobileSnacks?.lanes[0]).not.toBe(MIX.lanes[0]);
-    expect(zone.mobileSnacks?.spots[0]).not.toBe(MIX.spots[0]);
+    expect(zone.mobileSnacks?.wanders[0]).not.toBe(MIX.wanders[0]);
+    expect(zone.mobileSnacks?.wanders[0].points[0]).not.toBe(MIX.wanders[0].points[0]);
+    expect(zone.mobileSnacks?.homes[0]).not.toBe(MIX.homes[0]);
+    expect(zone.mobileSnacks?.homes[0].points[0]).not.toBe(MIX.homes[0].points[0]);
+  });
+
+  it('gives each build its own spawn wander loops and homes, sharing no object with the data or each other', () => {
+    const first = buildZone(canalWith({ mobileSnacks: MIX }), 3);
+    const second = buildZone(canalWith({ mobileSnacks: MIX }), 3);
+    const tadpoleOf = (zone: ZoneLayout) => zone.collectibles.find((snack) => snack.id === 'snack-tadpole-1');
+    const shrimpOf = (zone: ZoneLayout) => zone.collectibles.find((snack) => snack.id === 'snack-shrimp-1');
+    expect(tadpoleOf(first)?.wander).toEqual(tadpoleOf(second)?.wander);
+    expect(tadpoleOf(first)?.wander).not.toBe(tadpoleOf(second)?.wander);
+    expect(tadpoleOf(first)?.wander?.points).not.toBe(tadpoleOf(second)?.wander?.points);
+    expect(shrimpOf(first)?.home).toEqual(shrimpOf(second)?.home);
+    expect(shrimpOf(first)?.home).not.toBe(shrimpOf(second)?.home);
+    expect(shrimpOf(first)?.home?.[0]).not.toBe(MIX.homes[0].points[0]);
+    expect(shrimpOf(first)?.home?.[0]).not.toBe(first.mobileSnacks?.homes[0].points[0]);
   });
 
   it('builds only tadpoles or only shrimp, with no key for the missing rule', () => {
-    const tadpoles = buildZone(canalWith({ mobileSnacks: mobileSnackMix({ tadpole: TADPOLE, lanes: MIX.lanes, spots: [] }) }), 3);
+    const tadpoles = buildZone(canalWith({ mobileSnacks: mobileSnackMix({ tadpole: TADPOLE, wanders: MIX.wanders, homes: [] }) }), 3);
     expect(tadpoles.collectibles.filter((snack) => snack.kind === 'shrimp')).toEqual([]);
     expect(tadpoles.mobileSnacks).not.toHaveProperty('shrimp');
-    const shrimp = buildZone(canalWith({ mobileSnacks: mobileSnackMix({ lanes: [], shrimp: MIX.shrimp, spots: MIX.spots }) }), 3);
+    const shrimp = buildZone(canalWith({ mobileSnacks: mobileSnackMix({ wanders: [], shrimp: MIX.shrimp, homes: MIX.homes }) }), 3);
     expect(shrimp.collectibles.filter((snack) => snack.kind === 'tadpole')).toEqual([]);
     expect(shrimp.mobileSnacks).not.toHaveProperty('tadpole');
   });
 
-  it('refuses lanes without a tadpole rule and spots without a shrimp rule', () => {
-    expect(() => buildZone(canalWith({ mobileSnacks: { lanes: MIX.lanes, spots: [] } }), 3)).toThrow(RangeError);
-    expect(() => buildZone(canalWith({ mobileSnacks: { lanes: [], spots: MIX.spots } }), 3)).toThrow(RangeError);
+  it('refuses wander loops without a tadpole rule and homes without a shrimp rule', () => {
+    expect(() => buildZone(canalWith({ mobileSnacks: { wanders: MIX.wanders, homes: [] } }), 3)).toThrow(RangeError);
+    expect(() => buildZone(canalWith({ mobileSnacks: { wanders: [], homes: MIX.homes } }), 3)).toThrow(RangeError);
   });
 
   it.each([
@@ -1060,9 +1093,10 @@ describe('mobile snacks in the layout (ND-22, ND-23)', () => {
       const zone = buildZone(layout, seed);
       expect('movingHazards' in zone).toBe(layout.movingHazards !== undefined);
       expect('mobileSnacks' in zone).toBe(layout.mobileSnacks !== undefined);
+      const seeded = zone.collectibles.filter((snack) => snack.kind === 'worm' || snack.kind === 'bug');
+      expect(seeded.every((snack) => !('wander' in snack) && !('home' in snack))).toBe(true);
       if (layout.mobileSnacks === undefined) {
-        expect(zone.collectibles.every((snack) => snack.kind === 'worm' || snack.kind === 'bug')).toBe(true);
-        expect(zone.collectibles.every((snack) => !('lane' in snack))).toBe(true);
+        expect(seeded).toEqual(zone.collectibles);
       }
     }
   });

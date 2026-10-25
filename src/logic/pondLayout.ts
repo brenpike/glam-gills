@@ -4,7 +4,7 @@
  */
 import { POND_TREASURES } from './catalogue';
 import type { HazardSpawn } from './hazards';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PLASTIC_WORM } from './plasticWorms';
 import { TILAPIA, TILAPIA_RAMP_CHASE, type TilapiaTuning } from './tuning';
 import { BED_TOP, SURF, type AreaLayoutData } from './zone';
@@ -20,8 +20,8 @@ export const POND_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({
   chase: Object.freeze({ ...TILAPIA_RAMP_CHASE, leash: 60 }),
 });
 
-/** Area 2's tadpoles (issue #121, ND-4): 25 px/s, the bottom of the ramp's 20 to 30 px/s. */
-const POND_TADPOLE = tadpoleRule(25);
+/** Area 2's tadpoles (issue #131, ND-9): 40 px/s, the middle of the ramp's 35 to 45 px/s. */
+const POND_TADPOLE = tadpoleRule(40);
 
 /** One plastic worm: a circle of radius 0 at a fixed place, id `pond-1/plastic-worm-<n>`. */
 function plasticWormAt(index: number, x: number, y: number): Readonly<HazardSpawn> {
@@ -176,16 +176,18 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   tilapia: POND_TILAPIA,
   /**
    * Mobile snacks (issue #121, ND-4): a tadpole across the first reeds and one up and down beside
-   * the stream, half a lap ahead, then a shrimp by the Common pad and one past the stream. The
-   * Snack magnet pull stays 40 px/s (ND-5), and the shrimp turn the one-time darters off (ND-6).
+   * the stream, half a lap ahead, then a shrimp by the Common pad and one past the stream, and the
+   * shrimp turn the one-time darters off (ND-6). Plainly converted (issue #131, ND-14): each old
+   * lane is a 2-point wander loop, 6 s a lap at 40 px/s with the second 3 s ahead, and each shrimp
+   * a 1-spot home, so the Snack magnet pulls at 48 px/s (ND-8).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: POND_TADPOLE,
-    lanes: Object.freeze([
-      tadpoleLane(POND_TADPOLE, 320, 210, 120, 0, 0),
-      tadpoleLane(POND_TADPOLE, 1744, 140, 0, 120, (2 * 120) / 25 / 2),
+    wanders: Object.freeze([
+      tadpoleWander(POND_TADPOLE, [[320, 210], [440, 210]], 0),
+      tadpoleWander(POND_TADPOLE, [[1744, 140], [1744, 260]], (2 * 120) / 40 / 2),
     ]),
     shrimp: shrimpRule(60, 2.0, 36, 100),
-    spots: Object.freeze([Object.freeze({ x: 860, y: 106 }), Object.freeze({ x: 2320, y: 130 })]),
+    homes: Object.freeze([shrimpHome([[860, 106]]), shrimpHome([[2320, 130]])]),
   }),
 } satisfies AreaLayoutData);

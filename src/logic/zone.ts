@@ -1,4 +1,5 @@
 import { CANAL_TREASURES, type Rarity, type Treasure } from './catalogue';
+import { snackWander, type SnackWander } from './collectibles';
 import {
   elementSweep,
   hazardSweep,
@@ -8,7 +9,7 @@ import {
   type HazardRect,
   type HazardSpawn,
 } from './hazards';
-import type { MobileSnackMix, SnackLane } from './mobileSnacks';
+import type { MobileSnackMix } from './mobileSnacks';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import type { PredatorRoute } from './predators';
 import { mulberry32 } from './rng';
@@ -111,8 +112,10 @@ export interface CollectibleSpawn {
   kind: CollectibleKind;
   x: number;
   y: number;
-  /** A tadpole's lane from x and y (ND-24); absent on every other snack. */
-  lane?: SnackLane;
+  /** A tadpole's wander loop from x and y (issue #131, ND-13); absent on every other snack. */
+  wander?: SnackWander;
+  /** A shrimp's hop spots in world px, the first at x and y (issue #131, ND-13); absent on every other snack. */
+  home?: Point[];
 }
 
 export interface PadSpec {
@@ -627,29 +630,41 @@ function buildSnacks(
     .map((spot, i) => ({ id: `snack-${i}`, kind: kinds[i], x: spot.x, y: spot.y }));
 }
 
-/** The tadpole spawns, in lane order, each at its lane start carrying its lane. */
+/** The tadpole spawns, in data order, each at its loop's first point carrying its wander loop (issue #131, ND-13). */
 function tadpoleSpawns(mix: Readonly<MobileSnackMix>): CollectibleSpawn[] {
   const rule = mix.tadpole;
-  if (mix.lanes.length === 0) return [];
-  if (!rule) throw new RangeError('buildZone: tadpole lanes need a tadpole rule');
-  return mix.lanes.map((lane, i): CollectibleSpawn => ({
+  if (mix.wanders.length === 0) return [];
+  if (!rule) throw new RangeError('buildZone: tadpole wander loops need a tadpole rule');
+  return mix.wanders.map((wander, i): CollectibleSpawn => ({
     id: `snack-tadpole-${i + 1}`,
     kind: 'tadpole',
-    x: lane.x,
-    y: lane.y,
-    lane: { dx: lane.dx, dy: lane.dy, speed: rule.speed, offset: lane.offset },
+    x: wander.points[0].x,
+    y: wander.points[0].y,
+    wander: snackWander(wander.points, rule.speed, wander.offset),
+  }));
+}
+
+/** The shrimp spawns, in data order, each at its home's first hop spot carrying a copy of its hop spots (issue #131, ND-13). */
+function shrimpSpawns(mix: Readonly<MobileSnackMix>): CollectibleSpawn[] {
+  if (mix.homes.length > 0 && !mix.shrimp) throw new RangeError('buildZone: shrimp homes need a shrimp rule');
+  return mix.homes.map((home, i): CollectibleSpawn => ({
+    id: `snack-shrimp-${i + 1}`,
+    kind: 'shrimp',
+    x: home.points[0].x,
+    y: home.points[0].y,
+    home: home.points.map((spot) => ({ x: spot.x, y: spot.y })),
   }));
 }
 
 /**
- * The mobile snack spawns (ND-22, ND-23), appended after the seeded snacks with no rand() draw:
- * tadpoles, then shrimp, in data order, ids `snack-tadpole-<n>` and `snack-shrimp-<n>` from 1.
- * Throws RangeError for lanes without a tadpole rule or spots without a shrimp rule.
+ * The mobile snack spawns (ND-22, ND-23; issue #131, ND-1), appended after the seeded snacks with
+ * no rand() draw: tadpoles, then shrimp, in data order, ids `snack-tadpole-<n>` and
+ * `snack-shrimp-<n>` from 1. Throws RangeError for wander loops without a tadpole rule or homes
+ * without a shrimp rule.
  */
 function mobileSnackSpawns(mix: Readonly<MobileSnackMix> | undefined): CollectibleSpawn[] {
   if (!mix) return [];
-  if (mix.spots.length > 0 && !mix.shrimp) throw new RangeError('buildZone: shrimp spots need a shrimp rule');
-  const shrimps = mix.spots.map((spot, i): CollectibleSpawn => ({ id: `snack-shrimp-${i + 1}`, kind: 'shrimp', x: spot.x, y: spot.y }));
+  const shrimps = shrimpSpawns(mix);
   return [...tadpoleSpawns(mix), ...shrimps];
 }
 
@@ -808,9 +823,9 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
 function copyMobileSnackMix(mix: Readonly<MobileSnackMix>): MobileSnackMix {
   return {
     ...(mix.tadpole ? { tadpole: { ...mix.tadpole } } : {}),
-    lanes: mix.lanes.map((lane) => ({ ...lane })),
+    wanders: mix.wanders.map((wander) => ({ points: wander.points.map((point) => ({ ...point })), offset: wander.offset })),
     ...(mix.shrimp ? { shrimp: { ...mix.shrimp } } : {}),
-    spots: mix.spots.map((spot) => ({ ...spot })),
+    homes: mix.homes.map((home) => ({ points: home.points.map((spot) => ({ ...spot })) })),
   };
 }
 

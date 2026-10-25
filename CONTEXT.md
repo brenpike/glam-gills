@@ -66,15 +66,19 @@ A **Snack** that moves on its own: a **Tadpole** or a **Freshwater shrimp**. It 
 _Avoid_: prey, moving food
 
 **Tadpole**:
-A **Mobile snack** (`'tadpole'` in code), a baby frog that wiggles there and back along its **Lane** at its area's speed and turns at once at each end. It never drifts or bobs, and a one-leg axolotl always swims faster than any tadpole. Under reduced motion it slides along its lane without wiggling. Its fact card is "Meet the tadpole".
+A **Mobile snack** (`'tadpole'` in code), a baby frog that never stops: it swims its **Wander loop** round its **Home area** at its area's steady speed, forever, turning at each turn point, so it changes direction every few seconds. It never drifts or bobs, and a one-leg axolotl always swims faster than any tadpole. At each turn it flips to face its new way and tips smoothly to the new leg's slant, never more than 40 degrees, so it is never drawn sideways. Under reduced motion it still swims its loop, without wiggling, and turns at once. Its fact card is "Meet the tadpole".
 
 **Freshwater shrimp**:
-A **Mobile snack** (`'shrimp'` in code) that rests, drifting and bobbing like a worm, then flicks straight backward, away from the axolotl's head, when the head comes near; it flicks again after each rest, with no limit. A one-leg axolotl that swims straight at a shrimp that has just landed always reaches it before its rest ends. In an area with shrimp, the shrimp replace the snacks that dart once. Under reduced motion a flick lands at once. Its fact card is "Freshwater shrimp".
+A **Mobile snack** (`'shrimp'` in code) that rests, drifting and bobbing like a worm, and keeps busy: after each rest, while the axolotl's head is not close, it hops a short way toward the next hop spot of its **Home area**, about every 1 to 2 seconds. When the head comes near it flicks straight backward, away from the head, instead; it flicks again after each rest, with no limit, but never out of reach of its **Home area**, and then hops back. A one-leg axolotl that swims straight at a shrimp that has just landed always reaches it before its rest ends. A shrimp whose home has only one spot never hops; it only flicks. In an area with shrimp, the shrimp replace the snacks that dart once. Under reduced motion a hop or a flick lands at once. Its fact card is "Freshwater shrimp".
 _Avoid_: prawn
 
-**Lane**:
-A **Tadpole**'s short straight way there and back, 80 to 160 px long, written in its area's data (`TadpoleLane` in area data, `SnackLane` on the snack). Every lane keeps clear of the safe area, the **Home Spot**, every **Current**, every **Hazard**, every predator's strike reach, and every **Plastic worm**, and a spat plastic worm never lands near one.
-_Avoid_: route (a route is a **Predator**'s patrol)
+**Wander loop**:
+A **Tadpole**'s closed path of turn points, written as numbers in its area's data (`TadpoleWander` in area data, `SnackWander` on the snack), swum in order and back to the first. It counts as wandering with 4 to 8 turn points; a 2-point loop is a straight way there and back. Each leg takes 1.5 to 5 seconds and a lap at most 40 seconds, and where the tadpole is comes from the snack drift clock alone, never from chance. Every turn point and leg keeps inside the water, out of the safe area, the **Home Spot**, every **Current** and every **Water hyacinth mat**'s sweep, and 80 px or more from every **Hazard** (a drifting **Ghost net** by its whole drift path) and every **Plastic worm**. A **Predator** or a **Moving hazard** may reach part of the loop, but its longest stretch out of every threat's reach is at least half the loop. A spat plastic worm never lands near one of its legs.
+_Avoid_: lane (the old straight-only shape), route (a route is a **Predator**'s patrol)
+
+**Home area**:
+The box a **Mobile snack** keeps to. A **Tadpole**'s is the box around its **Wander loop**: 320 to 480 px wide (about one screen) and at least 150 px tall, from near the surface to near the bed, inside one screen. A **Freshwater shrimp**'s is its home of 3 to 6 hop spots (`ShrimpHome` in area data) in a box at most 200 x 160 px; each spot and hop keeps the same rules as a **Wander loop**'s turn points and legs, and at least half its spots are out of every threat's reach, so every shrimp keeps coming back to safe water.
+_Avoid_: home (the **Home Spot** and the Home Tank are other places)
 
 **Snack ramp**:
 The PRD's rule (H4, N2) for how many of an area's **Snacks** are **Mobile snacks**, and how fast they are, rising by area: none in Area 1, about 20% in Area 2, about 35% in Area 3, about 50% in Area 4, about 60% in Area 5, and up to about 70% from Area 6 on, with faster tadpoles and quicker shrimp each step. Every area keeps its snack total. Every area issue from Area 2 on must meet it, beside the **Danger bar**.
@@ -354,7 +358,7 @@ A themed group of Wearables, named by a Wearable's optional set ID, that unlocks
 - A **Predator** with the **Chase rule** chases only on patrol and within its **Leash**; chasing is not warning or lunging, so any number of **Predators** may chase at once, and a **Garter snake** chases along its stretch only
 - A **Moving hazard** is a **Hazard** that costs a leg, but not a **Predator** and not a **Timing element**; its **Telegraph** always comes before its jab, and it keeps its own cycle whatever the **Predators** do
 - A **Drifting ghost net** is a **Ghost net**: it only slows, it is never a **Hit**, and it is never a threat for **Hiding spots** (B10)
-- A **Mobile snack** is a **Snack**; a **Tadpole** swims its **Lane**, a **Freshwater shrimp** flicks away again after each rest, and in an **Area** with **Freshwater shrimp** no **Snack** darts once
+- A **Mobile snack** is a **Snack** with a **Home area**; a **Tadpole** swims its **Wander loop** forever, a **Freshwater shrimp** hops round its hop spots and flicks away again after each rest, and in an **Area** with **Freshwater shrimp** no **Snack** darts once
 - A **Water hyacinth mat** is a **Timing element**, not a **Hazard**: it blocks only the **Explorer**, never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part
 - A **Hit** is a **Lunge** that connects, or a touch on a **Hazard** that costs a leg; it starts **Protected time** and causes exactly one **Leg loss**, except a hit blocked by a Shell **Perk** (at most one per trip), which costs no leg; a **Hazard** that only slows never hits
 - Eating a **Plastic worm** makes the **Explorer** **Queasy**; it is not a **Hit**, so the Shell **Perk** plays no part, and it costs no leg

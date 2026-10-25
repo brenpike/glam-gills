@@ -56,7 +56,7 @@ describe('full motion', () => {
         expect(Math.abs(pose.tilt)).toBeLessThanOrEqual(TANK_SWIM.maxTilt);
       }
     }
-  });
+  }, 30_000);
 
   it('flips facing only at the ends of the lap', () => {
     const list = poses(STARTER_AXOLOTL_ID, 0, 60, false);

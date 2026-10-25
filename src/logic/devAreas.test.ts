@@ -18,14 +18,16 @@ import { coversAt, routeDistance, spotMatchesLabels } from './hiding';
 import { NET_CURRENT_CLEARANCE } from './layoutGaps';
 import { legSwimTuning } from './legs';
 import {
+  meetsSnackMotion,
   metSnackTypeIds,
   mobileSnackAvoid,
-  mobileSnackClear,
+  oneLegCatchesTadpole,
   oneTimeDarts,
-  shrimpBox,
+  shrimpHomeClear,
   snackMagnetSpeed,
+  tadpoleWanderClear,
   type ShrimpRule,
-  tadpoleLaneBox,
+  type TadpoleRule,
 } from './mobileSnacks';
 import { movingHazardSweep } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
@@ -49,6 +51,7 @@ import {
   GARTER_SNAKE,
   GARTER_SNAKE_CHASE,
   LEGS,
+  SHRIMP,
   TILAPIA,
   TILAPIA_CHASE,
 } from './tuning';
@@ -77,6 +80,16 @@ function expectInBounds(point: Point, bounds: SwimBounds, label: string): void {
   expect(point.x, label).toBeLessThanOrEqual(bounds.maxX);
   expect(point.y, label).toBeGreaterThanOrEqual(bounds.minY);
   expect(point.y, label).toBeLessThanOrEqual(bounds.maxY);
+}
+
+/** Seconds round the closed loop through `points` at `speed` px/s. */
+function lapSeconds(points: readonly (readonly number[])[], speed: number): number {
+  let length = 0;
+  points.forEach(([x, y], i) => {
+    const [nextX, nextY] = points[(i + 1) % points.length];
+    length += Math.hypot(nextX - x, nextY - y);
+  });
+  return length / speed;
 }
 
 function distanceToArea(pos: Point, area: { x0: number; x1: number; y0: number; y1: number }): number {
@@ -233,7 +246,7 @@ const DT = 1 / FRAMES_PER_SECOND;
 const SWIM_SECONDS = 90;
 const SWIM_FRAMES = SWIM_SECONDS * FRAMES_PER_SECOND;
 const HEAD_AHEAD = 25;
-const LANE_TOLERANCE = 1e-6;
+const LOOP_TOLERANCE = 1e-6;
 const OFF_LOOP = 2;
 const CRUISE_SPEED = legSwimTuning(LEGS.count).maxSpeed;
 
@@ -274,6 +287,7 @@ interface SwimLog {
   driftSnags: string[];
   movingTadpoles: Set<string>;
   flicked: Set<string>;
+  hopped: Set<string>;
   eaten: string[];
   cardsDue: string[];
   stoppedSwimming: boolean;
@@ -314,7 +328,7 @@ function routesOf(zone: ZoneLayout): { id: string; waypoints: Point[] }[] {
 function dangerSwimGoals(zone: ZoneLayout): SwimGoal[] {
   return [
     { kind: 'catch', snackId: 'snack-tadpole-1', seconds: 8 },
-    { kind: 'swimTo', at: { x: 560, y: 330 } },
+    { kind: 'swimTo', at: { x: 520, y: 370 } },
     { kind: 'catch', snackId: 'snack-shrimp-1', seconds: 8 },
     { kind: 'swimTo', at: { x: 600, y: 450 } },
     { kind: 'swimTo', at: { x: 980, y: 450 } },
@@ -384,21 +398,30 @@ function logChasers(log: SwimLog, trip: TripState): void {
   }
 }
 
-function onLane(item: Collectible, at: Point): boolean {
-  const lane = item.lane;
-  if (!lane) return false;
-  const along = ((at.x - item.x) * lane.dx + (at.y - item.y) * lane.dy) / (lane.dx * lane.dx + lane.dy * lane.dy);
-  const share = Math.min(1, Math.max(0, along));
-  return Math.hypot(at.x - (item.x + lane.dx * share), at.y - (item.y + lane.dy * share)) <= LANE_TOLERANCE;
+/** Distance from `at` to the leg from a to b. */
+function legDistance(at: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  const share = lengthSq === 0 ? 0 : Math.min(1, Math.max(0, ((at.x - a.x) * dx + (at.y - a.y) * dy) / lengthSq));
+  return Math.hypot(at.x - (a.x + dx * share), at.y - (a.y + dy * share));
 }
 
-/** Logs each uncollected tadpole drawn on its lane somewhere else than on the last frame. */
+/** Whether `at` is on one of the legs of the tadpole's wander loop, from its stored x and y (issue #131, ND-1). */
+function onLoop(item: Collectible, at: Point): boolean {
+  const wander = item.wander;
+  if (!wander) return false;
+  const corners = wander.points.map((point) => ({ x: item.x + point.x, y: item.y + point.y }));
+  return corners.some((corner, i) => legDistance(at, corner, corners[(i + 1) % corners.length]) <= LOOP_TOLERANCE);
+}
+
+/** Logs each uncollected tadpole drawn on its loop somewhere else than on the last frame. */
 function logTadpoles(log: SwimLog, world: SwimWorld, frame: SnackFrame): void {
   world.items.forEach((item, index) => {
     if (item.kind !== 'tadpole' || item.collected) return;
     const at = drawnAt(world.items, index, frame);
     const last = world.lastTadpoles.get(item.id);
-    if (last && (last.x !== at.x || last.y !== at.y) && onLane(item, at)) log.movingTadpoles.add(item.id);
+    if (last && (last.x !== at.x || last.y !== at.y) && onLoop(item, at)) log.movingTadpoles.add(item.id);
     world.lastTadpoles.set(item.id, at);
   });
 }
@@ -411,6 +434,7 @@ function stepSnacks(world: SwimWorld, log: SwimLog, frame: SnackFrame): void {
     world.items = flick.items;
     world.flicks = flick.state;
     for (const started of flick.state.flicks) log.flicked.add(started.id);
+    for (const hop of flick.state.hops) log.hopped.add(hop.id);
   }
   world.trip = meetSnacks(world.trip, metSnackTypeIds(world.items, world.pos, world.zone.safeArea, world.trip.met, frame));
   const eaten = collectSnacksAtHead(world.items, head, frame);
@@ -442,6 +466,12 @@ function stepSwimFrame(world: SwimWorld, log: SwimLog, goals: readonly SwimGoal[
   const frame = snackFrameAt(world, clock + DT);
   logTadpoles(log, world, frame);
   stepSnacks(world, log, frame);
+}
+
+function tadpoleRuleOf(zone: ZoneLayout): TadpoleRule {
+  const rule = zone.mobileSnacks?.tadpole;
+  if (!rule) throw new Error('devAreas.test: the dev danger area has a tadpole rule');
+  return rule;
 }
 
 function shrimpRuleOf(zone: ZoneLayout): ShrimpRule {
@@ -476,6 +506,7 @@ function runDangerSwim(zone: ZoneLayout): SwimLog {
     driftSnags: [],
     movingTadpoles: new Set(),
     flicked: new Set(),
+    hopped: new Set(),
     eaten: [],
     cardsDue: [],
     stoppedSwimming: false,
@@ -571,24 +602,31 @@ describe('DEV_DANGER_AREA', () => {
     expect(zone.collectibles.filter((snack) => isInsideCurrent(snack, current)).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('gives tadpoles out of step on 120 px lanes at 60 px/s, and shrimp with the Area 5 rule', () => {
+  it('gives tadpoles out of step on 5-point wander loops at 70 px/s, and shrimp on 4-spot homes with the Area 5 rule', () => {
     const mix = zone.mobileSnacks;
-    expect(mix?.tadpole).toEqual({ speed: 60 });
-    expect(mix?.lanes).toEqual([
-      { x: 330, y: 330, dx: 120, dy: 0, offset: 0 },
-      { x: 1340, y: 520, dx: 120, dy: 0, offset: 4 / 3 },
-      { x: 2400, y: 200, dx: 120, dy: 0, offset: 8 / 3 },
-    ]);
+    const loops = [
+      [[320, 140], [560, 120], [650, 320], [440, 340], [320, 300]],
+      [[1100, 140], [1300, 120], [1480, 150], [1420, 290], [1180, 280]],
+      [[1980, 140], [2250, 130], [2420, 220], [2300, 300], [2020, 290]],
+    ];
+    expect(mix?.tadpole).toEqual({ speed: 70 });
+    expect(mix?.wanders.map((wander) => wander.points.map((point) => [point.x, point.y]))).toEqual(loops);
+    loops.forEach((loop, index) => {
+      expect(mix?.wanders[index].offset, `loop ${index + 1}`).toBeCloseTo((index * lapSeconds(loop, 70)) / 3, 9);
+    });
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 1.2, flickDistance: 60, flickSpeed: 145 });
-    expect(mix?.spots).toEqual([
-      { x: 560, y: 420 },
-      { x: 1000, y: 300 },
-      { x: 2600, y: 420 },
+    expect(mix?.homes.map((home) => home.points.map((spot) => [spot.x, spot.y]))).toEqual([
+      [[480, 440], [560, 470], [520, 540], [440, 520]],
+      [[960, 200], [1040, 180], [1080, 250], [1000, 280]],
+      [[1360, 540], [1420, 560], [1440, 630], [1380, 620]],
     ]);
   });
 
-  it('pulls its snacks with the Snack magnet at 72 px/s', () => {
-    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(72);
+  it("hops its shrimp as Area 5's do: a 0.9 s rest after a hop, and 40 px hops at about 97 px/s", () => {
+    const rule = shrimpRuleOf(zone);
+    expect(rule.restFor * SHRIMP.hopRestShare).toBeCloseTo(0.9, 9);
+    expect(rule.flickDistance * SHRIMP.hopShare).toBeCloseTo(40, 9);
+    expect(rule.flickSpeed * SHRIMP.hopShare).toBeCloseTo(96.67, 2);
   });
 
   it('has three stranding places', () => {
@@ -644,15 +682,34 @@ describe.each(ZONE_SEEDS)('dev danger zone for seed %i', (seed) => {
     }
   });
 
-  it('keeps every tadpole lane and shrimp spot clear (mobileSnackClear)', () => {
+  it('moves its tadpoles and shrimp as the snack motion rules ask (meetsSnackMotion)', () => {
+    expect(meetsSnackMotion(DEV_DANGER_AREA.layout)).toBe(true);
+    expect(meetsSnackMotion({ screensWide: zone.chunks, screensTall: zone.rows, mobileSnacks: zone.mobileSnacks })).toBe(true);
+  });
+
+  it('keeps every tadpole wander loop and shrimp home clear (tadpoleWanderClear, shrimpHomeClear)', () => {
     const avoid = mobileSnackAvoid(zone);
     const mix = zone.mobileSnacks;
-    expect(mix?.lanes).toHaveLength(3);
-    expect(mix?.spots).toHaveLength(3);
-    for (const lane of mix?.lanes ?? []) expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane at ${lane.x}`).toBe(true);
-    for (const spot of mix?.spots ?? []) {
-      expect(mobileSnackClear(shrimpBox(spot, DEV_DANGER_AREA.snackDrift), avoid), `shrimp at ${spot.x}`).toBe(true);
+    expect(mix?.wanders).toHaveLength(3);
+    expect(mix?.homes).toHaveLength(3);
+    for (const wander of mix?.wanders ?? []) expect(tadpoleWanderClear(wander, avoid), `loop at ${wander.points[0].x}`).toBe(true);
+    for (const home of mix?.homes ?? []) {
+      expect(shrimpHomeClear(home, DEV_DANGER_AREA.snackDrift, avoid), `home at ${home.points[0].x}`).toBe(true);
     }
+  });
+
+  it('lets a one-leg axolotl catch every tadpole (the one-leg catch proof)', () => {
+    const rule = tadpoleRuleOf(zone);
+    const wanders = zone.mobileSnacks?.wanders ?? [];
+    expect(wanders).toHaveLength(3);
+    for (const wander of wanders) expect(oneLegCatchesTadpole(rule, wander, bounds), `loop at ${wander.points[0].x}`).toBe(true);
+  });
+
+  it('pulls its snacks with the Snack magnet at 84 px/s, has no one-time darters, and has 6 worms, 4 bugs, 3 tadpoles and 3 shrimp', () => {
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(84);
+    expect(oneTimeDarts(DEV_DANGER_AREA, zone)).toBeNull();
+    const kinds = zone.collectibles.map((snack) => snack.kind);
+    expect(['worm', 'bug', 'tadpole', 'shrimp'].map((kind) => kinds.filter((each) => each === kind).length)).toEqual([6, 4, 3, 3]);
   });
 
   it('gives every rarity and every find a non-empty pool of spots of its own rarity', () => {
@@ -703,8 +760,9 @@ describe('dev danger area scripted swim', () => {
     expect(log.poleHits.length).toBeGreaterThan(0);
     expect(log.shellBlocks.length).toBeGreaterThan(0);
     expect(log.driftSnags.length).toBeGreaterThan(0);
-    expect(log.movingTadpoles.size).toBeGreaterThan(0);
+    expect(log.movingTadpoles.size).toBe(3);
     expect(log.flicked.size).toBeGreaterThan(0);
+    expect(log.hopped.size).toBeGreaterThan(0);
     expect(log.eaten).toContain('tadpole');
     expect(log.eaten).toContain('shrimp');
     expect(log.cardsDue).toContain(TADPOLE_FACT.id);
