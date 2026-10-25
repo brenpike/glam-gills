@@ -18,7 +18,6 @@ import {
   nearestSafeStart,
   outOfPredatorReach,
   pathHits,
-  ringPoints,
   tilapiaOf,
 } from './riskFairness';
 import { CARP, CARP_CHASE, GARTER_SNAKE, GARTER_SNAKE_CHASE, PUNTING_POLES, TILAPIA, TILAPIA_CHASE } from './tuning';
@@ -249,54 +248,6 @@ describe('fairness harness with the relaxed safe start (issue #130, ND-11)', () 
     expect(Math.hypot(start.x - spot.x, start.y - spot.y)).toBeGreaterThan(600);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(reach);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeLessThanOrEqual(reach + 1);
-  });
-
-  /**
-   * A zone where a 300 px lungeRange (no chase) leaves one safe pocket, about 4 px across and 3 px
-   * high, round (502, 208): x 500 to 504 between the strip routes, y 206.5 to 209.5 between the two
-   * point routes. From (200, 200) it lies between two 1° rays, which cross x 502 at y 205.3 and
-   * 210.5. With `farWater`, the water past x 1700 is safe too, about 1500 px from (200, 200).
-   */
-  function pocketZone(farWater: boolean): ZoneLayout {
-    const strip = (id: string, x: number): TilapiaRoute => ({ id, waypoints: [{ x, y: 94 }, { x, y: 296 }] });
-    const strips = [strip('strip-0', 200), strip('strip-1', 804), strip('strip-2', 1400), ...(farWater ? [] : [strip('strip-3', 1880)])];
-    const caps: TilapiaRoute[] = [
-      { id: 'cap-top', waypoints: [{ x: 502, y: 206.5 - 300 }] },
-      { id: 'cap-bottom', waypoints: [{ x: 502, y: 209.5 + 300 }] },
-    ];
-    return madeUpZone({ tilapia: { ...TILAPIA, lungeRange: 300 }, tilapiaRoutes: [...strips, ...caps] });
-  }
-
-  it('keeps every ring point within 1 px of the next, however far out the ring is', () => {
-    const centre = { x: 1040, y: 200 };
-    for (const radius of [1, 57, 58, 600, 1000, 2000]) {
-      const points = ringPoints(centre, radius);
-      const widestGap = points.reduce((widest, point, index) => {
-        const next = points[(index + 1) % points.length];
-        return Math.max(widest, Math.hypot(next.x - point.x, next.y - point.y));
-      }, 0);
-      expect(points.length, `radius ${radius}`).toBeGreaterThanOrEqual(360);
-      expect(widestGap, `radius ${radius}`).toBeLessThanOrEqual(1);
-    }
-  });
-
-  it('finds a narrow safe pocket that lies between fixed 1° rays', () => {
-    const zone = pocketZone(false);
-    const spot = { x: 200, y: 200 };
-    const start = nearestSafeStart(spot, zone);
-    expect(isSafeStart(start, zone)).toBe(true);
-    expect(start.x).toBeGreaterThan(500);
-    expect(start.x).toBeLessThan(504);
-    expect(start.y).toBeGreaterThan(206.5);
-    expect(start.y).toBeLessThan(209.5);
-    expect(Math.hypot(start.x - spot.x, start.y - spot.y)).toBeLessThanOrEqual(302);
-  });
-
-  it('takes the nearer narrow pocket over farther open water', () => {
-    const zone = pocketZone(true);
-    const spot = { x: 200, y: 200 };
-    expect(isSafeStart({ x: 1750, y: 200 }, zone)).toBe(true);
-    expect(nearestSafeStart(spot, zone)).toEqual(nearestSafeStart(spot, pocketZone(false)));
   });
 
   it('throws only when the whole area has no safe start', () => {

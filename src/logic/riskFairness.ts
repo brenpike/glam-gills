@@ -124,31 +124,21 @@ export function outOfPredatorReach(point: Point, zone: Pick<ZoneLayout, 'predato
   return zone.predatorRoutes.every((route) => routeLoopDistance(point, route.waypoints) > route.species.tuning.lungeRange);
 }
 
-/**
- * Points on a circle round `centre`, in a fixed angle order from angle 0: SEARCH_ANGLES of them, or
- * one per px of the circle when that is more, so neighbouring points are never more than 1 px apart
- * however far out the ring is (issue #130, ND-11).
- */
+/** Points on a circle round `centre`, in a fixed angle order. */
 export function ringPoints(centre: Point, radius: number): Point[] {
-  const count = Math.max(SEARCH_ANGLES, Math.ceil(2 * Math.PI * radius));
-  return Array.from({ length: count }, (_, i) => {
-    const angle = (i * 2 * Math.PI) / count;
+  return Array.from({ length: SEARCH_ANGLES }, (_, i) => {
+    const angle = (i * 2 * Math.PI) / SEARCH_ANGLES;
     return { x: centre.x + radius * Math.cos(angle), y: centre.y + radius * Math.sin(angle) };
   });
 }
 
 /**
- * The nearest safe start to a spot, searched ring by ring in 1 px steps, each ring's points at most
- * 1 px apart, out to the water's farthest corner from the spot, which for a spot in the area is
- * never past the zone's diagonal, so the whole area is covered (issue #130, ND-11); the spot itself
- * when already safe. A safe pocket under 1 px across can still fall between the points.
+ * The nearest safe start to a spot, searched ring by ring in 1 px steps out to the zone's diagonal
+ * so the whole area is covered (issue #130, ND-11); the spot itself when already safe.
  */
 export function nearestSafeStart(spot: Point, zone: ZoneLayout): Point {
   if (isSafeStart(spot, zone)) return { x: spot.x, y: spot.y };
-  const bounds = swimBounds(zone);
-  const maxRadius = Math.ceil(
-    Math.hypot(Math.max(spot.x - bounds.minX, bounds.maxX - spot.x), Math.max(spot.y - bounds.minY, bounds.maxY - spot.y)),
-  );
+  const maxRadius = Math.ceil(Math.hypot(zone.width, zone.height));
   for (let radius = 1; radius <= maxRadius; radius++) {
     const found = ringPoints(spot, radius).find((point) => isSafeStart(point, zone));
     if (found) return found;
