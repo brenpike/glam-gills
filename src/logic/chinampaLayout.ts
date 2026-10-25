@@ -12,7 +12,7 @@
 import { CHINAMPA_TREASURES } from './catalogue';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, NetDrift } from './hazards';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule, type TadpoleLane } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
 import { CARP_SPECIES, tunedSpecies, type PredatorSpecies } from './predators';
 import { CARP, CARP_CHASE, DRIFTING_NETS, TILAPIA, TILAPIA_CHASE, type TilapiaTuning } from './tuning';
@@ -44,17 +44,17 @@ export const CHINAMPA_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({
 /** Area 4's common carp: CARP with its chase default, a danger part (issue #119, ND-3). */
 export const CHINAMPA_CARP: Readonly<PredatorSpecies> = tunedSpecies(CARP_SPECIES, Object.freeze({ ...CARP, chase: CARP_CHASE }));
 
-/** Area 4's tadpole rule (issue #119, ND-8): 48 px/s. */
-const CHINAMPA_TADPOLE = tadpoleRule(48);
+/** Area 4's tadpole rule (issue #131, ND-9): 60 px/s. */
+const CHINAMPA_TADPOLE = tadpoleRule(60);
 
 /** Area 4's shrimp rule (issue #119, ND-8): trigger 60 px, rest 1.4 s, flick 52 px at 130 px/s. */
 const CHINAMPA_SHRIMP = shrimpRule(60, 1.4, 52, 130);
 
-/** Px of every tadpole lane, sideways (issue #119, ND-8). */
-const LANE_LENGTH = 120;
+/** Px of each leg of every tadpole's 2-point wander loop, sideways (issue #119, ND-8; issue #131, ND-14). */
+const LEG_LENGTH = 120;
 
-/** How many tadpole lanes there are; each starts one seventh of a there-and-back cycle after the one before (issue #119, ND-8). */
-const LANE_COUNT = 7;
+/** How many tadpoles there are; each starts one seventh of its lap after the one before (issue #119, ND-8; issue #131, ND-14). */
+const TADPOLE_COUNT = 7;
 
 /** One ghost net, id `chinampa-1/ghost-net-<n>`: a rect at a fixed place, drifting when `drift` is set (issue #119, ND-5). */
 function ghostNetAt(index: number, x0: number, x1: number, y0: number, y1: number, drift?: Readonly<NetDrift>): Readonly<HazardSpawn> {
@@ -71,10 +71,13 @@ function puntingPoleAt(index: number, x: number, offset: number, depth: number):
   return Object.freeze(movingHazardSpawn(`${CHINAMPA_AREA_ID}/punting-pole-${index}`, PUNTING_POLE, x, offset, depth));
 }
 
-/** Tadpole lane `n` of LANE_COUNT, from (x, y) LANE_LENGTH px to the right, `(n - 1)` sevenths of its cycle ahead (issue #119, ND-8). */
-function laneAt(n: number, x: number, y: number): Readonly<TadpoleLane> {
-  const loopSeconds = (2 * LANE_LENGTH) / CHINAMPA_TADPOLE.speed;
-  return tadpoleLane(CHINAMPA_TADPOLE, x, y, LANE_LENGTH, 0, ((n - 1) * loopSeconds) / LANE_COUNT);
+/**
+ * Tadpole `n` of TADPOLE_COUNT on a 2-point wander loop from (x, y) to LEG_LENGTH px to the right and
+ * back, `(n - 1)` sevenths of its 4 s lap ahead (issue #119, ND-8; issue #131, ND-14).
+ */
+function wanderAt(n: number, x: number, y: number): Readonly<TadpoleWander> {
+  const lapSeconds = (2 * LEG_LENGTH) / CHINAMPA_TADPOLE.speed;
+  return tadpoleWander(CHINAMPA_TADPOLE, [[x, y], [x + LEG_LENGTH, y]], ((n - 1) * lapSeconds) / TADPOLE_COUNT);
 }
 
 /** The water under the bank of top-row screen `column`, from the surface to BANK_UNDER_Y, inset 20 px. */
@@ -253,27 +256,30 @@ export const CHINAMPA_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   ]),
   /** Two punting poles in top-row screen columns with no bank, 2 s out of step (issue #119, ND-4). */
   movingHazards: Object.freeze([puntingPoleAt(1, 420, 0, 180), puntingPoleAt(2, 2075, 2, 350)]),
-  /** Seven tadpoles on lanes out of step and seven shrimp, half of the 28 snacks (issue #119, ND-8). */
+  /**
+   * Seven tadpoles on 2-point wander loops out of step and seven shrimp on 1-spot homes, half of the
+   * 28 snacks (issue #119, ND-8; issue #131, ND-14).
+   */
   mobileSnacks: mobileSnackMix({
     tadpole: CHINAMPA_TADPOLE,
-    lanes: [
-      laneAt(1, 520, 200),
-      laneAt(2, 700, 280),
-      laneAt(3, 880, 200),
-      laneAt(4, 1310, 180),
-      laneAt(5, 1720, 420),
-      laneAt(6, 1740, 180),
-      laneAt(7, 2540, 650),
+    wanders: [
+      wanderAt(1, 520, 200),
+      wanderAt(2, 700, 280),
+      wanderAt(3, 880, 200),
+      wanderAt(4, 1310, 180),
+      wanderAt(5, 1720, 420),
+      wanderAt(6, 1740, 180),
+      wanderAt(7, 2540, 650),
     ],
     shrimp: CHINAMPA_SHRIMP,
-    spots: [
-      { x: 640, y: 280 },
-      { x: 980, y: 290 },
-      { x: 1380, y: 480 },
-      { x: 1960, y: 300 },
-      { x: 2440, y: 640 },
-      { x: 2320, y: 250 },
-      { x: 1100, y: 160 },
+    homes: [
+      shrimpHome([[640, 280]]),
+      shrimpHome([[980, 290]]),
+      shrimpHome([[1380, 480]]),
+      shrimpHome([[1960, 300]]),
+      shrimpHome([[2440, 640]]),
+      shrimpHome([[2320, 250]]),
+      shrimpHome([[1100, 160]]),
     ],
   }),
 } satisfies AreaLayoutData);

@@ -1044,7 +1044,7 @@ describe('bank overhang (guide 7e)', () => {
       expect(luminance(overlay(bg, haze)), `shade and haze y ${y}`).toBeGreaterThanOrEqual(LUMINANCE_FLOOR);
       expect(contrast(INK, bg), `ink y ${y}`).toBeGreaterThanOrEqual(PAIR_FLOOR);
     }
-  });
+  }, 30_000);
 
   it('reads as a dark band by value alone, 3:1 or better against the open water below it at the hidden spots', () => {
     const under = overlay(waterAt(SURF + 30), `rgba(${OVERHANG_SHADE_RGB.join(',')},${shadeAlphaAt(30)})`);

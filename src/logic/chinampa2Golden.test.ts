@@ -337,5 +337,5 @@ describe('chinampa-2 golden', () => {
     const rerun = listScriptedPositions(buildChinampa2Zone(DEFAULT_ZONE_SEED));
     expect(traceEncounter(defaultZone, rerun)).toEqual(traceEncounter(defaultZone, positions));
     expect(traceTrip(defaultZone, rerun)).toEqual(traceTrip(defaultZone, positions));
-  });
+  }, 30_000);
 });

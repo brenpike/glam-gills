@@ -1,19 +1,37 @@
 /**
  * Mobile snacks (PRD H4, A19, A21; open questions 269 to 275 and 278, ND-22 to ND-28 and ND-31):
- * the tadpole, which swims there and back along a fixed lane, and the freshwater shrimp, which
- * rests and flicks (src/logic/shrimpFlick.ts). Fixed area data, never seeded; opt-in per area.
+ * the tadpole, which swims its own closed wander loop forever (issue #131, ND-1), and the freshwater
+ * shrimp, which rests and flicks (src/logic/shrimpFlick.ts) and has a home of hop spots (issue
+ * #131, ND-5). Fixed area data, never seeded; opt-in per area.
  */
 import type { AreaData } from './areas';
-import { SNACK_BOB_PX, drawnSnackX, drawnSnackY, tadpoleLaneCycle, type Collectible, type SnackDrift, type SnackFrame } from './collectibles';
+import {
+  SNACK_BOB_PX,
+  drawnSnackX,
+  drawnSnackY,
+  headPoint,
+  snackWander,
+  wanderLegAt,
+  wanderOffsetAlong,
+  type Collectible,
+  type SnackDrift,
+  type SnackFrame,
+  type SnackWander,
+} from './collectibles';
+import { drawnAxolotl } from './drawnAxolotl';
 import { SHRIMP_FACT, SHRIMP_MEET_RANGE, TADPOLE_FACT, TADPOLE_MEET_RANGE } from './factCards';
 import { elementSweep, hazardSweep, type HazardRect, type HazardShape } from './hazards';
 import { zoneThreats, type Threat } from './hiding';
+import { legSwimTuning } from './legs';
 import { movingHazardSweep } from './movingHazards';
 import { createSnackDarts, type SnackDartState } from './snackDart';
-import { SHRIMP, SNACK_REACH, TADPOLES } from './tuning';
+import { stepSwim, type SwimEnv, type SwimState } from './swimPhysics';
+import { SHRIMP, SNACK_REACH, TADPOLES, type SwimTuning } from './tuning';
+import type { Vec2 } from './vec';
 import {
   SNACK_HAZARD_CLEARANCE,
   SURF,
+  areaSize,
   inSafeArea,
   swimBounds,
   type AreaLayoutData,
@@ -43,46 +61,31 @@ export interface ShrimpRule {
 }
 
 /**
- * One tadpole lane as area data (ND-24): from (x, y) to (x + dx, y + dy), `offset` seconds ahead on
- * its there-and-back cycle. Build it with tadpoleLane().
+ * One tadpole wander loop as area data (issue #131, ND-1, ND-13): its turn points in world px, the
+ * first its start, swum in order and back to the first, `offset` seconds ahead on its lap. Build it
+ * with tadpoleWander().
  */
-export interface TadpoleLane {
-  readonly x: number;
-  readonly y: number;
-  readonly dx: number;
-  readonly dy: number;
+export interface TadpoleWander {
+  readonly points: readonly Readonly<Point>[];
   readonly offset: number;
 }
 
-/** One shrimp's start as area data (ND-25). */
-export interface ShrimpSpot {
-  readonly x: number;
-  readonly y: number;
+/** One shrimp home as area data (issue #131, ND-5, ND-13): its hop spots in world px, the first its start. Build it with shrimpHome(). */
+export interface ShrimpHome {
+  readonly points: readonly Readonly<Point>[];
 }
 
-/** An area's mobile snacks (ND-23): the rules and where each snack starts. Build it with mobileSnackMix(). */
+/** An area's mobile snacks (ND-23; issue #131, ND-13): the rules, each tadpole's wander loop and each shrimp's home. Build it with mobileSnackMix(). */
 export interface MobileSnackMix {
   readonly tadpole?: TadpoleRule;
-  readonly lanes: readonly TadpoleLane[];
+  readonly wanders: readonly TadpoleWander[];
   readonly shrimp?: ShrimpRule;
-  readonly spots: readonly ShrimpSpot[];
+  readonly homes: readonly ShrimpHome[];
 }
 
 /**
- * The lane a tadpole snack carries (ND-22, ND-24): its path from the snack's stored x and y, its
- * speed in px/s and its offset in seconds. The stored x and y are the lane start, so the lane moves
- * with them.
- */
-export interface SnackLane {
-  readonly dx: number;
-  readonly dy: number;
-  readonly speed: number;
-  readonly offset: number;
-}
-
-/**
- * Where a mobile snack may not go (ND-26), built by mobileSnackAvoid(). Checked by
- * mobileSnackClear() against a tadpole's lane box or a shrimp's drift-and-bob box.
+ * Where a mobile snack may not go (ND-26; issue #131, ND-7), built by mobileSnackAvoid(). Checked
+ * by mobileSnackClear(), mobileSnackHardClear(), tadpoleWanderClear() and shrimpHomeClear().
  */
 export interface MobileSnackAvoid {
   bounds: SwimBounds;
@@ -98,15 +101,36 @@ export interface MobileSnackAvoid {
    * net's whole drift path), every element sweep and every moving hazard's sweep.
    */
   keepAway: readonly HazardShape[];
+  /**
+   * Every hazard by hazardSweep (a drifting net's whole drift path), which mobileSnackHardClear()
+   * keeps SNACK_HAZARD_CLEARANCE px from (issue #131, ND-7). mobileSnackAvoid() always sets it;
+   * absent, mobileSnackHardClear() uses `keepAway`, which holds every hazard sweep and more.
+   */
+  hazards?: readonly HazardShape[];
   /** The zone's B10 threats (zoneThreats); a box stays farther than each one's strike range. */
   threats: readonly Threat[];
 }
 
-/** A mobile snack's drawn pose (ND-24, ND-25, ND-30): its frame, facing and body sway in radians. */
+/**
+ * A mobile snack's drawn pose (ND-24, ND-25, ND-30; issue #131, ND-4): its frame, facing, body sway
+ * and tilt in radians. The sprite's rotation is tilt plus sway.
+ */
 export interface MobileSnackPose {
   frame: number;
   facing: 1 | -1;
   sway: number;
+  tilt: number;
+}
+
+/**
+ * What a shrimp's pose needs from the trip's flick state (issue #131, ND-10): whether a flick is
+ * under way, whether it rests after a flick, and the x sign of its last hop (0 before any hop or
+ * after a straight up or down hop). A tadpole, worm or bug pose ignores it.
+ */
+export interface ShrimpPoseState {
+  flicking: boolean;
+  afterFlick: boolean;
+  hopSign: -1 | 0 | 1;
 }
 
 /** What every mobile snack pose this frame shares: the scene clock (s), reduced motion and the head reach centre. */
@@ -140,6 +164,14 @@ export const TADPOLE_TAIL_FRAMES = 4;
 export const TADPOLE_TAIL_FPS = 8;
 /** Peak tadpole body sway in radians: 8 degrees either way. */
 export const TADPOLE_SWAY = (8 * Math.PI) / 180;
+/** Largest tadpole tilt in radians (issue #131, ND-4): 40 degrees either way. */
+export const TADPOLE_MAX_TILT = (40 * Math.PI) / 180;
+/** Seconds a tadpole takes to ease to a new leg's tilt after each corner (issue #131, ND-4). */
+export const TADPOLE_TURN_SECONDS = 0.25;
+/** Longest a one-leg axolotl may take to eat a tadpole in the catch proof, in seconds (issue #131, ND-8). */
+export const TADPOLE_CATCH_SECONDS = 20;
+/** How far outside a tadpole's home box each catch proof start is, in px (issue #131, ND-8). */
+export const TADPOLE_CATCH_START_GAP = 100;
 /** The shrimp's rest frame. */
 export const SHRIMP_REST_FRAME = 0;
 /** The shrimp's flick frame, tail tucked under. */
@@ -151,18 +183,31 @@ const SURFACE_PEAK_Y = SURF + 1.6 + 0.8;
 /** Seconds per tadpole sway: one pass of the tail frames. */
 const TADPOLE_SWAY_PERIOD = TADPOLE_TAIL_FRAMES / TADPOLE_TAIL_FPS;
 
+/** A leg whose sideways part is under this share of its length is near-vertical (issue #131, ND-4). */
+const NEAR_VERTICAL_SHARE = 0.25;
+
+/** The catch proof's step in seconds. */
+const CATCH_STEP_SECONDS = 1 / 60;
+
+/** A drift that never moves, for the catch proof's snack frame: a tadpole is drawn on its loop with no drift. */
+const STILL_DRIFT: Readonly<SnackDrift> = Object.freeze({ amplitudeX: 0, amplitudeY: 0, periodX: 1, periodY: 1 });
+
 const NO_IDS: readonly string[] = Object.freeze([]);
 
-/** The snack ramp (PRD H4, open question 278, ND-31). Shares are fractions of the area's snacks. */
+/**
+ * The snack ramp (PRD H4, open question 278, ND-31). Shares are fractions of the area's snacks.
+ * Tadpole speeds (issue #131, ND-9): 35 to 45, 45 to 55, 55 to 65 and 65 to 72 px/s for Areas 2 to
+ * 5, and 70 to 72 px/s from Area 6 on.
+ */
 export const SNACK_RAMP: Readonly<SnackRamp> = Object.freeze({
   rows: Object.freeze([
     Object.freeze({ mobile: false, minShare: 0, maxShare: 0, minTadpoleSpeed: 0, maxTadpoleSpeed: 0 }),
-    Object.freeze({ mobile: true, minShare: 0.15, maxShare: 0.25, minTadpoleSpeed: 20, maxTadpoleSpeed: 30 }),
-    Object.freeze({ mobile: true, minShare: 0.3, maxShare: 0.4, minTadpoleSpeed: 30, maxTadpoleSpeed: 40 }),
-    Object.freeze({ mobile: true, minShare: 0.45, maxShare: 0.55, minTadpoleSpeed: 40, maxTadpoleSpeed: 55 }),
-    Object.freeze({ mobile: true, minShare: 0.55, maxShare: 0.65, minTadpoleSpeed: 55, maxTadpoleSpeed: 65 }),
+    Object.freeze({ mobile: true, minShare: 0.15, maxShare: 0.25, minTadpoleSpeed: 35, maxTadpoleSpeed: 45 }),
+    Object.freeze({ mobile: true, minShare: 0.3, maxShare: 0.4, minTadpoleSpeed: 45, maxTadpoleSpeed: 55 }),
+    Object.freeze({ mobile: true, minShare: 0.45, maxShare: 0.55, minTadpoleSpeed: 55, maxTadpoleSpeed: 65 }),
+    Object.freeze({ mobile: true, minShare: 0.55, maxShare: 0.65, minTadpoleSpeed: 65, maxTadpoleSpeed: TADPOLES.maxSpeed }),
   ]),
-  later: Object.freeze({ mobile: true, minShare: 0.55, maxShare: 0.7, minTadpoleSpeed: 60, maxTadpoleSpeed: TADPOLES.maxSpeed }),
+  later: Object.freeze({ mobile: true, minShare: 0.55, maxShare: 0.7, minTadpoleSpeed: 70, maxTadpoleSpeed: TADPOLES.maxSpeed }),
 });
 
 function requireFinite(what: string, values: Readonly<Record<string, number>>): void {
@@ -182,35 +227,64 @@ export function tadpoleRule(speed: number): Readonly<TadpoleRule> {
   return Object.freeze({ speed });
 }
 
-/** Seconds a tadpole on this lane takes to swim there and back: 2L / speed. */
-function laneLoopSeconds(rule: Readonly<TadpoleRule>, dx: number, dy: number): number {
-  return (2 * Math.hypot(dx, dy)) / rule.speed;
+/** Frozen points from [x, y] pairs. */
+function frozenPoints(pairs: readonly (readonly [number, number])[]): readonly Readonly<Point>[] {
+  return Object.freeze(pairs.map(([x, y]) => Object.freeze({ x, y })));
 }
 
 /**
- * A tadpole lane for area data (ND-24), for a tadpole that swims at `rule`'s speed. Throws
- * RangeError when the rule is outside its limits, a value is not finite, the lane length is outside
- * TADPOLES.laneMin to TADPOLES.laneMax px, or `offset` is outside [0, 2L / speed).
+ * A tadpole wander loop for area data (issue #131, ND-1, ND-3, ND-13), for a tadpole that swims at
+ * `rule`'s speed: `points` are 2 to TADPOLES.maxLoopPoints [x, y] pairs in world px, the first its
+ * start, and `offset` is seconds ahead on its lap. Throws RangeError when the rule is outside its
+ * limits, a value is not finite, there are too few or too many points, a leg takes less than
+ * TADPOLES.minLegSeconds or more than TADPOLES.maxLegSeconds, the lap takes more than
+ * TADPOLES.maxLapSeconds, or `offset` is outside [0, lap).
  */
-export function tadpoleLane(
+export function tadpoleWander(
   rule: Readonly<TadpoleRule>,
-  x: number,
-  y: number,
-  dx: number,
-  dy: number,
+  points: readonly (readonly [number, number])[],
   offset: number,
-): Readonly<TadpoleLane> {
+): Readonly<TadpoleWander> {
   tadpoleRule(rule.speed);
-  requireFinite('tadpoleLane', { x, y, dx, dy, offset });
-  const length = Math.hypot(dx, dy);
-  if (length < TADPOLES.laneMin || length > TADPOLES.laneMax) {
-    throw new RangeError(`tadpoleLane: length ${length} must be from ${TADPOLES.laneMin} to ${TADPOLES.laneMax} px`);
+  if (points.length < 2 || points.length > TADPOLES.maxLoopPoints) {
+    throw new RangeError(`tadpoleWander: needs 2 to ${TADPOLES.maxLoopPoints} points, got ${points.length}`);
   }
-  const loop = laneLoopSeconds(rule, dx, dy);
-  if (!(offset >= 0 && offset < loop)) {
-    throw new RangeError(`tadpoleLane: offset ${offset} must be at least 0 and under ${loop}`);
+  points.forEach(([x, y], i) => requireFinite(`tadpoleWander point ${i}`, { x, y }));
+  requireFinite('tadpoleWander', { offset });
+  const frozen = frozenPoints(points);
+  const wander = snackWander(frozen, rule.speed, offset);
+  wander.legEnds.forEach((legEnd, i) => {
+    const seconds = (legEnd - (i === 0 ? 0 : wander.legEnds[i - 1])) / rule.speed;
+    if (seconds < TADPOLES.minLegSeconds || seconds > TADPOLES.maxLegSeconds) {
+      throw new RangeError(`tadpoleWander: leg ${i} takes ${seconds} s, must be from ${TADPOLES.minLegSeconds} to ${TADPOLES.maxLegSeconds} s`);
+    }
+  });
+  const lapSeconds = wander.lap / rule.speed;
+  if (lapSeconds > TADPOLES.maxLapSeconds) {
+    throw new RangeError(`tadpoleWander: lap takes ${lapSeconds} s, must be at most ${TADPOLES.maxLapSeconds} s`);
   }
-  return Object.freeze({ x, y, dx, dy, offset });
+  if (!(offset >= 0 && offset < lapSeconds)) {
+    throw new RangeError(`tadpoleWander: offset ${offset} must be at least 0 and under ${lapSeconds}`);
+  }
+  return Object.freeze({ points: frozen, offset });
+}
+
+/**
+ * A shrimp home for area data (issue #131, ND-5, ND-13): `points` are 1 to SHRIMP.maxHomeSpots hop
+ * spots as [x, y] pairs in world px, the first its start. Throws RangeError when there are too few
+ * or too many spots or a value is not finite.
+ */
+export function shrimpHome(points: readonly (readonly [number, number])[]): Readonly<ShrimpHome> {
+  if (points.length < 1 || points.length > SHRIMP.maxHomeSpots) {
+    throw new RangeError(`shrimpHome: needs 1 to ${SHRIMP.maxHomeSpots} spots, got ${points.length}`);
+  }
+  points.forEach(([x, y], i) => requireFinite(`shrimpHome spot ${i}`, { x, y }));
+  return Object.freeze({ points: frozenPoints(points) });
+}
+
+/** The [x, y] pairs of the points, for checking hand-written area data again. */
+function pointPairs(points: readonly Readonly<Point>[]): (readonly [number, number])[] {
+  return points.map((point) => [point.x, point.y] as const);
 }
 
 /**
@@ -246,57 +320,51 @@ export function shrimpRule(
   return Object.freeze({ triggerRadius, restFor, flickDistance, flickSpeed });
 }
 
-function checkedSpot(spot: Readonly<ShrimpSpot>): Readonly<ShrimpSpot> {
-  requireFinite('mobileSnackMix spot', { x: spot.x, y: spot.y });
-  return Object.freeze({ x: spot.x, y: spot.y });
-}
-
 /**
- * An area's mobile snacks for area data (ND-23). Checks every rule, lane and spot again with
- * tadpoleRule(), tadpoleLane() and shrimpRule(), so a hand-written value outside its limits throws
- * too. Throws RangeError when there are lanes without a tadpole rule, spots without a shrimp rule,
- * or any value is outside its limits.
+ * An area's mobile snacks for area data (ND-23; issue #131, ND-13). Checks every rule, wander loop
+ * and home again with tadpoleRule(), tadpoleWander(), shrimpRule() and shrimpHome(), so a
+ * hand-written value outside its limits throws too. Throws RangeError when there are wander loops
+ * without a tadpole rule, homes without a shrimp rule, or any value is outside its limits.
  */
 export function mobileSnackMix(mix: Readonly<MobileSnackMix>): Readonly<MobileSnackMix> {
   const { tadpole, shrimp } = mix;
-  if (mix.lanes.length > 0 && !tadpole) throw new RangeError('mobileSnackMix: tadpole lanes need a tadpole rule');
-  if (mix.spots.length > 0 && !shrimp) throw new RangeError('mobileSnackMix: shrimp spots need a shrimp rule');
+  if (mix.wanders.length > 0 && !tadpole) throw new RangeError('mobileSnackMix: tadpole wander loops need a tadpole rule');
+  if (mix.homes.length > 0 && !shrimp) throw new RangeError('mobileSnackMix: shrimp homes need a shrimp rule');
   const tadpoleChecked = tadpole ? tadpoleRule(tadpole.speed) : undefined;
-  const lanes = tadpoleChecked
-    ? mix.lanes.map((lane) => tadpoleLane(tadpoleChecked, lane.x, lane.y, lane.dx, lane.dy, lane.offset))
+  const wanders = tadpoleChecked
+    ? mix.wanders.map((wander) => tadpoleWander(tadpoleChecked, pointPairs(wander.points), wander.offset))
     : [];
   const shrimpChecked = shrimp
     ? shrimpRule(shrimp.triggerRadius, shrimp.restFor, shrimp.flickDistance, shrimp.flickSpeed)
     : undefined;
   return Object.freeze({
     ...(tadpoleChecked ? { tadpole: tadpoleChecked } : {}),
-    lanes: Object.freeze(lanes),
+    wanders: Object.freeze(wanders),
     ...(shrimpChecked ? { shrimp: shrimpChecked } : {}),
-    spots: Object.freeze(mix.spots.map(checkedSpot)),
+    homes: Object.freeze(mix.homes.map((home) => shrimpHome(pointPairs(home.points)))),
   });
 }
 
-/**
- * The box a tadpole's whole lane lies in (ND-26): from its start to its end. A tadpole has no drift
- * and no bob, so this holds every place it is drawn. Also the `keepClear` box a spat plastic worm
- * keeps away from.
- */
-export function tadpoleLaneBox(lane: Readonly<Pick<TadpoleLane, 'x' | 'y' | 'dx' | 'dy'>>): HazardRect {
-  return {
-    kind: 'rect',
-    x0: Math.min(lane.x, lane.x + lane.dx),
-    x1: Math.max(lane.x, lane.x + lane.dx),
-    y0: Math.min(lane.y, lane.y + lane.dy),
-    y1: Math.max(lane.y, lane.y + lane.dy),
-  };
+/** The box from a to b, edges included. */
+function legBox(a: Readonly<Point>, b: Readonly<Point>): HazardRect {
+  return { kind: 'rect', x0: Math.min(a.x, b.x), x1: Math.max(a.x, b.x), y0: Math.min(a.y, b.y), y1: Math.max(a.y, b.y) };
+}
+
+/** The box of each leg of the closed loop through `points`, leg i from points[i] to the next; none for a single point. */
+function loopLegBoxes(points: readonly Readonly<Point>[]): HazardRect[] {
+  if (points.length < 2) return [];
+  return points.map((point, i) => legBox(point, points[(i + 1) % points.length]));
 }
 
 /**
- * The lane box of every tadpole lane in the zone's mobile snacks, in data order, for SpitAvoid's
- * `keepClear` (ND-26). Empty when the zone has no tadpoles.
+ * One box per tadpole leg and per shrimp hop leg in the zone's mobile snacks, tadpoles first, in
+ * data order, for SpitAvoid's `keepClear` (issue #131, ND-7): a spat plastic worm keeps clear of
+ * each. A shrimp home with one hop spot has no legs. Empty when the zone has no mobile snacks.
  */
-export function tadpoleLaneBoxes(zone: Pick<ZoneLayout, 'mobileSnacks'>): HazardRect[] {
-  return (zone.mobileSnacks?.lanes ?? []).map(tadpoleLaneBox);
+export function mobileLegBoxes(zone: Pick<ZoneLayout, 'mobileSnacks'>): HazardRect[] {
+  const mix = zone.mobileSnacks;
+  if (!mix) return [];
+  return [...mix.wanders.flatMap((wander) => loopLegBoxes(wander.points)), ...mix.homes.flatMap((home) => loopLegBoxes(home.points))];
 }
 
 /**
@@ -345,6 +413,7 @@ export function mobileSnackAvoid(
   plasticWorms: readonly Readonly<Point>[] = [],
 ): MobileSnackAvoid {
   const mats = elementSweeps(zone);
+  const hazards = zone.hazards.map(hazardSweep);
   return {
     bounds: swimBounds(zone),
     homeSpot: zone.homeSpot,
@@ -352,18 +421,20 @@ export function mobileSnackAvoid(
     currents: zone.currents,
     mats,
     worms: plasticWorms,
-    keepAway: [
-      ...zone.hazards.map(hazardSweep),
-      ...mats,
-      ...(zone.movingHazards ?? []).map(movingHazardSweep),
-    ],
+    keepAway: [...hazards, ...mats, ...(zone.movingHazards ?? []).map(movingHazardSweep)],
+    hazards,
     threats: zoneThreats(zone),
   };
 }
 
+/** Distance from (px, py) to the rectangle x0..x1, y0..y1; 0 when inside or on it. Allocates nothing. */
+function gapToRect(px: number, py: number, x0: number, x1: number, y0: number, y1: number): number {
+  return Math.hypot(Math.max(x0 - px, 0, px - x1), Math.max(y0 - py, 0, py - y1));
+}
+
 /** Distance from (px, py) to the box; 0 when inside or on it. */
 function gapToBox(px: number, py: number, box: Readonly<HazardRect>): number {
-  return Math.hypot(Math.max(box.x0 - px, 0, px - box.x1), Math.max(box.y0 - py, 0, py - box.y1));
+  return gapToRect(px, py, box.x0, box.x1, box.y0, box.y1);
 }
 
 function boxesOverlap(box: Readonly<HazardRect>, other: Readonly<{ x0: number; x1: number; y0: number; y1: number }>): boolean {
@@ -379,54 +450,59 @@ function boxShapeDistance(box: Readonly<HazardRect>, shape: Readonly<HazardShape
   );
 }
 
-/** Whether the segment from a to b meets the box (edges count), by Liang-Barsky clipping. */
-function segmentMeetsBox(a: Readonly<Point>, b: Readonly<Point>, box: Readonly<HazardRect>): boolean {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const steps: readonly (readonly [number, number])[] = [
-    [-dx, a.x - box.x0],
-    [dx, box.x1 - a.x],
-    [-dy, a.y - box.y0],
-    [dy, box.y1 - a.y],
-  ];
-  let enter = 0;
-  let leave = 1;
-  for (const [toward, room] of steps) {
-    if (toward === 0) {
-      if (room < 0) return false;
-      continue;
-    }
-    const at = room / toward;
-    if (toward < 0) enter = Math.max(enter, at);
-    else leave = Math.min(leave, at);
-    if (enter > leave) return false;
-  }
-  return true;
+/**
+ * The share along a segment where its coordinate a + share x d enters [lo, hi], by slab clipping:
+ * -Infinity when it is always inside, Infinity when it never is.
+ */
+function slabEnter(a: number, d: number, lo: number, hi: number): number {
+  if (d === 0) return a >= lo && a <= hi ? -Infinity : Infinity;
+  return Math.min((lo - a) / d, (hi - a) / d);
 }
 
-function pointSegmentDistance(p: Readonly<Point>, a: Readonly<Point>, b: Readonly<Point>): number {
-  const abx = b.x - a.x;
-  const aby = b.y - a.y;
+/** The share along a segment where its coordinate a + share x d leaves [lo, hi]; the twin of slabEnter. */
+function slabLeave(a: number, d: number, lo: number, hi: number): number {
+  if (d === 0) return a >= lo && a <= hi ? Infinity : -Infinity;
+  return Math.max((lo - a) / d, (hi - a) / d);
+}
+
+/** Whether the segment from (ax, ay) to (bx, by) meets the rectangle x0..x1, y0..y1 (edges count). Allocates nothing. */
+function segmentMeetsRect(ax: number, ay: number, bx: number, by: number, x0: number, x1: number, y0: number, y1: number): boolean {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const enter = Math.max(0, slabEnter(ax, dx, x0, x1), slabEnter(ay, dy, y0, y1));
+  const leave = Math.min(1, slabLeave(ax, dx, x0, x1), slabLeave(ay, dy, y0, y1));
+  return enter <= leave;
+}
+
+/** Distance from (px, py) to the segment from (ax, ay) to (bx, by). Allocates nothing. */
+function pointSegmentGap(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const abx = bx - ax;
+  const aby = by - ay;
   const lengthSq = abx * abx + aby * aby;
-  const along = lengthSq === 0 ? 0 : Math.min(1, Math.max(0, ((p.x - a.x) * abx + (p.y - a.y) * aby) / lengthSq));
-  return Math.hypot(p.x - (a.x + along * abx), p.y - (a.y + along * aby));
+  const along = lengthSq === 0 ? 0 : Math.min(1, Math.max(0, ((px - ax) * abx + (py - ay) * aby) / lengthSq));
+  return Math.hypot(px - (ax + along * abx), py - (ay + along * aby));
 }
 
 /**
- * Distance between the box and the segment from a to b; 0 when they meet. Two convex shapes apart
- * are nearest at a corner of one of them, so the ends and the box corners are enough.
+ * Distance between the rectangle x0..x1, y0..y1 and the segment from a to b; 0 when they meet. Two
+ * convex shapes apart are nearest at a corner of one of them, so the ends and the rectangle's
+ * corners are enough. Allocates nothing.
  */
+function rectSegmentGap(x0: number, x1: number, y0: number, y1: number, a: Readonly<Point>, b: Readonly<Point>): number {
+  if (segmentMeetsRect(a.x, a.y, b.x, b.y, x0, x1, y0, y1)) return 0;
+  return Math.min(
+    gapToRect(a.x, a.y, x0, x1, y0, y1),
+    gapToRect(b.x, b.y, x0, x1, y0, y1),
+    pointSegmentGap(x0, y0, a.x, a.y, b.x, b.y),
+    pointSegmentGap(x1, y0, a.x, a.y, b.x, b.y),
+    pointSegmentGap(x0, y1, a.x, a.y, b.x, b.y),
+    pointSegmentGap(x1, y1, a.x, a.y, b.x, b.y),
+  );
+}
+
+/** Distance between the box and the segment from a to b; 0 when they meet. */
 function boxSegmentDistance(box: Readonly<HazardRect>, a: Readonly<Point>, b: Readonly<Point>): number {
-  if (segmentMeetsBox(a, b, box)) return 0;
-  const corners: readonly Point[] = [
-    { x: box.x0, y: box.y0 },
-    { x: box.x1, y: box.y0 },
-    { x: box.x0, y: box.y1 },
-    { x: box.x1, y: box.y1 },
-  ];
-  let best = Math.min(gapToBox(a.x, a.y, box), gapToBox(b.x, b.y, box));
-  for (const corner of corners) best = Math.min(best, pointSegmentDistance(corner, a, b));
-  return best;
+  return rectSegmentGap(box.x0, box.x1, box.y0, box.y1, a, b);
 }
 
 /** Distance between the box and a closed patrol loop, as routeLoopDistance measures; Infinity with no waypoints. */
@@ -453,7 +529,7 @@ function boxInOpenWater(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boo
 }
 
 /**
- * Whether a mobile snack's box (tadpoleLaneBox or shrimpBox) is a clear place for it (ND-26, PRD
+ * Whether a mobile snack's box (such as a leg box or shrimpBox) is a clear place for it (ND-26, PRD
  * open question 273): inside the bounds and below the highest wave; out of the Home Spot ring, the
  * safe area, every current and every mat sweep (edges count as inside); SNACK_HAZARD_CLEARANCE px
  * or more from every worm and every `keepAway` shape; and farther than its strike range from every
@@ -467,14 +543,234 @@ export function mobileSnackClear(box: Readonly<HazardRect>, avoid: MobileSnackAv
 }
 
 /**
+ * Whether the box meets the hard rules for every mobile snack (issue #131, ND-7): inside the bounds
+ * and below the highest wave; out of the Home Spot ring, the safe area, every current and every mat
+ * sweep (edges count as inside); and SNACK_HAZARD_CLEARANCE px or more from every plastic worm and
+ * every hazard by hazardSweep (a ghost net by its whole drift path). Moving hazards and predators
+ * are left to the threat rules of tadpoleWanderClear() and shrimpHomeClear().
+ */
+export function mobileSnackHardClear(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boolean {
+  if (!boxInOpenWater(box, avoid)) return false;
+  if (avoid.worms.some((worm) => gapToBox(worm.x, worm.y, box) < SNACK_HAZARD_CLEARANCE)) return false;
+  return (avoid.hazards ?? avoid.keepAway).every((shape) => boxShapeDistance(box, shape) >= SNACK_HAZARD_CLEARANCE);
+}
+
+/**
+ * Whether a shrimp gliding in a straight line from base `from` to base `to` meets the hard rules
+ * that do not move at every point on the way, its drift and bob included (issue #131, ND-7): at
+ * each base between the two, its shrimpBox is inside the bounds and below the highest wave; out of
+ * the Home Spot ring, the safe area, every current and every mat sweep (edges count as inside); and
+ * SNACK_HAZARD_CLEARANCE px or more from every hazard by hazardSweep, as mobileSnackHardClear()
+ * measures. Exact: the shrimpBox at base c meets a shape just when c meets the shape grown by the
+ * shrimpBox's half size, so each rule is measured from the glide's path to its grown shape. The
+ * plastic worms where they are now are left to the landing's own check, so a shrimp resting near a
+ * spat worm can still glide away from it. Allocates nothing.
+ */
+export function shrimpGlideClear(
+  from: Readonly<Point>,
+  to: Readonly<Point>,
+  drift: Readonly<SnackDrift>,
+  avoid: MobileSnackAvoid,
+): boolean {
+  const halfX = drift.amplitudeX;
+  const halfY = drift.amplitudeY + SNACK_BOB_PX;
+  const { bounds, homeSpot, safeArea } = avoid;
+  const topY = Math.min(from.y, to.y) - halfY;
+  if (Math.min(from.x, to.x) - halfX < bounds.minX || Math.max(from.x, to.x) + halfX > bounds.maxX) return false;
+  if (topY < bounds.minY || Math.max(from.y, to.y) + halfY > bounds.maxY || topY <= SURFACE_PEAK_Y) return false;
+  const ringGap = rectSegmentGap(homeSpot.x - halfX, homeSpot.x + halfX, homeSpot.y - halfY, homeSpot.y + halfY, from, to);
+  if (ringGap <= homeSpot.radius) return false;
+  if (glideMeetsRect(from, to, safeArea, halfX, halfY)) return false;
+  for (const current of avoid.currents) if (glideMeetsRect(from, to, current, halfX, halfY)) return false;
+  for (const mat of avoid.mats) if (glideMeetsRect(from, to, mat, halfX, halfY)) return false;
+  for (const shape of avoid.hazards ?? avoid.keepAway) {
+    if (glideShapeGap(from, to, shape, halfX, halfY) < SNACK_HAZARD_CLEARANCE) return false;
+  }
+  return true;
+}
+
+/** Whether a box of half size (halfX, halfY) whose centre glides from a to b meets the rectangle, edges included. */
+function glideMeetsRect(
+  a: Readonly<Point>,
+  b: Readonly<Point>,
+  rect: Readonly<{ x0: number; x1: number; y0: number; y1: number }>,
+  halfX: number,
+  halfY: number,
+): boolean {
+  return segmentMeetsRect(a.x, a.y, b.x, b.y, rect.x0 - halfX, rect.x1 + halfX, rect.y0 - halfY, rect.y1 + halfY);
+}
+
+/** The least distance, as boxShapeDistance measures it, between a hazard shape and a box of half size (halfX, halfY) whose centre glides from a to b. */
+function glideShapeGap(a: Readonly<Point>, b: Readonly<Point>, shape: Readonly<HazardShape>, halfX: number, halfY: number): number {
+  if (shape.kind === 'circle') {
+    return Math.max(0, rectSegmentGap(shape.x - halfX, shape.x + halfX, shape.y - halfY, shape.y + halfY, a, b) - shape.r);
+  }
+  return rectSegmentGap(shape.x0 - halfX, shape.x1 + halfX, shape.y0 - halfY, shape.y1 + halfY, a, b);
+}
+
+/** Whether the box is farther than its strike range from every threat. */
+function outOfThreatReach(box: Readonly<HazardRect>, threats: readonly Threat[]): boolean {
+  return threats.every((threat) => boxThreatDistance(box, threat) > threat.strike);
+}
+
+/** Px between the samples tadpoleWanderClear() takes along a wander loop, at most. */
+const WANDER_SAMPLE_PX = 2;
+
+/** The longest run of true flags, counting round from the last back to the first. */
+function longestCyclicRun(flags: readonly boolean[]): number {
+  const firstFalse = flags.indexOf(false);
+  if (firstFalse < 0) return flags.length;
+  let best = 0;
+  let run = 0;
+  for (let step = 1; step <= flags.length; step++) {
+    run = flags[(firstFalse + step) % flags.length] ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+
+/**
+ * Whether each sample along the loop through `points` is out of every threat's reach: evenly
+ * spaced, at most WANDER_SAMPLE_PX px apart, the first at points[0].
+ */
+function loopSamplesOutOfReach(points: readonly Readonly<Point>[], threats: readonly Threat[]): boolean[] {
+  const loop = snackWander(points, 1, 0);
+  const count = Math.max(1, Math.ceil(loop.lap / WANDER_SAMPLE_PX));
+  const start = points[0];
+  return Array.from({ length: count }, (_, k) => {
+    const along = (k * loop.lap) / count;
+    const x = start.x + wanderOffsetAlong(loop, along, 'x');
+    const y = start.y + wanderOffsetAlong(loop, along, 'y');
+    return outOfThreatReach({ kind: 'rect', x0: x, x1: x, y0: y, y1: y }, threats);
+  });
+}
+
+/**
+ * Whether a tadpole's wander loop is a clear place for it (issue #131, ND-7): every turn point and
+ * every leg's box meets mobileSnackHardClear(), and the longest stretch of the loop out of every
+ * threat's reach (zoneThreats strike range; a predator from its patrol loop, a moving hazard from
+ * its sweep) is at least TADPOLES.safeLoopShare of the loop, sampled along it at most
+ * WANDER_SAMPLE_PX px apart.
+ */
+export function tadpoleWanderClear(wander: Readonly<TadpoleWander>, avoid: MobileSnackAvoid): boolean {
+  const points = wander.points;
+  if (!points.every((point) => mobileSnackHardClear(legBox(point, point), avoid))) return false;
+  if (!loopLegBoxes(points).every((box) => mobileSnackHardClear(box, avoid))) return false;
+  const samples = loopSamplesOutOfReach(points, avoid.threats);
+  return longestCyclicRun(samples) >= TADPOLES.safeLoopShare * samples.length;
+}
+
+/**
+ * Whether a shrimp's home is a clear place for it (issue #131, ND-7): every hop spot's drift-and-bob
+ * box (shrimpBox) and every hop leg's box meets mobileSnackHardClear(), every hop leg's whole glide
+ * passes shrimpGlideClear(), and at least SHRIMP.safeSpotShare of its hop spots have a drift-and-bob
+ * box out of every threat's reach.
+ */
+export function shrimpHomeClear(home: Readonly<ShrimpHome>, drift: Readonly<SnackDrift>, avoid: MobileSnackAvoid): boolean {
+  const spots = home.points;
+  const spotBoxes = spots.map((spot) => shrimpBox(spot, drift));
+  if (!spotBoxes.every((box) => mobileSnackHardClear(box, avoid))) return false;
+  if (!loopLegBoxes(spots).every((box) => mobileSnackHardClear(box, avoid))) return false;
+  if (spots.length > 1 && !spots.every((spot, i) => shrimpGlideClear(spot, spots[(i + 1) % spots.length], drift, avoid))) return false;
+  const safe = spotBoxes.filter((box) => outOfThreatReach(box, avoid.threats)).length;
+  return safe >= SHRIMP.safeSpotShare * spotBoxes.length;
+}
+
+/** The box around the points, edges included. */
+function pointsBox(points: readonly Readonly<Point>[]): HazardRect {
+  const box: HazardRect = { kind: 'rect', x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
+  for (const point of points) {
+    box.x0 = Math.min(box.x0, point.x);
+    box.x1 = Math.max(box.x1, point.x);
+    box.y0 = Math.min(box.y0, point.y);
+    box.y1 = Math.max(box.y1, point.y);
+  }
+  return box;
+}
+
+/**
+ * The 8 catch proof starts round the home box (issue #131, ND-8): its corners and edge middles,
+ * TADPOLE_CATCH_START_GAP px outside it, each held inside the swim bounds.
+ */
+function catchStarts(home: Readonly<HazardRect>, bounds: SwimBounds): Point[] {
+  const gap = TADPOLE_CATCH_START_GAP;
+  const xs = [home.x0 - gap, (home.x0 + home.x1) / 2, home.x1 + gap];
+  const ys = [home.y0 - gap, (home.y0 + home.y1) / 2, home.y1 + gap];
+  const starts: Point[] = [];
+  ys.forEach((y, row) => {
+    xs.forEach((x, column) => {
+      if (row === 1 && column === 1) return;
+      starts.push({ x: Math.min(bounds.maxX, Math.max(bounds.minX, x)), y: Math.min(bounds.maxY, Math.max(bounds.minY, y)) });
+    });
+  });
+  return starts;
+}
+
+/** The unit vector from (fromX, fromY) to (toX, toY); zero when they are the same place. */
+function unitToward(fromX: number, fromY: number, toX: number, toY: number): Vec2 {
+  const distance = Math.hypot(toX - fromX, toY - fromY);
+  return distance > 0 ? { x: (toX - fromX) / distance, y: (toY - fromY) / distance } : { x: 0, y: 0 };
+}
+
+/**
+ * Whether an axolotl swimming with `tuning` from `start`, steering straight at where the tadpole is
+ * drawn, has its head reach centre within SNACK_REACH.radius of it within TADPOLE_CATCH_SECONDS.
+ */
+function eatsTadpoleFrom(start: Readonly<Point>, tadpole: Collectible, bounds: SwimBounds, tuning: SwimTuning): boolean {
+  const env: SwimEnv = { current: { x: 0, y: 0 }, dragMul: 1, bounds, dashing: false };
+  const frame: SnackFrame = { driftT: 0, bobT: 0, bobbing: false, drift: STILL_DRIFT, bounds };
+  let swim: SwimState = { x: start.x, y: start.y, vx: 0, vy: 0, facing: drawnSnackX(tadpole, 0, frame) < start.x ? -1 : 1 };
+  const steps = Math.round(TADPOLE_CATCH_SECONDS / CATCH_STEP_SECONDS);
+  for (let step = 0; step <= steps; step++) {
+    frame.driftT = step * CATCH_STEP_SECONDS;
+    const placeX = drawnSnackX(tadpole, 0, frame);
+    const placeY = drawnSnackY(tadpole, 0, frame);
+    const body = drawnAxolotl({ swim, t: 0, clock: frame.driftT, ambient: false, motionBob: 0, legsPresent: 1, swimming: true, squash: 1 });
+    const head = headPoint(body);
+    if (Math.hypot(placeX - head.x, placeY - head.y) <= SNACK_REACH.radius) return true;
+    swim = stepSwim(swim, unitToward(swim.x, swim.y, placeX, placeY), env, CATCH_STEP_SECONDS, tuning);
+  }
+  return false;
+}
+
+/**
+ * The one-leg catch proof for a tadpole (issue #131, ND-8): whether an axolotl with `tuning`
+ * (by default a one-leg axolotl, legSwimTuning(1)) eats the tadpole swimming `wander` at `rule`'s
+ * speed within TADPOLE_CATCH_SECONDS from each of 8 starts round its home box, the corners and
+ * edge middles TADPOLE_CATCH_START_GAP px outside it, held inside `bounds`. Each run starts still,
+ * at drift time 0, with no current, and steers straight at where the tadpole is drawn (drawnSnackX,
+ * drawnSnackY) by stepSwim; the tadpole counts as eaten when the head reach centre (headPoint of
+ * drawnAxolotl) is within SNACK_REACH.radius of it, inclusive. Throws RangeError when the rule or
+ * the wander loop is outside its limits (tadpoleWander).
+ */
+export function oneLegCatchesTadpole(
+  rule: Readonly<TadpoleRule>,
+  wander: Readonly<TadpoleWander>,
+  bounds: SwimBounds,
+  tuning: SwimTuning = legSwimTuning(1),
+): boolean {
+  const checked = tadpoleWander(rule, pointPairs(wander.points), wander.offset);
+  const start = checked.points[0];
+  const tadpole: Collectible = {
+    id: 'catch-proof-tadpole',
+    kind: 'tadpole',
+    x: start.x,
+    y: start.y,
+    collected: false,
+    wander: snackWander(checked.points, rule.speed, checked.offset),
+  };
+  return catchStarts(pointsBox(checked.points), bounds).every((from) => eatsTadpoleFrom(from, tadpole, bounds, tuning));
+}
+
+/**
  * The fastest top speed of the mix's snacks in px/s (ND-28), counting only types with at least one
  * snack: a tadpole's speed, and a shrimp's flickDistance / (restFor + flickDistance / flickSpeed),
  * the farthest it gets a second over one rest and one flick. 0 with no mobile snacks.
  */
 export function snackTopSpeed(mix: Readonly<MobileSnackMix>): number {
-  const tadpole = mix.tadpole && mix.lanes.length > 0 ? mix.tadpole.speed : 0;
+  const tadpole = mix.tadpole && mix.wanders.length > 0 ? mix.tadpole.speed : 0;
   const rule = mix.shrimp;
-  const shrimp = rule && mix.spots.length > 0 ? rule.flickDistance / (rule.restFor + rule.flickDistance / rule.flickSpeed) : 0;
+  const shrimp = rule && mix.homes.length > 0 ? rule.flickDistance / (rule.restFor + rule.flickDistance / rule.flickSpeed) : 0;
   return Math.max(tadpole, shrimp);
 }
 
@@ -502,7 +798,7 @@ export function oneTimeDarts(
   area: Pick<AreaData, 'snackDart'>,
   zone: Pick<ZoneLayout, 'collectibles' | 'mobileSnacks'>,
 ): SnackDartState | null {
-  if (!area.snackDart || (zone.mobileSnacks?.spots.length ?? 0) > 0) return null;
+  if (!area.snackDart || (zone.mobileSnacks?.homes.length ?? 0) > 0) return null;
   return createSnackDarts(zone.collectibles.filter(isWormOrBug), area.snackDart);
 }
 
@@ -546,12 +842,79 @@ export function metSnackTypeIds(
   return ids.length > 0 ? ids : NO_IDS;
 }
 
+/** The x part of leg `leg` of the loop, from points[leg] to the next point. */
+function legDx(wander: Readonly<SnackWander>, leg: number): number {
+  return wander.points[(leg + 1) % wander.points.length].x - wander.points[leg].x;
+}
+
+/** The y part of leg `leg` of the loop, from points[leg] to the next point. */
+function legDy(wander: Readonly<SnackWander>, leg: number): number {
+  return wander.points[(leg + 1) % wander.points.length].y - wander.points[leg].y;
+}
+
+/** Whether the leg's sideways part is under NEAR_VERTICAL_SHARE of its length (issue #131, ND-4). */
+function isNearVertical(wander: Readonly<SnackWander>, leg: number): boolean {
+  const dx = legDx(wander, leg);
+  return Math.abs(dx) < NEAR_VERTICAL_SHARE * Math.hypot(dx, legDy(wander, leg));
+}
+
+/**
+ * A tadpole's facing on the leg (issue #131, ND-4): along the leg's sideways part, +1 for none; a
+ * near-vertical leg keeps the facing of the last leg before it that is not, round the loop, and is
+ * +1 when every leg is near-vertical.
+ */
+function legFacing(wander: Readonly<SnackWander>, leg: number): 1 | -1 {
+  const count = wander.points.length;
+  for (let back = 0; back < count; back++) {
+    const at = (leg - back + count) % count;
+    if (!isNearVertical(wander, at)) return legDx(wander, at) < 0 ? -1 : 1;
+  }
+  return 1;
+}
+
+/** The leg's angle from level in radians, head down positive, held to TADPOLE_MAX_TILT either way (issue #131, ND-4). */
+function legPitch(wander: Readonly<SnackWander>, leg: number): number {
+  const angle = Math.atan2(legDy(wander, leg), Math.abs(legDx(wander, leg)));
+  return Math.min(TADPOLE_MAX_TILT, Math.max(-TADPOLE_MAX_TILT, angle));
+}
+
+/** Px along the loop at drift time `t` (s), as drawnSnackX places the tadpole: ((t + offset) x speed) mod lap. */
+function wanderAlongAt(wander: Readonly<SnackWander>, t: number): number {
+  if (!(wander.lap > 0)) return 0;
+  const along = ((t + wander.offset) * wander.speed) % wander.lap;
+  return along < 0 ? along + wander.lap : along;
+}
+
+/**
+ * The tadpole's pitch on the leg it swims now (issue #131, ND-4, ND-11): the leg's pitch, eased
+ * (smoothstep) from the leg before's over the first TADPOLE_TURN_SECONDS of the leg, or at once
+ * under reduced motion.
+ */
+function easedPitch(wander: Readonly<SnackWander>, leg: number, t: number, reduced: boolean): number {
+  const pitch = legPitch(wander, leg);
+  const legStart = leg === 0 ? 0 : wander.legEnds[leg - 1];
+  const intoLeg = (wanderAlongAt(wander, t) - legStart) / wander.speed;
+  if (reduced || !(intoLeg < TADPOLE_TURN_SECONDS)) return pitch;
+  const before = legPitch(wander, (leg - 1 + wander.points.length) % wander.points.length);
+  const share = Math.max(0, intoLeg) / TADPOLE_TURN_SECONDS;
+  return before + (pitch - before) * share * share * (3 - 2 * share);
+}
+
+/** Writes a tadpole's facing and tilt (issue #131, ND-4, ND-11) into `out`: facing +1 and tilt 0 with no wander loop. */
+function writeTadpoleHeading(item: Collectible, frame: SnackFrame, reduced: boolean, out: MobileSnackPose): void {
+  const wander = item.wander;
+  if (!wander) {
+    out.facing = 1;
+    out.tilt = 0;
+    return;
+  }
+  const leg = wanderLegAt(wander, frame.driftT);
+  out.facing = legFacing(wander, leg);
+  out.tilt = out.facing * easedPitch(wander, leg, frame.driftT, reduced);
+}
+
 function tadpolePose(item: Collectible, frame: SnackFrame, scene: MobileSnackPoseScene, out: MobileSnackPose): MobileSnackPose {
-  const lane = item.lane;
-  const outbound = lane ? tadpoleLaneCycle(lane, frame.driftT) < 0.5 : true;
-  const dx = lane?.dx ?? 0;
-  const movingRight = outbound ? dx > 0 : dx < 0;
-  out.facing = dx === 0 || movingRight ? 1 : -1;
+  writeTadpoleHeading(item, frame, scene.reduced, out);
   if (scene.reduced) {
     out.frame = 0;
     out.sway = 0;
@@ -564,35 +927,60 @@ function tadpolePose(item: Collectible, frame: SnackFrame, scene: MobileSnackPos
 }
 
 /**
- * The drawn pose of the snack at `index` (ND-24, ND-25, ND-30), written into `out` and returned, so
- * the view allocates nothing. A tadpole faces the sign of its x velocity along its lane (+1 on a lane
- * with dx 0), shows tail frame floor(clock x 8) mod 4 and sways up to 8 degrees either way; under
- * reduced motion it shows frame 0 with no sway. A shrimp faces the head (+1 straight above or below
- * it), so its flick goes backward, and shows its flick frame while `flicking`, else its rest frame;
- * under reduced motion its rest frame. A worm or a bug gets frame 0, facing +1 and no sway.
+ * The drawn pose of the snack at `index` (ND-24, ND-25, ND-30; issue #131, ND-4, ND-10, ND-11),
+ * written into `out` and returned, so the view allocates nothing. Everything comes from the drift
+ * clock, the scene clock and the loop's build-time leg data. A tadpole's place stays exactly on its
+ * loop. It faces along the leg it swims now, flipping at the corner; a near-vertical leg (sideways
+ * part under a quarter of its length) keeps the facing it had, +1 when every leg is near-vertical.
+ * Its tilt is facing x the leg's angle from level (head down positive), held to TADPOLE_MAX_TILT
+ * either way, so its head points along the leg in both facings, eased from the leg before's over
+ * the first TADPOLE_TURN_SECONDS after each corner. It shows tail frame floor(clock x 8) mod 4 and
+ * sways up to 8 degrees either way; under reduced motion it shows frame 0 with no sway, and its tilt
+ * changes at once. A shrimp, with no sway and no tilt, faces the head (+1 straight above or below
+ * it), so its flick goes backward, while the head is within SHRIMP.holdDistance of where it is
+ * drawn (inclusive), while `shrimp.flicking` and while `shrimp.afterFlick`; otherwise it faces
+ * `shrimp.hopSign`, or the head when that is 0. It shows its flick frame while `shrimp.flicking`,
+ * else its rest frame (at rest and while hopping); under reduced motion its rest frame. A worm or a
+ * bug gets frame 0, facing +1, no sway and no tilt.
  */
 export function mobileSnackPose(
   item: Collectible,
   index: number,
   frame: SnackFrame,
   scene: MobileSnackPoseScene,
-  flicking: boolean,
+  shrimp: Readonly<ShrimpPoseState>,
   out: MobileSnackPose,
 ): MobileSnackPose {
   if (item.kind === 'tadpole') return tadpolePose(item, frame, scene, out);
   out.sway = 0;
+  out.tilt = 0;
   if (item.kind !== 'shrimp') {
     out.frame = 0;
     out.facing = 1;
     return out;
   }
-  out.facing = scene.head.x < drawnSnackX(item, index, frame) ? -1 : 1;
-  out.frame = flicking && !scene.reduced ? SHRIMP_FLICK_FRAME : SHRIMP_REST_FRAME;
+  out.facing = shrimpFacing(item, index, frame, scene.head, shrimp);
+  out.frame = shrimp.flicking && !scene.reduced ? SHRIMP_FLICK_FRAME : SHRIMP_REST_FRAME;
   return out;
 }
 
+/** A shrimp's facing (issue #131, ND-10): toward the head while held, flicking or resting after a flick, else its last hop's x sign. */
+function shrimpFacing(
+  item: Collectible,
+  index: number,
+  frame: SnackFrame,
+  head: Readonly<Point>,
+  shrimp: Readonly<ShrimpPoseState>,
+): 1 | -1 {
+  const x = drawnSnackX(item, index, frame);
+  const towardHead = head.x < x ? -1 : 1;
+  if (shrimp.hopSign === 0 || shrimp.flicking || shrimp.afterFlick) return towardHead;
+  const held = Math.hypot(x - head.x, drawnSnackY(item, index, frame) - head.y) <= SHRIMP.holdDistance;
+  return held ? towardHead : shrimp.hopSign;
+}
+
 function mobileSnackCount(mix: Readonly<MobileSnackMix> | undefined): number {
-  return mix ? mix.lanes.length + mix.spots.length : 0;
+  return mix ? mix.wanders.length + mix.homes.length : 0;
 }
 
 /**
@@ -621,7 +1009,7 @@ export function meetsSnackRamp(
   const row = SNACK_RAMP.rows[number - 1] ?? SNACK_RAMP.later;
   const mix = layout.mobileSnacks;
   if (!row.mobile) return mobileSnackCount(mix) === 0;
-  if (!mix?.tadpole || !mix.shrimp || mix.lanes.length === 0 || mix.spots.length === 0) return false;
+  if (!mix?.tadpole || !mix.shrimp || mix.wanders.length === 0 || mix.homes.length === 0) return false;
   const share = mobileSnackShare(layout);
   const speed = mix.tadpole.speed;
   return (
@@ -630,4 +1018,67 @@ export function meetsSnackRamp(
     speed >= row.minTadpoleSpeed &&
     speed <= row.maxTadpoleSpeed
   );
+}
+
+/** Whether the point is inside the swim bounds and below the highest wave. */
+function inSwimWater(point: Readonly<Point>, bounds: SwimBounds): boolean {
+  if (point.x < bounds.minX || point.x > bounds.maxX) return false;
+  return point.y >= bounds.minY && point.y <= bounds.maxY && point.y > SURFACE_PEAK_Y;
+}
+
+/**
+ * Whether a tadpole wander loop swum at `speed` px/s meets the snack motion rules (issue #131,
+ * ND-1, ND-2, ND-3): TADPOLES.minLoopPoints to TADPOLES.maxLoopPoints turn points; a home box from
+ * TADPOLES.minHomeWidth to TADPOLES.maxHomeWidth px wide and TADPOLES.minHomeHeight to
+ * TADPOLES.maxHomeHeight px tall; every point inside `bounds` and below the highest wave; each leg
+ * TADPOLES.minLegSeconds to TADPOLES.maxLegSeconds; and the lap at most TADPOLES.maxLapSeconds.
+ */
+function wanderMeetsMotion(wander: Readonly<TadpoleWander>, speed: number, bounds: SwimBounds): boolean {
+  const points = wander.points;
+  if (points.length < TADPOLES.minLoopPoints || points.length > TADPOLES.maxLoopPoints) return false;
+  const home = pointsBox(points);
+  const width = home.x1 - home.x0;
+  const height = home.y1 - home.y0;
+  if (width < TADPOLES.minHomeWidth || width > TADPOLES.maxHomeWidth) return false;
+  if (height < TADPOLES.minHomeHeight || height > TADPOLES.maxHomeHeight) return false;
+  if (!points.every((point) => inSwimWater(point, bounds))) return false;
+  let lapSeconds = 0;
+  for (let leg = 0; leg < points.length; leg++) {
+    const next = points[(leg + 1) % points.length];
+    const seconds = Math.hypot(next.x - points[leg].x, next.y - points[leg].y) / speed;
+    if (!(seconds >= TADPOLES.minLegSeconds && seconds <= TADPOLES.maxLegSeconds)) return false;
+    lapSeconds += seconds;
+  }
+  return lapSeconds <= TADPOLES.maxLapSeconds;
+}
+
+/**
+ * Whether a shrimp home meets the snack motion rules (issue #131, ND-5): SHRIMP.minHomeSpots to
+ * SHRIMP.maxHomeSpots hop spots in a box at most SHRIMP.maxHomeWidth x SHRIMP.maxHomeHeight px.
+ */
+function homeMeetsMotion(home: Readonly<ShrimpHome>): boolean {
+  const points = home.points;
+  if (points.length < SHRIMP.minHomeSpots || points.length > SHRIMP.maxHomeSpots) return false;
+  const box = pointsBox(points);
+  return box.x1 - box.x0 <= SHRIMP.maxHomeWidth && box.y1 - box.y0 <= SHRIMP.maxHomeHeight;
+}
+
+/**
+ * Whether the layout's mobile snacks move as PRD H4's movement rules ask (issue #131, ND-2, ND-3,
+ * ND-5): every tadpole wander loop has at least TADPOLES.minLoopPoints turn points and meets the
+ * home area and direction change rules at the tadpole rule's speed, inside the swim bounds of an
+ * area `screensWide` x `screensTall` screens; and every shrimp home has at least
+ * SHRIMP.minHomeSpots hop spots in a box no bigger than SHRIMP.maxHomeWidth x SHRIMP.maxHomeHeight
+ * px. False when there are wander loops but no tadpole rule. True with no mobile snacks, as there is
+ * nothing to check; meetsSnackRamp() asks for them. The keep-out rules are tadpoleWanderClear() and
+ * shrimpHomeClear(), and the catch proof is oneLegCatchesTadpole().
+ */
+export function meetsSnackMotion(layout: Pick<AreaLayoutData, 'screensWide' | 'screensTall' | 'mobileSnacks'>): boolean {
+  const mix = layout.mobileSnacks;
+  if (!mix) return true;
+  const tadpole = mix.tadpole;
+  if (mix.wanders.length > 0 && !tadpole) return false;
+  const bounds = swimBounds(areaSize(layout.screensWide, layout.screensTall));
+  const wandersMove = mix.wanders.every((wander) => tadpole !== undefined && wanderMeetsMotion(wander, tadpole.speed, bounds));
+  return wandersMove && mix.homes.every(homeMeetsMotion);
 }

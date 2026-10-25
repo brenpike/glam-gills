@@ -7,14 +7,16 @@ import {
   mobileSnackPose,
   type MobileSnackPose,
   type MobileSnackPoseScene,
+  type ShrimpPoseState,
 } from '../logic/mobileSnacks';
-import { isShrimpFlicking, type ShrimpFlickState } from '../logic/shrimpFlick';
+import { createShrimpPoseLookup, readShrimpPose, type ShrimpFlickState } from '../logic/shrimpFlick';
 import { faceSprite } from './spriteFacing';
 
 /**
  * Poses the mobile snacks (issue #117; PRD H4, ND-24, ND-25, ND-30): each frame it sets each
- * uncollected tadpole's and shrimp's sprite frame, facing (faceSprite) and body sway (rotation)
- * from mobileSnackPose. Visual only: nothing here changes game state.
+ * uncollected tadpole's and shrimp's sprite frame, facing (faceSprite) and rotation (tilt plus body
+ * sway; issue #131, ND-4) from mobileSnackPose. Visual only: nothing here changes game state. It
+ * makes no new textures (ND-10).
  *
  * It owns no sprites. SwimScene keeps every snack sprite, worms and bugs too, in its one snack map
  * by snack id, so the eat pop and the last-3 stars work unchanged: it creates a tadpole sprite from
@@ -23,13 +25,20 @@ import { faceSprite } from './spriteFacing';
  * drawnSnackY) as today, and calls `render` once a frame with the same items, map and snack frame.
  * Worms, bugs and snacks with no sprite (eaten) are skipped.
  *
- * Under reduced motion (`scene.reduced`) a tadpole shows tail frame 0 with no sway and a shrimp its
- * rest frame. It allocates nothing per frame: the pose is written into one reused object.
+ * Under reduced motion (`scene.reduced`) a tadpole shows tail frame 0 with no sway and its tilt
+ * changes at once (issue #131, ND-11), and a shrimp shows its rest frame. A shrimp's facing and
+ * frame use its flick, its rest after a flick and its last hop's x sign from the trip's flick state
+ * (issue #131, ND-10), read from one id-indexed lookup refilled only when the state changes. It
+ * allocates nothing per frame: the lookup, the shrimp state and the pose are reused objects.
  */
 export class MobileSnackView {
   private readonly textures: MobileSnackTextures;
   /** Reused for every snack's pose each frame. */
-  private readonly pose: MobileSnackPose = { frame: 0, facing: 1, sway: 0 };
+  private readonly pose: MobileSnackPose = { frame: 0, facing: 1, sway: 0, tilt: 0 };
+  /** Reused for every snack's shrimp flick state each frame. */
+  private readonly shrimp: ShrimpPoseState = { flicking: false, afterFlick: false, hopSign: 0 };
+  /** Reused id-indexed view of the trip's shrimp flick state. */
+  private readonly shrimpLookup = createShrimpPoseLookup();
 
   /** `textures` is GameAssets.mobileSnacks; the caller throws when that is null in an area with mobile snacks. */
   constructor(textures: MobileSnackTextures) {
@@ -54,12 +63,22 @@ export class MobileSnackView {
       if (item.kind !== 'tadpole' && item.kind !== 'shrimp') continue;
       const sprite = sprites.get(item.id);
       if (!sprite) continue;
-      const flicking = item.kind === 'shrimp' && flicks !== null && isShrimpFlicking(flicks, item.id);
-      const pose = mobileSnackPose(item, index, frame, scene, flicking, this.pose);
+      const shrimp = this.readShrimpState(item, flicks);
+      const pose = mobileSnackPose(item, index, frame, scene, shrimp, this.pose);
       const info = this.poseTexture(item, pose);
       if (sprite.texture.key !== info.key) sprite.setTexture(info.key);
-      faceSprite(sprite, pose.facing, 1 / info.scale).setRotation(pose.sway);
+      faceSprite(sprite, pose.facing, 1 / info.scale).setRotation(pose.tilt + pose.sway);
     }
+  }
+
+  /** Writes the shrimp flick state of `item` into the reused object: none for a tadpole or with no flick state. */
+  private readShrimpState(item: Collectible, flicks: ShrimpFlickState | null): ShrimpPoseState {
+    const shrimp = this.shrimp;
+    if (item.kind === 'shrimp' && flicks !== null) return readShrimpPose(this.shrimpLookup, flicks, item.id, shrimp);
+    shrimp.flicking = false;
+    shrimp.afterFlick = false;
+    shrimp.hopSign = 0;
+    return shrimp;
   }
 
   /** The texture of a tadpole's tail frame or a shrimp's rest or flick frame. Throws on a tail frame with no bake. */

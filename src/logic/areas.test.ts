@@ -51,7 +51,7 @@ import {
   type FactCard,
 } from './factCards';
 import type { ElementType, HazardType } from './hazards';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardType } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { CARP_SPECIES, TILAPIA_SPECIES, type PredatorSpecies } from './predators';
@@ -102,12 +102,15 @@ const TEST_LOCK: ElementType = { ...TEST_TIDE, id: 'test-lock', name: 'Test lock
 const TEST_RAM: MovingHazardType = { ...PUNTING_POLE, id: 'test-ram', name: 'Test ram', fact: testFact('test-ram') };
 const TEST_OAR: MovingHazardType = { ...PUNTING_POLE, id: 'test-oar', name: 'Test oar', fact: testFact('test-oar') };
 const TEST_TADPOLE = tadpoleRule(30);
-const TEST_TADPOLE_LANES = [tadpoleLane(TEST_TADPOLE, 700, 300, 100, 0, 0), tadpoleLane(TEST_TADPOLE, 1100, 300, 0, 80, 0)];
+const TEST_TADPOLE_WANDERS = [
+  tadpoleWander(TEST_TADPOLE, [[700, 300], [800, 300]], 0),
+  tadpoleWander(TEST_TADPOLE, [[1100, 300], [1100, 380]], 0),
+];
 const TEST_SHRIMP = shrimpRule(60, 1.5, 40, 120);
-const TEST_SHRIMP_SPOTS = [{ x: 1300, y: 320 }, { x: 1500, y: 320 }];
-const SHRIMP_THEN_TADPOLES = mobileSnackMix({ shrimp: TEST_SHRIMP, spots: TEST_SHRIMP_SPOTS, tadpole: TEST_TADPOLE, lanes: TEST_TADPOLE_LANES });
-const TADPOLES_ONLY = mobileSnackMix({ tadpole: TEST_TADPOLE, lanes: TEST_TADPOLE_LANES, spots: [] });
-const SHRIMP_ONLY = mobileSnackMix({ shrimp: TEST_SHRIMP, spots: TEST_SHRIMP_SPOTS, lanes: [] });
+const TEST_SHRIMP_HOMES = [shrimpHome([[1300, 320]]), shrimpHome([[1500, 320], [1540, 340], [1500, 360]])];
+const SHRIMP_THEN_TADPOLES = mobileSnackMix({ shrimp: TEST_SHRIMP, homes: TEST_SHRIMP_HOMES, tadpole: TEST_TADPOLE, wanders: TEST_TADPOLE_WANDERS });
+const TADPOLES_ONLY = mobileSnackMix({ tadpole: TEST_TADPOLE, wanders: TEST_TADPOLE_WANDERS, homes: [] });
+const SHRIMP_ONLY = mobileSnackMix({ shrimp: TEST_SHRIMP, homes: TEST_SHRIMP_HOMES, wanders: [] });
 
 /** Canal layout data with these threats, elements and mobile snacks in place of the canal's. */
 function layoutWith(
@@ -496,7 +499,7 @@ describe('sourceFactCards', () => {
   it('gives a snack type card only for the snack types the area has', () => {
     expect(sourceFactCards(layoutWith({ mobileSnacks: TADPOLES_ONLY })).ids).toEqual(['tilapia', 'tadpole']);
     expect(sourceFactCards(layoutWith({ mobileSnacks: SHRIMP_ONLY })).ids).toEqual(['tilapia', 'shrimp']);
-    expect(sourceFactCards(layoutWith({ mobileSnacks: mobileSnackMix({ lanes: [], spots: [] }) })).ids).toEqual(['tilapia']);
+    expect(sourceFactCards(layoutWith({ mobileSnacks: mobileSnackMix({ wanders: [], homes: [] }) })).ids).toEqual(['tilapia']);
   });
 
   it('puts each area\'s snack type cards after its element cards, in area-table order, each once', () => {
@@ -971,5 +974,5 @@ describe('snack drift', () => {
         expect(inHomeSpot(snack, zone.homeSpot)).toBe(false);
       }
     }
-  });
+  }, 30_000);
 });

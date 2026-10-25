@@ -19,13 +19,15 @@ import {
 import { legSwimTuning } from './legs';
 import {
   meetsSnackRamp,
+  mobileLegBoxes,
   mobileSnackAvoid,
   mobileSnackClear,
   mobileSnackShare,
   oneTimeDarts,
   shrimpBox,
+  shrimpHomeClear,
   snackMagnetSpeed,
-  tadpoleLaneBox,
+  tadpoleWanderClear,
   type MobileSnackMix,
 } from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
@@ -227,10 +229,10 @@ describe('POND_2_LAYOUT', () => {
     expect(Object.isFrozen(POND_2_LAYOUT.predatorRoutes[0].waypoints)).toBe(true);
     expect(Object.isFrozen(POND_2_LAYOUT.elements)).toBe(true);
     expect(Object.isFrozen(POND_2_LAYOUT.mobileSnacks)).toBe(true);
-    expect(Object.isFrozen(pond2Mix().lanes)).toBe(true);
-    expect(Object.isFrozen(pond2Mix().spots)).toBe(true);
-    expect(pond2Mix().lanes.every((lane) => Object.isFrozen(lane))).toBe(true);
-    expect(pond2Mix().spots.every((spot) => Object.isFrozen(spot))).toBe(true);
+    expect(Object.isFrozen(pond2Mix().wanders)).toBe(true);
+    expect(Object.isFrozen(pond2Mix().homes)).toBe(true);
+    expect(pond2Mix().wanders.every((wander) => Object.isFrozen(wander) && wander.points.every((point) => Object.isFrozen(point)))).toBe(true);
+    expect(pond2Mix().homes.every((home) => Object.isFrozen(home) && home.points.every((spot) => Object.isFrozen(spot)))).toBe(true);
     expect(Object.isFrozen(POND_2_TILAPIA)).toBe(true);
     expect(Object.isFrozen(POND_2_TILAPIA.chase)).toBe(true);
   });
@@ -611,28 +613,31 @@ describe('Area 3 snacks', () => {
     expect(oneTimeDarts(POND_2_AREA, pond2(seed))).toBeNull();
   });
 
-  it('meet the Area 3 snack ramp: a third of the snacks swim, tadpoles at 35 px/s (issue #120, ND-4)', () => {
+  it('meet the Area 3 snack ramp: a third of the snacks swim, tadpoles at 50 px/s (issue #120, ND-4; issue #131, ND-9)', () => {
     const mix = pond2Mix();
     expect(meetsSnackRamp(3, POND_2_LAYOUT)).toBe(true);
     expect(mobileSnackShare(POND_2_LAYOUT)).toBeCloseTo(8 / 24, 9);
-    expect(mix.tadpole).toEqual({ speed: 35 });
+    expect(mix.tadpole).toEqual({ speed: 50 });
     expect(mix.shrimp).toEqual({ triggerRadius: 60, restFor: 1.7, flickDistance: 44, flickSpeed: 115 });
   });
 
-  it('put four tadpoles on 120 px lanes, each a quarter of the lane loop out of step, and four shrimp', () => {
+  it('put four tadpoles on 2-point wander loops 120 px long, each a quarter of the 4.8 s lap out of step, and four shrimp on 1-spot homes (issue #131, ND-14)', () => {
     const mix = pond2Mix();
-    const loop = (2 * 120) / 35;
-    expect(mix.lanes.map((lane) => [lane.x, lane.y, lane.dx, lane.dy])).toEqual([
-      [320, 210, 120, 0],
-      [560, 100, 120, 0],
-      [1655, 140, 0, 120],
-      [2420, 280, 120, 0],
+    const lap = (2 * 120) / 50;
+    expect(lap).toBeCloseTo(4.8, 12);
+    expect(mix.wanders.map((wander) => wander.points.map((point) => [point.x, point.y]))).toEqual([
+      [[320, 210], [440, 210]],
+      [[560, 100], [680, 100]],
+      [[1655, 140], [1655, 260]],
+      [[2420, 280], [2540, 280]],
     ]);
-    mix.lanes.forEach((lane, i) => {
-      expect(Math.hypot(lane.dx, lane.dy), `lane ${i + 1}`).toBe(120);
-      expect(lane.offset, `lane ${i + 1}`).toBeCloseTo((i * loop) / 4, 9);
+    mix.wanders.forEach((wander, i) => {
+      const [start, end] = wander.points;
+      expect(Math.hypot(end.x - start.x, end.y - start.y), `tadpole ${i + 1}`).toBe(120);
+      expect(wander.offset, `tadpole ${i + 1}`).toBeCloseTo((i * lap) / 4, 9);
     });
-    expect(mix.spots.map((spot) => [spot.x, spot.y])).toEqual([
+    expect(mix.homes.every((home) => home.points.length === 1)).toBe(true);
+    expect(mix.homes.map((home) => [home.points[0].x, home.points[0].y])).toEqual([
       [860, 106],
       [1230, 106],
       [2320, 280],
@@ -640,16 +645,26 @@ describe('Area 3 snacks', () => {
     ]);
   });
 
-  it.each(ALL_SEEDS)('keep every tadpole lane and shrimp box clear of the threats, worms, stream and safe area for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('keep every tadpole leg and shrimp box clear of the threats, worms, stream and safe area for seed %i', (seed) => {
     const layout = pond2(seed);
     const avoid = mobileSnackAvoid(layout);
     const mix = layout.mobileSnacks;
     expect(mix).toBeDefined();
-    for (const [index, lane] of (mix?.lanes ?? []).entries()) {
-      expect(mobileSnackClear(tadpoleLaneBox(lane), avoid), `lane ${index + 1}`).toBe(true);
+    for (const [index, box] of mobileLegBoxes(layout).entries()) {
+      expect(mobileSnackClear(box, avoid), `leg ${index + 1}`).toBe(true);
     }
-    for (const [index, spot] of (mix?.spots ?? []).entries()) {
-      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp ${index + 1}`).toBe(true);
+    for (const [index, home] of (mix?.homes ?? []).entries()) {
+      expect(mobileSnackClear(shrimpBox(home.points[0], drift), avoid), `shrimp ${index + 1}`).toBe(true);
+    }
+  });
+
+  it.each(ALL_SEEDS)('pass tadpoleWanderClear and shrimpHomeClear for every tadpole and shrimp for seed %i (issue #131, ND-7)', (seed) => {
+    const avoid = mobileSnackAvoid(pond2(seed));
+    for (const [index, wander] of pond2Mix().wanders.entries()) {
+      expect(tadpoleWanderClear(wander, avoid), `tadpole ${index + 1}`).toBe(true);
+    }
+    for (const [index, home] of pond2Mix().homes.entries()) {
+      expect(shrimpHomeClear(home, drift, avoid), `shrimp ${index + 1}`).toBe(true);
     }
   });
 
@@ -657,13 +672,13 @@ describe('Area 3 snacks', () => {
     const layout = pond2(seed);
     const flick = pond2Mix().shrimp?.flickDistance ?? 0;
     expect(flick).toBe(44);
-    for (const [index, spot] of pond2Mix().spots.entries()) {
-      expect(shrimpCanFlick(layout, spot, flick), `shrimp ${index + 1}`).toBe(true);
+    for (const [index, home] of pond2Mix().homes.entries()) {
+      expect(shrimpCanFlick(layout, home.points[0], flick), `shrimp ${index + 1}`).toBe(true);
     }
   });
 
-  it('pull with the Snack magnet at 42 px/s, 1.2 times the 35 px/s tadpole', () => {
-    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(42);
+  it('pull with the Snack magnet at 60 px/s, 1.2 times the 50 px/s tadpole (issue #131, ND-8)', () => {
+    expect(snackMagnetSpeed(SNACK_MAGNET_PULL_SPEED, zone)).toBe(60);
   });
 });
 
@@ -748,7 +763,7 @@ describe('beating Area 3', () => {
 
   it.each(ALL_SEEDS)('puts every snack the exit needs in the swim bounds for seed %i', (seed) => {
     const layout = pond2(seed);
-    const mobile = pond2Mix().lanes.length + pond2Mix().spots.length;
+    const mobile = pond2Mix().wanders.length + pond2Mix().homes.length;
     expect(layout.collectibles).toHaveLength(POND_2_LAYOUT.snackWorms + POND_2_LAYOUT.snackBugs + mobile);
     for (const snack of layout.collectibles) {
       expect(inBounds(snack, layout), snack.id).toBe(true);

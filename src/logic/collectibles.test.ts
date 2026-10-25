@@ -20,10 +20,11 @@ import {
   snackDriftOffset,
   snackTally,
   snackX,
+  snackWander,
   snackY,
   snacksLeft,
   sparklingSnackIds,
-  tadpoleLaneCycle,
+  wanderLegAt,
   type Collectible,
   type DrawnBody,
   type SnackDrift,
@@ -757,34 +758,66 @@ describe('collectSnacksAtHead on a fast pass', () => {
   });
 });
 
-describe('createCollectibles with lanes (ND-22)', () => {
-  const LANE = { dx: 120, dy: 0, speed: 60, offset: 1 };
+describe('createCollectibles with wander loops and homes (issue #131, ND-13)', () => {
+  const WANDER = snackWander([{ x: 300, y: 200 }, { x: 420, y: 200 }], 60, 1);
+  const HOME = [{ x: 500, y: 150 }, { x: 540, y: 170 }];
   const MIXED: CollectibleSpawn[] = [
     { id: 'snack-0', kind: 'worm', x: 100, y: 100 },
-    { id: 'snack-tadpole-1', kind: 'tadpole', x: 300, y: 200, lane: LANE },
-    { id: 'snack-shrimp-1', kind: 'shrimp', x: 500, y: 150 },
+    { id: 'snack-tadpole-1', kind: 'tadpole', x: 300, y: 200, wander: WANDER },
+    { id: 'snack-shrimp-1', kind: 'shrimp', x: 500, y: 150, home: HOME },
   ];
 
-  it('copies a lane only when the spawn has one', () => {
+  it('copies a wander loop or a home only when the spawn has one, sharing no object', () => {
     const [worm, tadpole, shrimp] = createCollectibles(MIXED);
     expect(worm).toStrictEqual({ id: 'snack-0', kind: 'worm', x: 100, y: 100, collected: false });
-    expect(tadpole).toStrictEqual({ id: 'snack-tadpole-1', kind: 'tadpole', x: 300, y: 200, collected: false, lane: LANE });
-    expect(tadpole.lane).not.toBe(LANE);
-    expect(shrimp).toStrictEqual({ id: 'snack-shrimp-1', kind: 'shrimp', x: 500, y: 150, collected: false });
-    expect(worm).not.toHaveProperty('lane');
-    expect(shrimp).not.toHaveProperty('lane');
+    expect(tadpole).toStrictEqual({ id: 'snack-tadpole-1', kind: 'tadpole', x: 300, y: 200, collected: false, wander: WANDER });
+    expect(tadpole.wander).not.toBe(WANDER);
+    expect(tadpole.wander?.points).not.toBe(WANDER.points);
+    expect(tadpole.wander?.points[1]).not.toBe(WANDER.points[1]);
+    expect(tadpole.wander?.legEnds).not.toBe(WANDER.legEnds);
+    expect(shrimp).toStrictEqual({ id: 'snack-shrimp-1', kind: 'shrimp', x: 500, y: 150, collected: false, home: HOME });
+    expect(shrimp.home).not.toBe(HOME);
+    expect(shrimp.home?.[0]).not.toBe(HOME[0]);
+    expect(worm).not.toHaveProperty('wander');
+    expect(worm).not.toHaveProperty('home');
+    expect(shrimp).not.toHaveProperty('wander');
+    expect(tadpole).not.toHaveProperty('home');
   });
 });
 
-describe('a tadpole\'s drawn place (ND-24)', () => {
+describe('snackWander (issue #131, ND-1, ND-12)', () => {
+  it('holds the turn points from the start, each leg\'s end along the loop and the lap', () => {
+    const wander = snackWander([{ x: 300, y: 200 }, { x: 420, y: 200 }, { x: 420, y: 290 }, { x: 300, y: 290 }], 60, 0.5);
+    expect(wander).toEqual({
+      points: [{ x: 0, y: 0 }, { x: 120, y: 0 }, { x: 120, y: 90 }, { x: 0, y: 90 }],
+      legEnds: [120, 210, 330, 420],
+      lap: 420,
+      speed: 60,
+      offset: 0.5,
+    });
+  });
+
+  it('counts a 2-point loop there and back', () => {
+    expect(snackWander([{ x: 10, y: 10 }, { x: 10, y: 130 }], 40, 0)).toMatchObject({ legEnds: [120, 240], lap: 240 });
+  });
+});
+
+describe('a tadpole\'s drawn place on its wander loop (issue #131, ND-1)', () => {
   const BOUNDS: SwimBounds = { minX: 40, maxX: 1880, minY: 94, maxY: 296 };
-  const tadpole = (x: number, y: number, dx: number, dy: number, speed: number, offset: number): Collectible => ({
+  /** A 120 x 90 px box loop from (300, 200), clockwise: legs of 120, 90, 120 and 90 px. */
+  const BOX: readonly Point[] = [
+    { x: 300, y: 200 },
+    { x: 420, y: 200 },
+    { x: 420, y: 290 },
+    { x: 300, y: 290 },
+  ];
+  const tadpole = (points: readonly Point[], speed: number, offset: number): Collectible => ({
     id: 'snack-tadpole-1',
     kind: 'tadpole',
-    x,
-    y,
+    x: points[0].x,
+    y: points[0].y,
     collected: false,
-    lane: { dx, dy, speed, offset },
+    wander: snackWander(points, speed, offset),
   });
   const frameAt = (driftT: number, bobbing = true, bobT = driftT * 1.3): SnackFrame => ({
     driftT,
@@ -793,75 +826,81 @@ describe('a tadpole\'s drawn place (ND-24)', () => {
     drift: DRIFT,
     bounds: BOUNDS,
   });
+  const placeAt = (item: Collectible, t: number): Point => ({ x: drawnSnackX(item, 0, frameAt(t)), y: drawnSnackY(item, 0, frameAt(t)) });
 
-  it('swims there and back at its speed and turns at once at each end', () => {
-    const item = tadpole(300, 200, 120, 0, 60, 0);
-    expect(drawnSnackX(item, 0, frameAt(0))).toBe(300);
-    expect(drawnSnackX(item, 0, frameAt(1))).toBeCloseTo(360, 9);
-    expect(drawnSnackX(item, 0, frameAt(2))).toBeCloseTo(420, 9);
-    expect(drawnSnackX(item, 0, frameAt(3))).toBeCloseTo(360, 9);
-    expect(drawnSnackX(item, 0, frameAt(4))).toBeCloseTo(300, 9);
-    expect(drawnSnackX(item, 0, frameAt(5))).toBeCloseTo(360, 9);
-    for (let t = 0; t < 8; t += 0.05) {
-      const step = Math.abs(drawnSnackX(item, 0, frameAt(t + 0.05)) - drawnSnackX(item, 0, frameAt(t)));
+  it('turns at each point, straight along each leg', () => {
+    const item = tadpole(BOX, 60, 0);
+    expect(placeAt(item, 0)).toEqual({ x: 300, y: 200 });
+    expect(placeAt(item, 1).x).toBeCloseTo(360, 9);
+    expect(placeAt(item, 2).x).toBeCloseTo(420, 9);
+    expect(placeAt(item, 2).y).toBeCloseTo(200, 9);
+    expect(placeAt(item, 2.5).y).toBeCloseTo(230, 9);
+    expect(placeAt(item, 3.5).x).toBeCloseTo(420, 9);
+    expect(placeAt(item, 3.5).y).toBeCloseTo(290, 9);
+    expect(placeAt(item, 4.5).x).toBeCloseTo(360, 9);
+    expect(placeAt(item, 5.5).x).toBeCloseTo(300, 9);
+    expect(placeAt(item, 6).y).toBeCloseTo(260, 9);
+    expect(placeAt(item, 7).x).toBeCloseTo(300, 9);
+    expect(placeAt(item, 7).y).toBeCloseTo(200, 9);
+  });
+
+  it('keeps a steady speed, never faster, and exactly its speed along a leg', () => {
+    const item = tadpole(BOX, 60, 0);
+    const corners = [2, 3.5, 5.5, 7];
+    for (let t = 0; t < 14; t += 0.05) {
+      const from = placeAt(item, t);
+      const to = placeAt(item, t + 0.05);
+      const step = Math.hypot(to.x - from.x, to.y - from.y);
       expect(step).toBeLessThanOrEqual(60 * 0.05 + 1e-9);
-      const x = drawnSnackX(item, 0, frameAt(t));
-      expect(x).toBeGreaterThanOrEqual(300);
-      expect(x).toBeLessThanOrEqual(420);
+      const lapT = t % 7;
+      const nearCorner = corners.some((corner) => Math.abs(lapT - corner) < 0.06 || Math.abs(lapT + 0.05 - corner) < 0.06);
+      if (!nearCorner && lapT > 0.06) expect(step).toBeCloseTo(60 * 0.05, 9);
     }
   });
 
-  it('follows a slanted lane on both axes', () => {
-    const item = tadpole(500, 150, 60, 80, 50, 0);
-    expect(drawnSnackX(item, 0, frameAt(1))).toBeCloseTo(530, 9);
-    expect(drawnSnackY(item, 0, frameAt(1))).toBeCloseTo(190, 9);
-    expect(drawnSnackX(item, 0, frameAt(2))).toBeCloseTo(560, 9);
-    expect(drawnSnackY(item, 0, frameAt(2))).toBeCloseTo(230, 9);
-    expect(drawnSnackY(item, 0, frameAt(3))).toBeCloseTo(190, 9);
+  it('gives the leg it swims at each moment', () => {
+    const wander = snackWander(BOX, 60, 0);
+    expect([0, 1.9, 2, 3.4, 3.6, 5.6, 6.9, 7, 8].map((t) => wanderLegAt(wander, t))).toEqual([0, 0, 1, 1, 2, 3, 3, 0, 0]);
+    expect(wanderLegAt(wander, -1)).toBe(3);
   });
 
   it('follows its offset', () => {
-    const late = tadpole(300, 200, 120, 0, 60, 1.5);
-    const early = tadpole(300, 200, 120, 0, 60, 0);
-    for (let t = 0; t < 6; t += 0.25) {
-      expect(drawnSnackX(late, 0, frameAt(t))).toBeCloseTo(drawnSnackX(early, 0, frameAt(t + 1.5)), 9);
+    const late = tadpole(BOX, 60, 1.5);
+    const early = tadpole(BOX, 60, 0);
+    for (let t = 0; t < 10; t += 0.25) {
+      expect(placeAt(late, t).x).toBeCloseTo(placeAt(early, t + 1.5).x, 9);
+      expect(placeAt(late, t).y).toBeCloseTo(placeAt(early, t + 1.5).y, 9);
     }
   });
 
   it('is clamped to the bounds', () => {
-    const item = tadpole(1800, 120, 160, -60, 40, 0);
+    const item = tadpole([{ x: 1800, y: 150 }, { x: 1960, y: 70 }], 40, 0);
     for (let t = 0; t < 10; t += 0.5) {
       expect(drawnSnackX(item, 0, frameAt(t))).toBeLessThanOrEqual(BOUNDS.maxX);
       expect(drawnSnackY(item, 0, frameAt(t))).toBeGreaterThanOrEqual(BOUNDS.minY);
     }
-    expect(drawnSnackX(item, 0, frameAt(4.272))).toBe(BOUNDS.maxX);
+    const farEnd = Math.hypot(160, 80) / 40;
+    expect(placeAt(item, farEnd)).toEqual({ x: BOUNDS.maxX, y: BOUNDS.minY });
   });
 
   it('has no drift and no bob, and is the same under reduced motion', () => {
-    const item = tadpole(300, 200, 120, 0, 60, 0);
-    for (let t = 0; t < 6; t += 0.3) {
-      expect(drawnSnackY(item, 3, frameAt(t))).toBe(200);
-      expect(drawnSnackY(item, 3, frameAt(t, false))).toBe(200);
+    const item = tadpole(BOX, 60, 0);
+    for (let t = 0; t < 8; t += 0.3) {
+      expect(drawnSnackY(item, 3, frameAt(t, false))).toBe(drawnSnackY(item, 3, frameAt(t)));
       expect(drawnSnackX(item, 3, frameAt(t, false))).toBe(drawnSnackX(item, 3, frameAt(t)));
       expect(drawnSnackX(item, 7, frameAt(t, true, 0))).toBe(drawnSnackX(item, 0, frameAt(t)));
+      expect(drawnSnackY(item, 7, frameAt(t, true, 0))).toBe(drawnSnackY(item, 0, frameAt(t)));
     }
+    expect(drawnSnackY(item, 3, frameAt(1))).toBe(200);
   });
 
   it('moves with its stored x and y, as the Snack magnet moves them', () => {
-    const item = tadpole(300, 200, 120, 0, 60, 0);
+    const item = tadpole(BOX, 60, 0);
     const moved = { ...item, x: 310, y: 190 };
-    expect(drawnSnackX(moved, 0, frameAt(1))).toBeCloseTo(drawnSnackX(item, 0, frameAt(1)) + 10, 9);
-    expect(drawnSnackY(moved, 0, frameAt(1))).toBe(190);
-  });
-
-  it('gives the cycle share, under 0.5 on the way out', () => {
-    const lane = { dx: 120, dy: 0, speed: 60, offset: 0 };
-    expect(tadpoleLaneCycle(lane, 0)).toBe(0);
-    expect(tadpoleLaneCycle(lane, 1)).toBeCloseTo(0.25, 9);
-    expect(tadpoleLaneCycle(lane, 3)).toBeCloseTo(0.75, 9);
-    expect(tadpoleLaneCycle(lane, 4)).toBeCloseTo(0, 9);
-    expect(tadpoleLaneCycle(lane, -1)).toBeCloseTo(0.75, 9);
-    expect(tadpoleLaneCycle({ ...lane, dx: 0 }, 2)).toBe(0);
+    for (const t of [1, 2.5, 4.5, 6]) {
+      expect(drawnSnackX(moved, 0, frameAt(t))).toBeCloseTo(drawnSnackX(item, 0, frameAt(t)) + 10, 9);
+      expect(drawnSnackY(moved, 0, frameAt(t))).toBeCloseTo(drawnSnackY(item, 0, frameAt(t)) - 10, 9);
+    }
   });
 
   it('leaves worms, bugs and shrimp drawn as before, with drift and bob', () => {

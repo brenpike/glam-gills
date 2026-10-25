@@ -6,7 +6,7 @@ import { CANAL_AREA, CHINAMPA_HABITAT, type AreaData } from './areas';
 import { CANAL_TREASURES, CHINAMPA_TREASURES } from './catalogue';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, NetDrift } from './hazards';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
 import { CARP_SPECIES, GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import {
@@ -156,14 +156,40 @@ const DEV_DANGER_SNAKE: Readonly<PredatorSpecies> = tunedSpecies(
 /** The common carp with its chase default (ND-4). */
 const DEV_DANGER_CARP: Readonly<PredatorSpecies> = tunedSpecies(CARP_SPECIES, Object.freeze({ ...CARP, chase: CARP_CHASE }));
 
-/** Area 5's tadpole rule (ND-24): 60 px/s. */
-const DEV_DANGER_TADPOLE = tadpoleRule(60);
+/** Area 5's tadpole rule (ND-24; issue #131, ND-9): 70 px/s. */
+const DEV_DANGER_TADPOLE = tadpoleRule(70);
 
-/** Area 5's shrimp rule (ND-25): trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s. */
+/**
+ * Area 5's shrimp rule (ND-25): trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s; so 0.9 s rest
+ * after a hop, and 40 px hops at about 97 px/s (issue #131, ND-5).
+ */
 const DEV_DANGER_SHRIMP = shrimpRule(60, 1.2, 60, 145);
 
-/** Seconds a 120 px tadpole lane takes there and back at 60 px/s: 2L / speed. */
-const DEV_DANGER_LANE_LOOP = (2 * 120) / DEV_DANGER_TADPOLE.speed;
+/**
+ * The three tadpole wander loops' turn points (issue #131, ND-2, ND-3, ND-7): beside `tilapia-0`
+ * and the second ghost net's drift, round both punting poles, and between the garter snake and
+ * `tilapia-1`.
+ */
+const DEV_DANGER_LOOPS: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
+  Object.freeze([[320, 140], [560, 120], [650, 320], [440, 340], [320, 300]] as const),
+  Object.freeze([[1100, 140], [1300, 120], [1480, 150], [1420, 290], [1180, 280]] as const),
+  Object.freeze([[1980, 140], [2250, 130], [2420, 220], [2300, 300], [2020, 290]] as const),
+]);
+
+/** Seconds a tadpole takes round the closed loop through `points` at the dev danger area's tadpole speed. */
+function devDangerLapSeconds(points: readonly (readonly [number, number])[]): number {
+  let length = 0;
+  points.forEach(([x, y], i) => {
+    const [nextX, nextY] = points[(i + 1) % points.length];
+    length += Math.hypot(nextX - x, nextY - y);
+  });
+  return length / DEV_DANGER_TADPOLE.speed;
+}
+
+/** Tadpole n of 3 (from 0) on its wander loop, offset n x lap / 3 so the three are out of step (ND-24). */
+function devDangerWander(points: readonly (readonly [number, number])[], index: number): Readonly<TadpoleWander> {
+  return tadpoleWander(DEV_DANGER_TADPOLE, points, (index * devDangerLapSeconds(points)) / 3);
+}
 
 /** The water under the bank of top-row screen `column`, from the surface to the bank's lowest y, inset 20 px. */
 function devDangerBankOf(column: number): Readonly<BankOverhang> {
@@ -199,9 +225,9 @@ function devDangerRoute(id: string, species: Readonly<PredatorSpecies>, points: 
  * The dev danger area (PRD open question 262, ND-15): 6 x 2 screens (2880 x 720 world px, bed top
  * 678) in the chinampa look, with every danger part and mobile snack at once. Its own data, written
  * out as numbers; it never refers to a real area's layout objects. The main path runs right along
- * the top row under the banks, past `tilapia-0` and both punting poles, dives past the second
- * tadpole lane, runs right along the bottom row through the gap current, then drops to a lane along
- * the bed under `tilapia-1` to the exit. The root tangle sits beside the carp, and the banks in the
+ * the top row under the banks, past `tilapia-0`, then through the second tadpole loop round both
+ * punting poles, dives, runs right along the bottom row through the gap current, then drops to a lane
+ * along the bed under `tilapia-1` to the exit. The root tangle sits beside the carp, and the banks in the
  * top right, past the garter snake, are a dead end with the Rare spots.
  */
 const DEV_DANGER_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
@@ -314,21 +340,19 @@ const DEV_DANGER_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** Two punting poles in the top row over the main path, 2 s out of step (ND-9). */
   movingHazards: Object.freeze([devDangerPole(1, 1150, 0), devDangerPole(2, 1350, 2)]),
   /**
-   * Three tadpoles on 120 px lanes out of step, offset (n - 1) x (2L / speed) / 3 (ND-24), and three
-   * shrimp (ND-25), with Area 5's rules.
+   * Three tadpoles on 5-point wander loops (DEV_DANGER_LOOPS), out of step, offset (n - 1) x lap / 3
+   * (ND-24), and three shrimp on 4-spot homes (ND-25; issue #131, ND-5), with Area 5's rules: one
+   * home beside the second ghost net's drift, one between `tilapia-0` and the first punting pole
+   * over the third net, and one just left of the gap current.
    */
   mobileSnacks: mobileSnackMix({
     tadpole: DEV_DANGER_TADPOLE,
-    lanes: [
-      tadpoleLane(DEV_DANGER_TADPOLE, 330, 330, 120, 0, 0),
-      tadpoleLane(DEV_DANGER_TADPOLE, 1340, 520, 120, 0, DEV_DANGER_LANE_LOOP / 3),
-      tadpoleLane(DEV_DANGER_TADPOLE, 2400, 200, 120, 0, (2 * DEV_DANGER_LANE_LOOP) / 3),
-    ],
+    wanders: DEV_DANGER_LOOPS.map(devDangerWander),
     shrimp: DEV_DANGER_SHRIMP,
-    spots: [
-      { x: 560, y: 420 },
-      { x: 1000, y: 300 },
-      { x: 2600, y: 420 },
+    homes: [
+      shrimpHome([[480, 440], [560, 470], [520, 540], [440, 520]]),
+      shrimpHome([[960, 200], [1040, 180], [1080, 250], [1000, 280]]),
+      shrimpHome([[1360, 540], [1420, 560], [1440, 630], [1380, 620]]),
     ],
   }),
 } satisfies AreaLayoutData);

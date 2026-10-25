@@ -5,13 +5,13 @@
  * (issue #111): `heron-0` over the spots past the stream and `heron-1` over the root arch, so the Epic
  * and Legendary spots there sit where a heron can strike. The water below their reach stays open.
  * For the ramp bar (issue #120, ND-1, ND-4) its tilapia chase on a short leash, and a third of its
- * snacks swim: tadpoles on fixed lanes and shrimp that flick away, which replace the darters. Each
+ * snacks swim: tadpoles on fixed loops and shrimp that flick away, which replace the darters. Each
  * Rare spot keeps a safe start beyond the chase (ND-8), so the deep Rare reeds and the Rare pad sit
  * at the far end, just past `heron-1`'s reach.
  */
 import { POND_2_TREASURES } from './catalogue';
 import type { HazardSpawn } from './hazards';
-import { mobileSnackMix, shrimpRule, tadpoleLane, tadpoleRule, type TadpoleLane } from './mobileSnacks';
+import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PLASTIC_WORM } from './plasticWorms';
 import { HERON_SPECIES, type PredatorRoute } from './predators';
 import { TILAPIA, TILAPIA_RAMP_CHASE, type TilapiaTuning } from './tuning';
@@ -25,21 +25,24 @@ export const POND_2_AREA_ID = 'pond-2';
  */
 export const POND_2_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({ ...TILAPIA, chase: TILAPIA_RAMP_CHASE });
 
-/** Area 3's tadpole rule (issue #120, ND-4): 35 px/s. */
-const POND_2_TADPOLE = tadpoleRule(35);
+/** Area 3's tadpole rule (issue #131, ND-9): 50 px/s. */
+const POND_2_TADPOLE = tadpoleRule(50);
 
 /** Area 3's shrimp rule (issue #120, ND-4): trigger 60 px, rest 1.7 s, flick 44 px at 115 px/s. */
 const POND_2_SHRIMP = shrimpRule(60, 1.7, 44, 115);
 
-/** Length in px of each tadpole lane. */
-const POND_2_LANE_LENGTH = 120;
+/** Length in px of each leg of a tadpole's 2-point wander loop (issue #131, ND-14). */
+const POND_2_LEG_LENGTH = 120;
 
-/** Seconds a tadpole takes there and back along its lane: 2L / speed. */
-const POND_2_LANE_LOOP = (2 * POND_2_LANE_LENGTH) / POND_2_TADPOLE.speed;
+/** Seconds a tadpole takes round its 2-point wander loop: 2L / speed, 4.8 s (issue #131, ND-14). */
+const POND_2_LAP = (2 * POND_2_LEG_LENGTH) / POND_2_TADPOLE.speed;
 
-/** Tadpole lane `n` (1 to 4) from (x, y), `n - 1` quarters of the lane loop ahead (issue #120, ND-4). */
-function pond2Lane(n: number, x: number, y: number, dx: number, dy: number): Readonly<TadpoleLane> {
-  return tadpoleLane(POND_2_TADPOLE, x, y, dx, dy, ((n - 1) * POND_2_LANE_LOOP) / 4);
+/**
+ * Tadpole `n` (1 to 4) on a 2-point wander loop from (x, y) to (x + dx, y + dy) and back, `n - 1`
+ * quarters of its lap ahead (issue #120, ND-4; issue #131, ND-14).
+ */
+function pond2Wander(n: number, x: number, y: number, dx: number, dy: number): Readonly<TadpoleWander> {
+  return tadpoleWander(POND_2_TADPOLE, [[x, y], [x + dx, y + dy]], ((n - 1) * POND_2_LAP) / 4);
 }
 
 /**
@@ -228,23 +231,19 @@ export const POND_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   sunChunk: 0,
   tilapia: POND_2_TILAPIA,
   /**
-   * Four tadpoles on 120 px lanes, each a quarter of the lane loop out of step (issue #120, ND-4),
-   * and four shrimp, every lane and shrimp box clear of the threats, worms and the stream.
+   * Four tadpoles on 2-point wander loops 120 px long, each a quarter of the lap out of step (issue
+   * #120, ND-4; issue #131, ND-14), and four shrimp on 1-spot homes, every loop and shrimp box clear
+   * of the threats, worms and the stream.
    */
   mobileSnacks: mobileSnackMix({
     tadpole: POND_2_TADPOLE,
-    lanes: [
-      pond2Lane(1, 320, 210, POND_2_LANE_LENGTH, 0),
-      pond2Lane(2, 560, 100, POND_2_LANE_LENGTH, 0),
-      pond2Lane(3, 1655, 140, 0, POND_2_LANE_LENGTH),
-      pond2Lane(4, 2420, 280, POND_2_LANE_LENGTH, 0),
+    wanders: [
+      pond2Wander(1, 320, 210, POND_2_LEG_LENGTH, 0),
+      pond2Wander(2, 560, 100, POND_2_LEG_LENGTH, 0),
+      pond2Wander(3, 1655, 140, 0, POND_2_LEG_LENGTH),
+      pond2Wander(4, 2420, 280, POND_2_LEG_LENGTH, 0),
     ],
     shrimp: POND_2_SHRIMP,
-    spots: [
-      { x: 860, y: 106 },
-      { x: 1230, y: 106 },
-      { x: 2320, y: 280 },
-      { x: 2760, y: 140 },
-    ],
+    homes: [shrimpHome([[860, 106]]), shrimpHome([[1230, 106]]), shrimpHome([[2320, 280]]), shrimpHome([[2760, 140]])],
   }),
 } satisfies AreaLayoutData);

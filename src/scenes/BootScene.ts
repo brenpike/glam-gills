@@ -551,10 +551,10 @@ function bakeMovingHazards(
   return looks.length > 0 ? bakeMovingHazardTextures(scene, bakeScale, looks) : null;
 }
 
-/** Whether area `area` has any tadpole lane or shrimp spot. */
+/** Whether area `area` has any tadpole wander loop or shrimp home (issue #131, ND-13). */
 function hasMobileSnacks(area: Readonly<AreaData>): boolean {
   const mix = area.layout.mobileSnacks;
-  return mix !== undefined && mix.lanes.length + mix.spots.length > 0;
+  return mix !== undefined && mix.wanders.length + mix.homes.length > 0;
 }
 
 /** Builds every area's zone, bakes every texture at the fitted scale, then starts the title. */
