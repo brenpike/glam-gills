@@ -11,11 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Area 4 has four common carp now, not one. They swim at every depth, from near the top down to the bed, and still dig in the mud on the bed (#134).
+- Area 4 has four common carp now, not one. One swims from near the top down to the middle, and three swim from the middle down by the bed, so together they cover every depth. They still dig in the mud on the bed (#134).
 
 ### Changed
 
-- Area 4's tilapia and carp swim at every depth, so no part of the water is always safe: near the top, in the middle, and down by the bed (#134).
+- Between them, Area 4's tilapia and carp cover every depth, so no part of the water is always safe: near the top, in the middle, and down by the bed (#134).
 - Area 4 has 4 tilapia now, not 6, to make room for the carp (#134).
 - Area 4 has no long safe stretch any more: wherever you swim, a tilapia, a carp or a punting pole is never far away (#134).
 - Tadpoles in Area 4 swim all around their homes, not just back and forth (#134).
