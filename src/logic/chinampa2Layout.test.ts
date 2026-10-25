@@ -1,13 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_2_AREA, CHINAMPA_AREA, CHINAMPA_HABITAT, newThingsByArea, sourceFactCards, threatFactCards, threatIds } from './areas';
 import { CHINAMPA_2_TREASURES, RARITIES } from './catalogue';
-import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT, CHINAMPA_2_SNAKE, CHINAMPA_2_TILAPIA, SNAKE_STRETCH_Y } from './chinampa2Layout';
+import { CHINAMPA_2_AREA_ID, CHINAMPA_2_CARP, CHINAMPA_2_LAYOUT, CHINAMPA_2_SNAKE, CHINAMPA_2_TILAPIA, SNAKE_STRETCH_Y } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
-import { longestQuietStretch, meetsFullDangerBar, movingHazardTypeCount, movingThreatCount, predatorTypeCount } from './dangerBar';
+import {
+  carpCount,
+  carpTarget,
+  depthBands,
+  floorQuietStretch,
+  hasSurfaceDanger,
+  longestQuietSwim,
+  meetsDepthRule,
+  meetsFloorRule,
+  meetsWholeWaterDangerBar,
+  movingHazardTypeCount,
+  movingThreatCount,
+  predatorTypeCount,
+} from './dangerBar';
 import { createEncounter, createEncounterContext, stepEncounter, type EncounterEvent, type EncounterState } from './encounter';
 import { currentAt, reedDragAt } from './environment';
 import {
+  CARP_FACT,
   GARTER_SNAKE_FACT,
   GHOST_NET_FACT,
   PUNTING_POLE_FACT,
@@ -53,11 +67,21 @@ import {
 import { PUNTING_POLE, movingHazardDepth, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { placeTreasures } from './placement';
-import { GARTER_SNAKE_SPECIES, ROUTE_WARN_TOLERANCE, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute } from './predators';
+import {
+  CARP_SPECIES,
+  GARTER_SNAKE_SPECIES,
+  ROUTE_WARN_TOLERANCE,
+  TILAPIA_SPECIES,
+  routeLoopDistance,
+  tunedSpecies,
+  type PredatorRoute,
+} from './predators';
 import { RESCUE } from './rescue';
 import { SNACK_DART } from './snackDart';
 import { stepSwim, type SwimState } from './swimPhysics';
 import {
+  CARP,
+  CARP_CHASE,
   FINDS,
   GARTER_SNAKE,
   GARTER_SNAKE_CHASE,
@@ -97,6 +121,7 @@ const SNACK_SEEDS = [...ALL_SEEDS, ...Array.from({ length: 51 }, (_, i) => (i + 
 const TRIP_SEEDS = Array.from({ length: 200 }, (_, i) => i * 104729 + 17);
 const STRIKE = CHINAMPA_2_TILAPIA.lungeRange;
 const SNAKE_STRIKE = GARTER_SNAKE.lungeRange;
+const CARP_STRIKE = CHINAMPA_2_CARP.tuning.lungeRange;
 const GROW = HYACINTH_MATS.bodyGrow;
 const STRANDING_ROUTE_CLEARANCE = 80;
 /** Least px from a hiding spot to every net: a grab from the pickup radius never comes within the net reach. */
@@ -118,8 +143,14 @@ const FLICK_DIRECTIONS = 8;
 const POLE_MAT_CLEARANCE = SAFE_PASSING_WIDTH;
 /** Least px from a stranding place to every pole sweep: the touch reach plus the rescue reach. */
 const STRAND_POLE_CLEARANCE = PUNTING_POLE.touchReach + RESCUE.reachRadius;
-/** Longest quiet stretch of the main path in px, as measured (issue #118, ND-3). */
-const LONGEST_QUIET_STRETCH = 458.85;
+/** Longest quiet swim in the whole water in px, as measured, and where it starts and ends (issue #135, ND-6). */
+const LONGEST_QUIET_SWIM = { length: 457.23, from: { x: 1744, y: 406 }, to: { x: 1416, y: 94 } };
+/** Longest quiet stretch of the floor lane in px, as measured (issue #135, ND-6). */
+const FLOOR_QUIET_STRETCH = 235;
+/** Least px from each carp loop to every tilapia loop, to every other carp loop and to every snake stretch (issue #135, ND-2). */
+const CARP_TILAPIA_CLEARANCE = 275;
+const CARP_CARP_CLEARANCE = 250;
+const CARP_SNAKE_CLEARANCE = 235;
 /** Area 4's narrowest main-path gap, which Area 5's must be under (the level layout ladder). */
 const AREA_4_NARROWEST = 64;
 
@@ -136,6 +167,7 @@ const SNAKE_REACH = HIT_TARGET_LIMIT - SNAKE_STRETCH_Y;
 /** The top of the deep lane under each stretch, out of every snake's reach. */
 const DEEP_LANE_Y = 260;
 const SNAKE_IDS = ['garter-snake-0', 'garter-snake-1', 'garter-snake-2'];
+const CARP_IDS = [0, 1, 2, 3, 4].map((n) => `carp-${n}`);
 const POLE_IDS = [1, 2, 3, 4, 5].map((n) => `chinampa-2/punting-pole-${n}`);
 
 const zone = buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED);
@@ -182,8 +214,19 @@ function matPairsOf(layout: Pick<ZoneLayout, 'elements'>): (ElementSpawn & { mat
   return layout.elements.flatMap((element) => (element.matPair ? [{ ...element, matPair: element.matPair }] : []));
 }
 
-/** The stretch line of a snake route as a flat rect at SNAKE_STRETCH_Y. */
+/** The zone's garter snake routes: its predator routes whose species is the garter snake. */
+function snakesOf(layout: Pick<ZoneLayout, 'predatorRoutes'>): PredatorRoute[] {
+  return layout.predatorRoutes.filter((route) => route.species.id === GARTER_SNAKE_SPECIES.id);
+}
+
+/** The zone's carp routes: its predator routes whose species is the common carp (issue #135, ND-2). */
+function carpOf(layout: Pick<ZoneLayout, 'predatorRoutes'>): PredatorRoute[] {
+  return layout.predatorRoutes.filter((route) => route.species.id === CARP_SPECIES.id);
+}
+
+/** The stretch line of a snake route as a flat rect at SNAKE_STRETCH_Y; throws for any other species' route. */
 function stretchRect(route: PredatorRoute): HazardRect {
+  if (route.species.id !== GARTER_SNAKE_SPECIES.id) throw new Error(`stretchRect: ${route.id} is not a garter snake`);
   const xs = route.waypoints.map((point) => point.x);
   return { kind: 'rect', x0: Math.min(...xs), x1: Math.max(...xs), y0: SNAKE_STRETCH_Y, y1: SNAKE_STRETCH_Y };
 }
@@ -194,21 +237,36 @@ function gapExtras(layout: ZoneLayout): ExtraObstacle[] {
     const sweep = elementSweep(element);
     return sweep ? [{ id: element.id, shape: sweep, keepOut: GROW }] : [];
   });
-  const reach = layout.predatorRoutes.map((route): ExtraObstacle => ({ id: `${route.id}/reach`, shape: stretchRect(route), keepOut: SNAKE_REACH }));
+  const reach = snakesOf(layout).map((route): ExtraObstacle => ({ id: `${route.id}/reach`, shape: stretchRect(route), keepOut: SNAKE_REACH }));
   return [...mats, ...reach];
 }
 
-/** Each predator route with its whole reach: a tilapia's strike, a snake's dart reach. */
+/** Each predator route with its whole reach: a tilapia's strike, a snake's dart reach, a carp's strike. */
 function reachRoutes(layout: ZoneLayout): { route: TilapiaRoute; reach: number }[] {
   return [
     ...layout.tilapiaRoutes.map((route) => ({ route, reach: STRIKE })),
-    ...layout.predatorRoutes.map((route) => ({ route: route as TilapiaRoute, reach: SNAKE_REACH })),
+    ...snakesOf(layout).map((route) => ({ route: route as TilapiaRoute, reach: SNAKE_REACH })),
+    ...carpOf(layout).map((route) => ({ route: route as TilapiaRoute, reach: CARP_STRIKE })),
+  ];
+}
+
+/** Each predator route with its strike: 150 px for a tilapia, 110 px for a snake, 125 px for a carp. */
+function strikeRoutes(layout: ZoneLayout): { route: TilapiaRoute; strike: number }[] {
+  return [
+    ...layout.tilapiaRoutes.map((route) => ({ route, strike: STRIKE })),
+    ...snakesOf(layout).map((route) => ({ route: route as TilapiaRoute, strike: SNAKE_STRIKE })),
+    ...carpOf(layout).map((route) => ({ route: route as TilapiaRoute, strike: CARP_STRIKE })),
   ];
 }
 
 /** Whether a point is out of every snake's whole reach. */
 function outOfSnakeReach(point: Point, layout: ZoneLayout): boolean {
-  return layout.predatorRoutes.every((route) => routeLoopDistance(point, route.waypoints) > SNAKE_REACH);
+  return snakesOf(layout).every((route) => routeLoopDistance(point, route.waypoints) > SNAKE_REACH);
+}
+
+/** Least distance between two closed loops, sampled along both. */
+function loopGap(first: readonly Point[], second: readonly Point[]): number {
+  return Math.min(...loopSamples(first).map((point) => routeLoopDistance(point, second)), ...loopSamples(second).map((point) => routeLoopDistance(point, first)));
 }
 
 /** Points every `step` px along an open path. */
@@ -290,12 +348,17 @@ function poleZone(spawn: Readonly<MovingHazardSpawn>): HazardRect {
   return { kind: 'rect', x0: sweep.x0 - touchReach, x1: sweep.x1 + touchReach, y0: sweep.y0 - touchReach, y1: sweep.y1 + touchReach };
 }
 
-/** Each predator route with its whole reach and its leash: a tilapia's strike and chase leash, a snake's dart reach and none. */
-function leashRoutes(layout: ZoneLayout): { route: TilapiaRoute; reach: number }[] {
+/**
+ * Each predator route with the reach its mat rule keeps from each mat sweep: a tilapia's strike and
+ * chase leash, a snake's dart reach and its leash, and a carp's strike only (issue #135, owner
+ * decision 2026-10-25: the mat rule for the carp is strike only).
+ */
+function matRuleRoutes(layout: ZoneLayout): { route: TilapiaRoute; reach: number }[] {
   const tilapiaLeash = CHINAMPA_2_TILAPIA.chase?.leash ?? 0;
   return [
     ...layout.tilapiaRoutes.map((route) => ({ route, reach: STRIKE + tilapiaLeash })),
-    ...layout.predatorRoutes.map((route) => ({ route: route as TilapiaRoute, reach: SNAKE_REACH + (route.species.tuning.chase?.leash ?? 0) })),
+    ...snakesOf(layout).map((route) => ({ route: route as TilapiaRoute, reach: SNAKE_REACH + (route.species.tuning.chase?.leash ?? 0) })),
+    ...carpOf(layout).map((route) => ({ route: route as TilapiaRoute, reach: CARP_STRIKE })),
   ];
 }
 
@@ -399,9 +462,11 @@ describe('CHINAMPA_2_LAYOUT', () => {
     expect(zone.cave.id).toBe('chinampa-2/cave');
   });
 
-  it('is frozen data, down to each net, snake stretch, mat pair, punting pole and mobile snack', () => {
+  it('is frozen data, down to each net, snake stretch, carp loop, mat pair, punting pole and mobile snack', () => {
     expect(Object.isFrozen(CHINAMPA_2_LAYOUT)).toBe(true);
     expect(Object.isFrozen(CHINAMPA_2_TILAPIA)).toBe(true);
+    expect(Object.isFrozen(CHINAMPA_2_CARP)).toBe(true);
+    expect(Object.isFrozen(CHINAMPA_2_CARP.tuning)).toBe(true);
     for (const part of [
       CHINAMPA_2_LAYOUT.hazards,
       CHINAMPA_2_LAYOUT.elements,
@@ -433,6 +498,7 @@ describe('CHINAMPA_2_LAYOUT', () => {
     for (const route of CHINAMPA_2_LAYOUT.predatorRoutes) {
       expect(Object.isFrozen(route), route.id).toBe(true);
       expect(Object.isFrozen(route.waypoints), route.id).toBe(true);
+      for (const point of route.waypoints) expect(Object.isFrozen(point), route.id).toBe(true);
     }
     for (const element of CHINAMPA_2_LAYOUT.elements) {
       expect(Object.isFrozen(element), element.id).toBe(true);
@@ -440,7 +506,7 @@ describe('CHINAMPA_2_LAYOUT', () => {
     }
   });
 
-  it('has 32 snacks (7 worms, 6 bugs, 10 tadpoles and 9 shrimp), 5 ghost nets, 5 punting poles, 3 tilapia, 3 garter snakes, 2 mat pairs and 10 treasure slots, and no reeds, pads, plastic worms, heron or carp', () => {
+  it('has 32 snacks (7 worms, 6 bugs, 10 tadpoles and 9 shrimp), 5 ghost nets, 5 punting poles, 3 tilapia, 3 garter snakes, 5 carp, 2 mat pairs and 10 treasure slots, and no reeds, pads, plastic worms or heron', () => {
     for (const seed of ALL_SEEDS) {
       const layout = chinampa2(seed);
       expect(layout.collectibles).toHaveLength(32);
@@ -457,8 +523,13 @@ describe('CHINAMPA_2_LAYOUT', () => {
       expect(hazard.type).toBe(GHOST_NET);
       expect(hazard.shape.kind).toBe('rect');
     }
-    expect(zone.predatorRoutes.map((route) => [route.id, route.species])).toEqual(SNAKE_IDS.map((id) => [id, CHINAMPA_2_SNAKE]));
-    expect(zone.predatorRoutes.every((route) => route.species.id === GARTER_SNAKE_SPECIES.id)).toBe(true);
+    expect(zone.predatorRoutes.map((route) => [route.id, route.species])).toEqual([
+      ...SNAKE_IDS.map((id) => [id, CHINAMPA_2_SNAKE]),
+      ...CARP_IDS.map((id) => [id, CHINAMPA_2_CARP]),
+    ]);
+    expect(snakesOf(zone).map((route) => route.id)).toEqual(SNAKE_IDS);
+    expect(carpOf(zone).map((route) => route.id)).toEqual(CARP_IDS);
+    expect(carpCount(zone)).toBe(5);
     for (const spawn of polesOf(zone)) expect(spawn.type, spawn.id).toBe(PUNTING_POLE);
     expect(zone.elements.map((element) => [element.id, element.type.id])).toEqual([
       ['chinampa-2/hyacinth-mats-1', 'water-hyacinth'],
@@ -477,7 +548,7 @@ describe('CHINAMPA_2_LAYOUT', () => {
     expect(CHINAMPA_2_TILAPIA.windup).toBeGreaterThan(CHINAMPA_2_TILAPIA.minWindup);
     expect(CHINAMPA_2_TILAPIA.minWindup).toBe(0.8);
     expect(CHINAMPA_2_TILAPIA.lungeDuration).toBe(0.4);
-    expect(zoneThreats(zone).map((threat) => threat.strike)).toEqual([150, 150, 150, 110, 110, 110, 18, 18, 18, 18, 18]);
+    expect(zoneThreats(zone).map((threat) => threat.strike)).toEqual([150, 150, 150, 110, 110, 110, 125, 125, 125, 125, 125, 18, 18, 18, 18, 18]);
     expect(zoneThreats(zone).slice(0, 3)).toMatchObject([
       { kind: 'route', tilapia: true, tuned: true },
       { kind: 'route', tilapia: true, tuned: true },
@@ -485,7 +556,21 @@ describe('CHINAMPA_2_LAYOUT', () => {
     ]);
   });
 
-  it('gives every predator its chase: the tilapia the full-bar chase, each garter snake its chase default (issue #118, ND-1)', () => {
+  it('plays its common carp one step up the predator ladder from Area 4, its warning over the floor, with its chase default, inside the chase limits (issue #135, ND-2)', () => {
+    expect(CHINAMPA_2_CARP.id).toBe(CARP_SPECIES.id);
+    expect(CHINAMPA_2_CARP.dangerPart).toBe(true);
+    expect(CHINAMPA_2_CARP.tuning).toEqual({ ...CARP, windup: 0.95, lungeSpeed: 210, lungeDuration: 0.6, lungeRange: 125, cooldown: 2.3, patrolSpeed: 38, chase: CARP_CHASE });
+    expect(CHINAMPA_2_CARP.tuning.chase).toBe(CARP_CHASE);
+    expect(CHINAMPA_2_CARP.tuning.minWindup).toBe(0.8);
+    expect(CHINAMPA_2_CARP.tuning.windup).toBeGreaterThanOrEqual(CHINAMPA_2_CARP.tuning.minWindup);
+    expect(() => tunedSpecies(CARP_SPECIES, CHINAMPA_2_CARP.tuning)).not.toThrow();
+    expect(CHINAMPA_2_CARP.tuning.windup).toBeLessThan(CARP.windup);
+    expect(CHINAMPA_2_CARP.tuning.lungeRange).toBeGreaterThan(CARP.lungeRange);
+    expect(CHINAMPA_2_CARP.tuning.lungeSpeed).toBeGreaterThan(CARP.lungeSpeed);
+    for (const route of carpOf(zone)) expect(route.species, route.id).toBe(CHINAMPA_2_CARP);
+  });
+
+  it('gives every predator its chase: the tilapia the full-bar chase, each garter snake and carp its chase default (issue #118, ND-1; issue #135, ND-2)', () => {
     expect(CHINAMPA_2_TILAPIA.chase).toBe(TILAPIA_CHASE);
     expect(TILAPIA_CHASE).toEqual({ sight: 240, leash: 160, speed: 125 });
     expect(() => tunedSpecies(TILAPIA_SPECIES, CHINAMPA_2_TILAPIA)).not.toThrow();
@@ -494,7 +579,8 @@ describe('CHINAMPA_2_LAYOUT', () => {
     expect(CHINAMPA_2_SNAKE.tuning).toEqual({ ...GARTER_SNAKE, chase: GARTER_SNAKE_CHASE });
     expect(CHINAMPA_2_SNAKE.tuning.chase).toBe(GARTER_SNAKE_CHASE);
     expect(Object.isFrozen(CHINAMPA_2_SNAKE)).toBe(true);
-    for (const route of zone.predatorRoutes) expect(route.species.tuning.chase, route.id).toBe(GARTER_SNAKE_CHASE);
+    for (const route of snakesOf(zone)) expect(route.species.tuning.chase, route.id).toBe(GARTER_SNAKE_CHASE);
+    for (const route of carpOf(zone)) expect(route.species.tuning.chase, route.id).toBe(CARP_CHASE);
   });
 
   it('is a U-turn: right along the top row, down in the rightmost column, back left along the bottom row to the exit under the Home Spot (ND-5)', () => {
@@ -527,16 +613,16 @@ describe('CHINAMPA_2_LAYOUT', () => {
     });
   });
 
-  it('names the tilapia, the garter snake, the ghost net and the punting pole as its threats, from its data or its zone (issue #118)', () => {
-    expect(threatIds(CHINAMPA_2_LAYOUT)).toEqual(['tilapia', 'garter-snake', 'ghost-net', 'punting-pole']);
-    expect(threatIds(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'garter-snake', 'ghost-net', 'punting-pole']);
-    expect(threatFactCards(CHINAMPA_2_LAYOUT)).toEqual([TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT]);
+  it('names the tilapia, the garter snake, the carp, the ghost net and the punting pole as its threats, from its data or its zone (issue #118; issue #135, ND-2)', () => {
+    expect(threatIds(CHINAMPA_2_LAYOUT)).toEqual(['tilapia', 'garter-snake', 'carp', 'ghost-net', 'punting-pole']);
+    expect(threatIds(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(['tilapia', 'garter-snake', 'carp', 'ghost-net', 'punting-pole']);
+    expect(threatFactCards(CHINAMPA_2_LAYOUT)).toEqual([TILAPIA_FACT, GARTER_SNAKE_FACT, CARP_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT]);
   });
 
-  it('gives its threat cards, then the water hyacinth card, then the tadpole and shrimp cards, from its data or its zone (issue #118)', () => {
+  it('gives its threat cards, then the water hyacinth card, then the tadpole and shrimp cards, from its data or its zone (issue #118; issue #135, ND-2)', () => {
     const expected = {
-      ids: ['tilapia', 'garter-snake', 'ghost-net', 'punting-pole', 'water-hyacinth', 'tadpole', 'shrimp'],
-      cards: [TILAPIA_FACT, GARTER_SNAKE_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, WATER_HYACINTH_FACT, TADPOLE_FACT, SHRIMP_FACT],
+      ids: ['tilapia', 'garter-snake', 'carp', 'ghost-net', 'punting-pole', 'water-hyacinth', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, GARTER_SNAKE_FACT, CARP_FACT, GHOST_NET_FACT, PUNTING_POLE_FACT, WATER_HYACINTH_FACT, TADPOLE_FACT, SHRIMP_FACT],
     };
     expect(sourceFactCards(CHINAMPA_2_LAYOUT)).toEqual(expected);
     expect(sourceFactCards(buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED))).toEqual(expected);
@@ -606,7 +692,7 @@ describe('Area 5 exit and safe area (ND-2)', () => {
 });
 
 describe('Area 5 garter snake stretches (ND-10)', () => {
-  const stretches = zone.predatorRoutes;
+  const stretches = snakesOf(zone);
 
   it('are three 160 px stretches: garter-snake-0 at x 1080 to 1240, garter-snake-1 at 2700 to 2860 and garter-snake-2 at 2525 to 2685 (issue #118, ND-3)', () => {
     expect(stretches.map((route) => [route.id, ...route.waypoints.map((point) => point.x)])).toEqual([
@@ -652,15 +738,13 @@ describe('Area 5 garter snake stretches (ND-10)', () => {
     expect(HEAD_LIMIT + GARTER_SNAKE.contactRadius).toBeLessThan(DEEP_LANE_Y);
   });
 
-  it('leave a deep lane below y 260 under each stretch, out of every snake reach and more than 150 px and the chase sight from every tilapia route', () => {
+  // The lane's two tilapia distance checks went: the whole-water bar proof replaces them (issue #135, ND-4).
+  it('leave a deep lane below y 260 under each stretch, out of every snake reach', () => {
     for (const route of stretches) {
       const rect = stretchRect(route);
       for (let x = rect.x0; x <= rect.x1; x += 10) {
         for (let y = DEEP_LANE_Y; y <= bounds.maxY; y += 10) {
-          const point = { x, y };
-          expect(outOfSnakeReach(point, zone), `${route.id} lane at ${x}, ${y}`).toBe(true);
-          expect(routeDistance(point, zone.tilapiaRoutes), `${route.id} lane at ${x}, ${y}`).toBeGreaterThan(STRIKE);
-          expect(routeDistance(point, zone.tilapiaRoutes), `${route.id} lane at ${x}, ${y}`).toBeGreaterThan(TILAPIA_CHASE.sight);
+          expect(outOfSnakeReach({ x, y }, zone), `${route.id} lane at ${x}, ${y}`).toBe(true);
         }
       }
     }
@@ -680,26 +764,74 @@ describe('Area 5 garter snake stretches (ND-10)', () => {
   });
 });
 
-describe('Area 5 danger bar (issue #118, ND-3, ND-9)', () => {
-  it.each(ALL_SEEDS)('meets the full danger bar for seed %i', (seed) => {
-    expect(meetsFullDangerBar(chinampa2(seed))).toBe(true);
+describe('Area 5 danger bar (issue #118, ND-3, ND-9; issue #135, ND-6)', () => {
+  it('meets the full danger bar with the whole-water test on the default seed', () => {
+    expect(meetsWholeWaterDangerBar(zone)).toBe(true);
   });
 
-  it('has 11 moving threats for its 14 screens, 2 predator types and 1 moving hazard type, and every predator chases', () => {
+  it.each(EXTRA_SEEDS)('builds the same threats and water as the default seed for seed %i, so the bar holds for it too', (seed) => {
+    const layout = chinampa2(seed);
+    expect(layout.tilapiaRoutes).toEqual(zone.tilapiaRoutes);
+    expect(layout.tilapia).toEqual(zone.tilapia);
+    expect(layout.predatorRoutes).toEqual(zone.predatorRoutes);
+    expect(layout.movingHazards).toEqual(zone.movingHazards);
+    expect(layout.safeArea).toEqual(zone.safeArea);
+    expect([layout.width, layout.height, layout.bedTop]).toEqual([zone.width, zone.height, zone.bedTop]);
+  });
+
+  it('has 16 moving threats for its 14 screens, 3 predator types and 1 moving hazard type, and every predator chases', () => {
     const screens = (zone.width / SCREEN_W) * (zone.height / WORLD_H);
     expect(screens).toBe(14);
-    expect(movingThreatCount(zone)).toBe(11);
+    expect(movingThreatCount(zone)).toBe(16);
     expect(movingThreatCount(zone)).toBeGreaterThanOrEqual(Math.ceil(0.75 * screens));
-    expect(predatorTypeCount(zone)).toBe(2);
+    expect(predatorTypeCount(zone)).toBe(3);
     expect(movingHazardTypeCount(zone)).toBe(1);
     expect(zone.tilapia?.chase).toBeDefined();
     for (const route of zone.predatorRoutes) expect(route.species.tuning.chase, route.id).toBeDefined();
   });
 
-  it('never leaves the main path quiet for more than one screen across', () => {
-    const quiet = longestQuietStretch(zone);
-    expect(quiet).toBeCloseTo(LONGEST_QUIET_STRETCH, 1);
-    expect(quiet).toBeLessThanOrEqual(SCREEN_W);
+  it('never leaves a quiet swim in the whole water longer than one screen across', () => {
+    const swim = longestQuietSwim(zone);
+    expect(swim?.length).toBeCloseTo(LONGEST_QUIET_SWIM.length, 1);
+    expect(swim?.from).toEqual(LONGEST_QUIET_SWIM.from);
+    expect(swim?.to).toEqual(LONGEST_QUIET_SWIM.to);
+    expect(swim?.length).toBeLessThanOrEqual(SCREEN_W);
+  });
+
+  it('patrols every depth: each tilapia and carp loop reaches 24 px into two bands, and each species reaches all three', () => {
+    const bands = depthBands(zone);
+    expect(bands.map((band) => [band.top, band.bottom])).toEqual([
+      [94, expect.closeTo(281.33, 2)],
+      [expect.closeTo(281.33, 2), expect.closeTo(468.67, 2)],
+      [expect.closeTo(468.67, 2), 656],
+    ]);
+    expect(meetsDepthRule(zone)).toBe(true);
+    const loops = [...zone.tilapiaRoutes.map((route) => ({ species: 'tilapia', route: route as TilapiaRoute })), ...carpOf(zone).map((route) => ({ species: 'carp', route: route as TilapiaRoute }))];
+    const reached = (route: TilapiaRoute) =>
+      bands.filter((band) => {
+        const ys = route.waypoints.map((point) => point.y);
+        return Math.min(Math.max(...ys), band.bottom) - Math.max(Math.min(...ys), band.top) >= 24;
+      });
+    for (const { route } of loops) expect(reached(route).length, route.id).toBeGreaterThanOrEqual(2);
+    for (const species of ['tilapia', 'carp']) {
+      const covered = new Set(loops.filter((loop) => loop.species === species).flatMap(({ route }) => reached(route)));
+      expect(covered.size, species).toBe(3);
+    }
+  });
+
+  it('has surface danger and keeps the floor lane quiet for no more than one screen across, with two carp in the bottom row west of x 1850', () => {
+    expect(hasSurfaceDanger(zone)).toBe(true);
+    expect(floorQuietStretch(zone)).toBe(FLOOR_QUIET_STRETCH);
+    expect(floorQuietStretch(zone)).toBeLessThanOrEqual(SCREEN_W);
+    expect(meetsFloorRule(zone)).toBe(true);
+    const westFloor = carpOf(zone).filter((route) => route.waypoints.every((point) => point.y > WORLD_H && point.x < 1850));
+    expect(westFloor.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('has 5 carp for its 14 screens, at least the carp target', () => {
+    expect(carpTarget(14)).toBe(5);
+    expect(carpCount(zone)).toBe(5);
+    expect(carpCount(zone)).toBeGreaterThanOrEqual(carpTarget(14));
   });
 });
 
@@ -738,29 +870,13 @@ describe('Area 5 punting poles (issue #118, ND-6)', () => {
     for (const spawn of poles) expect(SURF + movingHazardDepth(spawn), spawn.id).toBeLessThanOrEqual(zone.bedTop - PUNTING_POLE.touchReach);
   });
 
-  it('keeps every pole sweep farther than the strike from every patrol loop: 150 px for the tilapia, 110 px for the snakes', () => {
+  // The pole rule is strike only; the strike-plus-leash pole test went (issue #135, ND-1).
+  it('keeps every pole sweep farther than the strike from every patrol loop: 150 px for the tilapia, 110 px for the snakes, 125 px for the carp', () => {
+    expect([STRIKE, SNAKE_STRIKE, CARP_STRIKE]).toEqual([150, 110, 125]);
     for (const spawn of poles) {
       const sweep = movingHazardSweep(spawn);
-      for (const route of zone.tilapiaRoutes) {
-        expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(STRIKE);
-      }
-      for (const route of zone.predatorRoutes) {
-        expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(SNAKE_STRIKE);
-      }
-    }
-  });
-
-  it('keeps every pole sweep farther than the strike plus the chase leash from every patrol loop: 150 + 160 px for the tilapia, 110 + 0 px for the snakes', () => {
-    const tilapiaReach = CHINAMPA_2_TILAPIA.lungeRange + (CHINAMPA_2_TILAPIA.chase?.leash ?? 0);
-    expect(tilapiaReach).toBe(310);
-    for (const spawn of poles) {
-      const sweep = movingHazardSweep(spawn);
-      for (const route of zone.tilapiaRoutes) {
-        expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(tilapiaReach);
-      }
-      for (const route of zone.predatorRoutes) {
-        const snakeReach = route.species.tuning.lungeRange + (route.species.tuning.chase?.leash ?? 0);
-        expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(snakeReach);
+      for (const { route, strike } of strikeRoutes(zone)) {
+        expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(strike);
       }
     }
   });
@@ -821,13 +937,13 @@ describe('Area 5 garter snake depth bounds in the real encounter (#103)', () => 
       y: pingPong(time, DEEP_LANE_Y, bounds.maxY, 20),
     });
     const run = runEncounter(deepLane, seconds);
-    expect(run.events).toEqual([]);
+    expect(run.events.filter((event) => 'sourceId' in event && SNAKE_IDS.includes(event.sourceId))).toEqual([]);
     expectDepthBounds(run);
   });
 });
 
 describe('Area 5 hiding spots (B5, B6, B10, ND-15)', () => {
-  it.each(ALL_SEEDS)('match their labels against every threat, S = 150 for the tilapia and S = 110 for the snakes, with the turn clearance, for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('match their labels against every threat, S = 150 for the tilapia, S = 110 for the snakes and S = 125 for the carp, with the turn clearance, for seed %i', (seed) => {
     const layout = chinampa2(seed);
     const ids = layout.spots.map((spot) => spot.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -840,10 +956,7 @@ describe('Area 5 hiding spots (B5, B6, B10, ND-15)', () => {
   });
 
   it('bands every spot by its riskiest threat: Common over S + 60 from all, Rare over S, Epic over S / 2, Legendary within S / 2 of one', () => {
-    const threats = [
-      ...zone.tilapiaRoutes.map((route) => ({ route, strike: STRIKE })),
-      ...zone.predatorRoutes.map((route) => ({ route: route as TilapiaRoute, strike: SNAKE_STRIKE })),
-    ];
+    const threats = strikeRoutes(zone);
     for (const spot of zone.spots) {
       const bands = threats.map(({ route, strike }) => ({ distance: routeLoopDistance(spot, route.waypoints), band: riskBands(strike)[spot.rarity] }));
       for (const { distance, band } of bands) expect(distance, spot.id).toBeGreaterThan(band.over);
@@ -989,6 +1102,17 @@ describe('Area 5 tilapia, current and stranding places', () => {
     }
   });
 
+  it('keeps every carp loop more than 275 px from every tilapia loop, 250 px from every other carp loop and 235 px from every snake stretch, in the water (issue #135, ND-2)', () => {
+    const carp = carpOf(zone);
+    expect(carp).toHaveLength(5);
+    for (const [index, route] of carp.entries()) {
+      for (const tilapia of zone.tilapiaRoutes) expect(loopGap(route.waypoints, tilapia.waypoints), `${route.id} to ${tilapia.id}`).toBeGreaterThan(CARP_TILAPIA_CLEARANCE);
+      for (const other of carp.slice(index + 1)) expect(loopGap(route.waypoints, other.waypoints), `${route.id} to ${other.id}`).toBeGreaterThan(CARP_CARP_CLEARANCE);
+      for (const snake of snakesOf(zone)) expect(loopGap(route.waypoints, snake.waypoints), `${route.id} to ${snake.id}`).toBeGreaterThan(CARP_SNAKE_CLEARANCE);
+      for (const point of route.waypoints) expect(inBounds(point, zone), route.id).toBe(true);
+    }
+  });
+
   it('flows sideways through the gap in the bottom row at 73 px/s, to the right, against the main path where the path crosses it', () => {
     expect(zone.currents).toHaveLength(1);
     const current = zone.currents[0];
@@ -1068,8 +1192,11 @@ describe('Area 5 ghost nets (ND-13)', () => {
       for (const route of zone.tilapiaRoutes) {
         expect(shapeRouteDistance(net.shape, route.waypoints), `${net.id} to ${route.id}`).toBeGreaterThan(STRIKE + GHOST_NET.reach + SAFE_PASSING_WIDTH);
       }
-      for (const route of zone.predatorRoutes) {
+      for (const route of snakesOf(zone)) {
         expect(shapeRouteDistance(net.shape, route.waypoints), `${net.id} to ${route.id}`).toBeGreaterThan(SNAKE_STRIKE + GHOST_NET.reach + SAFE_PASSING_WIDTH);
+      }
+      for (const route of carpOf(zone)) {
+        expect(shapeRouteDistance(net.shape, route.waypoints), `${net.id} to ${route.id}`).toBeGreaterThan(CARP_STRIKE + GHOST_NET.reach + SAFE_PASSING_WIDTH);
       }
     }
   });
@@ -1164,11 +1291,13 @@ describe('Area 5 water hyacinth mats (ND-6 to ND-8)', () => {
     }
   });
 
-  it('keeps every predator route clear of each mat sweep by its reach and its chase leash: 150 + 160 + 18 for the tilapia, 154 + 0 + 18 for the snakes', () => {
+  // The carp's mat rule is strike only, 125 + 18 px; the tilapia's and the snakes' keep their leash (issue #135, owner decision 2026-10-25).
+  it('keeps every predator route clear of each mat sweep by its mat rule: 150 + 160 + 18 for the tilapia, 154 + 0 + 18 for the snakes, 125 + 18 for the carp', () => {
     expect(STRIKE + TILAPIA_CHASE.leash + GROW).toBe(328);
     expect(SNAKE_REACH + GARTER_SNAKE_CHASE.leash + GROW).toBeCloseTo(172, 9);
+    expect(CARP_STRIKE + GROW).toBe(143);
     for (const sweep of sweepsOf(zone)) {
-      for (const { route, reach } of leashRoutes(zone)) {
+      for (const { route, reach } of matRuleRoutes(zone)) {
         expect(shapeRouteDistance(sweep, route.waypoints), route.id).toBeGreaterThan(reach + GROW);
       }
     }

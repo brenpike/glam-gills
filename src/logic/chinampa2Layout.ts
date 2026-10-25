@@ -3,13 +3,15 @@
  * U-turn area. The Home Spot is top left and the exit straight under it, bottom left. The main
  * path runs right along the top row, under the banks and deep under the three garter snakes'
  * stretches, through the first water hyacinth channel; it goes down in the rightmost screen column,
- * then runs back left along the bottom row, through the gap current, under the first channel's
- * mats, between two ghost nets and through the second channel to the exit. Each mat pair gates
- * its row, and the way round it, through the other row, passes a ghost net. The bank in the top
- * right, beside the snakes and the tilapia there, and the root tangle in the bottom row are dead
- * ends that hold treasure spots. It meets the full danger bar (issue #118, ND-3): three chasing
- * tilapia, three chasing garter snakes and five punting poles that jab down across both rows of
- * the main path in the west half, with tadpoles and shrimp among its snacks (issue #118, ND-12).
+ * then runs back left along the bottom row, through the gap current, between two ghost nets, under
+ * the first channel's mats and through the second channel to the exit. Each mat pair gates its row,
+ * and the way round it, through the other row, passes a ghost net. The bank in the top right,
+ * beside the snakes and the carp there, and the root tangle in the bottom row are dead ends that
+ * hold treasure spots. It meets the full danger bar with the whole-water test (issue #135, ND-6):
+ * three chasing tilapia, three chasing garter snakes, five chasing common carp patrolling every
+ * depth and five punting poles that jab down across both rows of the main path in the west half
+ * (issue #118, ND-3; issue #135, ND-1 and ND-2), with tadpoles and shrimp among its snacks (issue
+ * #118, ND-12).
  */
 import { CHINAMPA_2_TREASURES } from './catalogue';
 import { GHOST_NET } from './ghostNets';
@@ -17,8 +19,10 @@ import type { ElementSpawn, HazardSpawn, MatPair } from './hazards';
 import { hyacinthMatSpawn } from './hyacinthMats';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
-import { GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
+import { CARP_SPECIES, GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import {
+  CARP,
+  CARP_CHASE,
   GARTER_SNAKE,
   GARTER_SNAKE_CHASE,
   HYACINTH_MATS,
@@ -65,6 +69,16 @@ export const CHINAMPA_2_SNAKE: Readonly<PredatorSpecies> = tunedSpecies(
   Object.freeze({ ...GARTER_SNAKE, chase: GARTER_SNAKE_CHASE }),
 );
 
+/**
+ * Area 5's common carp, one step up the predator ladder from Area 4's: a 0.95 s warning, over the
+ * 0.8 s floor, a sweep at 210 px/s for 0.6 s reaching 125 px, a 2.3 s cooldown, a 38 px/s patrol and
+ * the carp's chase default (issue #135, ND-2).
+ */
+export const CHINAMPA_2_CARP: Readonly<PredatorSpecies> = tunedSpecies(
+  CARP_SPECIES,
+  Object.freeze({ ...CARP, windup: 0.95, lungeSpeed: 210, lungeDuration: 0.6, lungeRange: 125, cooldown: 2.3, patrolSpeed: 38, chase: CARP_CHASE }),
+);
+
 /** Area 5's tadpole rule (issue #131, ND-9): 70 px/s. */
 const CHINAMPA_2_TADPOLE = tadpoleRule(70);
 
@@ -97,6 +111,12 @@ function bankOverhangOf(column: number): Readonly<BankOverhang> {
 function snakeStretch(id: string, x0: number, x1: number): Readonly<PredatorRoute> {
   const waypoints: Point[] = [Object.freeze({ x: x0, y: SNAKE_STRETCH_Y }), Object.freeze({ x: x1, y: SNAKE_STRETCH_Y })];
   return Object.freeze({ id, waypoints: Object.freeze(waypoints) as Point[], species: CHINAMPA_2_SNAKE });
+}
+
+/** One common carp's route, id `carp-<n>`: a closed loop through `points`, each an [x, y] pair (issue #135, ND-2). */
+function carpLoop(index: number, points: readonly (readonly [number, number])[]): Readonly<PredatorRoute> {
+  const waypoints: Point[] = points.map(([x, y]) => Object.freeze({ x, y }));
+  return Object.freeze({ id: `carp-${index}`, waypoints: Object.freeze(waypoints) as Point[], species: CHINAMPA_2_CARP });
 }
 
 /**
@@ -159,9 +179,11 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   /** The tangle of ahuejote roots on the bed of the bottom row, a dead end below the main path. */
   cave: Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/cave`, x0: 1920, x1: 2100, y0: 560, y1: CHINAMPA_2_BED_TOP }),
   /**
-   * Three fixed patrol loops: `tilapia-0` up and down beside the root tangle, from the bottom-row
-   * path down to the spots past the current, `tilapia-1` in the top right, under the bank there,
-   * and `tilapia-2` low in the bottom right corner (issue #118, ND-3).
+   * Three fixed patrol loops, each reaching into two depth bands: `tilapia-0` up and down beside the
+   * root tangle, from the bottom-row path down to the spots past the current; `tilapia-1` from the
+   * surface band into the middle one, under the second snake's stretch, just past the current; and
+   * `tilapia-2` up and down the right edge of the bottom row (issue #118, ND-3; issue #135, ND-3).
+   * Every two are more than twice the lunge range of 150 px apart.
    */
   tilapiaRoutes: Object.freeze([
     Object.freeze([
@@ -171,31 +193,42 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
       Object.freeze([2160, 620] as const),
     ]),
     Object.freeze([
-      Object.freeze([3140, 280] as const),
-      Object.freeze([3250, 280] as const),
-      Object.freeze([3250, 320] as const),
-      Object.freeze([3140, 320] as const),
+      Object.freeze([2767, 250] as const),
+      Object.freeze([2773, 250] as const),
+      Object.freeze([2773, 306] as const),
+      Object.freeze([2767, 306] as const),
     ]),
     Object.freeze([
-      Object.freeze([3140, 625] as const),
-      Object.freeze([3250, 625] as const),
-      Object.freeze([3250, 650] as const),
-      Object.freeze([3140, 650] as const),
+      Object.freeze([3316, 444] as const),
+      Object.freeze([3320, 444] as const),
+      Object.freeze([3320, 650] as const),
+      Object.freeze([3316, 650] as const),
     ]),
   ]),
   /**
    * Three chasing garter snakes, each on its own 160 px stretch at the surface in open top-row
-   * water: one in the third column, two in the sixth (issue #118, ND-3).
+   * water: one in the third column, two in the sixth (issue #118, ND-3). Then five chasing common
+   * carp, each loop reaching into two depth bands (issue #135, ND-2): `carp-0` up and down the
+   * bottom row beside the exit, `carp-1` between the first two poles, `carp-2` from under the first
+   * snake down to the bed and along it under the first channel's mats, `carp-3` beside the gap
+   * current, and `carp-4` from the surface band into the middle one under the bank in the top right.
+   * Each carp loop is more than 275 px from every tilapia loop, 250 px from every other carp loop and
+   * 235 px from every snake stretch; `carp-0` and `carp-2` patrol the bottom row west of x 1850.
    */
   predatorRoutes: Object.freeze([
     snakeStretch('garter-snake-0', 1080, 1240),
     snakeStretch('garter-snake-1', 2700, 2860),
     snakeStretch('garter-snake-2', 2525, 2685),
+    carpLoop(0, [[341, 380], [345, 380], [345, 560], [341, 560]]),
+    carpLoop(1, [[830, 320], [832, 320], [832, 500], [830, 500]]),
+    carpLoop(2, [[1096, 362], [1265, 362], [1265, 560], [1320, 648], [1700, 648], [1096, 648]]),
+    carpLoop(3, [[2527, 444], [2528, 444], [2528, 650], [2527, 650]]),
+    carpLoop(4, [[3049, 250], [3078, 250], [3078, 306], [3049, 306]]),
   ]),
   /**
    * Five punting poles jabbing down from the surface across both rows of the main path in the west
-   * half, each in a column with no bank, each sweep farther than every predator's strike reach plus
-   * its chase leash from its loop, clear of the mats, 2 s out of step with the next (issue #118, ND-6).
+   * half, each in a column with no bank, each sweep farther than every predator's strike reach from
+   * its loop, clear of the mats, 2 s out of step with the next (issue #118, ND-6; issue #135, ND-1).
    */
   movingHazards: Object.freeze([
     puntingPoleAt(1, 476, 0, 440),
@@ -205,17 +238,18 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     puntingPoleAt(5, 1840, 0, 340),
   ]),
   /**
-   * Five ghost nets: one in the top row over the second mat pair, two in the bottom row with the
-   * main path between them, one in the bottom row under the first mat pair, and one in the bottom
-   * right by the turn. Each is farther from every predator route than that predator's strike plus
-   * the net reach and the safe passing width, at least 190.5 px from the current, and clear of every
-   * mat sweep by the net reach and one body.
+   * Five ghost nets: one in the top row over the second mat pair, two in the bottom row past the
+   * last pole with the main path between them, one low and flat in the bottom row under the first
+   * mat pair, and one in the bottom right by the turn (issue #135, owner decision 2026-10-25). Each
+   * is farther from every predator route than that predator's strike plus the net reach and the
+   * safe passing width, at least 190.5 px from the current, and clear of every mat sweep by the net
+   * reach and one body.
    */
   hazards: Object.freeze([
-    ghostNetAt(1, 600, 700, 240, 280),
-    ghostNetAt(2, 1080, 1140, 372, 420),
-    ghostNetAt(3, 1080, 1140, 504, 570),
-    ghostNetAt(4, 1540, 1640, 446, 516),
+    ghostNetAt(1, 555, 635, 240, 280),
+    ghostNetAt(2, 1917, 1955, 362, 400),
+    ghostNetAt(3, 1917, 1955, 484, 544),
+    ghostNetAt(4, 1540, 1640, 446, 468),
     ghostNetAt(5, 2880, 2940, 480, 560),
   ]),
   /**
@@ -224,13 +258,13 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    */
   elements: Object.freeze([
     matPairAt(1, HYACINTH_MATS.offsets[0], { x0: 1500, x1: 1650, rowTop: SURF, rowBottom: WORLD_H, channelY: 220 }),
-    matPairAt(2, HYACINTH_MATS.offsets[1], { x0: 580, x1: 730, rowTop: WORLD_H, rowBottom: CHINAMPA_2_BED_TOP, channelY: 500 }),
+    matPairAt(2, HYACINTH_MATS.offsets[1], { x0: 535, x1: 685, rowTop: WORLD_H, rowBottom: CHINAMPA_2_BED_TOP, channelY: 500 }),
   ]),
   /**
    * The U-turn: right along the top row, under the first bank past the Common spots, down under the
    * first snake, through the first channel, up under the second bank, down under the second snake,
    * then down in the rightmost column and back left along the bottom row, through the current,
-   * under the first channel's mats, between two nets and through the second channel to the exit.
+   * between two nets, under the first channel's mats and through the second channel to the exit.
    */
   mainPath: Object.freeze([
     Object.freeze({ x: 120, y: 200 }),
@@ -245,6 +279,10 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ x: 2480, y: 300 }),
     Object.freeze({ x: 2980, y: 300 }),
     Object.freeze({ x: 2980, y: 400 }),
+    Object.freeze({ x: 2010, y: 400 }),
+    Object.freeze({ x: 1960, y: 442 }),
+    Object.freeze({ x: 1910, y: 442 }),
+    Object.freeze({ x: 1860, y: 410 }),
     Object.freeze({ x: 1460, y: 400 }),
     Object.freeze({ x: 1200, y: 462 }),
     Object.freeze({ x: 1020, y: 462 }),
@@ -256,8 +294,8 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * Fixed stranding places (PRD C2): in the open water past the safe area, on the bed past the
    * second channel, in the top row past the first channel, under the second bank, on the bed past
    * the current and in the bottom right corner. Every place is at least 80 px from every tilapia
-   * route and snake stretch, out of every snake's reach and clear of every pole sweep by the touch
-   * and rescue reach (issue #118, ND-6).
+   * route, snake stretch and carp loop, out of every snake's reach and clear of every pole sweep by
+   * the touch and rescue reach (issue #118, ND-6; issue #135, ND-2).
    */
   strandingPlaces: Object.freeze([
     Object.freeze({ id: `${CHINAMPA_2_AREA_ID}/strand-1`, x: 360, y: 300 }),
@@ -284,7 +322,8 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * Under the banks: Common spots along the main path under the first two banks; Rare spots off it,
    * at the right end of the first bank, within the second pole's strike band, at the right end of
    * the second bank, within the third snake's, and in the dead end under the bank in the top right,
-   * within the second snake's or `tilapia-1`'s strike band (issue #118, ND-6).
+   * within the second snake's or `carp-4`'s strike band (issue #118, ND-6; issue #135, owner decision
+   * 2026-10-25).
    */
   bankSpots: Object.freeze([
     Object.freeze([560, 110, 'common', false] as const),
@@ -295,12 +334,12 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([2260, 110, 'common', false] as const),
     Object.freeze([2375, 110, 'rare', false] as const),
     Object.freeze([929, 110, 'rare', false] as const),
-    Object.freeze([2980, 110, 'rare', false] as const),
-    Object.freeze([3030, 138, 'rare', false] as const),
-    Object.freeze([3080, 110, 'rare', false] as const),
-    Object.freeze([3140, 110, 'rare', false] as const),
-    Object.freeze([3200, 110, 'rare', false] as const),
-    Object.freeze([3260, 110, 'rare', false] as const),
+    Object.freeze([2971, 138, 'rare', false] as const),
+    Object.freeze([3013, 100, 'rare', false] as const),
+    Object.freeze([3069, 100, 'rare', false] as const),
+    Object.freeze([3125, 100, 'rare', false] as const),
+    Object.freeze([3167, 138, 'rare', false] as const),
+    Object.freeze([3223, 138, 'rare', false] as const),
   ]),
   /**
    * Ten tadpoles on 2-point wander loops 120 px long, each a tenth of its lap further on than the
