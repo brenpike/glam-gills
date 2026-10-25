@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-10-24
+
+### Changed
+
+- The game can now check all of the water for danger, not just part of it, so the coming area updates stay fair (#130).
+- No area plays differently yet (#130).
+
 ## [0.37.0] - 2026-10-24
 
 ### Added
