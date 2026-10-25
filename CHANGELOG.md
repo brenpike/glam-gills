@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-25
+
+### Added
+
+- Two common carp patrol the Lily pad pond (Area 2) at every depth. When one tips its nose down and puffs up mud, swim away before its tail sweeps (#132).
+
+### Changed
+
+- The Lily pad pond's tilapia now chase you at every depth, from the surface down to the bed, and a little farther before they swim back (#132).
+- The Lily pad pond's danger is laid out again, so the tilapia and carp are spread across all of the water (#132).
+- Tadpoles in the Lily pad pond swim all around their homes, and freshwater shrimp hop about their homes (#132).
+- The "Meet the carp" card now comes second in the Collection Book, after the tilapia card, and its hint says to explore the Lily pad pond (#132).
+
 ## [0.38.0] - 2026-10-25
 
 ### Changed
