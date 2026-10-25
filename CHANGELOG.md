@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-25
+
+### Changed
+
+- Tadpoles swim faster in every area that has them, from 40 to 70 px/s depending on the area, and the Snack magnet pulls harder to keep up (#131).
+
+### Fixed
+
+- A freshwater shrimp no longer flicks through a current, a mat or the edge of a hazard on its way to a clear landing (#131).
+
 ## [0.37.1] - 2026-10-24
 
 ### Changed
