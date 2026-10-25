@@ -1460,7 +1460,7 @@ describe('Area 5 mobile snacks (issue #118, ND-12; issue #131, ND-14)', () => {
     expect(meetsSnackMotion({ screensWide: zone.chunks, screensTall: zone.rows, mobileSnacks: zone.mobileSnacks })).toBe(true);
   });
 
-  it("swims ten tadpoles on wander loops of 4 to 6 points (within the shared 4 to 8), legs 105 to 350 px, laps of 11.8 to 14.7 s (within the shared 40 s), each a tenth of its own lap further on than the last (issue #131, ND-2, ND-3; issue #135, ND-5; open question 376)", () => {
+  it("swims ten tadpoles on wander loops of 4 to 6 points (within the shared 4 to 8), legs 105 to 350 px, laps of 11.8 to 14.7 s (within the shared 40 s), each a tenth of its own lap further on than the last (issue #131, ND-2, ND-3; issue #135, ND-5)", () => {
     const wanders = mix?.wanders ?? [];
     const speed = mix?.tadpole?.speed ?? 0;
     expect(wanders).toHaveLength(10);
@@ -1485,7 +1485,7 @@ describe('Area 5 mobile snacks (issue #118, ND-12; issue #131, ND-14)', () => {
     expect(Math.max(...laps)).toBeCloseTo(14.7, 1);
   });
 
-  it('gives every tadpole a home box 320 to 480 px wide and 150 to 360 px tall, wholly in one screen row, six in the top row and four in the bottom row, no two centres closer than 240 px (issue #131, ND-2; issue #135, ND-5; open question 376)', () => {
+  it('gives every tadpole a home box 320 to 480 px wide and 150 to 360 px tall, wholly in one screen row, six in the top row and four in the bottom row, no two centres closer than 240 px (issue #131, ND-2; issue #135, ND-5)', () => {
     const wanders = mix?.wanders ?? [];
     for (const wander of wanders) {
       const label = `loop at ${wander.points[0].x}, ${wander.points[0].y}`;
@@ -1517,7 +1517,7 @@ describe('Area 5 mobile snacks (issue #118, ND-12; issue #131, ND-14)', () => {
     }
   });
 
-  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s, on homes of exactly 3 hop spots (within the shared 3 to 6) in a box at most 200 x 160 px, five in the top row and four in the bottom row (issue #131, ND-5; issue #135, ND-5; open question 376)", () => {
+  it("gives its nine shrimp Area 5's shrimp rule: trigger 60 px, rest 1.2 s, flick 60 px at 145 px/s, on homes of exactly 3 hop spots (within the shared 3 to 6) in a box at most 200 x 160 px, five in the top row and four in the bottom row (issue #131, ND-5; issue #135, ND-5)", () => {
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 1.2, flickDistance: 60, flickSpeed: 145 });
     const homes = mix?.homes ?? [];
     expect(homes).toHaveLength(9);

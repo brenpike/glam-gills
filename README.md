@@ -6,7 +6,7 @@ It is mostly fun, with real axolotl facts along the way.
 
 ## What you can do now
 
-Version 0.39.0 is playable in five areas in three habitats, the canal, the Lily pad pond and the Chinampa gardens:
+Version 0.40.0 is playable in five areas in three habitats, the canal, the Lily pad pond and the Chinampa gardens:
 
 - Make your own axolotl the first time you play, one step at a time in 11 steps: colour (one of eight real morphs), boy or girl (with a boy or girl sign), eyes, mouth (eight to choose from), gills, spots, tail, body, age, size, and name. Every choice is a big picture button that shows it on your axolotl, and the preview changes as you pick. On the first step, Surprise me picks a whole new axolotl at random, with a name that fits. On the other steps, it picks something new for that step only. The other seven colours are the ones you rescue.
 - Type a name, or pick a suggested one that fits a boy or a girl, so typing is optional. Names stay on your device.
