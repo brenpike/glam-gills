@@ -29,10 +29,10 @@ const chinampa = fairnessZone(buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED));
 /** Ms each whole-seed sweep may take: every pool spot under nine chasing threats and two poles (issue #119, ND-10). */
 const SEED_SWEEP_TIMEOUT = 120_000;
 
-/** How far a safe start must be from a predator's loop: its leash plus the larger of its sight and its lunge range (issue #119). */
+/** How far a safe start must be from a predator's loop: its lunge range plus its leash (issue #130, ND-11). */
 function chaseBand(tuning: PredatorTuning): number {
   if (!tuning.chase) throw new Error('chaseBand: every Area 4 predator chases');
-  return tuning.chase.leash + Math.max(tuning.chase.sight, tuning.lungeRange);
+  return tuning.lungeRange + tuning.chase.leash;
 }
 
 describe('risk fairness on the default Area 4 zone', () => {
@@ -66,15 +66,15 @@ describe('risk fairness on the default Area 4 zone', () => {
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
-  it('clears a chasing tilapia by its leash plus its sight, 400 px, and the carp by its leash plus its sight, 340 px', () => {
-    expect(chaseBand(CHINAMPA_TILAPIA)).toBe(400);
+  it('clears a chasing tilapia by its lunge range plus its leash, 305 px, and the carp by its lunge range plus its leash, 240 px', () => {
+    expect(chaseBand(CHINAMPA_TILAPIA)).toBe(305);
     expect(zone.predatorRoutes.map((route) => route.species.id)).toEqual(['carp']);
     expect(zone.predatorRoutes[0].species.tuning).toEqual(CHINAMPA_CARP.tuning);
-    expect(chaseBand(CHINAMPA_CARP.tuning)).toBe(340);
+    expect(chaseBand(CHINAMPA_CARP.tuning)).toBe(240);
     expect((zone.movingHazards ?? []).map((pole) => pole.type.id)).toEqual(['punting-pole', 'punting-pole']);
   });
 
-  it.each(spots)('finds a safe start outside the Area 4 lunge range, every chase band and every pole danger zone for $id', (spot) => {
+  it.each(spots)('finds a safe start outside the Area 4 lunge range, every lunge range plus leash and every pole danger zone for $id', (spot) => {
     const start = nearestSafeStart(spot, zone);
     expect(routeDistance(start, zone.tilapiaRoutes)).toBeGreaterThan(CHINAMPA_TILAPIA.lungeRange);
     expect(routeDistance(start, zone.tilapiaRoutes), 'tilapia chase band').toBeGreaterThan(chaseBand(CHINAMPA_TILAPIA));
