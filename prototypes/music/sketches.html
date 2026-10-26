@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glam Gills Music Sketches</title>
+<style>
+/* Layout: a pond window on top that shows each note as a rising bubble, then one card per cue (home, then each habitat), then the plan for the game. */
+:root {
+  --bg: #e9f4f1;
+  --surface: #f8fcfb;
+  --ink: #213041;
+  --muted: #586b74;
+  --line: #c9dfda;
+  --accent: #d9577f;
+  --accent-ink: #ffffff;
+  --water-top: #8fd3cf;
+  --water-bottom: #2f7f8a;
+  --c-melody: #e2668e;
+  --c-chords: #3aa6a0;
+  --c-bass: #3d5f9e;
+  --c-rhythm: #6ea95a;
+  --c-sparkles: #e2b23c;
+  --f-display: "Trebuchet MS", system-ui, sans-serif;
+  --f-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1d22; --surface: #152a2f; --ink: #e5f1ee; --muted: #9ab4b6; --line: #24434a;
+    --accent: #ff8fb1; --accent-ink: #2a0d18; --water-top: #1f5a63; --water-bottom: #0a2229;
+    --c-melody: #ff8fb1; --c-chords: #5fd0c8; --c-bass: #8aa8ec; --c-rhythm: #9ad482; --c-sparkles: #f4cd62;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1d22; --surface: #152a2f; --ink: #e5f1ee; --muted: #9ab4b6; --line: #24434a;
+  --accent: #ff8fb1; --accent-ink: #2a0d18; --water-top: #1f5a63; --water-bottom: #0a2229;
+  --c-melody: #ff8fb1; --c-chords: #5fd0c8; --c-bass: #8aa8ec; --c-rhythm: #9ad482; --c-sparkles: #f4cd62;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; }
+h2 { font-size: 1.6rem; font-weight: 800; }
+h3 { font-size: 1.45rem; font-weight: 800; }
+p { margin: 0; max-width: 65ch; }
+header { display: grid; gap: 8px; }
+.lede { color: var(--muted); font-size: 1.08rem; }
+
+.pond { position: relative; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--line); aspect-ratio: 16 / 6; min-height: 190px; max-width: 100%; }
+.pond canvas { width: 100%; height: 100%; display: block; }
+.pond .now { position: absolute; left: 14px; bottom: 12px; right: 14px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.now strong { font-family: var(--f-display); font-size: 1.35rem; }
+.now .chord { font-variant-numeric: tabular-nums; font-size: .95rem; opacity: .95; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.controls label { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+.controls input[type=range] { width: 160px; accent-color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: .9rem; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--dot); vertical-align: -1px; }
+
+.tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.track { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.track.playing { border-color: var(--accent); }
+.track.future { border-style: dashed; }
+.where { color: var(--muted); font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.meta { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: .92rem; margin: 0; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; font-variant-numeric: tabular-nums; }
+.prog { font-family: var(--f-display); font-weight: 600; font-size: 1rem; display: flex; flex-wrap: wrap; gap: 4px; }
+.prog span { padding: 0 7px; border-radius: 6px; border: 1px solid var(--line); }
+.prog span.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.play { font: 800 1.1rem var(--f-display); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 8px 20px; cursor: pointer; min-height: 44px; }
+.seg { display: inline-flex; border: 2px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { font: 700 .88rem var(--f-body); background: transparent; color: var(--ink); border: 0; padding: 6px 12px; cursor: pointer; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.play:focus-visible, .chip:focus-visible, .seg button:focus-visible, input:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 700 .85rem var(--f-body); border: 2px solid var(--dot); color: var(--ink); background: transparent; border-radius: 999px; padding: 3px 11px; cursor: pointer; min-height: 32px; }
+.chip[aria-pressed="true"] { background: var(--dot); color: var(--bg); }
+
+.plan { display: grid; gap: 12px; border-top: 2px solid var(--line); padding-top: 24px; }
+.plan ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 72ch; }
+.map { overflow-x: auto; }
+.map table { border-collapse: collapse; min-width: 520px; font-size: .95rem; }
+.map th, .map td { text-align: left; padding: 6px 14px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.map th { color: var(--muted); font-weight: 700; }
+code { font-size: .9em; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Glam Gills Music Sketches</h1>
+    <p class="lede">One cue for the Home Tank and one for each habitat. Every sound is made live in the browser with Web Audio, with no audio files and no downloads, so it can go straight into the game without breaking the no-network rule. Tap a cue to hear it, and switch parts on and off to find the mix you like.</p>
+  </header>
+
+  <div class="pond" id="pond">
+    <canvas id="viz" aria-hidden="true"></canvas>
+    <div class="now" aria-live="polite"><strong id="nowName">Pick a cue to start</strong><span class="chord" id="nowChord"></span></div>
+  </div>
+
+  <div class="controls">
+    <label for="vol">Volume <input id="vol" type="range" min="0" max="100" value="60"></label>
+    <div class="legend">
+      <span style="--dot: var(--c-melody)">Tune</span>
+      <span style="--dot: var(--c-chords)">Chords</span>
+      <span style="--dot: var(--c-bass)">Bass</span>
+      <span style="--dot: var(--c-rhythm)">Percussion</span>
+      <span style="--dot: var(--c-sparkles)">Bubbles, hops and drips</span>
+    </div>
+  </div>
+
+  <section class="tracks" id="tracks"></section>
+
+  <section class="plan">
+    <h2>Which cue plays where</h2>
+    <div class="map">
+      <table>
+        <thead><tr><th>Screen</th><th>Cue</th><th>Picked by</th></tr></thead>
+        <tbody>
+          <tr><td>Title, Home Tank, creator, area map, refuge</td><td>Sunny Tank</td><td>Home side of the game</td></tr>
+          <tr><td>Area 1</td><td>Canal Paddle</td><td>Habitat <code>canal</code></td></tr>
+          <tr><td>A future dusk or night canal area</td><td>Canal Paddle, dusk version</td><td>Habitat <code>canal</code> with a dusk look</td></tr>
+          <tr><td>Area 2</td><td>Lily Pad Hop</td><td>Habitat <code>pond</code></td></tr>
+          <tr><td>Area 3</td><td>Lily Pad Hop, dusk version</td><td>Habitat <code>pond</code> with the dusk look</td></tr>
+          <tr><td>Areas 4 and 5</td><td>Garden Boats</td><td>Habitat <code>chinampa</code></td></tr>
+          <tr><td>A future dusk or night chinampa area</td><td>Garden Boats, dusk version</td><td>Habitat <code>chinampa</code> with a dusk look</td></tr>
+          <tr><td>A future habitat</td><td>Its own cue, such as Cenote Glow</td><td>A new entry keyed by its habitat id</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h2>How these would go into the game</h2>
+    <ul>
+      <li>Cues are plain data in <code>src/logic/music.ts</code>, keyed by habitat id, with tests, like the other game rules. A test checks that every habitat in <code>HABITATS</code> has a cue, so a new habitat cannot ship silent.</li>
+      <li>The rule: an area picks its cue by habitat, and a dusk or night area plays the dusk version of that same cue. Area 3 still sounds like the pond, just sleepier. Every habitat cue has a dusk version, made by one shared rule (slower, a music box for the tune, soft chords, no drums, fireflies), so a new dusk area never needs new music.</li>
+      <li>The synth that plays the cues lives in <code>src/platform/</code>, because it is browser glue. No new dependencies and no audio files.</li>
+      <li>Music starts after the first tap, which browsers require anyway. A music on/off button sits on the title screen and in the Home Tank, and the choice is saved on the device.</li>
+      <li>Cues cross-fade when the scene changes. Swim music stays the same when a predator warns, so music never makes a moment feel scary.</li>
+      <li>Requirements: PRD N6 and M1 to M12, ADR 0025, and <code>docs/music-guide.md</code>.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- Notes ----------
+  const LETTERS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  function midi(name) {
+    const m = /^([A-G])([#b]?)(-?\d)$/.exec(name);
+    const n = LETTERS[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+    return (Number(m[3]) + 1) * 12 + n;
+  }
+  const notes = (s) => s.split(' ').map(midi);
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function mulberry32(a) {
+    return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const melody = (bars) => bars.map((bar) => bar.map(([step, n, len]) => ({ step, m: midi(n), len })));
+  const pick = (rng, list) => list[Math.floor(rng() * list.length)];
+
+  // ---------- Dusk versions ----------
+  // Any dusk or night area keeps its habitat's tune and chords. Only the playing changes: slower,
+  // a music box for the tune, soft held chords, no drums, and fireflies.
+  function duskStep(tr, e) {
+    const { t, bar, st, pass, rng, stepDur, chord, chordStart, chordSteps } = e;
+    const beat = tr.stepsPerBeat;
+    if (chordStart) {
+      V.pad(t, chord.notes, stepDur * chordSteps * 1.02, 0.05, 'chords');
+      V.bass(t, chord.root, 0.28, stepDur * Math.min(4, chordSteps), 'bass');
+    } else if (st % beat === 0) {
+      V.kalimba(t, chord.notes[1], 0.06, 'chords');
+      V.kalimba(t + 0.015, chord.notes[2], 0.05, 'chords');
+    }
+    if (st % beat === beat - 1) V.shaker(t, 0.012, 'rhythm');
+    const p = pass % 4;
+    const hit = tr.tune[bar].find((n) => n.step === st);
+    if (hit) {
+      V.musicBox(t, hit.m < midi('C5') ? hit.m + 12 : hit.m, p === 2 ? 0.14 : 0.22, 'melody');
+      if (p === 1 && rng() < 0.4) V.musicBox(t + stepDur, hit.m + 12, 0.06, 'melody');
+    }
+    if (rng() < 0.14) {
+      V.firefly(t + rng() * stepDur, midi(tr.tonic + '6') + pick(rng, [0, 2, 4, 7, 9]) + (rng() < 0.3 ? 12 : 0), 0.045, 'sparkles');
+    }
+  }
+
+  // ---------- The cues ----------
+  const TRACKS = [
+    {
+      id: 'home',
+      name: 'Sunny Tank',
+      where: 'Home Tank, title, creator, area map, refuge',
+      blurb: 'Cozy but happy. A smiley kalimba tune with a little ukulele strum, soft taps and a whistle that joins in the second time round. A sunny E7 to Am lift, and a warm Cm near the end, like a hug.',
+      key: 'G major', meter: '4/4, swung', bpm: 96, beatsPerBar: 4, stepsPerBeat: 2, swing: 0.16,
+      layers: ['melody', 'chords', 'bass', 'rhythm', 'sparkles'],
+      chords: [
+        ['G', 'G3 B3 D4', 'G2'], ['Bm', 'F#3 B3 D4', 'B2'], ['C', 'G3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D3'],
+        ['G', 'G3 B3 D4', 'G2'], ['E7', 'G#3 B3 D4 E4', 'E2'], [['Am', 'A3 C4 E4', 'A2'], ['Cm', 'G3 C4 Eb4', 'C3']], [['G', 'G3 B3 D4', 'G2'], ['D', 'F#3 A3 D4', 'D3']],
+      ],
+      tune: melody([
+        [[0, 'B4', 1], [1, 'D5', 1], [2, 'G5', 3], [5, 'F#5', 1], [6, 'G5', 2]],
+        [[0, 'F#5', 2], [2, 'D5', 2], [4, 'B4', 3], [7, 'D5', 1]],
+        [[0, 'E5', 1], [1, 'E5', 1], [2, 'G5', 2], [4, 'E5', 2], [6, 'C5', 2]],
+        [[0, 'D5', 4], [4, 'A4', 2], [6, 'B4', 1], [7, 'C5', 1]],
+        [[0, 'B4', 1], [1, 'D5', 1], [2, 'G5', 3], [5, 'A5', 1], [6, 'B5', 2]],
+        [[0, 'G#5', 2], [2, 'E5', 2], [4, 'D5', 2], [6, 'B4', 2]],
+        [[0, 'C5', 2], [2, 'E5', 2], [4, 'Eb5', 2], [6, 'C5', 2]],
+        [[0, 'B4', 2], [2, 'G4', 2], [4, 'A4', 4]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        if (st === 0 || st === 4) V.bass(t, chord.root + (st === 4 && rng() < 0.4 ? 7 : 0), st === 0 ? 0.34 : 0.26, stepDur * 3, 'bass');
+        if (st === 3 || st === 7) V.bass(t, chord.root + 12, 0.1, stepDur, 'bass');
+        // Ukulele: a full strum on 2 and 4, a light one on the "and" of each beat.
+        if (st === 2 || st === 6) V.strumPluck(t, chord.notes.map((m) => m + 12), 0.14, 'uke', 'chords');
+        else if (st % 2 === 1) V.strumPluck(t, chord.notes.slice(1).map((m) => m + 12), 0.05, 'uke', 'chords');
+        if (st === 2 || st === 6) V.tap(t, 0.12, 'rhythm');
+        if (st % 2 === 1) V.shaker(t, 0.022, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (hit && p !== 3) {
+          V.kalimba(t, hit.m, 0.3, 'melody');
+          if (p === 1) V.whistle(t, hit.m + 12, 0.045, hit.len * stepDur, 'melody');
+          if (p === 2 && st % 4 === 0) V.kalimba(t, hit.m - 5, 0.1, 'melody');
+        }
+        if (p === 3 && st % 2 === 0 && rng() < 0.5) V.kalimba(t, midi('G5') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.16, 'melody');
+        if ((bar === 3 || bar === 7) && st === 7) V.bubble(t, 0.07, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'canal',
+      name: 'Canal Paddle',
+      where: 'Canal · Area 1',
+      blurb: 'A bouncy marimba tune in a lilting 6/8, with a strummed beat that sometimes flips from 1-2-3 4-5-6 to 1-2 3-4 5-6, a nod to the son music of Mexico. Bubble pops end each phrase.',
+      key: 'G major', meter: '6/8 lilt', bpm: 68, beatsPerBar: 2, stepsPerBeat: 3, swing: 0, tonic: 'G',
+      variants: { day: { label: 'Day', bpm: 68, swing: 0 }, dusk: { label: 'Dusk', bpm: 54, swing: 0 } },
+      variant: 'day',
+      layers: ['melody', 'chords', 'bass', 'rhythm', 'sparkles'],
+      chords: [
+        ['G', 'G3 B3 D4', 'G2'], ['C', 'G3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D3'], ['G', 'G3 B3 D4', 'G2'],
+        ['C', 'G3 C4 E4', 'C3'], ['G', 'G3 B3 D4', 'G2'], [['Am', 'A3 C4 E4', 'A2'], ['D', 'F#3 A3 D4', 'D3']], ['G', 'G3 B3 D4', 'G2'],
+      ],
+      tune: melody([
+        [[0, 'D5', 2], [2, 'B4', 1], [3, 'D5', 2], [5, 'G5', 1]],
+        [[0, 'E5', 2], [2, 'C5', 1], [3, 'E5', 2], [5, 'G5', 1]],
+        [[0, 'F#5', 1], [1, 'E5', 1], [2, 'D5', 1], [3, 'C5', 1], [4, 'B4', 1], [5, 'A4', 1]],
+        [[0, 'B4', 3], [3, 'G4', 3]],
+        [[0, 'E5', 2], [2, 'E5', 1], [3, 'G5', 2], [5, 'E5', 1]],
+        [[0, 'D5', 2], [2, 'B4', 1], [3, 'G4', 2], [5, 'B4', 1]],
+        [[0, 'C5', 1], [1, 'B4', 1], [2, 'A4', 1], [3, 'F#4', 1], [4, 'A4', 1], [5, 'C5', 1]],
+        [[0, 'B4', 2], [2, 'A4', 1], [3, 'G4', 3]],
+      ]),
+      step(e) {
+        if (this.variant === 'dusk') return duskStep(this, e);
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const hemiola = bar === 3 || bar === 7;
+        const accent = (hemiola ? [0, 2, 4] : [0, 3]).includes(st);
+        V.strum(t, chord.notes, accent ? 0.13 : 0.045, 'chords');
+        if (accent) {
+          const fifth = st !== 0 && !(hemiola && st === 4);
+          V.bass(t, chord.root + (fifth ? 7 : 0), st === 0 ? 0.42 : 0.3, stepDur * 2, 'bass');
+          V.kick(t, st === 0 ? 0.32 : 0.16, 'rhythm');
+        }
+        V.shaker(t, accent ? 0.06 : 0.028, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        const improvise = p === 3 && bar >= 4;
+        if (hit && !improvise) {
+          V.marimba(t, hit.m, 0.32, 'melody');
+          if (p === 1) V.kalimba(t, hit.m + 12, 0.1, 'melody');
+          if (p === 2 && st % 3 === 0) V.marimba(t, hit.m - 4, 0.12, 'melody');
+        }
+        if (improvise && rng() < 0.55) V.marimba(t, midi('G4') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.24, 'melody');
+        if (hemiola && st === 5) { V.bubble(t, 0.09, 'sparkles'); V.bubble(t + stepDur * 0.5, 0.07, 'sparkles'); }
+        else if (rng() < 0.04) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'pond',
+      name: 'Lily Pad Hop',
+      where: 'Lily pad pond · Areas 2 and 3',
+      blurb: 'A skippy flute tune that leaps up like a frog, with plucky strings, wood-block ticks and a boing at the end of each phrase. Area 3 plays its dusk version.',
+      key: 'F major', meter: '4/4', bpm: 104, beatsPerBar: 4, stepsPerBeat: 2, swing: 0, tonic: 'F',
+      variants: { day: { label: 'Day · Area 2', bpm: 104, swing: 0 }, dusk: { label: 'Dusk · Area 3', bpm: 80, swing: 0.12 } },
+      variant: 'day',
+      layers: ['melody', 'chords', 'bass', 'rhythm', 'sparkles'],
+      chords: [
+        ['F', 'F3 A3 C4', 'F2'], ['Dm', 'F3 A3 D4', 'D3'], ['Gm', 'G3 Bb3 D4', 'G2'], ['C', 'G3 C4 E4', 'C3'],
+        ['F', 'F3 A3 C4', 'F2'], ['A7', 'G3 C#4 E4', 'A2'], [['Bb', 'F3 Bb3 D4', 'Bb2'], ['C', 'G3 C4 E4', 'C3']], ['F', 'F3 A3 C4', 'F2'],
+      ],
+      tune: melody([
+        [[0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'G5', 1], [5, 'F5', 1], [6, 'C5', 2]],
+        [[0, 'D5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'F5', 2], [6, 'D5', 2]],
+        [[0, 'Bb4', 1], [1, 'D5', 1], [2, 'G5', 2], [4, 'F5', 1], [5, 'D5', 1], [6, 'Bb4', 2]],
+        [[0, 'C5', 2], [2, 'E5', 2], [4, 'G5', 4]],
+        [[0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'C6', 2], [6, 'A5', 2]],
+        [[0, 'C#5', 1], [1, 'E5', 1], [2, 'A5', 2], [4, 'G5', 2], [6, 'E5', 2]],
+        [[0, 'D5', 2], [2, 'F5', 2], [4, 'E5', 2], [6, 'G5', 2]],
+        [[0, 'F5', 3], [3, 'C5', 1], [4, 'F5', 4]],
+      ]),
+      step(e) {
+        if (this.variant === 'dusk') return duskStep(this, e);
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        // Plucked strings go oom-pah, wood block ticks, flute leads.
+        if (st % 4 === 0) V.pluck(t, chord.root + (st === 4 ? 7 : 0), 0.38, 'pizz', 'bass');
+        if (st === 7 && rng() < 0.5) V.pluck(t, chord.root + 11, 0.2, 'pizz', 'bass');
+        if (st % 4 === 2) V.strumPluck(t, chord.notes, 0.1, 'pizz', 'chords');
+        if (st % 2 === 0) V.woodblock(t, st % 4 === 0 ? 0.06 : 0.035, st % 4 === 0 ? 1 : 1.3, 'rhythm');
+        if (st % 2 === 1) V.shaker(t, 0.02, 'rhythm');
+        if (hit && p !== 3) {
+          V.whistle(t, hit.m, 0.075, hit.len * stepDur, 'melody');
+          if (p !== 0) V.marimba(t, hit.m, p === 2 ? 0.16 : 0.1, 'melody');
+        }
+        if (p === 3 && rng() < 0.4) V.marimba(t, midi('F5') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.22, 'melody');
+        if ((bar === 3 || bar === 7) && st === 6) V.boing(t, 0.08, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'chinampa',
+      name: 'Garden Boats',
+      where: 'Chinampa gardens · Areas 4 and 5',
+      blurb: 'A sunny little adventure for the busiest areas. Nylon guitar strums a 3-3-2 beat, with guiro scrapes and a soft box drum, like a trajinera band floating by. The C natural gives it a bright, open sound.',
+      key: 'D mixolydian', meter: '4/4, 3-3-2 beat', bpm: 112, beatsPerBar: 4, stepsPerBeat: 2, swing: 0.06, tonic: 'D',
+      variants: { day: { label: 'Day', bpm: 112, swing: 0.06 }, dusk: { label: 'Dusk', bpm: 86, swing: 0.12 } },
+      variant: 'day',
+      layers: ['melody', 'chords', 'bass', 'rhythm', 'sparkles'],
+      chords: [
+        ['D', 'F#3 A3 D4', 'D2'], ['C', 'E3 G3 C4', 'C3'], ['G', 'G3 B3 D4', 'G2'], ['D', 'F#3 A3 D4', 'D2'],
+        ['Bm', 'F#3 B3 D4', 'B2'], ['G', 'G3 B3 D4', 'G2'], [['Em', 'G3 B3 E4', 'E2'], ['A', 'E3 A3 C#4', 'A2']], ['D', 'F#3 A3 D4', 'D2'],
+      ],
+      tune: melody([
+        [[0, 'A4', 1], [1, 'D5', 1], [3, 'F#5', 2], [5, 'E5', 1], [6, 'D5', 2]],
+        [[0, 'E5', 1], [1, 'G5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'C5', 2]],
+        [[0, 'B4', 1], [1, 'D5', 1], [3, 'G5', 2], [5, 'F#5', 1], [6, 'E5', 1], [7, 'D5', 1]],
+        [[0, 'F#5', 3], [3, 'A5', 3], [6, 'F#5', 2]],
+        [[0, 'F#5', 1], [1, 'F#5', 1], [3, 'D5', 2], [5, 'B4', 1], [6, 'D5', 2]],
+        [[0, 'G5', 1], [1, 'F#5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'B4', 2]],
+        [[0, 'E5', 2], [2, 'G5', 2], [4, 'E5', 1], [5, 'C#5', 1], [6, 'A4', 2]],
+        [[0, 'D5', 3], [3, 'A4', 1], [4, 'D5', 4]],
+      ]),
+      step(e) {
+        if (this.variant === 'dusk') return duskStep(this, e);
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const tresillo = st === 0 || st === 3 || st === 6;
+        if (tresillo) V.bass(t, chord.root + (st === 3 ? 7 : st === 6 ? 12 : 0), st === 0 ? 0.42 : 0.3, stepDur * 2.5, 'bass');
+        if (tresillo) V.strumPluck(t, chord.notes.concat(chord.notes[0] + 12), 0.15, 'guitar', 'chords');
+        else if (st === 1 || st === 5) V.strumPluck(t, chord.notes.slice(1).map((m) => m + 12), 0.05, 'guitar', 'chords');
+        if (st === 0) V.kick(t, 0.3, 'rhythm');
+        if (st === 2 || st === 6) V.slap(t, 0.09, 'rhythm');
+        if (st === 1 || st === 5) V.guiro(t, 0.05, stepDur * 0.8, 'rhythm');
+        if (st === 3 || st === 7) V.shaker(t, 0.03, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (hit && !(p === 3 && bar >= 4)) {
+          V.marimba(t, hit.m, 0.3, 'melody');
+          if (p === 1 || p === 2) V.whistle(t, hit.m + (p === 2 ? 12 : 0), 0.04, hit.len * stepDur, 'melody');
+        }
+        if (p === 3 && bar >= 4 && rng() < 0.5) V.marimba(t, midi('D5') + pick(rng, [0, 2, 4, 7, 9, 10, 12]), 0.24, 'melody');
+        if (bar === 7 && st === 6) V.bubble(t, 0.08, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'cenote',
+      future: true,
+      name: 'Cenote Glow',
+      where: 'Future habitat idea · Cenote caves',
+      blurb: 'A sample of how a new habitat gets its own cue. Glassy bells echo in a cool, wide space, with water drips and a deep, soft hum. Calm and full of wonder, never spooky.',
+      key: 'E dorian', meter: '4/4, slow', bpm: 66, beatsPerBar: 4, stepsPerBeat: 2, swing: 0, echo: 0.4,
+      layers: ['melody', 'chords', 'bass', 'sparkles'],
+      chords: [
+        ['Em9', 'E3 G3 B3 F#4', 'E2'], ['A', 'E3 A3 C#4', 'A2'], ['Cmaj7', 'G3 B3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D2'],
+        ['Em9', 'E3 G3 B3 F#4', 'E2'], ['A', 'E3 A3 C#4', 'A2'], ['Cmaj7', 'G3 B3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D2'],
+      ],
+      tune: melody([
+        [[0, 'B4', 4], [4, 'E5', 4]],
+        [[0, 'C#5', 6], [6, 'E5', 2]],
+        [[0, 'G5', 4], [4, 'F#5', 2], [6, 'E5', 2]],
+        [[0, 'F#5', 8]],
+        [[0, 'B4', 4], [4, 'E5', 2], [6, 'F#5', 2]],
+        [[0, 'A5', 4], [4, 'G5', 2], [6, 'F#5', 2]],
+        [[0, 'E5', 4], [4, 'G5', 4]],
+        [[0, 'F#5', 4], [4, 'D5', 4]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        if (st === 0) { V.pad(t, chord.notes, stepDur * 8.2, 0.055, 'chords'); V.bass(t, chord.root, 0.3, stepDur * 6, 'bass'); }
+        if (st % 2 === 1 && rng() < 0.35) V.glass(t, chord.notes[Math.floor(rng() * chord.notes.length)] + 12, 0.05, 'chords');
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (hit && pass % 3 !== 2) V.glass(t, hit.m, 0.2, 'melody');
+        if (pass % 3 === 2 && st % 4 === 0 && rng() < 0.6) V.glass(t, midi('E5') + pick(rng, [0, 3, 5, 7, 10, 12]), 0.14, 'melody');
+        if (rng() < 0.1) V.drip(t + rng() * stepDur, 0.07, 'sparkles');
+      },
+    },
+  ];
+  for (const tr of TRACKS) {
+    tr.chords = tr.chords.map((c) => {
+      const one = (x) => ({ name: x[0], notes: notes(x[1]), root: midi(x[2]) });
+      return Array.isArray(c[0]) ? [one(c[0]), one(c[1])] : [one(c)];
+    });
+    tr.enabled = Object.fromEntries(tr.layers.map((l) => [l, true]));
+  }
+  const bpmOf = (tr) => (tr.variants ? tr.variants[tr.variant].bpm : tr.bpm);
+  const swingOf = (tr) => (tr.variants ? tr.variants[tr.variant].swing : tr.swing);
+  const stepDurOf = (tr) => 60 / bpmOf(tr) / tr.stepsPerBeat;
+
+  // ---------- Audio ----------
+  let ctx = null, master, reverbIn, echoIn, noiseBuf;
+  const layerGain = {};
+  const LAYERS = ['melody', 'chords', 'bass', 'rhythm', 'sparkles'];
+  function initAudio() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3;
+    master = ctx.createGain();
+    master.gain.value = volume();
+    const warm = ctx.createBiquadFilter();
+    warm.type = 'lowpass'; warm.frequency.value = 7500;
+    master.connect(warm); warm.connect(comp); comp.connect(ctx.destination);
+    // A soft room reverb made from decaying noise.
+    const conv = ctx.createConvolver();
+    const len = Math.floor(ctx.sampleRate * 2.4);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+    conv.buffer = ir;
+    reverbIn = ctx.createGain(); reverbIn.gain.value = 0.32;
+    reverbIn.connect(conv); conv.connect(master);
+    // An echo for cave-like cues, off unless a cue asks for it.
+    echoIn = ctx.createGain(); echoIn.gain.value = 0;
+    const delay = ctx.createDelay(1); delay.delayTime.value = 0.42;
+    const fb = ctx.createGain(); fb.gain.value = 0.38;
+    const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2400;
+    echoIn.connect(delay); delay.connect(dlp); dlp.connect(fb); fb.connect(delay); dlp.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    for (const l of LAYERS) {
+      const g = ctx.createGain();
+      g.connect(master); g.connect(reverbIn); g.connect(echoIn);
+      layerGain[l] = g;
+    }
+  }
+  function env(g, t, attack, peak, decay) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+  }
+  function tone(t, freq, type, attack, peak, decay, dest) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    env(g, t, attack, peak, decay);
+    o.connect(g); g.connect(dest);
+    o.start(t); o.stop(t + attack + decay + 0.05);
+    return o;
+  }
+  function noise(t, dur, dest) {
+    const s = ctx.createBufferSource();
+    s.buffer = noiseBuf; s.connect(dest);
+    s.start(t, Math.random() * 0.8); s.stop(t + dur);
+  }
+  // Plucked strings by the Karplus-Strong method, rendered once per note and kept.
+  const PLUCKS = { guitar: { dur: 1.6, keep: 0.996, soft: 0.6 }, uke: { dur: 0.9, keep: 0.992, soft: 0.35 }, pizz: { dur: 0.45, keep: 0.982, soft: 0.7 } };
+  const pluckCache = new Map();
+  function pluckBuffer(m, kind) {
+    const key = kind + m;
+    if (pluckCache.has(key)) return pluckCache.get(key);
+    const sr = ctx.sampleRate, f = mtof(m), cfg = PLUCKS[kind];
+    const n = Math.max(2, Math.floor(sr / f - 0.5));
+    const len = Math.floor(sr * cfg.dur), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    let prev = 0;
+    for (let i = 0; i < n; i++) { const r = Math.random() * 2 - 1; prev = prev * cfg.soft + r * (1 - cfg.soft); d[i] = prev * 2; }
+    for (let i = n; i < len; i++) d[i] = (d[i - n] + d[i - n + 1 < i ? i - n + 1 : i - n]) * 0.5 * cfg.keep;
+    const entry = { buf, rate: f / (sr / (n + 0.5)) };
+    pluckCache.set(key, entry);
+    return entry;
+  }
+  const V = {
+    kalimba(t, m, v, layer) {
+      const f = mtof(m), out = layerGain[layer];
+      tone(t, f, 'sine', 0.004, v, 1.3, out);
+      tone(t, f * 2, 'triangle', 0.003, v * 0.12, 0.25, out);
+      tone(t, f * 5.4, 'sine', 0.002, v * 0.1, 0.05, out);
+      viz(t, m, layer, v);
+    },
+    marimba(t, m, v, layer) {
+      const f = mtof(m), out = layerGain[layer];
+      tone(t, f, 'sine', 0.003, v, 0.55, out);
+      tone(t, f * 3.98, 'sine', 0.002, v * 0.22, 0.07, out);
+      tone(t, f * 9.2, 'sine', 0.001, v * 0.05, 0.02, out);
+      viz(t, m, layer, v);
+    },
+    musicBox(t, m, v, layer) {
+      const f = mtof(m), out = layerGain[layer];
+      tone(t, f, 'sine', 0.002, v, 1.8, out);
+      tone(t, f * 4.01, 'sine', 0.001, v * 0.12, 0.3, out);
+      tone(t, f * 2, 'sine', 0.002, v * 0.08, 0.6, out);
+      viz(t, m, layer, v);
+    },
+    glass(t, m, v, layer) {
+      const f = mtof(m), out = layerGain[layer];
+      tone(t, f, 'sine', 0.004, v, 2.6, out);
+      tone(t, f * 2.76, 'sine', 0.003, v * 0.25, 0.9, out);
+      tone(t, f * 5.4, 'sine', 0.002, v * 0.08, 0.3, out);
+      viz(t, m, layer, v);
+    },
+    whistle(t, m, v, dur, layer) {
+      const f = mtof(m), out = layerGain[layer];
+      const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + 0.25);
+      lfo.connect(lg); lg.connect(o.frequency);
+      const hold = Math.max(0.08, dur * 0.85);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(v, t + 0.035);
+      g.gain.setValueAtTime(v, t + hold);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + hold + 0.14);
+      o.connect(g); g.connect(out);
+      o.start(t); lfo.start(t); o.stop(t + hold + 0.2); lfo.stop(t + hold + 0.2);
+      // A breath of air at the start.
+      const bp = ctx.createBiquadFilter(), bg = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 3;
+      env(bg, t, 0.01, v * 0.5, 0.06);
+      bp.connect(bg); bg.connect(out); noise(t, 0.1, bp);
+      viz(t, m, layer, v * 3);
+    },
+    firefly(t, m, v, layer) {
+      const o = tone(t, mtof(m), 'sine', 0.02, v, 0.7, layerGain[layer]);
+      o.detune.setValueAtTime(-8, t); o.detune.linearRampToValueAtTime(8, t + 0.7);
+      viz(t, m, layer, v);
+    },
+    pluck(t, m, v, kind, layer) {
+      const { buf, rate } = pluckBuffer(m, kind);
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = buf; s.playbackRate.value = rate; g.gain.value = v;
+      s.connect(g); g.connect(layerGain[layer]); s.start(t);
+      viz(t, m, layer, v * 0.6);
+    },
+    strumPluck(t, ns, v, kind, layer) {
+      ns.forEach((m, i) => {
+        const { buf, rate } = pluckBuffer(m, kind);
+        const s = ctx.createBufferSource(), g = ctx.createGain();
+        s.buffer = buf; s.playbackRate.value = rate; g.gain.value = v * (1 - i * 0.08);
+        s.connect(g); g.connect(layerGain[layer]); s.start(t + i * 0.014);
+      });
+      if (v > 0.08) viz(t, ns[ns.length - 1], layer, v);
+    },
+    strum(t, ns, v, layer) {
+      ns.forEach((m, i) => {
+        const at = t + i * 0.012, f = mtof(m), out = layerGain[layer];
+        tone(at, f, 'triangle', 0.003, v * 0.7, 0.28, out);
+        tone(at, f * 2, 'sine', 0.002, v * 0.2, 0.12, out);
+      });
+      if (v > 0.08) viz(t, ns[ns.length - 1], layer, v);
+    },
+    pad(t, ns, dur, v, layer) {
+      const out = layerGain[layer];
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 950; lp.Q.value = 0.4;
+      const g = ctx.createGain();
+      const attack = Math.min(0.9, dur * 0.3), release = 1.2;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(v, t + attack);
+      g.gain.setValueAtTime(v, t + dur - 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + release);
+      lp.connect(g); g.connect(out);
+      for (const m of ns) for (const cents of [-7, 7]) {
+        const o = ctx.createOscillator();
+        o.type = 'triangle'; o.frequency.value = mtof(m); o.detune.value = cents;
+        o.connect(lp); o.start(t); o.stop(t + dur + release + 0.1);
+      }
+      viz(t, ns[0], layer, v * 4);
+    },
+    bass(t, m, v, dur, layer) {
+      const out = layerGain[layer], f = mtof(m);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 520;
+      lp.connect(out);
+      tone(t, f, 'triangle', 0.006, v, Math.min(dur, 0.7), lp);
+      tone(t, f, 'sine', 0.006, v * 0.6, Math.min(dur, 0.7), lp);
+      viz(t, m, layer, v);
+    },
+    shaker(t, v, layer) {
+      const hp = ctx.createBiquadFilter(), g = ctx.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 6000;
+      env(g, t, 0.004, v, 0.05);
+      hp.connect(g); g.connect(layerGain[layer]); noise(t, 0.08, hp);
+    },
+    tap(t, v, layer) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 1.2;
+      env(g, t, 0.002, v, 0.04);
+      bp.connect(g); g.connect(layerGain[layer]); noise(t, 0.06, bp);
+      tone(t, 330, 'sine', 0.002, v * 0.5, 0.04, layerGain[layer]);
+      viz(t, 44, layer, v * 0.8);
+    },
+    woodblock(t, v, pitch, layer) {
+      const out = layerGain[layer];
+      tone(t, 880 * pitch, 'sine', 0.001, v, 0.045, out);
+      tone(t, 1430 * pitch, 'sine', 0.001, v * 0.4, 0.025, out);
+      viz(t, 46, layer, v * 2);
+    },
+    slap(t, v, layer) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.9;
+      env(g, t, 0.002, v, 0.09);
+      bp.connect(g); g.connect(layerGain[layer]); noise(t, 0.12, bp);
+      tone(t, 190, 'sine', 0.002, v * 1.2, 0.07, layerGain[layer]);
+      viz(t, 44, layer, v * 2);
+    },
+    guiro(t, v, dur, layer) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 2;
+      const ridges = Math.max(4, Math.round(dur / 0.018));
+      g.gain.setValueAtTime(0.0001, t);
+      for (let k = 0; k < ridges; k++) {
+        const at = t + k * 0.018;
+        g.gain.setValueAtTime(v * (0.6 + 0.4 * (k / ridges)), at);
+        g.gain.setValueAtTime(0.0001, at + 0.008);
+      }
+      bp.connect(g); g.connect(layerGain[layer]); noise(t, ridges * 0.018 + 0.02, bp);
+      viz(t, 42, layer, v * 2);
+    },
+    kick(t, v, layer) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+      env(g, t, 0.004, v, 0.18);
+      o.connect(g); g.connect(layerGain[layer]);
+      o.start(t); o.stop(t + 0.25);
+      viz(t, 40, layer, v * 0.6);
+    },
+    bubble(t, v, layer) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      const base = 500 + Math.random() * 400;
+      o.frequency.setValueAtTime(base, t); o.frequency.exponentialRampToValueAtTime(base * 2.6, t + 0.07);
+      env(g, t, 0.003, v, 0.08);
+      o.connect(g); g.connect(layerGain[layer]);
+      o.start(t); o.stop(t + 0.12);
+      viz(t, 84 + Math.random() * 10, layer, v * 2, true);
+    },
+    boing(t, v, layer) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(720, t + 0.09); o.frequency.exponentialRampToValueAtTime(380, t + 0.28);
+      env(g, t, 0.005, v, 0.3);
+      o.connect(g); g.connect(layerGain[layer]);
+      o.start(t); o.stop(t + 0.36);
+      viz(t, 80, layer, v * 2, true);
+    },
+    drip(t, v, layer) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      const top = 1500 + Math.random() * 900;
+      o.frequency.setValueAtTime(top, t); o.frequency.exponentialRampToValueAtTime(top * 0.35, t + 0.06);
+      env(g, t, 0.002, v, 0.09);
+      o.connect(g); g.connect(layerGain[layer]);
+      o.start(t); o.stop(t + 0.12);
+      viz(t, 88 + Math.random() * 8, layer, v * 2, true);
+    },
+  };
+
+  // ---------- Scheduler ----------
+  let current = null, stepIndex = 0, nextTime = 0, timer = null;
+  const LOOKAHEAD = 0.15;
+  function tick() {
+    const tr = current;
+    const spb = tr.beatsPerBar * tr.stepsPerBeat;
+    while (nextTime < ctx.currentTime + LOOKAHEAD) {
+      const sd = stepDurOf(tr);
+      const bar = Math.floor(stepIndex / spb) % tr.chords.length;
+      const pass = Math.floor(stepIndex / (spb * tr.chords.length));
+      const st = stepIndex % spb;
+      const half = tr.chords[bar];
+      const chord = half.length === 2 && st >= spb / 2 ? half[1] : half[0];
+      const swing = st % 2 === 1 ? sd * swingOf(tr) : 0;
+      const rng = mulberry32((pass * 977 + bar * 131 + st * 17 + tr.id.length * 7919) >>> 0);
+      const split = half.length === 2;
+      const chordStart = st === 0 || (split && st === spb / 2);
+      tr.step({ t: nextTime + swing, bar, st, pass, rng, stepDur: sd, chord, chordStart, chordSteps: split ? spb / 2 : spb });
+      if (st === 0 || (half.length === 2 && st === spb / 2)) showChord(tr, bar, chord, nextTime);
+      nextTime += sd; stepIndex++;
+    }
+  }
+  function play(tr) {
+    initAudio();
+    ctx.resume();
+    applyMix(tr);
+    current = tr; stepIndex = 0; nextTime = ctx.currentTime + 0.12;
+    clearInterval(timer); timer = setInterval(tick, 25); tick();
+    nowName.textContent = nameOf(tr);
+    render();
+  }
+  function stop() {
+    clearInterval(timer); timer = null; current = null;
+    nowName.textContent = 'Pick a cue to start'; nowChord.textContent = '';
+    render();
+  }
+  const nameOf = (tr) => (tr.variants ? `${tr.name} (${tr.variants[tr.variant].label})` : tr.name);
+  function applyMix(tr) {
+    if (!ctx) return;
+    for (const l of LAYERS) layerGain[l].gain.setTargetAtTime(tr.enabled[l] ? 1 : 0, ctx.currentTime, 0.05);
+    echoIn.gain.setTargetAtTime(tr.echo || 0, ctx.currentTime, 0.1);
+  }
+  function showChord(tr, bar, chord, at) {
+    setTimeout(() => {
+      if (current !== tr) return;
+      nowChord.textContent = `Bar ${bar + 1} of ${tr.chords.length} · ${chord.name}`;
+      document.querySelectorAll(`#prog-${tr.id} span`).forEach((s, i) => s.classList.toggle('on', i === bar));
+    }, Math.max(0, (at - ctx.currentTime) * 1000));
+  }
+
+  // ---------- UI ----------
+  const nowName = document.getElementById('nowName');
+  const nowChord = document.getElementById('nowChord');
+  const vol = document.getElementById('vol');
+  function volume() { return (Number(vol.value) / 100) ** 2 * 0.9; }
+  vol.addEventListener('input', () => { if (master) master.gain.setTargetAtTime(volume(), ctx.currentTime, 0.05); });
+  const LABELS = { melody: 'Tune', chords: 'Chords', bass: 'Bass', rhythm: 'Percussion', sparkles: 'Bubbles, hops and drips' };
+  const tracksEl = document.getElementById('tracks');
+  const cards = {};
+  const loopSeconds = (tr) => Math.round(stepDurOf(tr) * tr.beatsPerBar * tr.stepsPerBeat * tr.chords.length);
+  const feelOf = (tr) => `${tr.meter}, ${bpmOf(tr)} bpm`;
+  for (const tr of TRACKS) {
+    const el = document.createElement('article');
+    el.className = 'track' + (tr.future ? ' future' : '');
+    const prog = tr.chords.map((c) => `<span>${c.map((x) => x.name).join(' ')}</span>`).join('');
+    const seg = tr.variants
+      ? `<div class="seg" role="group" aria-label="Version">${Object.entries(tr.variants).map(([k, v]) => `<button type="button" id="var-${tr.id}-${k}" data-variant="${k}" aria-pressed="${k === tr.variant}">${v.label}</button>`).join('')}</div>`
+      : '';
+    el.innerHTML = `
+      <div class="where">${tr.where}</div>
+      <h3>${tr.name}</h3>
+      <p>${tr.blurb}</p>
+      <dl class="meta"><dt>Key</dt><dd>${tr.key}</dd><dt>Feel</dt><dd class="feel">${feelOf(tr)}</dd><dt>Loop</dt><dd class="loop">${tr.chords.length} bars, about ${loopSeconds(tr)} s, with changes each time round</dd></dl>
+      <div class="prog" id="prog-${tr.id}" aria-label="Chords">${prog}</div>
+      <div class="row"><button class="play" type="button" id="play-${tr.id}">Play</button>${seg}</div>
+      <div class="chips" role="group" aria-label="Parts">${tr.layers.map((l) => `<button type="button" class="chip" id="chip-${tr.id}-${l}" data-layer="${l}" aria-pressed="true" style="--dot: var(--c-${l})">${LABELS[l]}</button>`).join('')}</div>`;
+    tracksEl.appendChild(el);
+    cards[tr.id] = el;
+    el.querySelector('.play').addEventListener('click', () => (current === tr ? stop() : play(tr)));
+    el.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
+      const l = chip.dataset.layer;
+      tr.enabled[l] = !tr.enabled[l];
+      chip.setAttribute('aria-pressed', String(tr.enabled[l]));
+      if (current === tr) applyMix(tr);
+    }));
+    el.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+      tr.variant = b.dataset.variant;
+      el.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      el.querySelector('.feel').textContent = feelOf(tr);
+      el.querySelector('.loop').textContent = `${tr.chords.length} bars, about ${loopSeconds(tr)} s, with changes each time round`;
+      if (current === tr) nowName.textContent = nameOf(tr);
+      else play(tr);
+    }));
+  }
+  function render() {
+    for (const tr of TRACKS) {
+      const el = cards[tr.id], on = current === tr;
+      el.classList.toggle('playing', on);
+      el.querySelector('.play').textContent = on ? 'Stop' : 'Play';
+      if (!on) el.querySelectorAll('.prog span').forEach((s) => s.classList.remove('on'));
+    }
+  }
+
+  // ---------- Pond: one bubble per note ----------
+  const canvas = document.getElementById('viz');
+  const g2 = canvas.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let bubbles = [];
+  function viz(t, m, layer, v, pop) {
+    const delay = Math.max(0, (t - ctx.currentTime) * 1000);
+    setTimeout(() => {
+      if (bubbles.length > 160) bubbles.shift();
+      bubbles.push({ x: Math.min(1, Math.max(0, (m - 30) / 70)), born: performance.now(), layer, r: 3 + Math.min(1, v * 3) * 9, pop: !!pop, wob: Math.random() * 6 });
+    }, delay);
+  }
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  function frame(now) {
+    const css = getComputedStyle(document.documentElement);
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const grad = g2.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, css.getPropertyValue('--water-top')); grad.addColorStop(1, css.getPropertyValue('--water-bottom'));
+    g2.fillStyle = grad; g2.fillRect(0, 0, w, h);
+    g2.globalAlpha = 0.12; g2.fillStyle = '#ffffff';
+    for (let i = 0; i < 5; i++) {
+      const y = 10 + i * 9, off = reduce.matches ? 0 : Math.sin(now / 1400 + i) * 30;
+      g2.fillRect(w * 0.1 + off + i * 60, y, w * 0.3, 2);
+    }
+    g2.globalAlpha = 1;
+    const life = 2600;
+    bubbles = bubbles.filter((b) => now - b.born < life);
+    for (const b of bubbles) {
+      const age = (now - b.born) / life;
+      const rise = reduce.matches ? 0 : age * h * 0.8;
+      const x = 20 + b.x * (w - 40) + (reduce.matches ? 0 : Math.sin(age * 8 + b.wob) * 6);
+      const y = h - 30 - rise;
+      g2.globalAlpha = (1 - age) * 0.9;
+      g2.beginPath(); g2.arc(x, y, b.r * (b.pop ? 1 + age : 1), 0, Math.PI * 2);
+      g2.fillStyle = css.getPropertyValue(`--c-${b.layer}`); g2.fill();
+      g2.globalAlpha = (1 - age) * 0.7; g2.fillStyle = '#ffffff';
+      g2.beginPath(); g2.arc(x - b.r * 0.35, y - b.r * 0.35, Math.max(1, b.r * 0.25), 0, Math.PI * 2); g2.fill();
+    }
+    g2.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
