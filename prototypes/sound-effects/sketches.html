@@ -608,7 +608,7 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     const o = Math.floor(i / 5), d = ((i % 5) + 5) % 5;
     return TONIC_MIDI[tonicNow()] + o * 12 + PENTA[d];
   }
-  const chordOf = (shift = 0) => [K(-5) + shift, K(-3) + shift, K(-1) + shift + 0]; // home triad an octave down (1, 3, 5)
+  const chordOf = (shift = 0) => [K(-5) + shift, K(-3) + shift, K(-2) + shift]; // home triad an octave down (1, 3, 5)
   function showKey() {
     const name = { G: 'G major', F: 'F major', D: 'D major' }[tonicNow()];
     document.getElementById('keyNow').textContent = `Sounds play in ${name}${matchKey.checked ? '' : ' (fixed)'}.`;
@@ -774,12 +774,22 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
   };
   const gainFor = (id, arg) => Math.pow(10, (LEVEL_DB[`${id}:${arg}`] ?? LEVEL_DB[id] ?? 0) / 20);
   const lastPlayed = {};
-  function play(id, arg, label) {
+  // One find sound at a time: a find asked for while another plays waits until it ends.
+  const FIND_SECONDS = { common: 0.9, rare: 1.1, epic: 1.6, legendary: 2.3 };
+  let findUntil = 0;
+  function play(id, arg, label, queued = false) {
     initAudio(); ctx.resume();
     const key = id + (arg || '');
-    // The repeat limit: the same sound at most once every 60 ms.
-    if (lastPlayed[key] && ctx.currentTime - lastPlayed[key] < 0.06) return;
-    lastPlayed[key] = ctx.currentTime;
+    if (!queued) {
+      // The repeat limit: the same sound at most once every 60 ms.
+      if (lastPlayed[key] && ctx.currentTime - lastPlayed[key] < 0.06) return;
+      lastPlayed[key] = ctx.currentTime;
+      if (id === 'find') {
+        const start = Math.max(ctx.currentTime, findUntil);
+        findUntil = start + FIND_SECONDS[arg];
+        if (start > ctx.currentTime) { setTimeout(() => play(id, arg, label, true), (start - ctx.currentTime) * 1000); return; }
+      }
+    }
     const stage = ctx.createGain();
     stage.gain.value = gainFor(id, arg);
     stage.connect(sfxBus);

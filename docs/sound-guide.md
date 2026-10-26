@@ -38,7 +38,7 @@ Pitched sounds use the five notes of the major pentatonic scale of the cue that 
 | Garden Boats (day and dusk) | D | D E F# A B |
 | No music (music off) | The cue that would play | The same notes |
 
-A recipe names its notes as steps of that scale: step 0 is the home note in the octave above middle C (G5, F5 or D5), step 5 is the home note an octave up, and step −5 an octave down. The "home chord" is steps −5, −3 and −1 (the major triad on the home note).
+A recipe names its notes as steps of that scale: step 0 is the home note in the octave above middle C (G5, F5 or D5), step 5 is the home note an octave up, and step −5 an octave down. The "home chord" is steps −5, −3 and −2 (the major triad on the home note, an octave down: the home note, its third and its fifth).
 Unpitched sounds (swishes, puffs, taps, clay knocks) do not change with the key.
 
 ## 4. Loudness
