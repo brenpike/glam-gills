@@ -4,13 +4,39 @@
  * the music switch's stored value and labels, and the music levels. The synth that plays the notes is
  * browser glue in src/platform/musicPlayer.ts. Nothing here reads danger, legs or trip state (M5).
  */
+import { CANAL_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, areaTimeOfDay, type AreaData } from './areas';
 import { mulberry32 } from './rng';
 
 /** A part of a cue, which the synth can mix on its own. */
 export type MusicPart = 'tune' | 'chords' | 'bass' | 'percussion' | 'sparkles';
 
 /** A sound the synth makes (docs/music-guide.md, section 2). */
-export type MusicVoice = 'kalimba' | 'whistle' | 'ukulele' | 'bass' | 'tap' | 'shaker' | 'bubble';
+export type MusicVoice =
+  | 'kalimba'
+  | 'marimba'
+  | 'musicBox'
+  | 'whistle'
+  | 'ukulele'
+  | 'guitar'
+  | 'strings'
+  | 'strum'
+  | 'pad'
+  | 'bass'
+  | 'tap'
+  | 'shaker'
+  | 'kick'
+  | 'slap'
+  | 'guiro'
+  | 'woodBlock'
+  | 'bubble'
+  | 'boing'
+  | 'firefly';
+
+/** Voices with no pitch: their notes carry a null MIDI number. */
+export const UNPITCHED_VOICES: readonly MusicVoice[] = Object.freeze(['tap', 'shaker', 'kick', 'slap', 'guiro', 'boing']);
+
+/** Drum voices, which a dusk version never plays (M4). A faint shaker is not a drum. */
+export const DRUM_VOICES: readonly MusicVoice[] = Object.freeze(['tap', 'kick', 'slap', 'guiro', 'woodBlock']);
 
 /** One note to play, timed from the start of its step. */
 export interface MusicNote {
@@ -18,7 +44,7 @@ export interface MusicNote {
   part: MusicPart;
   /** Seconds after the step starts, at least 0 (swing and strums play a little late). */
   at: number;
-  /** MIDI note number; null for an unpitched voice (tap, shaker). */
+  /** MIDI note number; null for an unpitched voice (UNPITCHED_VOICES). */
   midi: number | null;
   /** Loudness, above 0 and at most 1. */
   velocity: number;
@@ -40,6 +66,15 @@ export interface TuneNote {
   len: number;
 }
 
+/** How a cue is played: its own day arrangement, or the shared dusk rule (M4). */
+export type MusicVersion = 'day' | 'dusk';
+
+/** A habitat cue's dusk tempo and swing (PRD Tuning values). */
+export interface DuskPace {
+  bpm: number;
+  swing: number;
+}
+
 /**
  * A cue: an 8-bar loop (docs/music-guide.md, sections 3 and 4). Each bar holds one chord, or two
  * split at the half bar. A step is one subdivision of a beat; `swing` delays every odd step by that
@@ -49,12 +84,19 @@ export interface MusicCue {
   id: string;
   name: string;
   key: string;
+  /** Letter name of the key's home note, such as `'F'`; fireflies chime from its pentatonic notes. */
+  tonic: string;
   bpm: number;
   beatsPerBar: number;
   stepsPerBeat: number;
   swing: number;
   bars: readonly (readonly MusicChord[])[];
   tune: readonly (readonly TuneNote[])[];
+  version: MusicVersion;
+  /** A habitat cue's dusk pace, which its dusk version plays at; absent for the Home cue. */
+  dusk?: Readonly<DuskPace>;
+  /** For a dusk version, the id of the day cue it is made from. */
+  dayId?: string;
 }
 
 /** Where the player is, for choosing a cue (M1, M2). */
@@ -96,6 +138,7 @@ export const SUNNY_TANK: Readonly<MusicCue> = Object.freeze({
   id: SUNNY_TANK_ID,
   name: 'Sunny Tank',
   key: 'G major',
+  tonic: 'G',
   bpm: 96,
   beatsPerBar: 4,
   stepsPerBeat: 2,
@@ -120,24 +163,200 @@ export const SUNNY_TANK: Readonly<MusicCue> = Object.freeze({
     tuneBar([0, 'C5', 2], [2, 'E5', 2], [4, 'Eb5', 2], [6, 'C5', 2]),
     tuneBar([0, 'B4', 2], [2, 'G4', 2], [4, 'A4', 4]),
   ]),
+  version: 'day',
 });
 
-/** Every cue by id. */
-export const MUSIC_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object.freeze({ [SUNNY_TANK_ID]: SUNNY_TANK });
+/** Id of the canal's cue. */
+export const CANAL_PADDLE_ID = 'canal-paddle';
+
+const C = chord('C', 'G3 C4 E4', 'C3');
 
 /**
- * The cue `screen` plays: the Home cue on the Home side (M1). Trips play it too until the habitat
- * cues are built (issue #153, M2).
+ * Canal Paddle, the canal's cue (M3): bouncy and friendly, G major in a 6/8 lilt at 68 dotted-quarter
+ * beats a minute, a marimba tune over strummed chords, with a 1-2 3-4 5-6 flip in bars 4 and 8.
  */
-export function musicCueFor(screen: MusicScreen): Readonly<MusicCue> {
+export const CANAL_PADDLE: Readonly<MusicCue> = Object.freeze({
+  id: CANAL_PADDLE_ID,
+  name: 'Canal Paddle',
+  key: 'G major',
+  tonic: 'G',
+  bpm: 68,
+  beatsPerBar: 2,
+  stepsPerBeat: 3,
+  swing: 0,
+  bars: Object.freeze([
+    bar(G),
+    bar(C),
+    bar(D),
+    bar(G),
+    bar(C),
+    bar(G),
+    bar(chord('Am', 'A3 C4 E4', 'A2'), D),
+    bar(G),
+  ]),
+  tune: Object.freeze([
+    tuneBar([0, 'D5', 2], [2, 'B4', 1], [3, 'D5', 2], [5, 'G5', 1]),
+    tuneBar([0, 'E5', 2], [2, 'C5', 1], [3, 'E5', 2], [5, 'G5', 1]),
+    tuneBar([0, 'F#5', 1], [1, 'E5', 1], [2, 'D5', 1], [3, 'C5', 1], [4, 'B4', 1], [5, 'A4', 1]),
+    tuneBar([0, 'B4', 3], [3, 'G4', 3]),
+    tuneBar([0, 'E5', 2], [2, 'E5', 1], [3, 'G5', 2], [5, 'E5', 1]),
+    tuneBar([0, 'D5', 2], [2, 'B4', 1], [3, 'G4', 2], [5, 'B4', 1]),
+    tuneBar([0, 'C5', 1], [1, 'B4', 1], [2, 'A4', 1], [3, 'F#4', 1], [4, 'A4', 1], [5, 'C5', 1]),
+    tuneBar([0, 'B4', 2], [2, 'A4', 1], [3, 'G4', 3]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 54, swing: 0 }),
+});
+
+/** Id of the lily pad pond's cue. */
+export const LILY_PAD_HOP_ID = 'lily-pad-hop';
+
+const F = chord('F', 'F3 A3 C4', 'F2');
+
+/**
+ * Lily Pad Hop, the lily pad pond's cue (M3): leaps like a frog, F major at 104 bpm, a flute-like
+ * whistle tune over plucked strings going oom-pah, wood block ticks, and a boing at phrase ends.
+ */
+export const LILY_PAD_HOP: Readonly<MusicCue> = Object.freeze({
+  id: LILY_PAD_HOP_ID,
+  name: 'Lily Pad Hop',
+  key: 'F major',
+  tonic: 'F',
+  bpm: 104,
+  beatsPerBar: 4,
+  stepsPerBeat: 2,
+  swing: 0,
+  bars: Object.freeze([
+    bar(F),
+    bar(chord('Dm', 'F3 A3 D4', 'D3')),
+    bar(chord('Gm', 'G3 Bb3 D4', 'G2')),
+    bar(C),
+    bar(F),
+    bar(chord('A7', 'G3 C#4 E4', 'A2')),
+    bar(chord('Bb', 'F3 Bb3 D4', 'Bb2'), C),
+    bar(F),
+  ]),
+  tune: Object.freeze([
+    tuneBar([0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'G5', 1], [5, 'F5', 1], [6, 'C5', 2]),
+    tuneBar([0, 'D5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'F5', 2], [6, 'D5', 2]),
+    tuneBar([0, 'Bb4', 1], [1, 'D5', 1], [2, 'G5', 2], [4, 'F5', 1], [5, 'D5', 1], [6, 'Bb4', 2]),
+    tuneBar([0, 'C5', 2], [2, 'E5', 2], [4, 'G5', 4]),
+    tuneBar([0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'C6', 2], [6, 'A5', 2]),
+    tuneBar([0, 'C#5', 1], [1, 'E5', 1], [2, 'A5', 2], [4, 'G5', 2], [6, 'E5', 2]),
+    tuneBar([0, 'D5', 2], [2, 'F5', 2], [4, 'E5', 2], [6, 'G5', 2]),
+    tuneBar([0, 'F5', 3], [3, 'C5', 1], [4, 'F5', 4]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 80, swing: 0.12 }),
+});
+
+/** Id of the chinampa gardens' cue. */
+export const GARDEN_BOATS_ID = 'garden-boats';
+
+const D_LOW = chord('D', 'F#3 A3 D4', 'D2');
+
+/**
+ * Garden Boats, the chinampa gardens' cue (M3): a sunny adventure, D mixolydian at 112 bpm on a
+ * 3-3-2 beat, a marimba tune over nylon guitar strums, guiro scrapes, and a soft box-drum slap.
+ */
+export const GARDEN_BOATS: Readonly<MusicCue> = Object.freeze({
+  id: GARDEN_BOATS_ID,
+  name: 'Garden Boats',
+  key: 'D mixolydian',
+  tonic: 'D',
+  bpm: 112,
+  beatsPerBar: 4,
+  stepsPerBeat: 2,
+  swing: 0.06,
+  bars: Object.freeze([
+    bar(D_LOW),
+    bar(chord('C', 'E3 G3 C4', 'C3')),
+    bar(G),
+    bar(D_LOW),
+    bar(chord('Bm', 'F#3 B3 D4', 'B2')),
+    bar(G),
+    bar(chord('Em', 'G3 B3 E4', 'E2'), chord('A', 'E3 A3 C#4', 'A2')),
+    bar(D_LOW),
+  ]),
+  tune: Object.freeze([
+    tuneBar([0, 'A4', 1], [1, 'D5', 1], [3, 'F#5', 2], [5, 'E5', 1], [6, 'D5', 2]),
+    tuneBar([0, 'E5', 1], [1, 'G5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'C5', 2]),
+    tuneBar([0, 'B4', 1], [1, 'D5', 1], [3, 'G5', 2], [5, 'F#5', 1], [6, 'E5', 1], [7, 'D5', 1]),
+    tuneBar([0, 'F#5', 3], [3, 'A5', 3], [6, 'F#5', 2]),
+    tuneBar([0, 'F#5', 1], [1, 'F#5', 1], [3, 'D5', 2], [5, 'B4', 1], [6, 'D5', 2]),
+    tuneBar([0, 'G5', 1], [1, 'F#5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'B4', 2]),
+    tuneBar([0, 'E5', 2], [2, 'G5', 2], [4, 'E5', 1], [5, 'C#5', 1], [6, 'A4', 2]),
+    tuneBar([0, 'D5', 3], [3, 'A4', 1], [4, 'D5', 4]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 86, swing: 0.12 }),
+});
+
+/**
+ * The dusk version of habitat cue `cue` (the dusk rule, M4): the same tune and chords at the cue's
+ * dusk pace, played by the shared dusk arrangement. Throws for a cue with no dusk pace (the Home cue)
+ * or one that is already a dusk version.
+ */
+export function duskVersion(cue: Readonly<MusicCue>): Readonly<MusicCue> {
+  if (cue.version !== 'day' || cue.dusk === undefined) throw new Error(`music: no dusk version of cue ${cue.id}`);
+  const { dusk, ...rest } = cue;
+  return Object.freeze({
+    ...rest,
+    id: `${cue.id}-dusk`,
+    name: `${cue.name} (dusk)`,
+    bpm: dusk.bpm,
+    swing: dusk.swing,
+    version: 'dusk',
+    dayId: cue.id,
+  });
+}
+
+/** Each habitat's cue, by habitat id (M3). A new habitat adds its own here. */
+export const HABITAT_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object.freeze({
+  [CANAL_HABITAT.id]: CANAL_PADDLE,
+  [POND_HABITAT.id]: LILY_PAD_HOP,
+  [CHINAMPA_HABITAT.id]: GARDEN_BOATS,
+});
+
+/** Each habitat cue's dusk version, by the day cue's id, made once so the same version is reused. */
+const DUSK_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object.freeze(
+  Object.fromEntries(Object.values(HABITAT_CUES).map((cue) => [cue.id, duskVersion(cue)])),
+);
+
+/** Every cue by id, dusk versions included. */
+export const MUSIC_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object.freeze(
+  Object.fromEntries(
+    [SUNNY_TANK, ...Object.values(HABITAT_CUES), ...Object.values(DUSK_CUES)].map((cue) => [cue.id, cue]),
+  ),
+);
+
+/** What the music rule reads of an area: its habitat and its look (M2, M4). */
+export type MusicArea = Pick<AreaData, 'habitatId' | 'look'>;
+
+/**
+ * The cue a trip to `area` plays (M2, M4): its habitat's cue, in the dusk version when the area's
+ * look is dusk or night. Throws for a habitat with no cue (M3 makes that a test failure).
+ */
+export function tripCueFor(area: Readonly<MusicArea>): Readonly<MusicCue> {
+  const cue = HABITAT_CUES[area.habitatId];
+  if (cue === undefined) throw new Error(`music: no cue for habitat ${area.habitatId}`);
+  return areaTimeOfDay(area) === 'day' ? cue : DUSK_CUES[cue.id];
+}
+
+/**
+ * The cue `screen` plays: the Home cue on the Home side (M1), and on a trip the cue for `area`
+ * (M2, M4). A trip with no area, which the game never starts, plays the Home cue.
+ */
+export function musicCueFor(screen: MusicScreen, area?: Readonly<MusicArea>): Readonly<MusicCue> {
   switch (screen) {
     case 'title':
     case 'homeTank':
     case 'creator':
     case 'areaMap':
     case 'refuge':
-    case 'trip':
       return SUNNY_TANK;
+    case 'trip':
+      return area === undefined ? SUNNY_TANK : tripCueFor(area);
     default: {
       const unhandled: never = screen;
       throw new Error(`music: no cue for screen ${String(unhandled)}`);
@@ -200,6 +419,24 @@ const PENTATONIC: readonly number[] = Object.freeze([0, 2, 4, 7, 9, 12]);
 const STRUM_SPREAD_S = 0.014;
 /** How much quieter each higher string of a strum is. */
 const STRUM_FADE = 0.08;
+/** Seconds between the notes of Canal Paddle's struck strum, which keeps every string as loud. */
+const STRIKE_SPREAD_S = 0.012;
+/** Seconds each voice rings, where its synth sets the length rather than the note. */
+const RING_S = Object.freeze({
+  kalimba: 1.3,
+  marimba: 0.55,
+  musicBox: 1.8,
+  strings: 0.45,
+  guitar: 1.6,
+  strum: 0.28,
+  firefly: 0.7,
+});
+/** Wood block pitches: the beat, and the higher off-beat tick. */
+const WOOD_BLOCK_MIDI = Object.freeze({ beat: noteMidi('A5'), offBeat: noteMidi('D6') });
+/** The pentatonic steps fireflies chime from, above the key's home note in octave 6. */
+const FIREFLY_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9]);
+/** Garden Boats' made-up phrases: the pentatonic steps plus the mixolydian flat 7th. */
+const MIXOLYDIAN_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9, 10, 12]);
 
 function pick<T>(random: () => number, list: readonly T[]): T {
   return list[Math.floor(random() * list.length)];
@@ -209,9 +446,17 @@ function note(voice: MusicVoice, part: MusicPart, midi: number | null, velocity:
   return { voice, part, at, midi, velocity, duration };
 }
 
-/** A strum of `notes` on `voice`, low to high, each string a little later and softer. */
-function strum(voice: MusicVoice, notes: readonly number[], velocity: number, duration: number, at: number): MusicNote[] {
-  return notes.map((midi, i) => note(voice, 'chords', midi, velocity * (1 - i * STRUM_FADE), duration, at + i * STRUM_SPREAD_S));
+/** A strum of `notes` on `voice`, low to high, each string a little later and (by default) softer. */
+function strum(
+  voice: MusicVoice,
+  notes: readonly number[],
+  velocity: number,
+  duration: number,
+  at: number,
+  spread = STRUM_SPREAD_S,
+  fade = STRUM_FADE,
+): MusicNote[] {
+  return notes.map((midi, i) => note(voice, 'chords', midi, velocity * (1 - i * fade), duration, at + i * spread));
 }
 
 /** A bubble pop, its pitch drawn from `random`. */
@@ -244,12 +489,12 @@ function arrangeSunnyTank(cue: Readonly<MusicCue>, place: StepPlace, random: () 
   const pass = place.pass % 4;
   const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
   if (hit !== undefined && pass !== 3) {
-    notes.push(note('kalimba', 'tune', hit.midi, 0.3, 1.3, at));
+    notes.push(note('kalimba', 'tune', hit.midi, 0.3, RING_S.kalimba, at));
     if (pass === 1) notes.push(note('whistle', 'tune', hit.midi + 12, 0.045, hit.len * stepS, at));
-    if (pass === 2 && step % 4 === 0) notes.push(note('kalimba', 'tune', hit.midi - 5, 0.1, 1.3, at));
+    if (pass === 2 && step % 4 === 0) notes.push(note('kalimba', 'tune', hit.midi - 5, 0.1, RING_S.kalimba, at));
   }
   if (pass === 3 && step % 2 === 0 && random() < 0.5) {
-    notes.push(note('kalimba', 'tune', noteMidi('G5') + pick(random, PENTATONIC), 0.16, 1.3, at));
+    notes.push(note('kalimba', 'tune', noteMidi('G5') + pick(random, PENTATONIC), 0.16, RING_S.kalimba, at));
   }
   if ((barIndex === 3 || barIndex === 7) && step === 7) notes.push(bubble(random, 0.07, at));
   else if (random() < 0.03) notes.push(bubble(random, 0.05, at));
@@ -257,16 +502,163 @@ function arrangeSunnyTank(cue: Readonly<MusicCue>, place: StepPlace, random: () 
 }
 
 /**
+ * Canal Paddle's arrangement for one step. A struck strum on every step, accented on 1 and 4 of the
+ * six, flipping to 1, 3 and 5 (the hemiola) in bars 4 and 8, where bubbles end the phrase. The
+ * marimba tune; then a kalimba joins an octave up; then a harmony a third below; then a made-up
+ * marimba phrase in the second half.
+ */
+function arrangeCanalPaddle(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  const hemiola = barIndex === 3 || barIndex === 7;
+  const accent = (hemiola ? [0, 2, 4] : [0, 3]).includes(step);
+  notes.push(...strum('strum', sounding.notes, accent ? 0.13 : 0.045, RING_S.strum, at, STRIKE_SPREAD_S, 0));
+  if (accent) {
+    const fifth = step !== 0 && !(hemiola && step === 4);
+    notes.push(note('bass', 'bass', sounding.root + (fifth ? 7 : 0), step === 0 ? 0.42 : 0.3, stepS * 2, at));
+    notes.push(note('kick', 'percussion', null, step === 0 ? 0.32 : 0.16, 0.18, at));
+  }
+  notes.push(note('shaker', 'percussion', null, accent ? 0.06 : 0.028, 0.05, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  const improvise = pass === 3 && barIndex >= 4;
+  if (hit !== undefined && !improvise) {
+    notes.push(note('marimba', 'tune', hit.midi, 0.32, RING_S.marimba, at));
+    if (pass === 1) notes.push(note('kalimba', 'tune', hit.midi + 12, 0.1, RING_S.kalimba, at));
+    if (pass === 2 && step % 3 === 0) notes.push(note('marimba', 'tune', hit.midi - 4, 0.12, RING_S.marimba, at));
+  }
+  if (improvise && random() < 0.55) {
+    notes.push(note('marimba', 'tune', noteMidi('G4') + pick(random, PENTATONIC), 0.24, RING_S.marimba, at));
+  }
+  if (hemiola && step === 5) {
+    notes.push(bubble(random, 0.09, at), bubble(random, 0.07, at + stepS * 0.5));
+  } else if (random() < 0.04) notes.push(bubble(random, 0.05, at));
+  return notes;
+}
+
+/**
+ * Lily Pad Hop's arrangement for one step. Plucked strings go oom-pah, the wood block ticks, and the
+ * whistle leads; a marimba doubles it on the second and third passes; the fourth makes up a marimba
+ * phrase while the tune rests. A boing ends bars 4 and 8.
+ */
+function arrangeLilyPadHop(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  if (step % 4 === 0) notes.push(note('strings', 'bass', sounding.root + (step === 4 ? 7 : 0), 0.38, RING_S.strings, at));
+  if (step === 7 && random() < 0.5) notes.push(note('strings', 'bass', sounding.root + 11, 0.2, RING_S.strings, at));
+  if (step % 4 === 2) notes.push(...strum('strings', sounding.notes, 0.1, RING_S.strings, at));
+  if (step % 2 === 0) {
+    const beat = step % 4 === 0;
+    notes.push(note('woodBlock', 'percussion', beat ? WOOD_BLOCK_MIDI.beat : WOOD_BLOCK_MIDI.offBeat, beat ? 0.06 : 0.035, 0.045, at));
+  } else notes.push(note('shaker', 'percussion', null, 0.02, 0.05, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  if (hit !== undefined && pass !== 3) {
+    notes.push(note('whistle', 'tune', hit.midi, 0.075, hit.len * stepS, at));
+    if (pass !== 0) notes.push(note('marimba', 'tune', hit.midi, pass === 2 ? 0.16 : 0.1, RING_S.marimba, at));
+  }
+  if (pass === 3 && random() < 0.4) {
+    notes.push(note('marimba', 'tune', noteMidi('F5') + pick(random, PENTATONIC), 0.22, RING_S.marimba, at));
+  }
+  if ((barIndex === 3 || barIndex === 7) && step === 6) notes.push(note('boing', 'sparkles', null, 0.08, 0.3, at));
+  else if (random() < 0.03) notes.push(bubble(random, 0.05, at));
+  return notes;
+}
+
+/**
+ * Garden Boats' arrangement for one step. Bass and a full nylon guitar strum on the 3-3-2 beat
+ * (steps 0, 3 and 6), light strums and guiro scrapes between, a soft kick, box-drum slaps and a
+ * shaker. The marimba tune; a whistle joins on the second pass and an octave up on the third; the
+ * fourth makes up a phrase in the second half. A bubble ends the loop.
+ */
+function arrangeGardenBoats(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  if (step === 0 || step === 3 || step === 6) {
+    const lift = step === 3 ? 7 : step === 6 ? 12 : 0;
+    notes.push(note('bass', 'bass', sounding.root + lift, step === 0 ? 0.42 : 0.3, stepS * 2.5, at));
+    notes.push(...strum('guitar', [...sounding.notes, sounding.notes[0] + 12], 0.15, RING_S.guitar, at));
+  } else if (step === 1 || step === 5) {
+    notes.push(...strum('guitar', sounding.notes.slice(1).map((midi) => midi + 12), 0.05, RING_S.guitar, at));
+    notes.push(note('guiro', 'percussion', null, 0.05, stepS * 0.8, at));
+  }
+  if (step === 0) notes.push(note('kick', 'percussion', null, 0.3, 0.18, at));
+  if (step === 2 || step === 6) notes.push(note('slap', 'percussion', null, 0.09, 0.09, at));
+  if (step === 3 || step === 7) notes.push(note('shaker', 'percussion', null, 0.03, 0.05, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  const improvise = pass === 3 && barIndex >= 4;
+  if (hit !== undefined && !improvise) {
+    notes.push(note('marimba', 'tune', hit.midi, 0.3, RING_S.marimba, at));
+    if (pass === 1 || pass === 2) notes.push(note('whistle', 'tune', hit.midi + (pass === 2 ? 12 : 0), 0.04, hit.len * stepS, at));
+  }
+  if (improvise && random() < 0.5) {
+    notes.push(note('marimba', 'tune', noteMidi('D5') + pick(random, MIXOLYDIAN_STEPS), 0.24, RING_S.marimba, at));
+  }
+  if (barIndex === 7 && step === 6) notes.push(bubble(random, 0.08, at));
+  else if (random() < 0.03) notes.push(bubble(random, 0.05, at));
+  return notes;
+}
+
+/**
+ * The shared dusk rule (M4; docs/music-guide.md, section 5), for any habitat cue's dusk version: soft
+ * held chords with the root under each chord change and a light kalimba on the other beats; a faint
+ * shaker and no drums; the tune on a music box every pass (raised an octave when below C5), softer on
+ * the third pass and with a few echoes an octave up on the second; and fireflies at random.
+ */
+function arrangeDusk(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const beat = cue.stepsPerBeat;
+  const { bar: barIndex, step, chord: sounding } = place;
+  const chordSteps = cue.bars[barIndex].length === 2 ? stepsPerBar(cue) / 2 : stepsPerBar(cue);
+  if (place.chordStarts) {
+    for (const midi of sounding.notes) notes.push(note('pad', 'chords', midi, 0.05, stepS * chordSteps * 1.02, at));
+    notes.push(note('bass', 'bass', sounding.root, 0.28, stepS * Math.min(4, chordSteps), at));
+  } else if (step % beat === 0) {
+    notes.push(note('kalimba', 'chords', sounding.notes[1], 0.06, RING_S.kalimba, at));
+    notes.push(note('kalimba', 'chords', sounding.notes[2], 0.05, RING_S.kalimba, at + 0.015));
+  }
+  if (step % beat === beat - 1) notes.push(note('shaker', 'percussion', null, 0.012, 0.05, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  if (hit !== undefined) {
+    const midi = hit.midi < noteMidi('C5') ? hit.midi + 12 : hit.midi;
+    notes.push(note('musicBox', 'tune', midi, pass === 2 ? 0.14 : 0.22, RING_S.musicBox, at));
+    if (pass === 1 && random() < 0.4) notes.push(note('musicBox', 'tune', midi + 12, 0.06, RING_S.musicBox, at + stepS));
+  }
+  if (random() < 0.14) {
+    const midi = noteMidi(`${cue.tonic}6`) + pick(random, FIREFLY_STEPS) + (random() < 0.3 ? 12 : 0);
+    notes.push(note('firefly', 'sparkles', midi, 0.045, RING_S.firefly, at + random() * stepS));
+  }
+  return notes;
+}
+
+/**
  * The notes `cue` plays on step `index` (0 or more, from the cue's start), with `seed` choosing each
- * pass's small changes (M10). Odd steps swing late by `cue.swing` of a step. Throws for a cue with no
- * arrangement.
+ * pass's small changes (M10). Odd steps swing late by `cue.swing` of a step. A dusk version plays the
+ * shared dusk rule (M4). Throws for a cue with no arrangement.
  */
 export function arrangeStep(cue: Readonly<MusicCue>, index: number, seed: number): MusicNote[] {
   const place = stepPlace(cue, index);
   const random = stepRandom(seed, place);
   const at = place.step % 2 === 1 ? stepSeconds(cue) * cue.swing : 0;
-  if (cue.id === SUNNY_TANK_ID) return arrangeSunnyTank(cue, place, random, at);
-  throw new Error(`music: no arrangement for cue ${cue.id}`);
+  if (cue.version === 'dusk') return arrangeDusk(cue, place, random, at);
+  switch (cue.id) {
+    case SUNNY_TANK_ID:
+      return arrangeSunnyTank(cue, place, random, at);
+    case CANAL_PADDLE_ID:
+      return arrangeCanalPaddle(cue, place, random, at);
+    case LILY_PAD_HOP_ID:
+      return arrangeLilyPadHop(cue, place, random, at);
+    case GARDEN_BOATS_ID:
+      return arrangeGardenBoats(cue, place, random, at);
+    default:
+      throw new Error(`music: no arrangement for cue ${cue.id}`);
+  }
 }
 
 /** Device storage key of the music switch, outside the save so "Start over" keeps it (M8; ADR 0025). */

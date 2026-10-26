@@ -392,10 +392,10 @@ export class SwimScene extends Phaser.Scene {
   }
 
   create(): void {
-    setMusicScreen('trip');
     const areaId = this.start.areaId;
     const zone = zoneFor(this.assets, areaId);
     const area = areaFor(this.assets, areaId);
+    setMusicScreen('trip', area);
     this.zone = zone;
     this.area = area;
     this.look = areaLook(area);
