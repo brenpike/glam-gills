@@ -680,10 +680,13 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     },
     poof(variant) {
       const t = now();
-      V.puff(t, 0.13, S);
-      if (variant === 'sparkle') { [5, 7, 9].forEach((d, i) => V.firefly(t + 0.08 + i * 0.07, K(d), 0.05, S)); }
-      else { V.boing(t + 0.02, 0.05, S, 300, 500, 340); }
-      return 0.6;
+      if (variant === 'sparkle') { V.puff(t, 0.13, S); [5, 7, 9].forEach((d, i) => V.firefly(t + 0.08 + i * 0.07, K(d), 0.05, S)); return 0.6; }
+      V.puff(t, 0.11, S, 1200);
+      // Uh-oh: two soft, low marimba notes falling a minor third (5th to 3rd), left unresolved; the regrow sound resolves it.
+      if (variant === 'uhoh') { V.marimba(t + 0.04, K(-2), 0.13, S); V.marimba(t + 0.22, K(-3), 0.11, S); return 0.6; }
+      // Bump: a soft, round cartoon "bwump" that dips a little.
+      V.glide(t + 0.02, 330, 210, 0.2, 0.09, S, 'sine');
+      return 0.4;
     },
     regrow() { const t = now(); [2, 3, 5].forEach((d, i) => V.marimba(t + i * 0.1, K(d), 0.18, S)); V.bubble(t + 0.3, 0.05, S); return 0.7; },
     exitClosed() { const t = now(); V.marimba(t, K(-2), 0.14, S); V.marimba(t + 0.16, K(-2), 0.12, S); V.bubble(t + 0.08, 0.04, S, 300); return 0.4; },
@@ -795,8 +798,8 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
       sounds: [
         { id: 'warning', name: 'Predator warning', when: 'A tilapia, carp, heron or garter snake starts its telegraph, before it lunges (A1). Punting poles could share it in their warn phase.', idea: 'Ripple: a soft water swish with two low marimba notes, like "uh-oh, move". Tik-tik: two light wood ticks. Or none: the telegraph on screen is enough.', gentle: 'Once per warning, never repeating or building, at snack loudness. No low drones, no rising pitch. The music does not change (M5).', slice: 'later',
           btns: [['Ripple', 'ripple'], ['Tik-tik', 'tiktik'], ['None', 'none']] },
-        { id: 'poof', name: 'Lose a leg', when: 'A lunge or strike connects: the sparkle poof (A3).', idea: 'A soft puff of air with three twinkles going up, matching the sparkle poof. Or a puff with a small boing.', gentle: 'Pitches go up, not down, so it never sounds sad. No hit, crunch or "ouch".', slice: 'first',
-          btns: [['Puff and sparkle', 'sparkle'], ['Puff and boing', 'boing']] },
+        { id: 'poof', name: 'Lose a leg', when: 'A lunge or strike connects: the sparkle poof (A3).', idea: 'Uh-oh: a soft puff with two low marimba notes falling a small step, like "uh-oh", left hanging so the leg-back sound can answer it. Bump: a puff with a soft, round "bwump". Sparkle: the first idea, kept to compare; it sounds like a reward.', gentle: 'It says "oops", not "yay" and not "ouch": low, soft, short, no crunch, no sad slide down. It is a small step, not a minor-key sigh.', slice: 'first',
+          btns: [['Uh-oh', 'uhoh'], ['Bump', 'bump'], ['Sparkle (first idea)', 'sparkle']] },
         { id: 'shellBlock', name: 'Shell perk blocks a hit', when: 'A Shell perk Wearable stops a hit, so no leg is lost (A22).', idea: 'A bright shell "tink" and a bubble: "safe!"', gentle: 'A small, proud sound, not a clang.', slice: 'later' },
         { id: 'regrow', name: 'Leg grows back', when: 'A leg finishes regrowing (A4).', idea: 'Three rising marimba notes and a bubble: "all better".', gentle: 'Cheerful and small.', slice: 'first' },
         { id: 'carried', name: 'Carried home', when: 'The fourth leg is lost and the axolotl is carried home (A6, ADR 0008).', idea: 'A soft held chord with a slow music box line and bubbles floating up. Float: the tune rises, like being lifted up and home. Lullaby: it falls gently and settles on the home note.', gentle: 'Calm, major, slow. It sounds like "let\'s go home and rest", never like losing.', slice: 'later',
@@ -935,7 +938,7 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     [4.5, 'find', 'common', 'Common find'],
     [6.5, 'dash', null, 'Tail Dash'], [6.8, 'dashPot', null, 'Dash pot'], [7.6, 'find', 'rare', 'Rare find'],
     [9.5, 'snack', null, 'Snack'], [10.0, 'snack', null, 'Snack'],
-    [11.5, 'warning', 'ripple', 'Warning'], [12.6, 'poof', 'sparkle', 'Lose a leg'],
+    [11.5, 'warning', 'ripple', 'Warning'], [12.6, 'poof', 'uhoh', 'Lose a leg'],
     [14.0, 'snack', null, 'Snack'], [14.5, 'bleh', null, 'Plastic worm'],
     [16.0, 'regrow', null, 'Leg back'],
     [17.5, 'find', 'epic', 'Epic find'],
