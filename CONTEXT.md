@@ -59,7 +59,7 @@ One of up to 3 rewards for beating an area, kept forever once earned.
 The one treasure per area that earns a star when the area is beaten with it owned; always Common or Rare; the canal's is the Toy boat, Area 2's is the Frog statue, Area 3's is the Wooden duck decoy (Rare), Area 4's is the Scarecrow (Rare), and Area 5's is the Piñata (Rare).
 
 **Snack**:
-A worm, a bug or a **Mobile snack** the axolotl eats by touching it with its head; not a trip find, it speeds up regrowth while a leg is missing, and every snack must be eaten to open the exit. In some areas a few snacks dart a short hop away when the axolotl gets close, each at most once per **Trip** (3 in Area 3); darting is part of the growth rule (N2), not a new **Timing element**.
+A worm, a bug or a **Mobile snack** the axolotl eats by touching it with its head; not a trip find, it speeds up regrowth while a leg is missing, and every snack must be eaten to open the exit. In some areas a few snacks dart a short hop away when the axolotl gets close, each at most once per **Trip**; darting is part of the growth rule (N2), not a new **Timing element**.
 
 **Mobile snack**:
 A **Snack** that moves on its own: a **Tadpole** or a **Freshwater shrimp**. It counts as one snack, like a worm or a bug, for the counter, the last-3 **Hint sparkle**, opening the **Exit**, speeding up **Regrowth**, and starting over when **Carried home**. Mobile snacks are fixed area data, never placed by chance, and each is eaten, pulled by the Snack magnet, and met where it is drawn. A mobile snack is not a **Hazard** or a **Timing element**, so the one-new-thing rule and the **Danger bar** never count it. Which areas have them is in each area's danger pass paragraph in the PRD (N2).
