@@ -16,6 +16,7 @@ import {
 } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { hazardCentre, shapeDistance } from './hazards';
+import { narrowestPathGap } from './layoutGaps';
 import { spotMatchesLabels, turnDistance, underPad } from './hiding';
 import { legSwimTuning } from './legs';
 import {
@@ -30,6 +31,7 @@ import {
 } from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { PLASTIC_WORM } from './plasticWorms';
+import { POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_CARP, POND_LAYOUT, POND_TILAPIA } from './pondLayout';
 import { CARP_SPECIES, TILAPIA_SPECIES, tunedSpecies } from './predators';
 import { stepSwim, type SwimState } from './swimPhysics';
@@ -380,6 +382,28 @@ describe('pond plastic worms', () => {
     }
   });
 
+  it('spread over the area instead of sitting in a clump (issue #145)', () => {
+    let closest = Infinity;
+    for (const [i, first] of worms.entries()) {
+      for (const second of worms.slice(i + 1)) closest = Math.min(closest, Math.hypot(first.x - second.x, first.y - second.y));
+    }
+    expect(closest).toBeGreaterThanOrEqual(180);
+    const xs = worms.map((worm) => worm.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThanOrEqual(1.5 * SCREEN_W);
+    expect(new Set(xs.map((x) => Math.floor(x / SCREEN_W))).size).toBeGreaterThanOrEqual(2);
+    const ys = worms.map((worm) => worm.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(150);
+  });
+
+  it('leave a main path gap wider than Area 3 narrowest, so the gap ladder holds (issue #145)', () => {
+    const narrowest = narrowestPathGap(zone);
+    const pond2Narrowest = narrowestPathGap(buildZone(POND_2_LAYOUT, DEFAULT_ZONE_SEED));
+    expect(pond2Narrowest.width).toBeCloseTo(136.09, 2);
+    expect(narrowest.between).toBe('pond-1/plastic-worm-2 and pond-1/plastic-worm-3');
+    expect(narrowest.width).toBeCloseTo(Math.hypot(670 - 585, 96 - 294) - 36 - 36, 5);
+    expect(narrowest.width).toBeGreaterThan(pond2Narrowest.width);
+  });
+
   it('never sit under a lily pad', () => {
     for (const worm of worms) {
       expect(underPad(worm, zone.pads)).toBe(false);
@@ -567,16 +591,14 @@ describe('pond mobile snacks (issue #121, ND-4 to ND-6; issue #132, ND-5)', () =
     expect(meetsSnackRamp(2, POND_LAYOUT)).toBe(true);
   });
 
-  it('has 40 px/s tadpoles on a west and an east wander loop half a lap out of step, and two shrimp on 3-spot homes', () => {
+  it('has 40 px/s tadpoles sharing one east wander loop half a lap out of step, and two shrimp on 3-spot homes (issue #145)', () => {
+    const east = [[1180, 136], [1190, 236], [1310, 232], [1300, 294], [1140, 294], [990, 290], [985, 226], [1170, 226]];
     expect(mix?.tadpole).toEqual({ speed: 40 });
-    expect(mix?.wanders.map((wander) => wander.points.map((point) => [point.x, point.y]))).toEqual([
-      [[492, 110], [630, 104], [812, 170], [700, 290], [600, 288], [492, 280]],
-      [[1034, 135], [1024, 288], [1200, 290], [1346, 286], [1200, 250], [1100, 240]],
-    ]);
-    expect(mix?.wanders.map((wander) => wander.offset)).toEqual([0, expect.closeTo(10.6286, 3)]);
+    expect(mix?.wanders.map((wander) => wander.points.map((point) => [point.x, point.y]))).toEqual([east, east]);
+    expect(mix?.wanders.map((wander) => wander.offset)).toEqual([0, expect.closeTo(11.6646, 3)]);
     expect(mix?.shrimp).toEqual({ triggerRadius: 60, restFor: 2, flickDistance: 36, flickSpeed: 100 });
     expect(mix?.homes.map((home) => home.points.map((point) => [point.x, point.y]))).toEqual([
-      [[510, 120], [575, 140], [525, 190]],
+      [[1650, 110], [1720, 110], [1690, 160]],
       [[1650, 285], [1720, 285], [1690, 240]],
     ]);
   });

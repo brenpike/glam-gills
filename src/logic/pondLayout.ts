@@ -32,24 +32,20 @@ export const POND_CARP: Readonly<PredatorSpecies> = tunedSpecies(
 /** Area 2's tadpoles (issue #131, ND-9): 40 px/s, the middle of the ramp's 35 to 45 px/s. */
 const POND_TADPOLE = tadpoleRule(40);
 
-/** The west tadpole's wander loop turn points (issue #132, ND-5): from beside the first Common reeds out round `carp-0`. */
-const WEST_LOOP: readonly (readonly [number, number])[] = Object.freeze([
-  [492, 110],
-  [630, 104],
-  [812, 170],
-  [700, 290],
-  [600, 288],
-  [492, 280],
-] as const);
-
-/** The east tadpole's wander loop turn points (issue #132, ND-5): along the bed between `tilapia-1` and `tilapia-2`. */
-const EAST_LOOP: readonly (readonly [number, number])[] = Object.freeze([
-  [1034, 135],
-  [1024, 288],
-  [1200, 290],
-  [1346, 286],
-  [1200, 250],
-  [1100, 240],
+/**
+ * The tadpoles' wander loop turn points (issue #145): along the bed between `tilapia-1` and
+ * `tilapia-2`, with a thin spike up the middle, so the surface corners on either side stay clear
+ * for plastic worms. Both tadpoles share it, half a lap apart.
+ */
+const TADPOLE_LOOP: readonly (readonly [number, number])[] = Object.freeze([
+  [1180, 136],
+  [1190, 236],
+  [1310, 232],
+  [1300, 294],
+  [1140, 294],
+  [990, 290],
+  [985, 226],
+  [1170, 226],
 ] as const);
 
 /** Seconds a tadpole takes round the closed loop through `points` at Area 2's tadpole speed. */
@@ -188,14 +184,20 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * least 210 px from every tilapia route and the two are far more than 240 px apart.
    */
   predatorRoutes: Object.freeze([carpRoute(0, 729, 749, 204, 296), carpRoute(1, 1860, 1870, 100, 190)]),
-  /** Six plastic worms near the surface between `tilapia-1` and `tilapia-2`, each far from every predator and the stream. */
+  /**
+   * Six plastic worms spread from the first Common reeds to before `tilapia-2` (issue #145): near
+   * the surface past `tilapia-0`, on the bed before `carp-0`, near the surface either side of
+   * `carp-0`, near the surface past `tilapia-1`, and in the open water before `tilapia-2`. Each is
+   * at least 180 px from every other, farther than a lunge from every tilapia route and a sweep from
+   * every carp route, and far from the stream.
+   */
   hazards: Object.freeze([
-    plasticWormAt(1, 1185, 104),
-    plasticWormAt(2, 1225, 150),
-    plasticWormAt(3, 1245, 104),
-    plasticWormAt(4, 1265, 150),
-    plasticWormAt(5, 1290, 104),
-    plasticWormAt(6, 1300, 150),
+    plasticWormAt(1, 488, 100),
+    plasticWormAt(2, 585, 294),
+    plasticWormAt(3, 670, 96),
+    plasticWormAt(4, 855, 96),
+    plasticWormAt(5, 1080, 96),
+    plasticWormAt(6, 1300, 144),
   ]),
   elements: Object.freeze([]),
   /** Along the middle, up round the Common pad, then on past the hollow log and the stream to the exit. */
@@ -248,24 +250,25 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   sunChunk: 0,
   tilapia: POND_TILAPIA,
   /**
-   * Mobile snacks (issue #132, ND-5), placed after the predators: a tadpole on a wander loop in the
-   * west round `carp-0`, and one in the east along the bed between `tilapia-1` and `tilapia-2`,
-   * half a lap out of step; then a shrimp home by the first Common reeds and one between the hollow
-   * log and the stream. The shrimp turn the one-time darters off (issue #121, ND-6), and the Snack
+   * Mobile snacks (issue #132, ND-5), placed after the predators: two tadpoles sharing one wander
+   * loop along the bed between `tilapia-1` and `tilapia-2`, half a lap out of step, so the west
+   * water is free for plastic worms (issue #145); then a shrimp home near the surface between the
+   * hollow log and the stream, and one on the bed below it. The shrimp turn the one-time darters off
+   * (issue #121, ND-6), and the Snack
    * magnet pulls at 48 px/s (issue #131, ND-8).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: POND_TADPOLE,
     wanders: Object.freeze([
-      tadpoleWander(POND_TADPOLE, WEST_LOOP, 0),
-      tadpoleWander(POND_TADPOLE, EAST_LOOP, lapSeconds(EAST_LOOP) / 2),
+      tadpoleWander(POND_TADPOLE, TADPOLE_LOOP, 0),
+      tadpoleWander(POND_TADPOLE, TADPOLE_LOOP, lapSeconds(TADPOLE_LOOP) / 2),
     ]),
     shrimp: shrimpRule(60, 2.0, 36, 100),
     homes: Object.freeze([
       shrimpHome([
-        [510, 120],
-        [575, 140],
-        [525, 190],
+        [1650, 110],
+        [1720, 110],
+        [1690, 160],
       ]),
       shrimpHome([
         [1650, 285],
