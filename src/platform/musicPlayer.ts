@@ -411,12 +411,13 @@ function pluckBuffer(graph: Graph, midi: number): { buffer: AudioBuffer; rate: n
   const buffer = ctx.createBuffer(1, length, sampleRate);
   const data = buffer.getChannelData(0);
   let last = 0;
-  for (let i = 0; i < period; i++) {
+  for (let i = 0; i <= period; i++) {
     last = last * shape.soft + (Math.random() * 2 - 1) * (1 - shape.soft);
     data[i] = last * 2;
   }
-  for (let i = period; i < length; i++) data[i] = (data[i - period] + data[i - period + 1]) * 0.5 * shape.keep;
-  // The averaging delays the loop by half a sample, so the played rate corrects the pitch.
+  for (let i = period + 1; i < length; i++) data[i] = (data[i - period] + data[i - period - 1]) * 0.5 * shape.keep;
+  // Averaging the samples `period` and `period + 1` back makes the loop `period + 0.5` samples long,
+  // so the played rate corrects the pitch to `hz`.
   const made = { buffer, rate: hz / (sampleRate / (period + 0.5)) };
   graph.plucks.set(midi, made);
   return made;
