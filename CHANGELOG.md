@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-26
+
+### Added
+
+- Each habitat has its own music. The canal plays Canal Paddle, a bouncy marimba tune. The lily pad pond plays Lily Pad Hop, a skippy flute tune with plucked strings and a boing. The chinampa gardens play Garden Boats, a sunny guitar tune with a guiro. The music fades from the Home Tank's tune into the habitat's tune when a trip starts, and back again when you go home (#153).
+- Area 3, the pond at dusk, plays a sleepy dusk version of Lily Pad Hop: the same tune on a music box, slower, with soft chords, no drums and twinkly fireflies (#153).
+
 ## [0.43.0] - 2026-10-26
 
 ### Added

@@ -43,6 +43,17 @@ export function habitatById(id: string): Readonly<Habitat> | undefined {
  */
 export type AreaLookVariant = 'pond-dusk';
 
+/** The time of day an area's look shows; the music rule reads it (M2, M4). */
+export type TimeOfDay = 'day' | 'dusk' | 'night';
+
+/** The time of day each area look variant shows. */
+export const AREA_LOOK_TIMES: Readonly<Record<AreaLookVariant, TimeOfDay>> = Object.freeze({ 'pond-dusk': 'dusk' });
+
+/** The time of day `area`'s look shows: its variant's, or day for the habitat's own look. */
+export function areaTimeOfDay(area: Pick<AreaData, 'look'>): TimeOfDay {
+  return area.look === undefined ? 'day' : AREA_LOOK_TIMES[area.look];
+}
+
 /** An area's exit: a circle the axolotl centre reaches to leave. Inclusive edge. */
 export interface AreaExit {
   x: number;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  areaTimeOfDay,
   AREAS,
   CANAL_AREA,
   CANAL_HABITAT,
@@ -231,6 +232,10 @@ describe('POND_2_AREA', () => {
     expect(POND_2_AREA.habitatId).toBe(POND_HABITAT.id);
     expect(POND_2_AREA.layout).toBe(POND_2_LAYOUT);
     expect(POND_2_AREA.look).toBe('pond-dusk');
+  });
+
+  it("is the only dusk area: its look's time of day is dusk, and every other area's look is day", () => {
+    for (const area of AREAS) expect(areaTimeOfDay(area)).toBe(area === POND_2_AREA ? 'dusk' : 'day');
   });
 
   it('names the Wooden duck decoy, a Rare treasure from the Area 3 catalogue, as its special treasure', () => {
