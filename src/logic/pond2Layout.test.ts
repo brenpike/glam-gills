@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { POND_2_AREA, POND_AREA, sourceFactCards } from './areas';
 import { POND_2_TREASURES, RARITIES } from './catalogue';
-import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
+import { createCollectibles, snackDriftMaxSpeed, snackWander, snackX, snackY, wanderOffsetAlong } from './collectibles';
 import {
   carpCount,
   carpTarget,
@@ -15,7 +15,7 @@ import {
 } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
 import { CARP_FACT, HERON_FACT, PLASTIC_WORM_FACT, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT } from './factCards';
-import { hazardCentre, shapeDistance } from './hazards';
+import { hazardCentre, shapeDistance, type HazardRect } from './hazards';
 import {
   PAST_CURRENT_DEPTH,
   RISK_COMMON_MARGIN,
@@ -31,14 +31,18 @@ import {
   meetsSnackMotion,
   meetsSnackRamp,
   mobileSnackAvoid,
+  mobileLegBoxes,
   mobileSnackClear,
+  mobileSnackHardClear,
   mobileSnackShare,
   oneLegCatchesTadpole,
   oneTimeDarts,
   shrimpBox,
+  shrimpGlideClear,
   shrimpHomeClear,
   snackMagnetSpeed,
   tadpoleWanderClear,
+  type MobileSnackAvoid,
   type MobileSnackMix,
 } from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
@@ -55,8 +59,10 @@ import {
   LEGS,
   PLASTIC_WORMS,
   RISK,
+  SHRIMP,
   SNACK_REACH,
   SWIM,
+  TADPOLES,
   TILAPIA,
   TILAPIA_RAMP_CHASE,
   tripTreasureTuning,
@@ -129,6 +135,10 @@ const TADPOLE_HOMES_X = [300, 1880] as const;
 const EXIT_SHRIMP_REACH = 100;
 /** Area 3's tadpole speed in px/s (issue #131, ND-9). */
 const TADPOLE_SPEED = 50;
+/** Px a tilapia or carp loop must reach into a depth band for the band to count: a tilapia body (issue #130, ND-5). */
+const BAND_REACH = 24;
+/** Most px between the samples the tadpole threat rule takes along a wander loop (issue #131, ND-7). */
+const WANDER_SAMPLE_PX = 2;
 /**
  * Gap in px between each two tilapia loops, measured to 0.1 px. Option A on issue #133 drops the
  * tilapia-to-tilapia spacing for Area 3, so the two loops of each pair sit 48.1 px apart.
@@ -216,6 +226,42 @@ function boxCentre(points: readonly Point[]): Point {
   const xs = points.map((point) => point.x);
   const ys = points.map((point) => point.y);
   return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+}
+
+/** Px of the depth band that the y span of the loop's waypoints covers; 0 when they do not meet (issue #130, ND-5). */
+function bandOverlap(route: TilapiaRoute, band: { top: number; bottom: number }): number {
+  const ys = route.waypoints.map((point) => point.y);
+  return Math.max(0, Math.min(Math.max(...ys), band.bottom) - Math.max(Math.min(...ys), band.top));
+}
+
+/** The box of one point, as the hard rules measure a tadpole turn point or a sample on its loop. */
+function pointBox(point: Point): HazardRect {
+  return { kind: 'rect', x0: point.x, x1: point.x, y0: point.y, y1: point.y };
+}
+
+/**
+ * The share of a tadpole's wander loop in its longest stretch, counting round from the end back to
+ * the start, where mobileSnackClear clears the loop, sampled evenly at most WANDER_SAMPLE_PX px apart
+ * from its first point (issue #131, ND-7). Every hard rule holds all along a clear loop, so only the
+ * threats decide which samples count.
+ */
+function longestClearShare(points: readonly Point[], avoid: MobileSnackAvoid): number {
+  const loop = snackWander(points, 1, 0);
+  const count = Math.max(1, Math.ceil(loop.lap / WANDER_SAMPLE_PX));
+  const start = points[0];
+  const clear = Array.from({ length: count }, (_, k) => {
+    const along = (k * loop.lap) / count;
+    const sample = { x: start.x + wanderOffsetAlong(loop, along, 'x'), y: start.y + wanderOffsetAlong(loop, along, 'y') };
+    return mobileSnackClear(pointBox(sample), avoid);
+  });
+  if (clear.every(Boolean)) return 1;
+  let best = 0;
+  let run = 0;
+  for (let step = 0; step < 2 * count; step++) {
+    run = clear[step % count] ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  return best / count;
 }
 
 /** Seconds a tadpole takes round its wander loop at Area 3's tadpole speed, TADPOLE_SPEED. */
@@ -761,8 +807,36 @@ describe('Area 3 snacks', () => {
 
   it('meet the snack motion rules: 4 to 8 turn points, legs of 1.5 to 5 s, laps of at most 40 s, homes 320 to 480 px wide and 150 px tall, and hop homes of 3 to 6 spots in 200 x 160 px (issue #131, ND-2, ND-3, ND-5)', () => {
     expect(meetsSnackMotion(POND_2_LAYOUT)).toBe(true);
+    for (const [index, wander] of pond2Mix().wanders.entries()) {
+      const label = `tadpole ${index + 1}`;
+      const xs = wander.points.map((point) => point.x);
+      const ys = wander.points.map((point) => point.y);
+      expect(wander.points.length, label).toBeGreaterThanOrEqual(TADPOLES.minLoopPoints);
+      expect(wander.points.length, label).toBeLessThanOrEqual(TADPOLES.maxLoopPoints);
+      expect(Math.max(...xs) - Math.min(...xs), label).toBeGreaterThanOrEqual(TADPOLES.minHomeWidth);
+      expect(Math.max(...xs) - Math.min(...xs), label).toBeLessThanOrEqual(TADPOLES.maxHomeWidth);
+      expect(Math.max(...ys) - Math.min(...ys), label).toBeGreaterThanOrEqual(TADPOLES.minHomeHeight);
+      expect(Math.max(...ys) - Math.min(...ys), label).toBeLessThanOrEqual(TADPOLES.maxHomeHeight);
+      for (const point of wander.points) {
+        expect(inBounds(point, zone), `${label} at ${point.x}, ${point.y}`).toBe(true);
+        expect(point.y, `${label} at ${point.x}, ${point.y}`).toBeGreaterThan(surfacePeak);
+      }
+      for (const [a, b] of loopSegments(wander.points)) {
+        const seconds = Math.hypot(b.x - a.x, b.y - a.y) / TADPOLE_SPEED;
+        expect(seconds, `${label} leg from ${a.x}, ${a.y}`).toBeGreaterThanOrEqual(TADPOLES.minLegSeconds);
+        expect(seconds, `${label} leg from ${a.x}, ${a.y}`).toBeLessThanOrEqual(TADPOLES.maxLegSeconds);
+      }
+      expect(lapSeconds(wander.points), label).toBeLessThanOrEqual(TADPOLES.maxLapSeconds);
+    }
     for (const [index, home] of pond2Mix().homes.entries()) {
-      expect(home.points.length, `shrimp ${index + 1}`).toBe(3);
+      const label = `shrimp ${index + 1}`;
+      const xs = home.points.map((point) => point.x);
+      const ys = home.points.map((point) => point.y);
+      expect(home.points.length, label).toBe(3);
+      expect(home.points.length, label).toBeGreaterThanOrEqual(SHRIMP.minHomeSpots);
+      expect(home.points.length, label).toBeLessThanOrEqual(SHRIMP.maxHomeSpots);
+      expect(Math.max(...xs) - Math.min(...xs), label).toBeLessThanOrEqual(SHRIMP.maxHomeWidth);
+      expect(Math.max(...ys) - Math.min(...ys), label).toBeLessThanOrEqual(SHRIMP.maxHomeHeight);
     }
   });
 
@@ -815,6 +889,39 @@ describe('Area 3 snacks', () => {
     }
     for (const [index, home] of pond2Mix().homes.entries()) {
       expect(shrimpHomeClear(home, drift, avoid), `shrimp ${index + 1}`).toBe(true);
+    }
+  });
+
+  it.each(ALL_SEEDS)('hold every tadpole turn point and leg, and every shrimp hop spot, hop leg and glide, to the hard rules for seed %i (issue #131, ND-7)', (seed) => {
+    const layout = pond2(seed);
+    const avoid = mobileSnackAvoid(layout);
+    for (const [index, wander] of pond2Mix().wanders.entries()) {
+      for (const point of wander.points) {
+        expect(mobileSnackHardClear(pointBox(point), avoid), `tadpole ${index + 1} at ${point.x}, ${point.y}`).toBe(true);
+      }
+    }
+    const legBoxes = mobileLegBoxes(layout);
+    expect(legBoxes).toHaveLength(7 + 6 + 6 + 5 + 4 * 3);
+    for (const [index, box] of legBoxes.entries()) {
+      expect(mobileSnackHardClear(box, avoid), `leg box ${index + 1}`).toBe(true);
+    }
+    for (const [index, home] of pond2Mix().homes.entries()) {
+      home.points.forEach((spot, i) => {
+        const next = home.points[(i + 1) % home.points.length];
+        expect(mobileSnackHardClear(shrimpBox(spot, drift), avoid), `shrimp ${index + 1} at ${spot.x}, ${spot.y}`).toBe(true);
+        expect(shrimpGlideClear(spot, next, drift, avoid), `shrimp ${index + 1} hop from ${spot.x}, ${spot.y}`).toBe(true);
+      });
+    }
+  });
+
+  it.each(ALL_SEEDS)('keep half of each tadpole loop, in one stretch, and half of each shrimp home\'s hop spots out of every threat\'s reach for seed %i (issue #131, ND-7)', (seed) => {
+    const avoid = mobileSnackAvoid(pond2(seed));
+    for (const [index, wander] of pond2Mix().wanders.entries()) {
+      expect(longestClearShare(wander.points, avoid), `tadpole ${index + 1}`).toBeGreaterThanOrEqual(TADPOLES.safeLoopShare);
+    }
+    for (const [index, home] of pond2Mix().homes.entries()) {
+      const safe = home.points.filter((spot) => mobileSnackClear(shrimpBox(spot, drift), avoid)).length;
+      expect(safe, `shrimp ${index + 1}`).toBeGreaterThanOrEqual(SHRIMP.safeSpotShare * home.points.length);
     }
   });
 
@@ -899,13 +1006,25 @@ describe('Area 3 whole-water ramp bar (issue #120, ND-1; issue #133, ND-1 to ND-
     expect(MEASURED_QUIET_SWIM).toBeLessThanOrEqual(QUIET_SWIM_LIMIT);
   });
 
-  it('patrols every depth: each tilapia and carp loop reaches into two bands, and each kind into all three', () => {
-    expect(depthBands(zone)).toEqual([
+  it('patrols every depth: each tilapia and carp loop reaches 24 px into two bands, and each kind into all three', () => {
+    const bands = depthBands(zone);
+    expect(bands).toEqual([
       { top: 94, bottom: 94 + 202 / 3 },
       { top: 94 + 202 / 3, bottom: 94 + (2 * 202) / 3 },
       { top: 94 + (2 * 202) / 3, bottom: 296 },
     ]);
     expect(meetsDepthRule(zone)).toBe(true);
+    const loops: TilapiaRoute[] = [...zone.tilapiaRoutes, ...carps];
+    expect(loops.map((route) => route.id)).toEqual(['tilapia-0', 'tilapia-1', 'tilapia-2', 'tilapia-3', 'carp-0', 'carp-1']);
+    for (const route of loops) {
+      expect(bands.filter((band) => bandOverlap(route, band) >= BAND_REACH).length, route.id).toBeGreaterThanOrEqual(2);
+    }
+    for (const kind of [zone.tilapiaRoutes, carps]) {
+      for (const [index, band] of bands.entries()) {
+        const deepest = Math.max(...kind.map((route) => bandOverlap(route, band)));
+        expect(deepest, `${kind[0].id} kind in band ${index}`).toBeGreaterThanOrEqual(BAND_REACH);
+      }
+    }
   });
 
   it('has danger from the surface, and a floor quiet stretch of 210 px, at most one screen', () => {
