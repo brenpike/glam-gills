@@ -613,6 +613,15 @@ exports[`pond-2 golden > keeps the default zone projection 1`] = `
         "pond-2/spot-pad-b",
       ],
     },
+    {
+      "id": "canal/paint-shell-galaxy",
+      "pool": [
+        "pond-2/spot-cave-1",
+        "pond-2/spot-cave-2",
+        "pond-2/spot-current-1",
+        "pond-2/spot-current-2",
+      ],
+    },
   ],
   "hazards": [
     {
@@ -1852,36 +1861,36 @@ exports[`pond-2 golden > keeps the placements of every extra zone seed 1`] = `
 exports[`pond-2 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 3704386648,
-    "length": 19755,
+    "fnv1a": 1854498689,
+    "length": 19888,
   },
   "1234": {
-    "fnv1a": 4058054835,
-    "length": 19768,
+    "fnv1a": 2466225764,
+    "length": 19901,
   },
   "2": {
-    "fnv1a": 757511229,
-    "length": 19709,
+    "fnv1a": 513795394,
+    "length": 19842,
   },
   "3": {
-    "fnv1a": 570665321,
-    "length": 19776,
+    "fnv1a": 514338350,
+    "length": 19909,
   },
   "305419896": {
-    "fnv1a": 750829369,
-    "length": 20041,
+    "fnv1a": 2067223518,
+    "length": 20174,
   },
   "3735928559": {
-    "fnv1a": 1587156231,
-    "length": 19515,
+    "fnv1a": 3416219688,
+    "length": 19648,
   },
   "42": {
-    "fnv1a": 2503373584,
-    "length": 19758,
+    "fnv1a": 2181871945,
+    "length": 19891,
   },
   "987654321": {
-    "fnv1a": 2536143222,
-    "length": 19516,
+    "fnv1a": 2078216035,
+    "length": 19649,
   },
 }
 `;

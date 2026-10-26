@@ -42,7 +42,7 @@ exports[`chinampa-1 golden > keeps the default zone placements with three banked
   "chinampa/marigold-necklace@chinampa-1/spot-bank-2,chinampa/scarecrow@chinampa-1/spot-bank-11,chinampa/papel-picado-banner@chinampa-1/spot-bank-9,chinampa/garden-overalls@chinampa-1/spot-bank-12,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-10,chinampa/willow-swing@chinampa-1/spot-cave-5,chinampa/monarch-hair-clip@chinampa-1/spot-current-3,chinampa/golden-corn@chinampa-1/spot-cave-2+pot",
   "chinampa/marigold-necklace@chinampa-1/spot-bank-2,chinampa/scarecrow@chinampa-1/spot-bank-12,chinampa/papel-picado-banner@chinampa-1/spot-bank-8,chinampa/garden-overalls@chinampa-1/spot-bank-11,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-10",
   "chinampa/marigold-necklace@chinampa-1/spot-bank-4,chinampa/scarecrow@chinampa-1/spot-bank-12,chinampa/papel-picado-banner@chinampa-1/spot-bank-10,chinampa/garden-overalls@chinampa-1/spot-bank-11,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-8,chinampa/willow-swing@chinampa-1/spot-cave-5,chinampa/monarch-hair-clip@chinampa-1/spot-cave-4,chinampa/golden-corn@chinampa-1/spot-cave-1+pot,chinampa/monarch-wings@chinampa-1/spot-cave-2+pot",
-  "chinampa/marigold-necklace@chinampa-1/spot-bank-4,chinampa/scarecrow@chinampa-1/spot-bank-10,chinampa/papel-picado-banner@chinampa-1/spot-bank-11,chinampa/garden-overalls@chinampa-1/spot-bank-9,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-12,chinampa/willow-swing@chinampa-1/spot-cave-6,chinampa/monarch-hair-clip@chinampa-1/spot-cave-4,chinampa/monarch-wings@chinampa-1/spot-cave-3+pot",
+  "chinampa/marigold-necklace@chinampa-1/spot-bank-4,chinampa/scarecrow@chinampa-1/spot-bank-10,chinampa/papel-picado-banner@chinampa-1/spot-bank-11,chinampa/garden-overalls@chinampa-1/spot-bank-9,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-12,chinampa/willow-swing@chinampa-1/spot-cave-6,chinampa/monarch-hair-clip@chinampa-1/spot-cave-4,canal/paint-shell-rainbow@chinampa-1/spot-cave-3+pot",
   "chinampa/marigold-necklace@chinampa-1/spot-bank-3,chinampa/scarecrow@chinampa-1/spot-bank-7,chinampa/papel-picado-banner@chinampa-1/spot-bank-11,chinampa/garden-overalls@chinampa-1/spot-bank-12,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-8,chinampa/monarch-hair-clip@chinampa-1/spot-cave-4,chinampa/golden-corn@chinampa-1/spot-cave-3+pot",
   "chinampa/marigold-necklace@chinampa-1/spot-bank-4,chinampa/scarecrow@chinampa-1/spot-bank-9,chinampa/papel-picado-banner@chinampa-1/spot-bank-7,chinampa/garden-overalls@chinampa-1/spot-bank-8,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-10,chinampa/monarch-hair-clip@chinampa-1/spot-cave-4",
   "chinampa/marigold-necklace@chinampa-1/spot-bank-3,chinampa/scarecrow@chinampa-1/spot-bank-10,chinampa/papel-picado-banner@chinampa-1/spot-bank-11,chinampa/garden-overalls@chinampa-1/spot-bank-9,chinampa/paint-shell-poppy-red@chinampa-1/spot-bank-8,chinampa/monarch-hair-clip@chinampa-1/spot-cave-5",
@@ -819,6 +819,16 @@ exports[`chinampa-1 golden > keeps the default zone projection 1`] = `
     },
     {
       "id": "chinampa/monarch-wings",
+      "pool": [
+        "chinampa-1/spot-cave-1",
+        "chinampa-1/spot-cave-2",
+        "chinampa-1/spot-cave-3",
+        "chinampa-1/spot-current-1",
+        "chinampa-1/spot-current-2",
+      ],
+    },
+    {
+      "id": "canal/paint-shell-rainbow",
       "pool": [
         "chinampa-1/spot-cave-1",
         "chinampa-1/spot-cave-2",
@@ -1993,36 +2003,36 @@ exports[`chinampa-1 golden > keeps the placements of every extra zone seed 1`] =
 exports[`chinampa-1 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 2916397553,
-    "length": 18252,
+    "fnv1a": 3870610278,
+    "length": 18427,
   },
   "1234": {
-    "fnv1a": 1609265110,
-    "length": 18260,
+    "fnv1a": 2758858707,
+    "length": 18435,
   },
   "2": {
-    "fnv1a": 3241615028,
-    "length": 18256,
+    "fnv1a": 92407141,
+    "length": 18431,
   },
   "3": {
-    "fnv1a": 3649672954,
-    "length": 18257,
+    "fnv1a": 4077230455,
+    "length": 18432,
   },
   "305419896": {
-    "fnv1a": 153550772,
-    "length": 18265,
+    "fnv1a": 2504491109,
+    "length": 18440,
   },
   "3735928559": {
-    "fnv1a": 1110543378,
-    "length": 18257,
+    "fnv1a": 4225962815,
+    "length": 18432,
   },
   "42": {
-    "fnv1a": 454114554,
-    "length": 18261,
+    "fnv1a": 2037422967,
+    "length": 18436,
   },
   "987654321": {
-    "fnv1a": 4136482462,
-    "length": 18259,
+    "fnv1a": 3021528907,
+    "length": 18434,
   },
 }
 `;
