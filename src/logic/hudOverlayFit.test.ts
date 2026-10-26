@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { exitClosedText, snacksLeftLabel } from './areaText';
 import { ALL_TREASURES, categoryName, type Treasure } from './catalogue';
 import { isSupportedCanvas } from './cardFit';
+import { DASH_POT_TIP_TEXT } from './dashPotTip';
 import { rarityName } from './hints';
 import {
   FIND_TOAST,
@@ -124,10 +125,16 @@ const SNACK_BANNER_TEXTS: readonly string[] = [
 /** The longest snack banner message: the worst case the fit runs. */
 const LONGEST_SNACK_BANNER = SNACK_BANNER_TEXTS.reduce((longest, text) => (text.length > longest.length ? text : longest));
 
+/** Every message the hint banner shows: the banking hint and the Dash pot tip for each input (PRD B11). */
+const HINT_TEXTS: readonly string[] = [BANKING_HINT, ...Object.values(DASH_POT_TIP_TEXT)];
+
+/** The longest hint banner message: the worst case the fit runs. */
+const LONGEST_HINT = HINT_TEXTS.reduce((longest, text) => (text.length > longest.length ? text : longest));
+
 type BannerId = Exclude<HudOverlayId, 'findToast'>;
 
 const BANNER_TEXTS: Readonly<Record<BannerId, string>> = {
-  hint: BANKING_HINT,
+  hint: LONGEST_HINT,
   snackBanner: LONGEST_SNACK_BANNER,
 };
 const BANNER_IDS: readonly BannerId[] = ['snackBanner', 'hint'];

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-26
+
+### Added
+
+- The first time you meet a Dash pot, a short tip shows how to break it: "Tail Dash into the pot to break it!", with Press Space on a keyboard or Tap Dash on touch. It shows once per save, waits until no predator can reach you, and closes with a tap, Enter or Space, or after a few seconds. Players who already have a Legendary never see it (#149).
+
 ## [0.44.0] - 2026-10-26
 
 ### Added

@@ -15,6 +15,7 @@ export const GAME_EVENTS = Object.freeze({
   EXIT_CLOSED: 'exit-closed',
   PLASTIC_WORM_SPAT: 'plastic-worm-spat',
   GHOST_NET_SNAGGED: 'ghost-net-snagged',
+  DASH_POT_TIP: 'dash-pot-tip',
 } as const);
 
 export type GameEventName = (typeof GAME_EVENTS)[keyof typeof GAME_EVENTS];
@@ -65,6 +66,11 @@ export interface GhostNetSnaggedPayload {
   id: string;
 }
 
+/** Sent when the Dash pot tip shows (`show` true) or hides (PRD B11). */
+export interface DashPotTipPayload {
+  show: boolean;
+}
+
 /** Payload type for each event; `undefined` marks payload-less events. */
 export interface GameEventPayloads {
   [GAME_EVENTS.COLLECTED]: CollectedPayload;
@@ -80,6 +86,7 @@ export interface GameEventPayloads {
   [GAME_EVENTS.EXIT_CLOSED]: ExitClosedPayload;
   [GAME_EVENTS.PLASTIC_WORM_SPAT]: PlasticWormSpatPayload;
   [GAME_EVENTS.GHOST_NET_SNAGGED]: GhostNetSnaggedPayload;
+  [GAME_EVENTS.DASH_POT_TIP]: DashPotTipPayload;
 }
 
 /** Keys for values stored in the shared game registry. */
