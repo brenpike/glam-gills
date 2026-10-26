@@ -46,6 +46,7 @@ import { bestStarsFor, starCount, type AreaStarsRecord } from '../logic/stars';
 import { UI, tankKeyFor } from '../logic/tankUi';
 import type { Vec2 } from '../logic/vec';
 import { setMusicScreen } from '../platform/musicPlayer';
+import { playTap } from '../platform/soundPlayer';
 import {
   SCENE_KEYS,
   createButton,
@@ -756,6 +757,8 @@ export class AreaMapScene extends Phaser.Scene {
    */
   private pressMarker(index: number): void {
     if (this.leaving || this.shownMs < MARKER_WAIT_MS) return;
+    // A marker is drawn, not a UiButton, so it plays the button tap itself, by touch or by key (PRD S15).
+    playTap();
     const entry = this.entries[index];
     if (entry.locked) {
       this.showLockedMessage(entry.number);

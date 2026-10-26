@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-26
+
+### Added
+
+- A sounds switch, "Sounds on" or "Sounds off" with a speaker icon, beside the music switch on the title screen and the pause screen. Sounds are on at first launch, and your choice is kept on the device, also after Start over. Turning sounds on plays two little notes so you can hear them; turning them off is silent (#164).
+- Every button press now plays a soft tap, a little bubble and wood tick, whether you tap it, click it or press Enter or Space on it. Moving the keyboard focus and typing a name stay silent (#164).
+
+### Changed
+
+- In the Home Tank, the music tile is now a "Sound" tile. It opens a small card with the music switch and the sounds switch. The hub is narrower, so at 1024 x 768 its buttons fit on one row again (#164).
+- The music and the sounds share one audio engine, with a bus each, one reverb and one limiter. The music sounds the same as before (#164).
+
 ## [0.46.0] - 2026-10-26
 
 ### Changed
