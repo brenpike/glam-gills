@@ -479,8 +479,8 @@ describe('HUD overlay fit', () => {
       // every supported canvas. The toast never shrinks: below 375 tall and 520 wide (460 and 480
       // wide, 360 tall or less on this grid) a long toast may have no place outside the open
       // middle and wait (X10); the next test pins those waits. Long pond names wait the same way:
-      // with Go home visible at 460 x 320 and 460 x 340, "Rainbow dragonfly wings" waits as the
-      // canal's "Tie-dye galaxy Paint shell" does, never overlapping. A toast with Go home visible
+      // with Go home visible at 460 x 320 and 460 x 340, "Rainbow dragonfly wings" waits as
+      // Area 5's "Tie-dye galaxy Paint shell" does, never overlapping. A toast with Go home visible
       // is unreachable: trip.ts banks a non-empty bag inside the ring in the same step, and
       // HudScene clears the toast on 'banked'.
       const huds = allHudCases();
@@ -503,13 +503,13 @@ describe('HUD overlay fit', () => {
     {
       cssW: 460,
       cssH: 320,
-      shown: ['findToast "Tie-dye galaxy Paint shell"', 'findToast "Rainbow dragonfly wings"'],
+      shown: ['findToast "Rainbow dragonfly wings"', 'findToast "Tie-dye galaxy Paint shell"'],
       hidden: [],
     },
     {
       cssW: 460,
       cssH: 340,
-      shown: ['findToast "Tie-dye galaxy Paint shell"', 'findToast "Rainbow dragonfly wings"'],
+      shown: ['findToast "Rainbow dragonfly wings"', 'findToast "Tie-dye galaxy Paint shell"'],
       hidden: [],
     },
     { cssW: 460, cssH: 360, shown: [], hidden: [] },

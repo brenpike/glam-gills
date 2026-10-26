@@ -1021,7 +1021,7 @@ describe('Area 5 hiding spots (B5, B6, B10, ND-15)', () => {
 
   it.each(ALL_SEEDS)('give each rarity a pool larger than its Area 5 treasures for seed %i', (seed) => {
     const layout = chinampa2(seed);
-    expect(RARITIES.map((rarity) => CHINAMPA_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => CHINAMPA_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
     for (const rarity of RARITIES) {
       const treasures = CHINAMPA_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(layout.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);

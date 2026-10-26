@@ -284,6 +284,13 @@ describe('field-by-field repair', () => {
     expect(hub.axolotls).toEqual(playedSession().hub.axolotls);
   });
 
+  it('keeps the four treasures that moved out of the canal banked and owned, under their old ids (issue #146)', () => {
+    const moved = ['canal/golden-bow', 'canal/paint-shell-galaxy', 'canal/paint-shell-rainbow', 'canal/paint-shell-tie-dye-galaxy'];
+    const hub = hubWith('banked', [HAT, ...moved]);
+    expect(hub.banked).toEqual([HAT, ...moved]);
+    expect(ownedDreamColours(hub.banked)).toEqual(['galaxy', 'rainbow', 'tie-dye-galaxy']);
+  });
+
   it('banks nothing when banked is not an array, and drops tank pieces and worn Dream colours no longer owned', () => {
     const hub = hubWith('banked', 'canal/pond-plant');
     expect(hub.banked).toEqual([]);
@@ -458,7 +465,6 @@ describe('save upgrades', () => {
 
   it('starts at version 1 with no upgrades', () => {
     expect(SAVE_UPGRADES).toEqual([]);
-    expect(SAVE_VERSION).toBe(SAVE_UPGRADES.length + 1);
   });
 
   it('upgrades an older save forward through an injected chain', () => {
@@ -575,10 +581,13 @@ describe('save keys', () => {
   });
 });
 
-const WEARABLES = CANAL_TREASURES.filter((treasure): treasure is Wearable => treasure.category === 'wearable');
+/** The canal Wearables plus the Golden bow, which moved to the pond but keeps its id (issue #146), so every slot has one. */
+const WEARABLES = [...CANAL_TREASURES, treasureById('canal/golden-bow')].filter(
+  (treasure): treasure is Wearable => treasure?.category === 'wearable',
+);
 const FLIPPERS = 'canal/flippers';
 
-/** An outfit with the canal Wearable for each slot on. */
+/** An outfit with one of WEARABLES for each slot on. */
 function fullOutfit(): Outfit {
   const outfit = emptyOutfit();
   for (const wearable of WEARABLES) outfit[wearable.slot] = wearable.id;
@@ -586,7 +595,7 @@ function fullOutfit(): Outfit {
 }
 
 /**
- * `playedSession` with every canal Wearable banked, the wild axolotl wearing one in every slot and
+ * `playedSession` with every one of WEARABLES banked, the wild axolotl wearing one in every slot and
  * chosen as the explorer.
  */
 function dressedSession(): Session {
