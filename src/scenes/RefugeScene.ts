@@ -47,6 +47,7 @@ import {
 import { explorerAxolotl, markFactCardFound } from '../logic/session';
 import { tankKeyFor } from '../logic/tankUi';
 import type { Vec2 } from '../logic/vec';
+import { setMusicScreen } from '../platform/musicPlayer';
 import {
   SCENE_KEYS,
   createButton,
@@ -304,6 +305,7 @@ export class RefugeScene extends Phaser.Scene {
   }
 
   create(): void {
+    setMusicScreen('refuge');
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     const hub = readSession(this.registry).hub;

@@ -45,6 +45,7 @@ import { motionProfile, type MotionProfile } from '../logic/motion';
 import { bestStarsFor, starCount, type AreaStarsRecord } from '../logic/stars';
 import { UI, tankKeyFor } from '../logic/tankUi';
 import type { Vec2 } from '../logic/vec';
+import { setMusicScreen } from '../platform/musicPlayer';
 import {
   SCENE_KEYS,
   createButton,
@@ -286,6 +287,7 @@ export class AreaMapScene extends Phaser.Scene {
   }
 
   create(): void {
+    setMusicScreen('areaMap');
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     const hub = readSession(this.registry).hub;

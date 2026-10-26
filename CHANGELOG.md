@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-26
+
+### Added
+
+- Background music: Sunny Tank, a cozy, happy tune with a kalimba, a ukulele and a whistle. It is made right in the game, with no audio files and no downloads. It starts after your first tap or key press, carries on without restarting as you move between screens, plays softer while a trip is paused, and stops while the game is in a hidden tab (#152).
+- A Music switch on the title screen, in the Home Tank and on the pause screen turns the music on or off. Music is on at first. The game remembers your choice on this device, and Start over keeps it (#152).
+
+### Changed
+
+- The Home Tank has a sixth button, the Music switch, after Refuge. On some screen sizes the Home Tank buttons now take two rows (#152).
+
 ## [0.42.0] - 2026-10-25
 
 ### Added

@@ -4,6 +4,7 @@ import { HOME_TANK_WALL } from '../art/palette';
 import { GAME_EVENTS, REGISTRY_KEYS, type ReducedMotionPayload } from '../logic/gameEvents';
 import { motionProfile, type MotionProfile } from '../logic/motion';
 import { creatorStart, type StylerAxolotl } from '../logic/styler';
+import { setMusicScreen } from '../platform/musicPlayer';
 import { AxolotlStyler } from './AxolotlStyler';
 import { SCENE_KEYS, readSceneView, useCssCamera, type GameAssets, type SceneView } from './BootScene';
 import { finishCreator } from './sceneFlow';
@@ -42,6 +43,7 @@ export class CreatorScene extends Phaser.Scene {
   }
 
   create(): void {
+    setMusicScreen('creator');
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     useCssCamera(this.cameras.main, this.view.fit.dpr);

@@ -216,7 +216,7 @@ describe('hubStarsBadgeShape', () => {
 
 describe('hubStarsBadgeRect', () => {
   it('places the badge and leaves a place for the hub focus caption on every supported canvas with the 5 hub actions', () => {
-    expect(HUB_ACTIONS).toHaveLength(5);
+    expect(HUB_ACTIONS).toHaveLength(6);
     const problems: string[] = [];
     for (const view of supportedCanvases()) {
       for (const withTitle of [true, false]) {
@@ -233,7 +233,7 @@ describe('hubStarsBadgeRect', () => {
   });
 
   it('centres the badge a gap under the hub when it fits in the room of the hub', () => {
-    const view = { cssW: 1024, cssH: 768 };
+    const view = { cssW: 1366, cssH: 768 };
     const frame = tankFrame(view.cssW, view.cssH);
     const hub = hubLayout(view, frame, HUB_ACTIONS, titleSize(view));
     const badge = besideBadge();

@@ -76,6 +76,7 @@ import {
 import { FactCard } from './FactCard';
 import { FindPopup } from './FindPopup';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
+import { createMusicSwitch, toggleMusic } from './musicSwitch';
 
 const MARGIN = 16;
 const GAP = 12;
@@ -277,6 +278,10 @@ export class HudScene extends Phaser.Scene {
   private overlayPanel!: Phaser.GameObjects.Graphics;
   private overlayTitle!: Phaser.GameObjects.Text;
   private resumeButton!: UiButton;
+  /** The music switch on the pause overlay (PRD M8). */
+  private musicButton!: UiButton;
+  /** Whether the pause overlay's focus is on the music switch instead of Keep swimming. */
+  private musicFocused = false;
   private banner!: Phaser.GameObjects.Container;
   private bannerPanel!: Phaser.GameObjects.Graphics;
   private bannerText!: Phaser.GameObjects.Text;
@@ -593,9 +598,10 @@ export class HudScene extends Phaser.Scene {
       pressOnDown: false,
       onPress: () => this.resumeSwim(),
     });
-    this.resumeButton.setFocused(true);
+    this.musicButton = createMusicSwitch(this, this.assets.baked, dpr);
+    this.refreshPauseFocus();
     this.overlay = this.add
-      .container(0, 0, [dim, this.overlayPanel, this.overlayTitle, this.resumeButton.container])
+      .container(0, 0, [dim, this.overlayPanel, this.overlayTitle, this.resumeButton.container, this.musicButton.container])
       .setDepth(OVERLAY_DEPTH)
       .setVisible(false);
   }
@@ -796,19 +802,27 @@ export class HudScene extends Phaser.Scene {
     if (this.stickPointer) this.updateStick();
   }
 
+  /** The pause overlay: the Paused title, Keep swimming under it, and the music switch under that (PRD M8). */
   private layoutOverlay(): void {
     const { cssW, cssH } = this.view;
     const button = this.resumeButton;
-    const panelW = Math.min(cssW - 2 * MARGIN, Math.max(button.width, this.overlayTitle.width) + 2 * OVERLAY_PAD);
-    const panelH = this.overlayTitle.height + button.height + 3 * OVERLAY_PAD;
+    const music = this.musicButton;
+    const contentW = Math.max(button.width, music.width, this.overlayTitle.width);
+    const panelW = Math.min(cssW - 2 * MARGIN, contentW + 2 * OVERLAY_PAD);
+    const panelH = this.overlayTitle.height + button.height + GAP + music.height + 3 * OVERLAY_PAD;
     const panelX = (cssW - panelW) / 2;
     const panelY = (cssH - panelH) / 2;
     drawPanel(this.overlayPanel, panelX, panelY, panelW, panelH, UI_PANEL);
     this.overlayTitle.setPosition((cssW - this.overlayTitle.width) / 2, panelY + OVERLAY_PAD);
-    button.container.setPosition(
-      (cssW - button.width) / 2,
-      panelY + 2 * OVERLAY_PAD + this.overlayTitle.height,
-    );
+    const buttonY = panelY + 2 * OVERLAY_PAD + this.overlayTitle.height;
+    button.container.setPosition((cssW - button.width) / 2, buttonY);
+    music.container.setPosition((cssW - music.width) / 2, buttonY + button.height + GAP);
+  }
+
+  /** Shows the pause overlay's focus ring on Keep swimming or the music switch. */
+  private refreshPauseFocus(): void {
+    this.resumeButton.setFocused(!this.musicFocused);
+    this.musicButton.setFocused(this.musicFocused);
   }
 
   /**
@@ -1011,6 +1025,10 @@ export class HudScene extends Phaser.Scene {
   private pauseSwim(): void {
     if (this.paused || this.trip.phase === 'ended') return;
     this.holdSwim();
+    this.musicFocused = false;
+    this.refreshPauseFocus();
+    // Tab moves the focus between Keep swimming and the music switch, not out of the game.
+    this.input.keyboard?.addCapture(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.overlay.setVisible(true);
     this.game.events.emit(GAME_EVENTS.PAUSED);
   }
@@ -1065,6 +1083,10 @@ export class HudScene extends Phaser.Scene {
   private resumeSwim(): void {
     if (!this.paused) return;
     this.paused = false;
+    this.musicFocused = false;
+    if (this.overlay.visible && this.trip.phase !== 'banked') {
+      this.input.keyboard?.removeCapture(Phaser.Input.Keyboard.KeyCodes.TAB);
+    }
     this.overlay.setVisible(false);
     this.refreshControls();
     this.setHudClockPaused(false);
@@ -1109,16 +1131,26 @@ export class HudScene extends Phaser.Scene {
   private handleConfirmKey(event: KeyboardEvent): void {
     if (this.pressFactCardKey(event)) return;
     if (this.paused) {
-      this.resumeSwim();
+      if (!this.musicFocused) this.resumeSwim();
+      else if (!event.repeat) toggleMusic(this.musicButton);
       return;
     }
     if (event.repeat) return;
     if (this.trip.phase === 'banked') this.bankingCard.pressFocused();
   }
 
-  /** Left, Right or Tab: moves the banking card focus to the other button, ignoring key repeat. */
+  /**
+   * Left, Right or Tab: moves the pause overlay's focus between Keep swimming and the music switch,
+   * or the banking card focus to the other button, ignoring key repeat.
+   */
   private handleFocusKey(event: KeyboardEvent): void {
-    if (this.paused || event.repeat || this.trip.phase !== 'banked') return;
+    if (event.repeat) return;
+    if (this.paused && this.overlay.visible) {
+      this.musicFocused = !this.musicFocused;
+      this.refreshPauseFocus();
+      return;
+    }
+    if (this.paused || this.trip.phase !== 'banked') return;
     this.bankingCard.moveFocus();
   }
 
@@ -1365,7 +1397,7 @@ export class HudScene extends Phaser.Scene {
     for (const text of texts) {
       text.setResolution(dpr);
     }
-    for (const button of [this.pauseButton, this.dashButton, this.goHomeButton, this.resumeButton]) {
+    for (const button of [this.pauseButton, this.dashButton, this.goHomeButton, this.resumeButton, this.musicButton]) {
       button.setResolution(dpr);
     }
     this.foundPopup.setResolution(dpr);

@@ -75,6 +75,7 @@ import {
 } from '../logic/tankUi';
 import type { TripEnding } from '../logic/tripEvents';
 import { SURF, waveY } from '../logic/zone';
+import { musicIsOn, setMusicOn, setMusicScreen } from '../platform/musicPlayer';
 import { AxolotlStyler, type StyledAxolotl } from './AxolotlStyler';
 import {
   SCENE_KEYS,
@@ -94,6 +95,7 @@ import { AxolotlChoicesCard } from './AxolotlChoicesCard';
 import { CollectionBookView } from './CollectionBookView';
 import { ExplorerCard, type ExplorerCardAxolotl } from './ExplorerCard';
 import { settleMotionTweens } from './motionTweens';
+import { showMusicState } from './musicSwitch';
 import { RefugeMilestoneCard } from './RefugeMilestoneCard';
 import {
   goExploring,
@@ -138,6 +140,7 @@ const HUB_ICONS: Readonly<Record<HubActionId, IconKind>> = Object.freeze({
   treasureChest: 'chest',
   collectionBook: 'book',
   refuge: 'refuge',
+  music: 'musicOn',
 });
 
 /**
@@ -369,6 +372,7 @@ export class HomeTankScene extends Phaser.Scene {
   }
 
   create(): void {
+    setMusicScreen('homeTank');
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     this.session = readSession(this.registry);
@@ -608,6 +612,10 @@ export class HomeTankScene extends Phaser.Scene {
       iconOnly: true,
     });
     compact.container.setDepth(TANK_DEPTH.hub).setVisible(false);
+    if (id === 'music') {
+      showMusicState(full);
+      showMusicState(compact);
+    }
     return { id, full, compact };
   }
 
@@ -761,11 +769,23 @@ export class HomeTankScene extends Phaser.Scene {
       case 'refuge':
         this.startRefuge();
         return;
+      case 'music':
+        this.toggleMusic();
+        return;
       default: {
         const unhandled: never = id;
         throw new Error(`HomeTankScene: no hub action ${String(unhandled)}`);
       }
     }
+  }
+
+  /** The music switch (PRD M8): turns music on or off and shows the new state on both variants and the caption. */
+  private toggleMusic(): void {
+    const hubButton = this.hubButtons[this.hubIndexOf('music')];
+    setMusicOn(!musicIsOn());
+    showMusicState(hubButton.full);
+    if (hubButton.compact !== null) showMusicState(hubButton.compact);
+    this.renderHubCaption();
   }
 
   /** Refuge, once: opens the Xochimilco refuge (PRD N2) through the scene flow (openRefuge). */

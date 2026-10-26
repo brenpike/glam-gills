@@ -5,6 +5,7 @@ import { GAME_EVENTS, REGISTRY_KEYS, type ReducedMotionPayload } from './logic/g
 import { VIEW } from './logic/tuning';
 import { fitView, type ViewFit } from './logic/viewport';
 import { WORLD_H } from './logic/zone';
+import { installMusic, setMusicPaused } from './platform/musicPlayer';
 import { AreaMapScene } from './scenes/AreaMapScene';
 import { BootScene, DEV_AREA_REGISTRY_KEY, DEV_DECOR_REGISTRY_KEY, type DecorationPack } from './scenes/BootScene';
 import { CreatorScene } from './scenes/CreatorScene';
@@ -60,6 +61,13 @@ function watchViewport(game: Phaser.Game, parent: HTMLElement): void {
   refreshView();
 }
 
+/** Starts the background music (PRD N6) and plays it softer while a trip is paused (M9). */
+function startMusic(game: Phaser.Game): void {
+  installMusic();
+  game.events.on(GAME_EVENTS.PAUSED, () => setMusicPaused(true));
+  game.events.on(GAME_EVENTS.RESUMED, () => setMusicPaused(false));
+}
+
 function watchReducedMotion(game: Phaser.Game): void {
   const query = window.matchMedia(REDUCED_MOTION_QUERY);
   game.registry.set(REGISTRY_KEYS.reducedMotion, query.matches);
@@ -94,6 +102,8 @@ function startGame(
       zoom: 1 / initialView.dpr,
     },
     input: { activePointers: 3 },
+    // Music is made by src/platform/musicPlayer.ts (ADR 0025), so Phaser's own sound is off.
+    audio: { noAudio: true },
     scene: scenes,
     callbacks: {
       preBoot: (booting: Phaser.Game) => {
@@ -103,6 +113,7 @@ function startGame(
     },
   });
   watchReducedMotion(game);
+  startMusic(game);
   game.events.once(Phaser.Core.Events.READY, () => watchViewport(game, parent));
   return game;
 }
