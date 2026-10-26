@@ -2,6 +2,7 @@
 
 How the game's background music sounds, so every cue, new ones included, feels like one game.
 Requirements are in the [PRD](prds/axolotl-mvp.md) (N6, M1 to M12). The decisions behind them are in [ADR 0025](adr/0025-procedural-background-music.md).
+Sound effects have their own [sound guide](sound-guide.md); they play in the key of the cue playing (section 4 gives each cue's key).
 
 ## 1. Source of truth
 

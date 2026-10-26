@@ -351,6 +351,24 @@ _Avoid_: night song, dusk theme
 The on/off control for background music, kept on the device outside the save (M8).
 _Avoid_: mute button
 
+### Sound effects
+
+**Sound**:
+A short sound effect for one moment, such as eating a snack or a find, made live in code (N7, S1).
+_Avoid_: sfx, sample (in specs)
+
+**Sounds switch**:
+The on/off control for sound effects, kept on the device outside the save (S14).
+_Avoid_: mute button
+
+**Snack ladder**:
+Snacks eaten close together each play one note higher, starting again after a pause (S3).
+_Avoid_: combo
+
+**Uh-oh**:
+The sound for a lost leg: two soft, low notes falling a small step, answered by the leg-back sound (S5).
+_Avoid_: hit sound, hurt sound
+
 ## Relationships
 
 - A **Trip** has exactly one **Explorer**, starts at the **Home Spot** in the **Area** picked on the **Area map**, and ends by **Go home**, **Carried home**, or reaching the open **Exit**
