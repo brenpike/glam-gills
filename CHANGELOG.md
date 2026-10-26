@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.42.0] - 2026-10-26
+## [0.43.0] - 2026-10-26
 
 ### Added
 
@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The Home Tank has a sixth button, the Music switch, after Refuge. On some screen sizes the Home Tank buttons now take two rows (#152).
+
+## [0.42.0] - 2026-10-25
+
+### Added
+
+- Area 3 has two common carp that chase you. One swims along the bottom under the herons, so staying deep is not always safe, and the other swims near the top (#133).
+
+### Changed
+
+- Area 3's tilapia swim at every depth, from near the top to near the bottom. They chase you a little farther than before, then swim back to where they were (#133).
+- Area 3's tadpoles swim all around their part of the pond, from near the top to near the bottom (#133).
+- Area 3's freshwater shrimp hop about their homes, and still flick away when you get close (#133).
 
 ## [0.41.0] - 2026-10-25
 

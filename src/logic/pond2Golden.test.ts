@@ -8,6 +8,7 @@ import { POND_2_TREASURES } from './catalogue';
 import { createEncounter, createEncounterContext, stepEncounter, type EncounterState } from './encounter';
 import { legSwimTuning } from './legs';
 import { POND_2_LAYOUT } from './pond2Layout';
+import { CARP_SPECIES } from './predators';
 import { createTrip, createTripContext, newTrip, stepTrip, type TripState } from './trip';
 import { LEGS } from './tuning';
 import { DEFAULT_ZONE_SEED, buildZone, swimBounds, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
@@ -21,7 +22,7 @@ const FNV_PRIME = 0x01000193;
 const FRAMES_PER_SECOND = 60;
 const DT = 1 / FRAMES_PER_SECOND;
 const PARK_SECONDS = 20;
-const TRACE_SECONDS = 120;
+const TRACE_SECONDS = 180;
 const MIN_TRACE_SECONDS = 90;
 const TRACE_FRAMES = TRACE_SECONDS * FRAMES_PER_SECOND;
 const EVENT_DECIMALS = 100;
@@ -110,7 +111,7 @@ function swimPositions(from: Point, to: Point): Point[] {
   return positions;
 }
 
-/** Mean of a route's waypoints: inside the tilapia's lunge range wherever it is on its loop. */
+/** Mean of a route's waypoints: inside the tilapia's or the carp's lunge range wherever it is on its loop. */
 function routeCentre(route: TilapiaRoute): Point {
   const count = route.waypoints.length;
   const sumX = route.waypoints.reduce((total, point) => total + point.x, 0);
@@ -118,14 +119,19 @@ function routeCentre(route: TilapiaRoute): Point {
   return { x: sumX / count, y: sumY / count };
 }
 
+/** The routes the scripted swim parks by: every tilapia route, then every carp route (issue #133, ND-9). */
+function listParkRoutes(zone: ZoneLayout): TilapiaRoute[] {
+  return [...zone.tilapiaRoutes, ...zone.predatorRoutes.filter((route) => route.species.id === CARP_SPECIES.id)];
+}
+
 /**
  * The scripted swim, one axolotl centre per frame: the main path at four-leg cruise, then to each
- * tilapia's route centre in turn, parked there PARK_SECONDS, then parked at the last one until
- * TRACE_SECONDS.
+ * tilapia's and then each carp's route centre in turn, parked there PARK_SECONDS, then parked at the
+ * last one until TRACE_SECONDS. Throws when the stops overrun TRACE_SECONDS, so no park is cut off.
  */
 function listScriptedPositions(zone: ZoneLayout): Point[] {
   const positions: Point[] = [{ ...zone.mainPath[0] }];
-  const stops = [...zone.mainPath.slice(1), ...zone.tilapiaRoutes.map(routeCentre)];
+  const stops = [...zone.mainPath.slice(1), ...listParkRoutes(zone).map(routeCentre)];
   const parkFrom = zone.mainPath.length - 1;
   stops.forEach((stop, index) => {
     positions.push(...swimPositions(positions[positions.length - 1], stop));
@@ -133,6 +139,9 @@ function listScriptedPositions(zone: ZoneLayout): Point[] {
       positions.push(...Array.from({ length: PARK_SECONDS * FRAMES_PER_SECOND }, () => ({ ...stop })));
     }
   });
+  if (positions.length > TRACE_FRAMES) {
+    throw new Error(`listScriptedPositions: the stops take ${positions.length} frames, more than the ${TRACE_FRAMES} of TRACE_SECONDS`);
+  }
   const last = positions[positions.length - 1];
   while (positions.length < TRACE_FRAMES) positions.push({ ...last });
   return positions.slice(0, TRACE_FRAMES);
@@ -235,9 +244,17 @@ describe('pond-2 golden', () => {
     expect(summaries).toMatchSnapshot();
   });
 
-  it('scripts a swim of at least 90 s that parks inside every tilapia lunge range', () => {
+  it('scripts a swim of at least 90 s that parks inside every tilapia and carp lunge range', () => {
     expect(positions.length / FRAMES_PER_SECOND).toBeGreaterThanOrEqual(MIN_TRACE_SECONDS);
-    const parkedFrames = defaultZone.tilapiaRoutes.map((route) => {
+    expect(listParkRoutes(defaultZone).map((route) => route.id)).toEqual([
+      'tilapia-0',
+      'tilapia-1',
+      'tilapia-2',
+      'tilapia-3',
+      'carp-0',
+      'carp-1',
+    ]);
+    const parkedFrames = listParkRoutes(defaultZone).map((route) => {
       const centre = routeCentre(route);
       return positions.filter((pos) => pos.x === centre.x && pos.y === centre.y).length;
     });
