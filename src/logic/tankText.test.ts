@@ -49,6 +49,7 @@ describe('tank text', () => {
       'PREVIOUS_PAGE_LABEL',
       'PUT_AWAY_LABEL',
       'REFUGE_LABEL',
+      'SOUND_LABEL',
       'TREASURE_CHEST_LABEL',
     ]);
   });

@@ -86,6 +86,11 @@ export interface MusicCue {
   key: string;
   /** Letter name of the key's home note, such as `'F'`; fireflies chime from its pentatonic notes. */
   tonic: string;
+  /**
+   * The key of the sounds while this cue plays, or would play with music off (PRD S12; ADR 0026):
+   * pitched sounds use its major pentatonic. A dusk version keeps its day cue's.
+   */
+  soundKey: SoundKey;
   bpm: number;
   beatsPerBar: number;
   stepsPerBeat: number;
@@ -98,6 +103,9 @@ export interface MusicCue {
   /** For a dusk version, the id of the day cue it is made from. */
   dayId?: string;
 }
+
+/** The home note of a sounds key: sounds play the major pentatonic on it (PRD S12; docs/sound-guide.md, section 3). */
+export type SoundKey = 'G' | 'F' | 'D';
 
 /** Where the player is, for choosing a cue (M1, M2). */
 export type MusicScreen = 'title' | 'homeTank' | 'creator' | 'areaMap' | 'refuge' | 'trip';
@@ -139,6 +147,7 @@ export const SUNNY_TANK: Readonly<MusicCue> = Object.freeze({
   name: 'Sunny Tank',
   key: 'G major',
   tonic: 'G',
+  soundKey: 'G',
   bpm: 96,
   beatsPerBar: 4,
   stepsPerBeat: 2,
@@ -180,6 +189,7 @@ export const CANAL_PADDLE: Readonly<MusicCue> = Object.freeze({
   name: 'Canal Paddle',
   key: 'G major',
   tonic: 'G',
+  soundKey: 'G',
   bpm: 68,
   beatsPerBar: 2,
   stepsPerBeat: 3,
@@ -222,6 +232,7 @@ export const LILY_PAD_HOP: Readonly<MusicCue> = Object.freeze({
   name: 'Lily Pad Hop',
   key: 'F major',
   tonic: 'F',
+  soundKey: 'F',
   bpm: 104,
   beatsPerBar: 4,
   stepsPerBeat: 2,
@@ -264,6 +275,7 @@ export const GARDEN_BOATS: Readonly<MusicCue> = Object.freeze({
   name: 'Garden Boats',
   key: 'D mixolydian',
   tonic: 'D',
+  soundKey: 'D',
   bpm: 112,
   beatsPerBar: 4,
   stepsPerBeat: 2,

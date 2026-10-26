@@ -75,7 +75,9 @@ export type IconKind =
   | 'paintDrop'
   | 'refuge'
   | 'musicOn'
-  | 'musicOff';
+  | 'musicOff'
+  | 'soundsOn'
+  | 'soundsOff';
 
 /**
  * House icon (guide 7d), shared by the Home Spot flag and every "go home" UI.
@@ -597,8 +599,45 @@ export function paintIcon(ctx: CanvasRenderingContext2D, kind: IconKind, size: n
       ctx.stroke(slash);
       break;
     }
+    case 'soundsOn': {
+      // Sounds switch, on (PRD S14): a speaker with two sound waves. Ink only.
+      fillSpeaker(ctx);
+      ctx.lineWidth = 3;
+      const waves = new Path2D();
+      waves.arc(17, 16, 5.5, -0.75, 0.75);
+      waves.moveTo(17 + 10.5 * Math.cos(-0.8), 16 + 10.5 * Math.sin(-0.8));
+      waves.arc(17, 16, 10.5, -0.8, 0.8);
+      ctx.stroke(waves);
+      break;
+    }
+    case 'soundsOff': {
+      // Sounds switch, off (PRD S14): the speaker without waves, crossed by the music icon's slash (X2).
+      fillSpeaker(ctx);
+      ctx.lineWidth = 3.5;
+      const slash = new Path2D();
+      slash.moveTo(5, 5);
+      slash.lineTo(27, 27);
+      ctx.stroke(slash);
+      break;
+    }
   }
   ctx.restore();
+}
+
+/**
+ * A speaker in the 32 box, ink only, filled: a box from (4, 12) to (10, 20) and a cone from it
+ * opening to (17, 5) and (17, 27).
+ */
+function fillSpeaker(ctx: CanvasRenderingContext2D): void {
+  const speaker = new Path2D();
+  speaker.moveTo(4, 12);
+  speaker.lineTo(10, 12);
+  speaker.lineTo(17, 5);
+  speaker.lineTo(17, 27);
+  speaker.lineTo(10, 20);
+  speaker.lineTo(4, 20);
+  speaker.closePath();
+  ctx.fill(speaker);
 }
 
 /**

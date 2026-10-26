@@ -75,7 +75,7 @@ import {
 } from '../logic/tankUi';
 import type { TripEnding } from '../logic/tripEvents';
 import { SURF, waveY } from '../logic/zone';
-import { musicIsOn, setMusicOn, setMusicScreen } from '../platform/musicPlayer';
+import { setMusicScreen } from '../platform/musicPlayer';
 import { AxolotlStyler, type StyledAxolotl } from './AxolotlStyler';
 import {
   SCENE_KEYS,
@@ -95,8 +95,8 @@ import { AxolotlChoicesCard } from './AxolotlChoicesCard';
 import { CollectionBookView } from './CollectionBookView';
 import { ExplorerCard, type ExplorerCardAxolotl } from './ExplorerCard';
 import { settleMotionTweens } from './motionTweens';
-import { showMusicState } from './musicSwitch';
 import { RefugeMilestoneCard } from './RefugeMilestoneCard';
+import { SoundCard } from './SoundCard';
 import {
   goExploring,
   openRefuge,
@@ -140,7 +140,7 @@ const HUB_ICONS: Readonly<Record<HubActionId, IconKind>> = Object.freeze({
   treasureChest: 'chest',
   collectionBook: 'book',
   refuge: 'refuge',
-  music: 'musicOn',
+  sound: 'soundsOn',
 });
 
 /**
@@ -162,6 +162,7 @@ const TANK_DEPTH = Object.freeze({
   book: DEPTH.ui + 8,
   arrival: DEPTH.ui + 9,
   milestone: DEPTH.ui + 9,
+  sound: DEPTH.ui + 9,
   restyle: DEPTH.ui + 8,
   explorer: DEPTH.ui + 8,
   choices: DEPTH.ui + 8,
@@ -169,12 +170,13 @@ const TANK_DEPTH = Object.freeze({
 
 /**
  * What the Home Tank is showing and where keys go, in priority order: the tank arrival card, a
- * refuge milestone card (PRD N2), the Treasure Chest, the Collection Book, decorate mode, restyling
+ * refuge milestone card (PRD N2), the Sound card (PRD M8, S14), the Treasure Chest, the Collection Book, decorate mode, restyling
  * an axolotl (PRD F6), the explorer card (PRD F7), the axolotl choices card (PRD F6), or the hub.
  */
 type TankMode =
   | 'arrival'
   | 'milestone'
+  | 'sound'
   | 'chest'
   | 'book'
   | 'decorate'
@@ -329,6 +331,8 @@ export class HomeTankScene extends Phaser.Scene {
   private refugeNudge!: Phaser.GameObjects.Image;
   /** The refuge milestone card showing, if any. */
   private milestoneCard: RefugeMilestoneCard | null = null;
+  /** The Sound card showing, if any (PRD M8, S14). */
+  private soundCard: SoundCard | null = null;
   /** The Decorations the tank uses: the shipped ones plus the dev pack's (page session only). */
   private tankCatalogue: readonly Decoration[] = SHIPPED_DECORATIONS;
   private titleFits = false;
@@ -369,6 +373,7 @@ export class HomeTankScene extends Phaser.Scene {
     this.explorerCard = null;
     this.choicesCard = null;
     this.milestoneCard = null;
+    this.soundCard = null;
   }
 
   create(): void {
@@ -612,10 +617,6 @@ export class HomeTankScene extends Phaser.Scene {
       iconOnly: true,
     });
     compact.container.setDepth(TANK_DEPTH.hub).setVisible(false);
-    if (id === 'music') {
-      showMusicState(full);
-      showMusicState(compact);
-    }
     return { id, full, compact };
   }
 
@@ -769,8 +770,8 @@ export class HomeTankScene extends Phaser.Scene {
       case 'refuge':
         this.startRefuge();
         return;
-      case 'music':
-        this.toggleMusic();
+      case 'sound':
+        this.openSoundCard();
         return;
       default: {
         const unhandled: never = id;
@@ -779,13 +780,27 @@ export class HomeTankScene extends Phaser.Scene {
     }
   }
 
-  /** The music switch (PRD M8): turns music on or off and shows the new state on both variants and the caption. */
-  private toggleMusic(): void {
-    const hubButton = this.hubButtons[this.hubIndexOf('music')];
-    setMusicOn(!musicIsOn());
-    showMusicState(hubButton.full);
-    if (hubButton.compact !== null) showMusicState(hubButton.compact);
-    this.renderHubCaption();
+  /**
+   * Sound: opens the Sound card with the music and sounds switches over the hub (PRD M8, S14), which
+   * takes every key and press until it closes; the focus then comes back to Sound.
+   */
+  private openSoundCard(): void {
+    this.destroySoundCard();
+    this.mode = 'sound';
+    this.refreshHubFocus();
+    this.soundCard = new SoundCard(this, this.assets, this.view, TANK_DEPTH.sound, () => this.closeSoundCard());
+    this.soundCard.open();
+  }
+
+  private closeSoundCard(): void {
+    this.destroySoundCard();
+    this.showHub(this.hubIndexOf('sound'));
+  }
+
+  /** Removes the Sound card, if any. */
+  private destroySoundCard(): void {
+    this.soundCard?.destroy();
+    this.soundCard = null;
   }
 
   /** Refuge, once: opens the Xochimilco refuge (PRD N2) through the scene flow (openRefuge). */
@@ -1074,6 +1089,9 @@ export class HomeTankScene extends Phaser.Scene {
       case 'milestone':
         this.milestoneCard?.handleKey(action, event.repeat);
         return;
+      case 'sound':
+        this.soundCard?.handleKey(action, event.repeat);
+        return;
       case 'chest':
         if (action !== 'confirm' || !event.repeat) this.chest.handleKey(action);
         return;
@@ -1187,6 +1205,7 @@ export class HomeTankScene extends Phaser.Scene {
     this.explorerCard?.setResolution(dpr);
     this.choicesCard?.setResolution(dpr);
     this.milestoneCard?.setResolution(dpr);
+    this.soundCard?.setResolution(dpr);
     this.layout();
     this.animate(0);
   }
@@ -1202,6 +1221,7 @@ export class HomeTankScene extends Phaser.Scene {
     this.destroyExplorerCard();
     this.destroyChoicesCard();
     this.destroyMilestoneCard();
+    this.destroySoundCard();
     this.releaseSwimmers();
     const keyboard = this.input.keyboard;
     if (!keyboard) return;
@@ -1246,6 +1266,7 @@ export class HomeTankScene extends Phaser.Scene {
     this.explorerCard?.layout(this.view);
     this.choicesCard?.layout(this.view);
     this.milestoneCard?.layout(this.view);
+    this.soundCard?.layout(this.view);
   }
 
   /**
@@ -1255,7 +1276,7 @@ export class HomeTankScene extends Phaser.Scene {
    * nudge badge only while a refuge clean-up is pending.
    */
   private applyHubVisibility(): void {
-    const shown = this.mode === 'hub' || this.mode === 'arrival' || this.mode === 'milestone';
+    const shown = this.mode === 'hub' || this.mode === 'arrival' || this.mode === 'milestone' || this.mode === 'sound';
     for (const hubButton of this.hubButtons) {
       const active = this.shownHubButton(hubButton);
       hubButton.full.container.setVisible(shown && active === hubButton.full);

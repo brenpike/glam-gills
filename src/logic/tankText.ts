@@ -13,6 +13,9 @@ export const COLLECTION_BOOK_LABEL = 'Collection Book';
 /** Home Tank button that opens the Xochimilco refuge (PRD N2). */
 export const REFUGE_LABEL = 'Refuge';
 
+/** Home Tank button that opens the Sound card, with the music and sounds switches (PRD M8, S14). */
+export const SOUND_LABEL = 'Sound';
+
 /** Home Tank button that starts placing Decorations. */
 export const DECORATE_LABEL = 'Decorate';
 

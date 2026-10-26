@@ -8,7 +8,7 @@ Requirements are in the [PRD](prds/axolotl-mvp.md) (N7, S1 to S16). The decision
 | Item | Value |
 |---|---|
 | Approved sketches | [`prototypes/sound-effects/sketches.html`](../prototypes/sound-effects/sketches.html), approved by the owner on 2026-10-26. Open it in a browser, pick a cue to play under the sounds, and tap a sound. "Play the trip" plays 30 seconds of a canal trip. |
-| Game code (once built) | Sound recipes, levels and rules in `src/logic/`; the shared engine and voices in `src/platform/`. |
+| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164). |
 | When they disagree | The game code is the record once it ships. Before that, the sketches are. Correct this guide to match. |
 
 Every sound is made live in code with Web Audio. There are no audio files (PRD S1).
@@ -124,5 +124,5 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 1. Decide whether the moment needs one: check section 6 and the principles in section 2.
 2. Sketch it on the sketches page: copy a recipe near it and change it, using steps of the scale (section 3).
 3. Listen over every cue, with "Match the music's key" on.
-4. Measure its loudness and set its level (section 4).
+4. Measure its loudness and set its level (section 4). `prototypes/sound-effects/measure.cjs` renders every sketch sound offline in Chromium and prints its level.
 5. Add the recipe and level to `src/logic/`, hook the moment, and add a row to section 5. The rule test fails if a sound has no level.

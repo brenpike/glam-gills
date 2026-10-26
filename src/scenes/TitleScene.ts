@@ -32,6 +32,7 @@ import {
   type UiButton,
 } from './BootScene';
 import { createMusicSwitch, toggleMusic } from './musicSwitch';
+import { createSoundsSwitch, toggleSounds } from './soundsSwitch';
 import { openHomeTank, readSession, startOver } from './sceneFlow';
 import { StartOverCard, type StartOverOutcome } from './StartOverCard';
 
@@ -65,19 +66,28 @@ const CAPTURED_KEYS: readonly number[] = [
   Phaser.Input.Keyboard.KeyCodes.SPACE,
 ];
 
-/** `buttons` split in order into rows that each fit `maxW` with BUTTON_GAP between. */
-function splitButtonRows(buttons: readonly UiButton[], maxW: number): UiButton[][] {
+/**
+ * `groups` of buttons split in order into rows that each fit `maxW` with BUTTON_GAP between. A group
+ * (such as the music and sounds switches) stays whole on one row, unless it is wider than `maxW`.
+ */
+function splitButtonRows(groups: readonly (readonly UiButton[])[], maxW: number): UiButton[][] {
   const rows: UiButton[][] = [];
   let rowW = Infinity;
-  for (const button of buttons) {
+  for (const group of groups) {
+    const groupW = group.reduce((sum, button) => sum + button.width, 0) + BUTTON_GAP * (group.length - 1);
     const last = rows[rows.length - 1];
-    if (last !== undefined && rowW + BUTTON_GAP + button.width <= maxW) {
-      last.push(button);
-      rowW += BUTTON_GAP + button.width;
+    if (last !== undefined && rowW + BUTTON_GAP + groupW <= maxW) {
+      last.push(...group);
+      rowW += BUTTON_GAP + groupW;
       continue;
     }
-    rows.push([button]);
-    rowW = button.width;
+    if (groupW > maxW && group.length > 1) {
+      for (const button of group) rows.push([button]);
+      rowW = group[group.length - 1].width;
+      continue;
+    }
+    rows.push([...group]);
+    rowW = groupW;
   }
   return rows;
 }
@@ -109,8 +119,8 @@ function startOverButtonBodyWidth(): number {
 
 /**
  * Title card: canal background, idle axolotl, game name and subtitle, controls, version label, a
- * Start button, the music switch (PRD M8), the Start over button with its card (PRD D7) and the
- * update prompt.
+ * Start button, the music and sounds switches (PRD M8, S14), the Start over button with its card
+ * (PRD D7) and the update prompt.
  */
 export class TitleScene extends Phaser.Scene {
   private assets!: GameAssets;
@@ -129,8 +139,12 @@ export class TitleScene extends Phaser.Scene {
   private versionText!: Phaser.GameObjects.Text;
   private startButton!: UiButton;
   private musicButton!: UiButton;
-  /** Whether the music switch shows: it hides only when the title panel would not fit above it (PRD open question 420). */
-  private musicShown = true;
+  private soundsButton!: UiButton;
+  /**
+   * Whether the music and sounds switches show: they hide together only when the title panel would
+   * not fit above them (PRD open questions 420 and 429).
+   */
+  private switchesShown = true;
   private startOver: StartOverControls | null = null;
   private startOverShown = false;
   /** Index into focusOrder(); Start is 0. */
@@ -191,6 +205,8 @@ export class TitleScene extends Phaser.Scene {
     this.startButton.container.setDepth(DEPTH.ui);
     this.musicButton = createMusicSwitch(this, this.assets.baked, this.view.fit.dpr);
     this.musicButton.container.setDepth(DEPTH.ui);
+    this.soundsButton = createSoundsSwitch(this, this.assets.baked, this.view.fit.dpr);
+    this.soundsButton.container.setDepth(DEPTH.ui);
     setMusicScreen('title');
     if (showsStartOver(readSession(this.registry))) this.createStartOver();
     this.refreshFocus();
@@ -260,10 +276,13 @@ export class TitleScene extends Phaser.Scene {
     return this.startOver?.card.isShowing() === true;
   }
 
-  /** The title buttons that take the focus, in order: Start, Start over while it shows, then the music switch. */
+  /**
+   * The title buttons that take the focus, in order: Start, Start over while it shows, then the
+   * music and sounds switches while they show.
+   */
   private focusOrder(): UiButton[] {
     const startOverButton = this.startOver !== null && this.startOverShown ? [this.startOver.button] : [];
-    return [this.startButton, ...startOverButton, ...(this.musicShown ? [this.musicButton] : [])];
+    return [this.startButton, ...startOverButton, ...(this.switchesShown ? [this.musicButton, this.soundsButton] : [])];
   }
 
   /** Shows the focus ring on the focused title button, only while the Start over card is hidden. */
@@ -272,6 +291,7 @@ export class TitleScene extends Phaser.Scene {
     const focused = this.focusOrder()[this.focusIndex];
     this.startButton.setFocused(!cardShowing && focused === this.startButton);
     this.musicButton.setFocused(!cardShowing && focused === this.musicButton);
+    this.soundsButton.setFocused(!cardShowing && focused === this.soundsButton);
     this.startOver?.button.setFocused(!cardShowing && focused === this.startOver.button);
   }
 
@@ -285,7 +305,7 @@ export class TitleScene extends Phaser.Scene {
 
   /**
    * While the Start over card shows, keys go to it. Otherwise Tab and Shift+Tab move the focus
-   * between Start, Start over and the music switch, wrapping, and Enter and Space press the focused
+   * between Start, Start over and the music and sounds switches, wrapping, and Enter and Space press the focused
    * button, ignoring key repeat.
    */
   private handleKeyDown(event: KeyboardEvent): void {
@@ -308,6 +328,10 @@ export class TitleScene extends Phaser.Scene {
     const focused = this.focusOrder()[this.focusIndex];
     if (focused === this.musicButton) {
       toggleMusic(this.musicButton);
+      return;
+    }
+    if (focused === this.soundsButton) {
+      toggleSounds(this.soundsButton);
       return;
     }
     if (focused === this.startOver?.button) {
@@ -366,6 +390,7 @@ export class TitleScene extends Phaser.Scene {
     this.versionText.setResolution(this.view.fit.dpr);
     this.startButton.setResolution(this.view.fit.dpr);
     this.musicButton.setResolution(this.view.fit.dpr);
+    this.soundsButton.setResolution(this.view.fit.dpr);
     this.startOver?.button.setResolution(this.view.fit.dpr);
     this.startOver?.card.setResolution(this.view.fit.dpr);
     this.updatePrompt?.text.setResolution(this.view.fit.dpr);
@@ -417,19 +442,20 @@ export class TitleScene extends Phaser.Scene {
   }
 
   /**
-   * Places the buttons and the update prompt, and returns the top of the lower UI. The music switch
-   * hides when its row would leave no room above for the title panel (name, subtitle and version),
-   * as on a short screen with the update prompt showing, and shows again once there is room. The
-   * focus moves off it when it hides.
+   * Places the buttons and the update prompt, and returns the top of the lower UI. The music and
+   * sounds switches hide together when their rows would leave no room above for the title panel
+   * (name, subtitle and version), as on a short screen with the update prompt showing, and show
+   * again once there is room. The focus moves off them when they hide.
    */
   private layoutLower(cssW: number, cssH: number): number {
-    this.musicShown = true;
+    this.switchesShown = true;
     let lowerTop = this.layoutPrompt(cssW, this.layoutButtons(cssW, cssH));
     if (MARGIN + this.titlePanelHeight(false) + BUTTON_GAP > lowerTop) {
-      this.musicShown = false;
+      this.switchesShown = false;
       lowerTop = this.layoutPrompt(cssW, this.layoutButtons(cssW, cssH));
     }
-    this.musicButton.container.setVisible(this.musicShown);
+    this.musicButton.container.setVisible(this.switchesShown);
+    this.soundsButton.container.setVisible(this.switchesShown);
     this.focusIndex = Math.min(this.focusIndex, this.focusOrder().length - 1);
     this.refreshFocus();
     return lowerTop;
@@ -437,7 +463,7 @@ export class TitleScene extends Phaser.Scene {
 
   /**
    * Places the buttons from the bottom: Start over centred at the bottom while it shows, and above it
-   * the row of Update (while the prompt shows), Start and the music switch, in that order. The row
+   * the row of Update (while the prompt shows), Start, the music switch and the sounds switch, in that order. The row
    * wraps onto more rows, each centred, when it is wider than the screen. Returns the top of the
    * topmost button.
    */
@@ -450,8 +476,8 @@ export class TitleScene extends Phaser.Scene {
       bottomY -= BUTTON_GAP;
     }
     const update = this.updatePrompt?.button;
-    const music = this.musicShown ? [this.musicButton] : [];
-    const items = [...(update === undefined ? [] : [update]), this.startButton, ...music];
+    const switches = this.switchesShown ? [[this.musicButton, this.soundsButton]] : [];
+    const items = [...(update === undefined ? [] : [[update]]), [this.startButton], ...switches];
     const rows = splitButtonRows(items, cssW - 2 * MARGIN);
     let rowBottom = bottomY;
     for (const row of [...rows].reverse()) {

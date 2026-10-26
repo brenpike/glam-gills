@@ -134,6 +134,8 @@ const ICON_KINDS: readonly IconKind[] = [
   'refuge',
   'musicOn',
   'musicOff',
+  'soundsOn',
+  'soundsOff',
 ];
 
 export const bgKey = (i: number): string => `bg-${i}`;

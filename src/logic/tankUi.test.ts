@@ -507,14 +507,14 @@ describe('hubButtonLook', () => {
     }
   });
 
-  it('puts Go exploring first, Refuge then the music switch last, and makes Go exploring the only primary', () => {
+  it('puts Go exploring first, Refuge then Sound last, and makes Go exploring the only primary', () => {
     expect(HUB_BUTTONS.map((spec) => spec.id)).toEqual([
       'goExploring',
       'decorate',
       'treasureChest',
       'collectionBook',
       'refuge',
-      'music',
+      'sound',
     ]);
     expect(HUB_BUTTONS.filter((spec) => spec.primary).map((spec) => spec.id)).toEqual(['goExploring']);
   });
@@ -593,7 +593,7 @@ describe('hubLayout', () => {
   });
 
   it('never reaches with the 4 actions before Refuge', () => {
-    const four = HUB_ACTIONS.filter((action) => action.id !== 'refuge' && action.id !== 'music');
+    const four = HUB_ACTIONS.filter((action) => action.id !== 'refuge' && action.id !== 'sound');
     const reaching = supportedCanvases().filter((view) => hubLayout(view, tankFrame(view.cssW, view.cssH), four, hubTitle(view)).reach);
     expect(reaching).toEqual([]);
   });
@@ -622,7 +622,7 @@ describe('hubLayout', () => {
     expect(layout.actions.map((placement) => placement.rect.w)).toEqual(actions.map((action) => action.w));
   });
 
-  it('puts two compact rows in the open water, Refuge and the music switch reaching over the floor Decorations, at 460 x 320', () => {
+  it('puts two compact rows in the open water, Refuge and Sound reaching over the floor Decorations, at 460 x 320', () => {
     const view = { cssW: 460, cssH: 320 };
     const frame = tankFrame(view.cssW, view.cssH);
     const layout = sceneHub(view);
@@ -666,14 +666,14 @@ describe('hubLayout', () => {
     expect(layout.reach).toBe(false);
     expect(layout.title).toEqual({ x: (view.cssW - title.w) / 2, y: 228, w: title.w, h: 66.5 });
     expect(layout.actions.map((placement) => placement.rect)).toEqual([
-      { x: 123.5, y: 306.5, w: 225, h: 64 },
-      { x: 360.5, y: 306.5, w: 118, h: 64 },
-      { x: 490.5, y: 306.5, w: 197, h: 64 },
-      { x: 699.5, y: 306.5, w: 210, h: 64 },
-      { x: 921.5, y: 306.5, w: 92, h: 64 },
-      { x: 1025.5, y: 306.5, w: 131, h: 64 },
+      { x: 150, y: 306.5, w: 225, h: 64 },
+      { x: 387, y: 306.5, w: 118, h: 64 },
+      { x: 517, y: 306.5, w: 197, h: 64 },
+      { x: 726, y: 306.5, w: 210, h: 64 },
+      { x: 948, y: 306.5, w: 92, h: 64 },
+      { x: 1052, y: 306.5, w: 78, h: 64 },
     ]);
-    expect(1025.5 + 131 - 123.5).toBe(1033);
+    expect(1052 + 78 - 150).toBe(980);
     expect(layout.room).toEqual({ top: 228, bottom: 436 });
   });
 
@@ -697,14 +697,14 @@ describe('hubLayout', () => {
     expect(layout.compact).toBe(true);
     expect(layout.title).toBeNull();
     expect(layout.reach).toBe(false);
-    const [go, decorate, chest, book, refuge, music] = layout.actions.map((placement) => placement.rect);
+    const [go, decorate, chest, book, refuge, sound] = layout.actions.map((placement) => placement.rect);
     expect(go.y).toBe(wall.top);
     expect(decorate.y).toBe(chest.y);
     expect(bottomOf(chest)).toBeLessThanOrEqual(wall.bottom);
     expect(book.y).toBeCloseTo(water.top, 9);
     expect(refuge.y).toBeCloseTo(water.top, 9);
-    expect(music.y).toBeCloseTo(water.top, 9);
-    expect(bottomOf(music)).toBeLessThanOrEqual(water.bottom);
+    expect(sound.y).toBeCloseTo(water.top, 9);
+    expect(bottomOf(sound)).toBeLessThanOrEqual(water.bottom);
     expect(layout.room).toEqual(water);
   });
 });

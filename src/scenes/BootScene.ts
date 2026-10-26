@@ -41,6 +41,8 @@ import { TANK } from '../logic/tank';
 import { VIEW } from '../logic/tuning';
 import { fitView, type ViewFit } from '../logic/viewport';
 import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, WORLD_H, buildZone, type ReedSpec, type ZoneLayout } from '../logic/zone';
+import { playTap } from '../platform/soundPlayer';
+import { forgetTapButton, setTapFocus } from './buttonTaps';
 
 /** Scene keys, in render order (later scenes draw on top). */
 export const SCENE_KEYS = Object.freeze({
@@ -279,6 +281,11 @@ export interface ButtonOptions {
   dpr: number;
   /** Fire on pointer down (for held, multi-touch actions) instead of pointer up. */
   pressOnDown: boolean;
+  /**
+   * Play the button tap on a press, by touch or by keyboard (PRD S15). Default true; false for a
+   * button whose press makes its own sound, or none, such as the sounds switch.
+   */
+  taps?: boolean;
   onPress: () => void;
 }
 
@@ -388,21 +395,27 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
     pressed = false;
     refresh();
   };
+  const taps = opts.taps !== false;
+  const press = (): void => {
+    if (taps) playTap();
+    opts.onPress();
+  };
   const handleDown = (): void => {
     pressed = true;
     refresh();
-    if (opts.pressOnDown) opts.onPress();
+    if (opts.pressOnDown) press();
   };
   const handleUp = (): void => {
     const wasPressed = pressed;
     release();
-    if (wasPressed && !opts.pressOnDown) opts.onPress();
+    if (wasPressed && !opts.pressOnDown) press();
   };
 
   body.setInteractive({ useHandCursor: true });
   body.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, handleDown);
   body.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, handleUp);
   body.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, release);
+  container.once(Phaser.GameObjects.Events.DESTROY, () => forgetTapButton(container));
   refresh();
 
   return {
@@ -414,6 +427,7 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
     height,
     setFocused(next: boolean): void {
       focused = next;
+      if (taps) setTapFocus(container, next);
       refresh();
     },
     setResolution(dpr: number): void {
