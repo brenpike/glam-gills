@@ -507,8 +507,15 @@ describe('hubButtonLook', () => {
     }
   });
 
-  it('puts Go exploring first and Refuge last, and makes Go exploring the only primary', () => {
-    expect(HUB_BUTTONS.map((spec) => spec.id)).toEqual(['goExploring', 'decorate', 'treasureChest', 'collectionBook', 'refuge']);
+  it('puts Go exploring first, Refuge then the music switch last, and makes Go exploring the only primary', () => {
+    expect(HUB_BUTTONS.map((spec) => spec.id)).toEqual([
+      'goExploring',
+      'decorate',
+      'treasureChest',
+      'collectionBook',
+      'refuge',
+      'music',
+    ]);
     expect(HUB_BUTTONS.filter((spec) => spec.primary).map((spec) => spec.id)).toEqual(['goExploring']);
   });
 });
@@ -568,16 +575,17 @@ describe('tankRooms', () => {
 
 describe('hubLayout', () => {
   it('fits every hub action on every supported canvas', () => {
-    expect(HUB_ACTIONS).toHaveLength(5);
+    expect(HUB_ACTIONS).toHaveLength(6);
     const problems = supportedCanvases().flatMap((view) => hubProblems(view, HUB_ACTIONS));
     expect(problems).toEqual([]);
   });
 
-  it('reaches over the floor Decorations, untitled, only at 460 and 480 x 320, 340, 360, 375 and 414', () => {
+  it('reaches over the floor Decorations, untitled, only at 460 and 480 x 320 to 414 and 520 x 320 to 440', () => {
     const reaching = supportedCanvases().filter((view) => sceneHub(view).reach);
-    expect(reaching.map((view) => `${view.cssW}x${view.cssH}`)).toEqual(
-      [460, 480].flatMap((cssW) => [320, 340, 360, 375, 414].map((cssH) => `${cssW}x${cssH}`)),
-    );
+    expect(reaching.map((view) => `${view.cssW}x${view.cssH}`)).toEqual([
+      ...[460, 480].flatMap((cssW) => [320, 340, 360, 375, 414].map((cssH) => `${cssW}x${cssH}`)),
+      ...[320, 340, 360, 375, 414, 440].map((cssH) => `520x${cssH}`),
+    ]);
     for (const view of reaching) {
       expect(sceneHub(view).title).toBeNull();
       expect(hubLayout(view, tankFrame(view.cssW, view.cssH), HUB_ACTIONS, null).reach).toBe(true);
@@ -585,7 +593,7 @@ describe('hubLayout', () => {
   });
 
   it('never reaches with the 4 actions before Refuge', () => {
-    const four = HUB_ACTIONS.filter((action) => action.id !== 'refuge');
+    const four = HUB_ACTIONS.filter((action) => action.id !== 'refuge' && action.id !== 'music');
     const reaching = supportedCanvases().filter((view) => hubLayout(view, tankFrame(view.cssW, view.cssH), four, hubTitle(view)).reach);
     expect(reaching).toEqual([]);
   });
@@ -614,7 +622,7 @@ describe('hubLayout', () => {
     expect(layout.actions.map((placement) => placement.rect.w)).toEqual(actions.map((action) => action.w));
   });
 
-  it('puts two compact rows in the open water, Refuge reaching over the floor Decorations, at 460 x 320', () => {
+  it('puts two compact rows in the open water, Refuge and the music switch reaching over the floor Decorations, at 460 x 320', () => {
     const view = { cssW: 460, cssH: 320 };
     const frame = tankFrame(view.cssW, view.cssH);
     const layout = sceneHub(view);
@@ -626,10 +634,12 @@ describe('hubLayout', () => {
       { x: 264.5, y: 116, w: 48, h: 48 },
       { x: 324.5, y: 116, w: 48, h: 48 },
       { x: 384.5, y: 116, w: 48, h: 48 },
-      { x: 206, y: 184, w: 48, h: 48 },
+      { x: 176, y: 184, w: 48, h: 48 },
+      { x: 236, y: 184, w: 48, h: 48 },
     ]);
     expect(layout.room).toEqual({ top: 108, bottom: 304 });
     expect(bottomOf(layout.actions[4].rect)).toBeGreaterThan(decorationBandTop(frame));
+    expect(bottomOf(layout.actions[5].rect)).toBeGreaterThan(decorationBandTop(frame));
   });
 
   it('puts two compact rows on the wall above the lid at 320 x 440', () => {
@@ -639,9 +649,10 @@ describe('hubLayout', () => {
     expect(layout.actions.map((placement) => placement.rect)).toEqual([
       { x: 17.5, y: 16, w: 225, h: 64 },
       { x: 254.5, y: 24, w: 48, h: 48 },
-      { x: 76, y: 92, w: 48, h: 48 },
-      { x: 136, y: 92, w: 48, h: 48 },
-      { x: 196, y: 92, w: 48, h: 48 },
+      { x: 46, y: 92, w: 48, h: 48 },
+      { x: 106, y: 92, w: 48, h: 48 },
+      { x: 166, y: 92, w: 48, h: 48 },
+      { x: 226, y: 92, w: 48, h: 48 },
     ]);
     expect(layout.reach).toBe(false);
     expect(layout.room).toEqual({ top: UI.margin, bottom: lidTopCss(tankFrame(320, 440)) - UI.gap });
@@ -655,24 +666,25 @@ describe('hubLayout', () => {
     expect(layout.reach).toBe(false);
     expect(layout.title).toEqual({ x: (view.cssW - title.w) / 2, y: 228, w: title.w, h: 66.5 });
     expect(layout.actions.map((placement) => placement.rect)).toEqual([
-      { x: 195, y: 306.5, w: 225, h: 64 },
-      { x: 432, y: 306.5, w: 118, h: 64 },
-      { x: 562, y: 306.5, w: 197, h: 64 },
-      { x: 771, y: 306.5, w: 210, h: 64 },
-      { x: 993, y: 306.5, w: 92, h: 64 },
+      { x: 123.5, y: 306.5, w: 225, h: 64 },
+      { x: 360.5, y: 306.5, w: 118, h: 64 },
+      { x: 490.5, y: 306.5, w: 197, h: 64 },
+      { x: 699.5, y: 306.5, w: 210, h: 64 },
+      { x: 921.5, y: 306.5, w: 92, h: 64 },
+      { x: 1025.5, y: 306.5, w: 131, h: 64 },
     ]);
-    expect(993 + 92 - 195).toBe(890);
+    expect(1025.5 + 131 - 123.5).toBe(1033);
     expect(layout.room).toEqual({ top: 228, bottom: 436 });
   });
 
-  it('goes compact in one row in the open water at 844 x 320, the full row of 5 being too wide', () => {
+  it('goes compact in one row in the open water at 844 x 320, the full row of 6 being too wide', () => {
     const view = { cssW: 844, cssH: 320 };
     const layout = sceneHub(view);
     expect(layout.compact).toBe(true);
     expect(layout.reach).toBe(false);
-    expect(layout.actions.map((placement) => placement.rect.y)).toEqual([108, 116, 116, 116, 116]);
+    expect(layout.actions.map((placement) => placement.rect.y)).toEqual([108, 116, 116, 116, 116, 116]);
     expect(layout.room).toEqual(tankRooms(view, tankFrame(view.cssW, view.cssH))[0]);
-    expect(HUB_ACTIONS.reduce((rowW, action) => rowW + action.w, 0) + 4 * UI.gap).toBeGreaterThan(view.cssW - 2 * UI.margin);
+    expect(HUB_ACTIONS.reduce((rowW, action) => rowW + action.w, 0) + 5 * UI.gap).toBeGreaterThan(view.cssW - 2 * UI.margin);
   });
 
   it.each([
@@ -685,13 +697,14 @@ describe('hubLayout', () => {
     expect(layout.compact).toBe(true);
     expect(layout.title).toBeNull();
     expect(layout.reach).toBe(false);
-    const [go, decorate, chest, book, refuge] = layout.actions.map((placement) => placement.rect);
+    const [go, decorate, chest, book, refuge, music] = layout.actions.map((placement) => placement.rect);
     expect(go.y).toBe(wall.top);
     expect(decorate.y).toBe(chest.y);
     expect(bottomOf(chest)).toBeLessThanOrEqual(wall.bottom);
     expect(book.y).toBeCloseTo(water.top, 9);
     expect(refuge.y).toBeCloseTo(water.top, 9);
-    expect(bottomOf(refuge)).toBeLessThanOrEqual(water.bottom);
+    expect(music.y).toBeCloseTo(water.top, 9);
+    expect(bottomOf(music)).toBeLessThanOrEqual(water.bottom);
     expect(layout.room).toEqual(water);
   });
 });

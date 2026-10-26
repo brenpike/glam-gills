@@ -87,6 +87,7 @@ import { TRIP_EVENTS, TRIP_REGISTRY_KEYS, type TripSnapshot } from '../logic/tri
 import { LEGS, SWIM, type SwimTuning } from '../logic/tuning';
 import { len, type Vec2 } from '../logic/vec';
 import { SURF, swimBounds, waveY, type CollectibleKind, type CurrentZone, type ZoneLayout } from '../logic/zone';
+import { setMusicScreen } from '../platform/musicPlayer';
 import {
   SCENE_KEYS,
   areaFor,
@@ -391,6 +392,7 @@ export class SwimScene extends Phaser.Scene {
   }
 
   create(): void {
+    setMusicScreen('trip');
     const areaId = this.start.areaId;
     const zone = zoneFor(this.assets, areaId);
     const area = areaFor(this.assets, areaId);

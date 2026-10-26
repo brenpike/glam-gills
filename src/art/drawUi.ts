@@ -73,7 +73,9 @@ export type IconKind =
   | 'shirt'
   | 'lock'
   | 'paintDrop'
-  | 'refuge';
+  | 'refuge'
+  | 'musicOn'
+  | 'musicOff';
 
 /**
  * House icon (guide 7d), shared by the Home Spot flag and every "go home" UI.
@@ -580,8 +582,47 @@ export function paintIcon(ctx: CanvasRenderingContext2D, kind: IconKind, size: n
       ctx.stroke(wave);
       break;
     }
+    case 'musicOn': {
+      // Music switch, on (PRD M8): two beamed notes. Ink only.
+      strokeBeamedNotes(ctx);
+      break;
+    }
+    case 'musicOff': {
+      // Music switch, off (PRD M8): the beamed notes crossed by one slash, readable in greyscale (X2).
+      strokeBeamedNotes(ctx);
+      ctx.lineWidth = 3.5;
+      const slash = new Path2D();
+      slash.moveTo(5, 5);
+      slash.lineTo(27, 27);
+      ctx.stroke(slash);
+      break;
+    }
   }
   ctx.restore();
+}
+
+/**
+ * Two beamed eighth notes in the 32 box, ink only: filled heads (radii 4.2 x 3.2, tilted) centred on
+ * (10, 24) and (22, 22), stems 3 wide up their right sides to y 9 and 7, and a beam 4 wide joining
+ * the stem tops.
+ */
+function strokeBeamedNotes(ctx: CanvasRenderingContext2D): void {
+  const heads = new Path2D();
+  heads.ellipse(10, 24, 4.2, 3.2, -0.35, 0, TAU);
+  heads.ellipse(22, 22, 4.2, 3.2, -0.35, 0, TAU);
+  ctx.fill(heads);
+  ctx.lineWidth = 3;
+  const stems = new Path2D();
+  stems.moveTo(13.6, 23);
+  stems.lineTo(13.6, 9);
+  stems.moveTo(25.6, 21);
+  stems.lineTo(25.6, 7);
+  ctx.stroke(stems);
+  ctx.lineWidth = 4;
+  const beam = new Path2D();
+  beam.moveTo(13.6, 9);
+  beam.lineTo(25.6, 7);
+  ctx.stroke(beam);
 }
 
 /**

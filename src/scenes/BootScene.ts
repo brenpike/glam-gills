@@ -285,13 +285,15 @@ export interface ButtonOptions {
 /** A baked button with an icon and a text label, laid out in CSS px. */
 export interface UiButton {
   container: Phaser.GameObjects.Container;
-  /** The button's name (`ButtonOptions.label`), also when it is not drawn. */
+  /** The button's name (`ButtonOptions.label`, or the last setLabel), also when it is not drawn. */
   readonly label: string;
   /** Button body size in CSS px; the container origin is the body's top-left corner. */
   width: number;
   height: number;
   setFocused(focused: boolean): void;
   setResolution(dpr: number): void;
+  /** Changes the name and icon in place, such as the music switch's (PRD M8). The body keeps its size. */
+  setLabel(label: string, icon: IconKind): void;
 }
 
 function placeButtonContent(
@@ -375,6 +377,7 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
   const label = addButtonLabel(scene, opts);
   const container = scene.add.container(0, 0, label === null ? [body, icon] : [body, icon, label]);
   container.setData(BUTTON_LABEL_DATA_KEY, opts.label);
+  let name = opts.label;
 
   const refresh = (): void => {
     const visual: ButtonVisual = pressed ? 'pressed' : focused ? 'focused' : 'normal';
@@ -404,7 +407,9 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
 
   return {
     container,
-    label: opts.label,
+    get label(): string {
+      return name;
+    },
     width,
     height,
     setFocused(next: boolean): void {
@@ -413,6 +418,13 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
     },
     setResolution(dpr: number): void {
       label?.setResolution(dpr);
+      refresh();
+    },
+    setLabel(next: string, nextIcon: IconKind): void {
+      name = next;
+      container.setData(BUTTON_LABEL_DATA_KEY, next);
+      label?.setText(next);
+      icon.setTexture(iconKey(nextIcon)).setScale(buttonIconScale(opts) / baked.icons[nextIcon].scale);
       refresh();
     },
   };

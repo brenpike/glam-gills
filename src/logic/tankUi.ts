@@ -5,6 +5,7 @@
  * (issue #95) by choosing between their full and compact sizes, both at least PRD X5.
  */
 import type { HudView, Rect, Size } from './hudLayout';
+import { MUSIC_OFF_LABEL } from './music';
 import { decorationBandTop, lidTopCss, topKeepClearCss, type TankFrame } from './tank';
 import {
   CLOSE_LABEL,
@@ -91,7 +92,7 @@ export function tileButtonWidth(label: string): number {
 }
 
 /** A Home Tank hub action id. */
-export type HubActionId = 'goExploring' | 'decorate' | 'treasureChest' | 'collectionBook' | 'refuge';
+export type HubActionId = 'goExploring' | 'decorate' | 'treasureChest' | 'collectionBook' | 'refuge' | 'music';
 
 /** One hub action button: its id, its label, and whether it is the primary action. */
 export interface HubButtonSpec {
@@ -100,13 +101,18 @@ export interface HubButtonSpec {
   primary: boolean;
 }
 
-/** The hub actions in focus and layout order, Go exploring first (PRD C7) and Refuge last (PRD N2). */
+/**
+ * The hub actions in focus and layout order, Go exploring first (PRD C7), then Refuge (PRD N2) and
+ * the music switch last (PRD M8). The music switch is sized for its longer label, "Music off"; the
+ * scene shows the current state on it.
+ */
 export const HUB_BUTTONS: readonly HubButtonSpec[] = Object.freeze([
   Object.freeze({ id: 'goExploring', label: GO_EXPLORING_LABEL, primary: true }),
   Object.freeze({ id: 'decorate', label: DECORATE_LABEL, primary: false }),
   Object.freeze({ id: 'treasureChest', label: TREASURE_CHEST_LABEL, primary: false }),
   Object.freeze({ id: 'collectionBook', label: COLLECTION_BOOK_LABEL, primary: false }),
   Object.freeze({ id: 'refuge', label: REFUGE_LABEL, primary: false }),
+  Object.freeze({ id: 'music', label: MUSIC_OFF_LABEL, primary: false }),
 ]);
 
 /** How a hub button is drawn: its createButton shape and its size-1 body in CSS px. */

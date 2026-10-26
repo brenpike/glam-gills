@@ -17,6 +17,7 @@ import {
 } from '../logic/tankUi';
 import type { BuildManifest } from '../logic/updateCheck';
 import { WORLD_H } from '../logic/zone';
+import { setMusicScreen } from '../platform/musicPlayer';
 import { applyUpdate, versionLabel, watchForUpdates } from '../platform/updates';
 import {
   SCENE_KEYS,
@@ -30,6 +31,7 @@ import {
   type SceneView,
   type UiButton,
 } from './BootScene';
+import { createMusicSwitch, toggleMusic } from './musicSwitch';
 import { openHomeTank, readSession, startOver } from './sceneFlow';
 import { StartOverCard, type StartOverOutcome } from './StartOverCard';
 
@@ -54,8 +56,6 @@ const CONTROLS_TEXT =
 const UPDATE_PROMPT_TEXT = 'A new version is ready!';
 const BUTTONS_BOTTOM_INSET = 8;
 const START_OVER_SIZE = 0.8;
-const START_INDEX = 0;
-const START_OVER_INDEX = 1;
 const CAPTURED_KEYS: readonly number[] = [
   Phaser.Input.Keyboard.KeyCodes.TAB,
   Phaser.Input.Keyboard.KeyCodes.LEFT,
@@ -64,6 +64,23 @@ const CAPTURED_KEYS: readonly number[] = [
   Phaser.Input.Keyboard.KeyCodes.DOWN,
   Phaser.Input.Keyboard.KeyCodes.SPACE,
 ];
+
+/** `buttons` split in order into rows that each fit `maxW` with BUTTON_GAP between. */
+function splitButtonRows(buttons: readonly UiButton[], maxW: number): UiButton[][] {
+  const rows: UiButton[][] = [];
+  let rowW = Infinity;
+  for (const button of buttons) {
+    const last = rows[rows.length - 1];
+    if (last !== undefined && rowW + BUTTON_GAP + button.width <= maxW) {
+      last.push(button);
+      rowW += BUTTON_GAP + button.width;
+      continue;
+    }
+    rows.push([button]);
+    rowW = button.width;
+  }
+  return rows;
+}
 
 /** The update prompt: a text panel and an Update button, shown once a newer build is published. */
 interface UpdatePrompt {
@@ -92,7 +109,8 @@ function startOverButtonBodyWidth(): number {
 
 /**
  * Title card: canal background, idle axolotl, game name and subtitle, controls, version label, a
- * Start button, the Start over button with its card (PRD D7) and the update prompt.
+ * Start button, the music switch (PRD M8), the Start over button with its card (PRD D7) and the
+ * update prompt.
  */
 export class TitleScene extends Phaser.Scene {
   private assets!: GameAssets;
@@ -110,9 +128,11 @@ export class TitleScene extends Phaser.Scene {
   private controls!: Phaser.GameObjects.Text;
   private versionText!: Phaser.GameObjects.Text;
   private startButton!: UiButton;
+  private musicButton!: UiButton;
   private startOver: StartOverControls | null = null;
   private startOverShown = false;
-  private focusIndex = START_INDEX;
+  /** Index into focusOrder(); Start is 0. */
+  private focusIndex = 0;
   private updating = false;
   private updateManifest: BuildManifest | null = null;
   private updatePrompt: UpdatePrompt | null = null;
@@ -128,7 +148,7 @@ export class TitleScene extends Phaser.Scene {
     this.starting = false;
     this.startOver = null;
     this.startOverShown = false;
-    this.focusIndex = START_INDEX;
+    this.focusIndex = 0;
     this.updating = false;
     this.updateManifest = null;
     this.updatePrompt = null;
@@ -167,6 +187,9 @@ export class TitleScene extends Phaser.Scene {
       onPress: () => this.openTank(),
     });
     this.startButton.container.setDepth(DEPTH.ui);
+    this.musicButton = createMusicSwitch(this, this.assets.baked, this.view.fit.dpr);
+    this.musicButton.container.setDepth(DEPTH.ui);
+    setMusicScreen('title');
     if (showsStartOver(readSession(this.registry))) this.createStartOver();
     this.refreshFocus();
 
@@ -227,7 +250,7 @@ export class TitleScene extends Phaser.Scene {
       startOver(this, this.assets);
       return;
     }
-    this.focusIndex = this.startOverShown ? START_OVER_INDEX : START_INDEX;
+    this.focusIndex = this.startOverShown ? this.focusOrder().indexOf(this.startOver?.button ?? this.startButton) : 0;
     this.refreshFocus();
   }
 
@@ -235,16 +258,19 @@ export class TitleScene extends Phaser.Scene {
     return this.startOver?.card.isShowing() === true;
   }
 
-  /** How many title buttons take the focus: Start, plus Start over while it shows. */
-  private focusCount(): number {
-    return this.startOverShown ? 2 : 1;
+  /** The title buttons that take the focus, in order: Start, Start over while it shows, then the music switch. */
+  private focusOrder(): UiButton[] {
+    const startOverButton = this.startOver !== null && this.startOverShown ? [this.startOver.button] : [];
+    return [this.startButton, ...startOverButton, this.musicButton];
   }
 
   /** Shows the focus ring on the focused title button, only while the Start over card is hidden. */
   private refreshFocus(): void {
     const cardShowing = this.startOverCardShowing();
-    this.startButton.setFocused(!cardShowing && this.focusIndex === START_INDEX);
-    this.startOver?.button.setFocused(!cardShowing && this.startOverShown && this.focusIndex === START_OVER_INDEX);
+    const focused = this.focusOrder()[this.focusIndex];
+    this.startButton.setFocused(!cardShowing && focused === this.startButton);
+    this.musicButton.setFocused(!cardShowing && focused === this.musicButton);
+    this.startOver?.button.setFocused(!cardShowing && focused === this.startOver.button);
   }
 
   /** One keydown handler for every title key; Tab, the arrows and Space are captured while it runs. */
@@ -257,8 +283,8 @@ export class TitleScene extends Phaser.Scene {
 
   /**
    * While the Start over card shows, keys go to it. Otherwise Tab and Shift+Tab move the focus
-   * between Start and Start over, wrapping, and Enter and Space press the focused button, ignoring
-   * key repeat.
+   * between Start, Start over and the music switch, wrapping, and Enter and Space press the focused
+   * button, ignoring key repeat.
    */
   private handleKeyDown(event: KeyboardEvent): void {
     const action = tankKeyFor(event.key, event.shiftKey);
@@ -272,12 +298,17 @@ export class TitleScene extends Phaser.Scene {
       return;
     }
     if (action !== 'next' && action !== 'previous') return;
-    this.focusIndex = nextFocusIndex(this.focusIndex, this.focusCount(),action === 'next' ? 1 : -1);
+    this.focusIndex = nextFocusIndex(this.focusIndex, this.focusOrder().length, action === 'next' ? 1 : -1);
     this.refreshFocus();
   }
 
   private pressFocused(): void {
-    if (this.focusIndex === START_OVER_INDEX && this.startOverShown) {
+    const focused = this.focusOrder()[this.focusIndex];
+    if (focused === this.musicButton) {
+      toggleMusic(this.musicButton);
+      return;
+    }
+    if (focused === this.startOver?.button) {
       this.openStartOverCard();
       return;
     }
@@ -312,7 +343,7 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-U', this.updateNow, this);
     this.startOverShown = false;
     this.startOver?.button.container.setVisible(false);
-    this.focusIndex = START_INDEX;
+    this.focusIndex = 0;
     this.refreshFocus();
     this.layout();
   }
@@ -332,6 +363,7 @@ export class TitleScene extends Phaser.Scene {
     this.controls.setResolution(this.view.fit.dpr);
     this.versionText.setResolution(this.view.fit.dpr);
     this.startButton.setResolution(this.view.fit.dpr);
+    this.musicButton.setResolution(this.view.fit.dpr);
     this.startOver?.button.setResolution(this.view.fit.dpr);
     this.startOver?.card.setResolution(this.view.fit.dpr);
     this.updatePrompt?.text.setResolution(this.view.fit.dpr);
@@ -384,36 +416,34 @@ export class TitleScene extends Phaser.Scene {
   }
 
   /**
-   * Places Start, plus Start over centred 12 px under it while it shows, or Update beside or above
-   * it; returns the top of the topmost button.
+   * Places the buttons from the bottom: Start over centred at the bottom while it shows, and above it
+   * the row of Update (while the prompt shows), Start and the music switch, in that order. The row
+   * wraps onto more rows, each centred, when it is wider than the screen. Returns the top of the
+   * topmost button.
    */
   private layoutButtons(cssW: number, cssH: number): number {
-    const start = this.startButton;
-    const bottomY = cssH - MARGIN - BUTTONS_BOTTOM_INSET;
+    let bottomY = cssH - MARGIN - BUTTONS_BOTTOM_INSET;
     if (this.startOver !== null && this.startOverShown) {
       const startOverButton = this.startOver.button;
-      const startOverY = bottomY - startOverButton.height;
-      const startAboveY = startOverY - BUTTON_GAP - start.height;
-      start.container.setPosition((cssW - start.width) / 2, startAboveY);
-      startOverButton.container.setPosition((cssW - startOverButton.width) / 2, startOverY);
-      return startAboveY;
+      bottomY -= startOverButton.height;
+      startOverButton.container.setPosition((cssW - startOverButton.width) / 2, bottomY);
+      bottomY -= BUTTON_GAP;
     }
-    const startY = bottomY - start.height;
     const update = this.updatePrompt?.button;
-    if (update === undefined) {
-      start.container.setPosition((cssW - start.width) / 2, startY);
-      return startY;
+    const items = [...(update === undefined ? [] : [update]), this.startButton, this.musicButton];
+    const rows = splitButtonRows(items, cssW - 2 * MARGIN);
+    let rowBottom = bottomY;
+    for (const row of [...rows].reverse()) {
+      const rowH = Math.max(...row.map((button) => button.height));
+      const rowW = row.reduce((sum, button) => sum + button.width, 0) + BUTTON_GAP * (row.length - 1);
+      let x = (cssW - rowW) / 2;
+      for (const button of row) {
+        button.container.setPosition(x, rowBottom - rowH + (rowH - button.height) / 2);
+        x += button.width + BUTTON_GAP;
+      }
+      rowBottom -= rowH + BUTTON_GAP;
     }
-    if (cssW >= update.width + BUTTON_GAP + start.width + 2 * MARGIN) {
-      const left = (cssW - update.width - BUTTON_GAP - start.width) / 2;
-      update.container.setPosition(left, startY);
-      start.container.setPosition(left + update.width + BUTTON_GAP, startY);
-      return startY;
-    }
-    const updateY = startY - BUTTON_GAP - update.height;
-    start.container.setPosition((cssW - start.width) / 2, startY);
-    update.container.setPosition((cssW - update.width) / 2, updateY);
-    return updateY;
+    return rowBottom + BUTTON_GAP;
   }
 
   /** Places the prompt text panel just above the buttons; returns its top, or `buttonsTop` with no prompt. */
