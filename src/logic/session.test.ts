@@ -26,6 +26,7 @@ import {
   explorerId,
   explorerMorph,
   markFactCardFound,
+  markDashPotTipSeen,
   markFirstFindSeen,
   needsStarter,
   newOwnedAxolotl,
@@ -270,6 +271,7 @@ describe('createSession', () => {
         firstFindsSeen: [],
         lastAreaId: CANAL_AREA_ID,
         metHazards: [],
+        dashPotTipSeen: false,
       },
       areas: {
         canal: { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
@@ -1356,6 +1358,23 @@ describe('chooseExplorer (F7)', () => {
     expect(explorerAxolotl(session)).toBe(session.hub.axolotls[0]);
     expect(explorerId(session)).toBe(STARTER_AXOLOTL_ID);
     expect(explorerMorph(session)).toBe(STARTER_MORPH);
+  });
+});
+
+describe('markDashPotTipSeen (B11, D2)', () => {
+  it('marks the tip seen, keeps every other field and leaves the input session alone', () => {
+    const before = withStarter();
+    const copy = JSON.parse(JSON.stringify(before)) as Session;
+    const after = markDashPotTipSeen(before);
+    expect(after.hub.dashPotTipSeen).toBe(true);
+    expect({ ...after.hub, dashPotTipSeen: false }).toEqual(before.hub);
+    expect(after.areas).toBe(before.areas);
+    expect(before).toEqual(copy);
+  });
+
+  it('returns the same session when the tip was already seen', () => {
+    const seen = markDashPotTipSeen(withStarter());
+    expect(markDashPotTipSeen(seen)).toBe(seen);
   });
 });
 

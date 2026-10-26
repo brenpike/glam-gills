@@ -23,6 +23,14 @@ import {
   type SnackFrame,
   type SnackTally,
 } from '../logic/collectibles';
+import {
+  closeDashPotTip,
+  createDashPotTip,
+  dashPotTipSeen,
+  stepDashPotTip,
+  type DashPotTipState,
+  type DashPotTipStep,
+} from '../logic/dashPotTip';
 import { TURN_SQUASH, bodyPoint, drawnAxolotl, type DrawnAxolotl } from '../logic/drawnAxolotl';
 import { currentAt, reedDragAt, reedsNear } from '../logic/environment';
 import { exitArrowSide } from '../logic/exitArrow';
@@ -31,6 +39,7 @@ import {
   REGISTRY_KEYS,
   type AllCollectedPayload,
   type CollectedPayload,
+  type DashPotTipPayload,
   type DashStatePayload,
   type ExitClosedPayload,
   type GhostNetSnaggedPayload,
@@ -59,7 +68,7 @@ import { isQueasy, queasySwimTuning, type SpitAvoid } from '../logic/plasticWorm
 import { CARP_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
 import { mulberry32 } from '../logic/rng';
 import { tripStranding } from '../logic/rescue';
-import { explorerAxolotl, restoreSnacks, tripStart } from '../logic/session';
+import { explorerAxolotl, markDashPotTipSeen, restoreSnacks, tripStart } from '../logic/session';
 import { createShrimpFlicks, stepShrimpFlicks, type ShrimpFlickState } from '../logic/shrimpFlick';
 import { stepSnackDarts, type SnackDartAvoid, type SnackDartState } from '../logic/snackDart';
 import { steerFromKeys, type KeyState } from '../logic/steering';
@@ -109,14 +118,14 @@ import { GarterSnakeView } from './GarterSnakeView';
 import { GhostNetView } from './GhostNetView';
 import { HeronView } from './HeronView';
 import { HomeSpotView } from './HomeSpotView';
-import { HUD_EVENTS, type FactCardSeenPayload } from './HudScene';
+import { HUD_EVENTS, type DashPotTipHeldPayload, type FactCardSeenPayload } from './HudScene';
 import { HyacinthMatView } from './HyacinthMatView';
 import { MobileSnackView } from './MobileSnackView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
 import { PlasticWormView } from './PlasticWormView';
 import { PredatorView } from './PredatorView';
-import { readSession, returnToHomeTank } from './sceneFlow';
+import { readSession, returnToHomeTank, writeSession } from './sceneFlow';
 import { faceSprite } from './spriteFacing';
 import { StrandedView } from './StrandedView';
 import { TreasureView } from './TreasureView';
@@ -269,6 +278,10 @@ export class SwimScene extends Phaser.Scene {
   private areaBeaten = false;
   private trip!: TripState;
   private tripCtx!: TripContext;
+  /** The Dash pot tip this trip (PRD B11). */
+  private dashPotTip: DashPotTipState = { phase: 'done' };
+  /** Whether the HUD holds the Dash pot tip off screen for want of room (X10). */
+  private dashPotTipHeld = false;
   private snapshot!: TripSnapshot;
   /** Whether the ended trip has been handed back and the Home Tank asked for; once per trip. */
   private leaving = false;
@@ -434,6 +447,7 @@ export class SwimScene extends Phaser.Scene {
       returnedFinds: start.returnedFinds,
       area,
     });
+    this.dashPotTip = createDashPotTip(session.hub);
     this.setUpMats();
     this.dashKeyLatched = true;
     this.tripCtx = perkTripContext(this.perks, this.bounds);
@@ -452,6 +466,8 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.on(TRIP_EVENTS.REQUEST_KEEP_EXPLORING, this.handleRequestKeepExploring, this);
     this.game.events.on(TRIP_EVENTS.REQUEST_GO_HOME, this.handleRequestGoHome, this);
     this.game.events.on(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
+    this.game.events.on(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
+    this.game.events.on(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.events.on(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -1097,7 +1113,43 @@ export class SwimScene extends Phaser.Scene {
       this.placeCarried();
     }
     this.dispatchTripEvents(result.events);
+    const tipInput = {
+      trip: this.trip,
+      events: result.events,
+      pos: input.axolotlPos,
+      dt,
+      held: this.dashPotTipHeld,
+      ctx: this.tripCtx.encounter,
+    };
+    this.applyDashPotTip(stepDashPotTip(this.dashPotTip, tipInput));
     this.syncSnapshot();
+  }
+
+  /**
+   * Takes a Dash pot tip step (PRD B11): saves the tip as seen the first time it is on screen or a
+   * pot breaks first, and tells the HUD to show or hide it. A show starts unheld; the HUD's placing,
+   * during the emit, reports a hold at once.
+   */
+  private applyDashPotTip(step: DashPotTipStep): void {
+    const wasSeen = dashPotTipSeen(this.dashPotTip);
+    this.dashPotTip = step.state;
+    if (!wasSeen && dashPotTipSeen(step.state)) {
+      writeSession(this.registry, markDashPotTipSeen(readSession(this.registry)));
+    }
+    if (step.cue === null) return;
+    this.dashPotTipHeld = false;
+    const payload: DashPotTipPayload = { show: step.cue === 'show' };
+    this.game.events.emit(GAME_EVENTS.DASH_POT_TIP, payload);
+  }
+
+  /** The HUD placed the Dash pot tip, or held it for want of room. */
+  private handleDashPotTipHeld(payload: DashPotTipHeldPayload): void {
+    this.dashPotTipHeld = payload.held;
+  }
+
+  /** The player closed the Dash pot tip in the HUD: it never shows again. */
+  private handleDashPotTipClosed(): void {
+    this.applyDashPotTip(closeDashPotTip(this.dashPotTip));
   }
 
   /**
@@ -1279,6 +1331,8 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.off(TRIP_EVENTS.REQUEST_KEEP_EXPLORING, this.handleRequestKeepExploring, this);
     this.game.events.off(TRIP_EVENTS.REQUEST_GO_HOME, this.handleRequestGoHome, this);
     this.game.events.off(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
+    this.game.events.off(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
+    this.game.events.off(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.events.off(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.strandedView.destroy();
     this.heronView?.destroy();

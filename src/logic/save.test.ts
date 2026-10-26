@@ -40,6 +40,7 @@ import {
   chooseExplorer,
   createSession,
   markFactCardFound,
+  markDashPotTipSeen,
   markFirstFindSeen,
   recordTripEnd,
   restyleAxolotl,
@@ -177,6 +178,7 @@ describe('save round trip', () => {
       'axolotls',
       'banked',
       'book',
+      'dashPotTipSeen',
       'explorerId',
       'firstFindsSeen',
       'lastAreaId',
@@ -807,6 +809,34 @@ describe('first-find cards seen (#83, D2)', () => {
       kind: 'paintShell',
       pictureId: MINT_SHELL,
     });
+  });
+});
+
+describe('Dash pot tip seen (#149, B11, D2)', () => {
+  it('round-trips the tip seen', () => {
+    const session = markDashPotTipSeen(playedSession());
+    expect(session.hub.dashPotTipSeen).toBe(true);
+    expect(JSON.parse(encodeSave(session.hub)).hub.dashPotTipSeen).toBe(true);
+    expect(decodeSave(encodeSave(session.hub))).toEqual({ kind: 'loaded', hub: session.hub });
+  });
+
+  it('loads an older save without the field as not seen, with every other field intact and SAVE_VERSION at 1', () => {
+    const json = savedJson();
+    const olderHub: Record<string, unknown> = { ...json.hub };
+    delete olderHub.dashPotTipSeen;
+    const hub = loadedHub({ version: 1, hub: olderHub });
+    expect(hub).toEqual(playedSession().hub);
+    expect(hub.dashPotTipSeen).toBe(false);
+    expect(SAVE_VERSION).toBe(1);
+  });
+
+  it.each([
+    ['a string', 'true'],
+    ['a number', 1],
+    ['null', null],
+    ['an object', { seen: true }],
+  ])('loads a field that is %s as not seen', (_label, dashPotTipSeen) => {
+    expect(hubWith('dashPotTipSeen', dashPotTipSeen).dashPotTipSeen).toBe(false);
   });
 });
 
