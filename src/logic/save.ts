@@ -34,6 +34,10 @@
  * refuge card ids found join `metHazards`, after the hazard and predator ids, in bookFactCards order.
  * An older save has none, so they load as not found; an older build drops them as unknown ids.
  *
+ * The Dash pot tip (#149) came under the additive rule, with no version bump: the hub's
+ * `dashPotTipSeen` loads as true only when exactly true, so a missing or bad value loads as not
+ * seen. An older build drops it, so the tip may show once more there.
+ *
  * Legacy `book.tilapiaCard`: the Collection Book no longer holds the tilapia card, the hub's
  * `metHazards` does. The encoder still writes `book.tilapiaCard` (true when 'tilapia' is met), so
  * an older build reads the card, and the loader adds 'tilapia' to metHazards when it is exactly true.
@@ -128,6 +132,7 @@ function savedHub(hub: HubState): SavedHub {
     firstFindsSeen: [...hub.firstFindsSeen],
     lastAreaId: hub.lastAreaId,
     metHazards: [...hub.metHazards],
+    dashPotTipSeen: hub.dashPotTipSeen,
   } satisfies { [Key in keyof HubState]-?: unknown };
 }
 
@@ -240,6 +245,7 @@ function repairedHub(saved: Record<string, unknown>): HubState {
     firstFindsSeen: repairedFirstFindsSeen(saved.firstFindsSeen),
     lastAreaId: resolveAreaId(saved.lastAreaId, stars),
     metHazards: repairedMetHazards(saved.metHazards, saved.book),
+    dashPotTipSeen: saved.dashPotTipSeen === true,
   };
 }
 

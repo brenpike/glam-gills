@@ -6,12 +6,14 @@ import { INK, UI_PANEL, UI_PANEL_PINK, WHITE } from '../art/palette';
 import { iconKey, type TexInfo } from '../art/textures';
 import { exitClosedText, snacksLeftLabel } from '../logic/areaText';
 import { sourceFactCards } from '../logic/areas';
+import { dashPotTipText, type TipInput } from '../logic/dashPotTip';
 import type { FactCard as FactCardData } from '../logic/factCards';
 import { pickToastAnnouncement } from '../logic/findToast';
 import {
   GAME_EVENTS,
   REGISTRY_KEYS,
   type CollectedPayload,
+  type DashPotTipPayload,
   type DashStatePayload,
   type ExitClosedPayload,
   type ReducedMotionPayload,
@@ -131,6 +133,8 @@ const OVERLAY_SETTLE_MS = 100;
 export const HUD_EVENTS = Object.freeze({
   /** The player closed a fact card; payload FactCardSeenPayload. */
   FACT_CARD_SEEN: 'fact-card-seen',
+  /** The player closed the Dash pot tip with a tap or a key (PRD B11); no payload. */
+  DASH_POT_TIP_CLOSED: 'dash-pot-tip-closed',
 } as const);
 
 /** Payload of HUD_EVENTS.FACT_CARD_SEEN: the id of the fact card closed. */
@@ -324,6 +328,12 @@ export class HudScene extends Phaser.Scene {
   private hintActive = false;
   /** Whether placement found no room for the hint, so it is hidden and its timer paused. */
   private hintHeld = false;
+  /** Whether the hint banner shows the Dash pot tip (PRD B11) instead of the banking hint. */
+  private dashTipActive = false;
+  /** Tap target over the Dash pot tip; above the swim pad's capture zone, so a tap on the tip only closes it. */
+  private dashTipHit!: Phaser.GameObjects.Zone;
+  /** The input the Dash pot tip names the Tail Dash control for: the last one used. */
+  private tipInput: TipInput = 'keyboard';
   private bankingCard!: BankingCard;
   private foundPopup!: FindPopup;
   /** How many of the trip's finds the pop-up has been given. */
@@ -355,6 +365,7 @@ export class HudScene extends Phaser.Scene {
     this.hintTimer = null;
     this.hintActive = false;
     this.hintHeld = false;
+    this.dashTipActive = false;
     this.announcedCount = 0;
     this.factCardsShown = [];
   }
@@ -398,6 +409,7 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on(GAME_EVENTS.REQUEST_PAUSE, this.pauseSwim, this);
     this.game.events.on(GAME_EVENTS.REDUCED_MOTION, this.handleReducedMotion, this);
     this.game.events.on(GAME_EVENTS.SNACK_BOOST, this.handleSnackBoost, this);
+    this.game.events.on(GAME_EVENTS.DASH_POT_TIP, this.handleDashPotTip, this);
     this.game.events.on(TRIP_EVENTS.STATE, this.handleTripState, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -629,6 +641,19 @@ export class HudScene extends Phaser.Scene {
       .container(0, 0, [this.hintPanel, this.hintText])
       .setDepth(DEPTH.ui + 5)
       .setVisible(false);
+    this.dashTipHit = this.add
+      .zone(0, 0, 1, 1)
+      .setOrigin(0)
+      .setDepth(DEPTH.ui + 5)
+      .setInteractive()
+      .setVisible(false);
+    this.dashTipHit.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, this.closeDashPotTip, this);
+    this.placeDashTipHit(null);
+    this.tipInput = this.sys.game.device.input.touch ? 'touch' : 'keyboard';
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      if (pointer.wasTouch) this.setTipInput('touch');
+    });
+    this.input.keyboard?.on('keydown', () => this.setTipInput('keyboard'));
   }
 
   private bindKeys(): void {
@@ -862,6 +887,7 @@ export class HudScene extends Phaser.Scene {
       this.hintHeld = rect === null;
       placeTopBanner(this.hint, this.hintPanel, this.hintText, rect, textPx, boxes);
       holdTimer(this.hintTimer, this.hintHeld);
+      this.placeDashTipHit(rect);
       return;
     }
     this.bannerHeld = rect === null;
@@ -1137,6 +1163,7 @@ export class HudScene extends Phaser.Scene {
     }
     if (event.repeat) return;
     if (this.trip.phase === 'banked') this.bankingCard.pressFocused();
+    else this.closeDashPotTip();
   }
 
   /**
@@ -1334,6 +1361,7 @@ export class HudScene extends Phaser.Scene {
   private showHintOnce(): void {
     if (this.registry.get(TRIP_REGISTRY_KEYS.bankingHintShown) === true || this.trip.phase !== 'swimming') return;
     this.registry.set(TRIP_REGISTRY_KEYS.bankingHintShown, true);
+    this.hintText.setText(BANKING_HINT);
     this.hintActive = true;
     this.hint.setAlpha(this.motion.ambient ? 0 : 1);
     this.layoutOverlays();
@@ -1365,8 +1393,56 @@ export class HudScene extends Phaser.Scene {
     if (!this.hintActive) return;
     this.hintActive = false;
     this.hintHeld = false;
+    this.dashTipActive = false;
     this.tweens.killTweensOf(this.hint);
     this.hint.setVisible(false).setAlpha(1);
+    this.placeDashTipHit(null);
+    this.layoutOverlays();
+  }
+
+  /**
+   * The swim scene's Dash pot tip cue (PRD B11). Show: the hint banner shows the tip, in place of
+   * the banking hint when that is still up, faded in under full motion; only while swimming. The
+   * swim scene owns its time, so it has no timer here. Hide: hides the tip when it shows.
+   */
+  private handleDashPotTip(payload: DashPotTipPayload): void {
+    if (!payload.show) {
+      if (this.dashTipActive) this.hideHint();
+      return;
+    }
+    if (this.trip.phase !== 'swimming') return;
+    this.hideHint();
+    this.hintText.setText(dashPotTipText(this.tipInput));
+    this.hintActive = true;
+    this.dashTipActive = true;
+    this.hint.setAlpha(this.motion.ambient ? 0 : 1);
+    this.layoutOverlays();
+    if (this.motion.ambient) {
+      addMotionTween(this, { targets: this.hint, props: { alpha: 1 }, duration: HINT_FADE_MS });
+    }
+  }
+
+  /** A tap on the tip, Enter or Space: hides the Dash pot tip when it shows and tells the swim scene. */
+  private closeDashPotTip(): void {
+    if (!this.dashTipActive || this.paused) return;
+    this.hideHint();
+    this.game.events.emit(HUD_EVENTS.DASH_POT_TIP_CLOSED);
+  }
+
+  /** Puts the tip's tap target over the hint banner at `rect` while it shows the Dash pot tip; hides it otherwise. */
+  private placeDashTipHit(rect: Rect | null): void {
+    const shown = this.dashTipActive && rect !== null;
+    this.dashTipHit.setVisible(shown);
+    if (this.dashTipHit.input) this.dashTipHit.input.enabled = shown;
+    if (shown) this.dashTipHit.setPosition(rect.x, rect.y).setSize(rect.w, rect.h);
+  }
+
+  /** Records the input last used; the Dash pot tip, when it shows, names that input's Tail Dash control. */
+  private setTipInput(input: TipInput): void {
+    if (input === this.tipInput) return;
+    this.tipInput = input;
+    if (!this.dashTipActive) return;
+    this.hintText.setText(dashPotTipText(input));
     this.layoutOverlays();
   }
 
@@ -1423,5 +1499,6 @@ export class HudScene extends Phaser.Scene {
     this.game.events.off(GAME_EVENTS.REDUCED_MOTION, this.handleReducedMotion, this);
     this.game.events.off(GAME_EVENTS.SNACK_BOOST, this.handleSnackBoost, this);
     this.game.events.off(TRIP_EVENTS.STATE, this.handleTripState, this);
+    this.game.events.off(GAME_EVENTS.DASH_POT_TIP, this.handleDashPotTip, this);
   }
 }
