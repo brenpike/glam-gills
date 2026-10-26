@@ -151,7 +151,8 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     <div class="qs">
       <div class="q"><h3>The switch</h3><p><span class="rec">Recommend "Sounds on" and "Sounds off"</span>, a speaker icon with a sparkle, on by default, kept on the device under <code>glam-gills:sounds</code>, outside the save, so Start over keeps it, like the music switch. It goes beside the music switch on the title screen, the pause screen and the Home Tank. "Sounds" is the word kids use; "Sound effects" is long for a 131 pixel tile.</p></div>
       <div class="q"><h3>Room in the Home Tank</h3><p><span class="rec">Recommend one "Sound" hub tile that opens a small card with both switches.</span> The hub already wrapped onto two rows at 1024 x 768 when the music tile came in (open question 419); a seventh tile makes it worse. On the title and pause screens there is room for the two tiles side by side. The other choice is a seventh hub tile.</p></div>
-      <div class="q"><h3>Volume next to the music</h3><p><span class="rec">Recommend the two sliders above at the same setting (both 60).</span> The sounds are short, so they cut through at the same level without being loud. No ducking: the music never dips for a sound, so nothing changes in the music when danger is near (M5). One limiter after both keeps the loudest moment gentle (M11).</p></div>
+      <div class="q"><h3>Loudness: every sound matched</h3><p><span class="rec">Every sound has its own level, so they all sound about as loud as each other.</span> Each sound was rendered and measured with a loudness meter (K-weighted, like LUFS, over its loudest 0.2 seconds), then given a level so that every event sound peaks at about −18 and the small touch sounds (button taps, picking up, page turns, the shrimp flick) about 3 dB under that, so a tap is never as big as a find. Before, they ran from about −54 to −13; now every sound is within 1 dB of its target. The game keeps these levels as data next to each sound, and a test can check that every sound has one.</p></div>
+      <div class="q"><h3>Volume next to the music</h3><p><span class="rec">Recommend the two sliders above at the same setting (both 60).</span> The music measures about −22 most of the time and about −15 at its loudest moments; the sounds at −18 sit just above its usual level, so they are clear without being loud. No ducking: the music never dips for a sound, so nothing changes in the music when danger is near (M5). One limiter after both keeps the loudest moment gentle (M11).</p></div>
       <div class="q"><h3>Does a warning sound count as "reacting to danger"?</h3><p><span class="rec">Recommend the "Ripple" warning, kept soft.</span> M5 is about the music: it sets the mood of a place, and that never changes. A warning sound is a one-off cue for one event, like the telegraph on screen, at the same level as a snack. It never repeats, builds or drones. It also helps a player who is looking at another part of the screen. If it feels tense in play-tests, drop it; the telegraph stays.</p></div>
       <div class="q"><h3>Reduced motion</h3><p><span class="rec">Recommend no change.</span> Reduced motion is about what moves on screen. Every sound stays the same, and no sound is ever the only sign that something happened, so the game works with sounds off.</p></div>
       <div class="q"><h3>One audio engine or two</h3><p><span class="rec">Recommend one shared engine with two buses.</span> One audio context, one unlock on the first input, one page-hidden pause, one reverb and one limiter, with a music bus and a sounds bus, each with its own switch and level. Two contexts would double the cost on phones, and iPhones limit how many can run. The voices (kalimba, marimba, bubble and the rest) move from <code>musicPlayer.ts</code> into a shared voices file both use.</p></div>
@@ -215,7 +216,7 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
   }
   const level = (input) => (Number(input.value) / 100) ** 2 * 0.9;
   // A voice's output: music voices name a part (a string) and go to the music bus; sounds go to the sounds bus.
-  const dst = (o) => (typeof o === 'string' ? musicBus : sfxBus);
+  const dst = (o) => (typeof o === 'string' ? musicBus : o || sfxBus);
 
   function env(g, t, attack, peak, decay) {
     g.gain.setValueAtTime(0.0001, t);
@@ -615,8 +616,9 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
   matchKey.addEventListener('change', showKey);
 
   // ---------- The sounds ----------
-  // Each returns its length in seconds. `S` is the sounds bus marker for the voices.
-  const S = null;
+  // Each returns its length in seconds. `S` is the output for the voices: while a sound plays, its own
+  // level stage on the sounds bus (see `play`).
+  let S = null;
   let ladder = 0, ladderAt = -10;
   const FX = {
     tap() { V.bubble(now(), 0.07, S, 700); V.woodblock(now(), 0.035, 1.3, S); return 0.12; },
@@ -757,6 +759,20 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     arrive() { const t = now(); V.bubble(t, 0.06, S, 300); V.bubble(t + 0.09, 0.05, S, 420); V.kalimba(t + 0.12, K(5), 0.14, S); return 0.6; },
   };
   const now = () => ctx.currentTime + 0.02;
+  // Loudness matching: each sound's level in dB, so every sound peaks at the same loudness (see the
+  // "Loudness" note at the bottom). Keyed by sound, or by sound and version where versions differ.
+  const LEVEL_DB = {
+    'snack:null': 6.5, 'snack:same': 6, lastThree: 4, catchSnack: 5.5, shrimpFlick: 25.5, 'find:common': -1,
+    'find:rare': -3.5, 'find:epic': -4, 'find:legendary': -5.5, paintShell: 3, dash: 20, dashReady: 7.5,
+    potWobble: 17, dashPot: 12.5, 'warning:ripple': 14, 'warning:tiktik': 23, 'poof:uhoh': 9, 'poof:bump': 16.5,
+    'poof:sparkle': 10, shellBlock: 9, regrow: 3, 'carried:float': 0.5, 'carried:lullaby': 1.5, bleh: 18,
+    snag: 7.5, wriggleFree: 10, exitClosed: 7.5, matsOpen: 23.5, 'bank:1': 0, 'bank:3': 1, 'bank:5': 0.5,
+    rescueMeet: 9, rescueSafe: -1.5, exitOpens: 1, 'areaBeaten:1': 2.5, 'areaBeaten:2': 2.5, 'areaBeaten:3': 2,
+    arrive: 4.5, pickUp: 21.5, place: 15.5, wearOn: 9.5, wearOff: 22.5, dreamColour: 3.5, factCard: 1.5,
+    pageTurn: 28, refuge: 1.5, unlock: 8.5, tap: 19, back: 20.5, toggleOn: 2, toggleOff: 4.5, surprise: 3,
+    focus: 33.5,
+  };
+  const gainFor = (id, arg) => Math.pow(10, (LEVEL_DB[`${id}:${arg}`] ?? LEVEL_DB[id] ?? 0) / 20);
   const lastPlayed = {};
   function play(id, arg, label) {
     initAudio(); ctx.resume();
@@ -764,7 +780,13 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     // The repeat limit: the same sound at most once every 60 ms.
     if (lastPlayed[key] && ctx.currentTime - lastPlayed[key] < 0.06) return;
     lastPlayed[key] = ctx.currentTime;
-    FX[id](arg);
+    const stage = ctx.createGain();
+    stage.gain.value = gainFor(id, arg);
+    stage.connect(sfxBus);
+    S = stage;
+    const seconds = FX[id](arg);
+    S = null;
+    setTimeout(() => stage.disconnect(), (seconds + 3) * 1000);
     if (label) nowName.textContent = label;
     showKey();
   }
@@ -774,7 +796,7 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     {
       name: 'Snacks and finds', blurb: 'The sounds a player hears most. Each one is short, bright and in the music\'s key.',
       sounds: [
-        { id: 'snack', name: 'Eat a snack', when: 'Every worm, bug, tadpole or shrimp eaten. About 20 to 30 a trip.', idea: 'A soft gulp (a low bubble) with one marimba note. Snacks eaten close together climb the scale, one note higher each time, and start again after a short pause.', gentle: 'Very short and quiet, so 30 of them never wear thin.', slice: 'first',
+        { id: 'snack', name: 'Eat a snack', when: 'Every worm, bug, tadpole or shrimp eaten. About 20 to 30 a trip.', idea: 'Chosen: the climbing ladder (owner, 2026-10-26). A soft gulp (a low bubble) with one marimba note. Snacks eaten close together climb the scale, one note higher each time, and start again after a short pause.', gentle: 'Very short and quiet, so 30 of them never wear thin.', slice: 'first',
           btns: [['Eat (ladder)', null], ['Eat (same note)', 'same']] },
         { id: 'lastThree', name: 'One of the last 3 snacks', when: 'Each of the last 3 snacks, which sparkle on screen (H2).', idea: 'The gulp on a high note, with two firefly twinkles, so you can hear the exit is close.', gentle: 'The same size as a snack; only the twinkle is new.', slice: 'first' },
         { id: 'catchSnack', name: 'Catch a tadpole or shrimp', when: 'A mobile snack eaten (Areas 3 to 5).', idea: 'The gulp with a tiny upward boing: "got it!"', gentle: 'A touch more fun than a plain snack, never louder.', slice: 'later' },
@@ -796,14 +818,14 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
     {
       name: 'Bumps, hazards and predators', blurb: 'The hardest group. Each one marks what happened, kindly, and nothing builds tension. None of them is ever the only sign; everything still shows on screen.',
       sounds: [
-        { id: 'warning', name: 'Predator warning', when: 'A tilapia, carp, heron or garter snake starts its telegraph, before it lunges (A1). Punting poles could share it in their warn phase.', idea: 'Ripple: a soft water swish with two low marimba notes, like "uh-oh, move". Tik-tik: two light wood ticks. Or none: the telegraph on screen is enough.', gentle: 'Once per warning, never repeating or building, at snack loudness. No low drones, no rising pitch. The music does not change (M5).', slice: 'later',
+        { id: 'warning', name: 'Predator warning', when: 'A tilapia, carp, heron or garter snake starts its telegraph, before it lunges (A1). Punting poles could share it in their warn phase.', idea: 'Chosen: Ripple (owner, 2026-10-26). Ripple: a soft water swish with two low marimba notes, like "uh-oh, move". Tik-tik: two light wood ticks. Or none: the telegraph on screen is enough.', gentle: 'Once per warning, never repeating or building, at snack loudness. No low drones, no rising pitch. The music does not change (M5).', slice: 'later',
           btns: [['Ripple', 'ripple'], ['Tik-tik', 'tiktik'], ['None', 'none']] },
         { id: 'poof', name: 'Lose a leg', when: 'A lunge or strike connects: the sparkle poof (A3).', idea: 'Chosen: Uh-oh (owner, 2026-10-26). Uh-oh: a soft puff with two low marimba notes falling a small step, like "uh-oh", left hanging so the leg-back sound can answer it. Bump: a puff with a soft, round "bwump". Sparkle: the first idea, kept to compare; it sounds like a reward.', gentle: 'It says "oops", not "yay" and not "ouch": low, soft, short, no crunch, no sad slide down. It is a small step, not a minor-key sigh.', slice: 'first',
           btns: [['Uh-oh', 'uhoh'], ['Bump', 'bump'], ['Sparkle (first idea)', 'sparkle']] },
         { id: 'shellBlock', name: 'Shell perk blocks a hit', when: 'A Shell perk Wearable stops a hit, so no leg is lost (A22).', idea: 'A bright shell "tink" and a bubble: "safe!"', gentle: 'A small, proud sound, not a clang.', slice: 'later' },
         { id: 'regrow', name: 'Leg grows back', when: 'A leg finishes regrowing (A4).', idea: 'Three rising marimba notes and a bubble: "all better".', gentle: 'Cheerful and small.', slice: 'first' },
-        { id: 'carried', name: 'Carried home', when: 'The fourth leg is lost and the axolotl is carried home (A6, ADR 0008).', idea: 'A soft held chord with a slow music box line and bubbles floating up. Float: the tune rises, like being lifted up and home. Lullaby: it falls gently and settles on the home note.', gentle: 'Calm, major, slow. It sounds like "let\'s go home and rest", never like losing.', slice: 'later',
-          btns: [['Float home', 'float'], ['Lullaby', 'lullaby']] },
+        { id: 'carried', name: 'Carried home', when: 'The fourth leg is lost and the axolotl is carried home (A6, ADR 0008).', idea: 'Chosen: Lullaby (owner, 2026-10-26). A soft held chord with a slow music box line and bubbles floating up. Float: the tune rises, like being lifted up and home. Lullaby: it falls gently and settles on the home note.', gentle: 'Calm, major, slow. It sounds like "let\'s go home and rest", never like losing.', slice: 'later',
+          btns: [['Lullaby', 'lullaby'], ['Float home', 'float']] },
         { id: 'bleh', name: 'Plastic worm "bleh"', when: 'The explorer bites a plastic worm and spits it out (N3).', idea: 'A little "pthh" spit and a droopy, comic "bwoip", then a bubble.', gentle: 'Funny, not gross. No gagging.', slice: 'later' },
         { id: 'snag', name: 'Snagged on a ghost net', when: 'A ghost net snags the explorer (N3).', idea: 'A wobbly, stretchy twang, like a rubber band.', gentle: 'Springy and silly, not a trap snapping shut.', slice: 'later' },
         { id: 'wriggleFree', name: 'Wriggle free', when: 'The snag ends.', idea: 'Three quick plucks up and a pop: "free!"', gentle: 'A little win.', slice: 'later' },
