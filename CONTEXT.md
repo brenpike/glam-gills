@@ -337,6 +337,20 @@ Trying on Wearables and posing in a spotlight, started from the Home Tank (N1); 
 **Wearable set**:
 A themed group of Wearables, named by a Wearable's optional set ID, that unlocks a small bonus when worn together (N5).
 
+### Music
+
+**Cue**:
+One piece of background music, an 8-bar loop that changes a little each time round. The Home cue plays on the Home side, and each habitat has its own cue (N6, M1 to M3).
+_Avoid_: track, song (in specs)
+
+**Dusk version**:
+A habitat cue played the dusk way: the same tune and chords, slower, on a music box, with soft chords, no drums, and fireflies. Dusk and night areas play it (the dusk rule, M4).
+_Avoid_: night song, dusk theme
+
+**Music switch**:
+The on/off control for background music, kept on the device outside the save (M8).
+_Avoid_: mute button
+
 ## Relationships
 
 - A **Trip** has exactly one **Explorer**, starts at the **Home Spot** in the **Area** picked on the **Area map**, and ends by **Go home**, **Carried home**, or reaching the open **Exit**

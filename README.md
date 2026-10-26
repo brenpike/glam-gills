@@ -150,8 +150,9 @@ On WSL2 this needs Windows port forwarding to the WSL VM, so the Pages build is 
 | `src/logic/` | Pure game rules with headless unit tests. No Phaser or DOM. |
 | `src/art/` | Canvas 2D drawing code, baked into Phaser textures. |
 | `src/scenes/` | Phaser scenes that connect logic, art, and input. |
-| `docs/` | Tech stack, ADRs, PRDs, and the art style guide. |
+| `docs/` | Tech stack, ADRs, PRDs, the art style guide, and the music guide. |
 | `prototypes/art-styles/` | Standalone art-style prototypes. |
+| `prototypes/music/` | Standalone background music sketches. |
 | `.github/workflows/` | CI and GitHub Pages deploy. |
 
 ## Docs
@@ -162,5 +163,7 @@ On WSL2 this needs Windows port forwarding to the WSL VM, so the Pages build is 
 - [Glossary](CONTEXT.md)
 - [Art style guide](docs/art-style-guide.md)
 - [Art-style prototypes](prototypes/art-styles/)
+- [Music guide](docs/music-guide.md)
+- [Music sketches](prototypes/music/)
 - [Changelog](CHANGELOG.md)
 - [Agent instructions](AGENTS.md)
