@@ -233,7 +233,8 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
   }
   function noise(t, dur, dest) {
     const s = ctx.createBufferSource();
-    s.buffer = noiseBuf; s.connect(dest);
+    // Loop the 1-second buffer, so a random start never cuts a long sound short.
+    s.buffer = noiseBuf; s.loop = true; s.connect(dest);
     s.start(t, Math.random() * 0.8); s.stop(t + dur);
   }
   // Plucked strings by Karplus-Strong, with the game's in-tune loop length (issue #152).
