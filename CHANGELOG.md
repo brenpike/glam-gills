@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The other four canal Legendaries moved to later areas, one in each: the Golden bow is now in the lily pad pond (Area 2), the Galaxy Paint shell in the pond at dusk (Area 3), the Rainbow Paint shell in the chinampa gardens (Area 4), and the Tie-dye galaxy Paint shell in Area 5. Each still hides in a Dash pot. If you already found one, you keep it (#146).
 - Dream colours are listed in area order, in the Treasure Chest, the Collection Book and the Dream colour tab (#146).
 
+## [0.45.1] - 2026-10-26
+
+### Fixed
+
+- In Area 2, the lily pad pond, the six plastic worms no longer sit in one clump. They are spread across the pond, at the surface and on the bed. To make room, the two tadpoles now swim the same loop, half a lap apart, and one freshwater shrimp moved next to the hollow log (#145).
+
 ## [0.45.0] - 2026-10-26
 
 ### Added
