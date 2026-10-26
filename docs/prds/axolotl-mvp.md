@@ -536,7 +536,7 @@ Everything stays calm, never scary, readable without colour, and usable with red
 
 ### M. Music
 
-Background music is N6 (issue #147; [ADR 0025](../adr/0025-procedural-background-music.md)). The mood rules, the instruments, and each cue's key, tempo and chords are in the [music guide](../music-guide.md).
+Background music is N6 (epic issue #150; [ADR 0025](../adr/0025-procedural-background-music.md)). The mood rules, the instruments, and each cue's key, tempo and chords are in the [music guide](../music-guide.md).
 
 1. **M1** The Home cue, Sunny Tank, plays on the title screen, in the Home Tank, in the character creator and restyle screens, on the area map, and in the refuge. It is cozy but happy. Moving between these screens never restarts it.
 2. **M2** On a trip, the music is the cue of the area's habitat: Canal Paddle for the canal (Area 1), Lily Pad Hop for the lily pad pond (Areas 2 and 3), and Garden Boats for the chinampa gardens (Areas 4 and 5). Cards and popups shown during a trip, and the pause screen, keep the trip's cue playing.
@@ -935,7 +935,7 @@ Each one follows [ADR 0007](../adr/0007-kid-safety-and-privacy.md) and [ADR 0008
 
     The full set unlocks a mild themed ability, a visual flourish, and a special pose with extra cheers in Tank Top Model (N1). The ability is separate from perk caps, but small, and a little stronger for rarer sets. Removing any piece turns these off. Sets are data. Each set has a Collection Book page that shows its found and missing pieces. The MVP prepares for sets with the optional set ID (Implementation Decision 12).
 
-6. **N6 Background music** (issue #147). Cozy but fun music, made live in code (M1 to M12, [ADR 0025](../adr/0025-procedural-background-music.md), [music guide](../music-guide.md)). The Home side of the game has one cue, Sunny Tank, cozy but happy. Each habitat has its own cue: Canal Paddle for the canal, Lily Pad Hop for the lily pad pond, and Garden Boats for the chinampa gardens. Every new habitat adds its own cue (M3). A dusk or night area plays the dusk version of its habitat's cue (the dusk rule, M4), so it never needs new music. Music never reacts to danger (M5). One music switch turns it on and off (M8). Sound effects are not part of N6; they come later under issue #147. The approved sketches are in `prototypes/music/`.
+6. **N6 Background music** (epic issue #150, under issue #147; issues #151 to #153). Cozy but fun music, made live in code (M1 to M12, [ADR 0025](../adr/0025-procedural-background-music.md), [music guide](../music-guide.md)). The Home side of the game has one cue, Sunny Tank, cozy but happy. Each habitat has its own cue: Canal Paddle for the canal, Lily Pad Hop for the lily pad pond, and Garden Boats for the chinampa gardens. Every new habitat adds its own cue (M3). A dusk or night area plays the dusk version of its habitat's cue (the dusk rule, M4), so it never needs new music. Music never reacts to danger (M5). One music switch turns it on and off (M8). Sound effects are not part of N6; they come later under issue #147. The approved sketches are in `prototypes/music/`.
 
 ## Further Notes
 
