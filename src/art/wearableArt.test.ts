@@ -2808,10 +2808,14 @@ describe('every catalogue Wearable (#88): the durable size rule', { timeout: ENU
 // rest of guide 6i: the keep-clear zones, their slot's footprint, the layer order, and the details the
 // rarity ladder counts. The pond items reuse the canal painters' footprints, never new ones.
 
-/** The pond's Area 2 Wearables (issue #75) and the pond Area 3's (issue #98), told apart by their catalogue list, not by the id prefix both share. */
-const inList = (list: readonly { readonly id: string }[]) => (w: Wearable): boolean => list.some((t) => t.id === w.id);
-const POND_WEARABLES = CATALOGUE_WEARABLES.filter(inList(POND_TREASURES));
-const POND_2_WEARABLES = CATALOGUE_WEARABLES.filter(inList(POND_2_TREASURES));
+/**
+ * The pond's Area 2 Wearables (issue #75) and the pond Area 3's (issue #98), told apart by their catalogue list, not by the id prefix both share.
+ * The Golden bow is in the pond's list since issue #146 but keeps its 'canal/' id and is canal art, so each area's art keeps to its own prefix.
+ */
+const inList = (list: readonly { readonly id: string }[], prefix: 'pond' | 'chinampa') => (w: Wearable): boolean =>
+  w.id.startsWith(`${prefix}/`) && list.some((t) => t.id === w.id);
+const POND_WEARABLES = CATALOGUE_WEARABLES.filter(inList(POND_TREASURES, 'pond'));
+const POND_2_WEARABLES = CATALOGUE_WEARABLES.filter(inList(POND_2_TREASURES, 'pond'));
 const POND_SLUG = {
   crown: 'lily-flower-crown',
   scarf: 'pond-weed-scarf',
@@ -3767,7 +3771,7 @@ const AREA4_SLUG = {
   clip: 'monarch-hair-clip',
   wings: 'monarch-wings',
 } as const satisfies Record<string, WearableArtSlug>;
-const CHINAMPA_WEARABLES = CATALOGUE_WEARABLES.filter(inList(CHINAMPA_TREASURES));
+const CHINAMPA_WEARABLES = CATALOGUE_WEARABLES.filter(inList(CHINAMPA_TREASURES, 'chinampa'));
 /** A full Area 4 outfit with the Straw sun hat, and the same with the Monarch hair clip in the Head slot. */
 const AREA4_OUTFIT: ArtOutfit = { head: AREA4_SLUG.hat, neck: AREA4_SLUG.necklace, shirt: AREA4_SLUG.overalls, back: AREA4_SLUG.wings };
 const AREA4_CLIP_OUTFIT: ArtOutfit = { ...AREA4_OUTFIT, head: AREA4_SLUG.clip };
@@ -4289,7 +4293,7 @@ const AREA5_SLUG = {
   ribbon: 'hummingbird-tail-ribbon',
   cape: 'rainbow-serape-cape',
 } as const satisfies Record<string, WearableArtSlug>;
-const CHINAMPA_2_WEARABLES = CATALOGUE_WEARABLES.filter(inList(CHINAMPA_2_TREASURES));
+const CHINAMPA_2_WEARABLES = CATALOGUE_WEARABLES.filter(inList(CHINAMPA_2_TREASURES, 'chinampa'));
 /** A full Area 5 outfit: one Wearable in each of the six body slots. */
 const AREA5_OUTFIT: ArtOutfit = {
   head: AREA5_SLUG.band,

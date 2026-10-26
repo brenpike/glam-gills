@@ -17,6 +17,7 @@ import {
   placementKind,
   treasureSlug,
   type Decoration,
+  type Treasure,
 } from '../logic/catalogue';
 import { DEV_DECORATIONS } from '../logic/devDecorations';
 import { TANK, TOP_BASE_Y } from '../logic/tank';
@@ -213,14 +214,23 @@ const TUBE_SLUGS: readonly TreasureIconSlug[] = [
   'dragonfly-glasses',
   'sunflower-sunglasses',
 ];
+/**
+ * The treasures of an area's list whose ids start with its own `prefix`: the ones that area added.
+ * Treasures that moved out of the canal (issue #146) keep their 'canal/' ids and stay canal art.
+ */
+function addedBy(treasures: readonly Treasure[], prefix: 'pond' | 'chinampa'): Treasure[] {
+  return treasures.filter((treasure) => treasure.id.startsWith(`${prefix}/`));
+}
 /** The slugs the pond added (the text after `pond/`), from the catalogue. */
-const POND_SLUGS: readonly string[] = POND_TREASURES.map((treasure) => treasureSlug(treasure.id));
+const POND_SLUGS: readonly string[] = addedBy(POND_TREASURES, 'pond').map((treasure) => treasureSlug(treasure.id));
 /** The slugs the pond Area 3 added (the text after `pond/`), from the catalogue. */
-const POND_2_SLUGS: readonly string[] = POND_2_TREASURES.map((treasure) => treasureSlug(treasure.id));
+const POND_2_SLUGS: readonly string[] = addedBy(POND_2_TREASURES, 'pond').map((treasure) => treasureSlug(treasure.id));
 /** The slugs the chinampa Area 4 added (the text after `chinampa/`), from the catalogue. */
-const CHINAMPA_SLUGS: readonly string[] = CHINAMPA_TREASURES.map((treasure) => treasureSlug(treasure.id));
+const CHINAMPA_SLUGS: readonly string[] = addedBy(CHINAMPA_TREASURES, 'chinampa').map((treasure) => treasureSlug(treasure.id));
 /** The slugs the chinampa Area 5 added (the text after `chinampa/`), from the catalogue. */
-const CHINAMPA_2_SLUGS: readonly string[] = CHINAMPA_2_TREASURES.map((treasure) => treasureSlug(treasure.id));
+const CHINAMPA_2_SLUGS: readonly string[] = addedBy(CHINAMPA_2_TREASURES, 'chinampa').map((treasure) =>
+  treasureSlug(treasure.id),
+);
 /** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. */
 const CANAL_ICON_SLUGS = TREASURE_ICON_SLUGS.filter(
   (slug) =>
@@ -1490,7 +1500,7 @@ describe('Pond treasure art (issue #75)', () => {
 
   it('adds the eleven pond items after the canal twelve, in catalogue order, with the Lily green shell among the Paint shells', () => {
     expect(POND_ITEM_SLUGS).toEqual(
-      POND_TREASURES.filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
+      addedBy(POND_TREASURES, 'pond').filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
     );
     expect(POND_ITEM_SLUGS).toHaveLength(11);
     expect(TREASURE_ICON_SLUGS.slice(12, 23)).toEqual(POND_ITEM_SLUGS);
@@ -1697,7 +1707,7 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
   it('lists the eleven Area 3 items after the pond ones, in catalogue order, with the Paint shells last', () => {
     expect(AREA3_ITEM_SLUGS).toHaveLength(11);
     expect(AREA3_ITEM_SLUGS).toEqual(
-      POND_2_TREASURES.filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
+      addedBy(POND_2_TREASURES, 'pond').filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
     );
     expect(AREA3_ITEM_SLUGS).toEqual([
       'reed-bundle',
@@ -1721,10 +1731,10 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
   });
 
   it('draws the Firefly gold Paint shell icon and its swatch in the Firefly gold body colour', () => {
-    const last = POND_2_TREASURES[POND_2_TREASURES.length - 1];
-    expect(last.category).toBe('paintShell');
-    expect(last.category === 'paintShell' ? last.dreamColour : undefined).toBe('firefly-gold');
-    expect(treasureSlug(last.id)).toBe('paint-shell-firefly-gold');
+    const last = addedBy(POND_2_TREASURES, 'pond').at(-1);
+    expect(last?.category).toBe('paintShell');
+    expect(last?.category === 'paintShell' ? last.dreamColour : undefined).toBe('firefly-gold');
+    expect(last && treasureSlug(last.id)).toBe('paint-shell-firefly-gold');
     expect(DREAM_SWATCH['firefly-gold'].body).toBe('#ffd52a');
     expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-firefly-gold', 48))).toContain('#ffd52a');
     expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'firefly-gold', 32))).toContain('#ffd52a');
@@ -1840,7 +1850,7 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
     const DECORATION_SLUGS = [...FLOORS, ...FLOATS, ...HANGS] as const;
 
     it('matches the catalogue placement kinds, rarities and the 144 wide string lights', () => {
-      const decorations = new Map(POND_2_TREASURES.filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
+      const decorations = new Map(addedBy(POND_2_TREASURES, 'pond').filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
       expect([...decorations.keys()]).toEqual([
         'reed-bundle',
         'drifting-feather',
@@ -1968,7 +1978,7 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
   it('lists the eleven Area 4 items after the Area 3 ones, in catalogue order, with the Poppy red Paint shell last', () => {
     expect(CHINAMPA_ITEM_SLUGS).toHaveLength(11);
     expect(CHINAMPA_ITEM_SLUGS).toEqual(
-      CHINAMPA_TREASURES.filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
+      addedBy(CHINAMPA_TREASURES, 'chinampa').filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
     );
     expect(CHINAMPA_ITEM_SLUGS).toEqual([
       'clay-flowerpot',
@@ -2143,7 +2153,7 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
     const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
 
     it('matches the catalogue placement kinds, rarities and the 144 wide banner', () => {
-      const decorations = new Map(CHINAMPA_TREASURES.filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
+      const decorations = new Map(addedBy(CHINAMPA_TREASURES, 'chinampa').filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
       expect([...decorations.keys()]).toEqual([
         'clay-flowerpot',
         'corn-husk-doll',
@@ -2343,7 +2353,7 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
   it('lists the eleven Area 5 items after the Area 4 ones, in catalogue order, with the Plum Paint shell last', () => {
     expect(CHINAMPA_2_ITEM_SLUGS).toHaveLength(11);
     expect(CHINAMPA_2_ITEM_SLUGS).toEqual(
-      CHINAMPA_2_TREASURES.filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
+      addedBy(CHINAMPA_2_TREASURES, 'chinampa').filter((treasure) => treasure.category !== 'paintShell').map((treasure) => treasureSlug(treasure.id)),
     );
     expect(CHINAMPA_2_ITEM_SLUGS).toEqual([
       'watering-can',
@@ -2557,7 +2567,7 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
     const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
 
     it('matches the catalogue placement kinds, rarities and standard widths', () => {
-      const decorations = new Map(CHINAMPA_2_TREASURES.filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
+      const decorations = new Map(addedBy(CHINAMPA_2_TREASURES, 'chinampa').filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
       expect([...decorations.keys()]).toEqual(['watering-can', 'floating-gourd', 'pinata', 'talavera-fountain', 'alebrije-statue']);
       for (const slug of FLOORS) expect(placementKind(decorations.get(slug) as Decoration), slug).toBe('floor');
       for (const slug of FLOATS) expect(placementKind(decorations.get(slug) as Decoration), slug).toBe('floating');

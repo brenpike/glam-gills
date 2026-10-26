@@ -402,7 +402,6 @@ describe('chestListing', () => {
       ['Sun hat', 'Head', 'Head · Speed +4%'],
       ['Shell necklace', 'Neck', 'Neck · Regrowth +15%'],
       ['Heart glasses', 'Face', 'Face · Treasure sense +35%'],
-      ['Golden bow', 'Tail', 'Tail · Shell blocks 1 hit'],
       ['Tank top', 'Shirt', 'Shirt · Regrowth +10%'],
       ['Diving tank', 'Back', 'Back · Dash +15%'],
       ['Stripy socks', 'Socks', 'Socks · Snack magnet +30'],
@@ -414,6 +413,7 @@ describe('chestListing', () => {
       ['Ladybug backpack', 'Back', 'Back · Shell blocks 1 hit'],
       ['Rainbow dragonfly wings', 'Back', 'Back · Dash +25%'],
       ['Froggy boots', 'Feet', 'Feet · Speed +10%'],
+      ['Golden bow', 'Tail', 'Tail · Shell blocks 1 hit'],
       ['Feather cap', 'Head', 'Head · Speed +4%'],
       ['Lily-pad socks', 'Socks', 'Socks · Snack magnet +30'],
       ['Water-lily shirt', 'Shirt', 'Shirt · Regrowth +15%'],
@@ -547,26 +547,29 @@ describe('area hints', () => {
     ['canal/sun-pyramid', 'Canal: Area 1: break a Dash pot with Tail Dash!'],
     ['canal/sun-hat', 'Canal: Area 1: look near the main swim path!'],
     ['mint', 'Canal: Area 1: look near the main swim path!'],
-    ['galaxy', 'Canal: Area 1: break a Dash pot with Tail Dash!'],
     ['pond/lily-pad', 'Lily pad pond: Area 2: look near the main swim path!'],
     ['pond/frog-statue', 'Lily pad pond: Area 2: look off the main path!'],
     ['pond/lotus-lantern', 'Lily pad pond: Area 2: look in a cave or log, or past the current!'],
     ['pond/rainbow-dragonfly-wings', 'Lily pad pond: Area 2: break a Dash pot with Tail Dash!'],
     ['lily-green', 'Lily pad pond: Area 2: look off the main path!'],
+    ['canal/golden-bow', 'Lily pad pond: Area 2: break a Dash pot with Tail Dash!'],
     ['pond/reed-bundle', 'Lily pad pond: Area 3: look near the main swim path!'],
     ['pond/wooden-duck-decoy', 'Lily pad pond: Area 3: look off the main path!'],
     ['pond/firefly-jar', 'Lily pad pond: Area 3: look in a cave or log, or past the current!'],
     ['pond/golden-lotus-throne', 'Lily pad pond: Area 3: break a Dash pot with Tail Dash!'],
     ['pond/firefly-cape', 'Lily pad pond: Area 3: break a Dash pot with Tail Dash!'],
     ['firefly-gold', 'Lily pad pond: Area 3: look off the main path!'],
+    ['galaxy', 'Lily pad pond: Area 3: break a Dash pot with Tail Dash!'],
     ['chinampa/scarecrow', 'Chinampa gardens: Area 4: look off the main path!'],
     ['poppy-red', 'Chinampa gardens: Area 4: look off the main path!'],
+    ['rainbow', 'Chinampa gardens: Area 4: break a Dash pot with Tail Dash!'],
     ['chinampa/watering-can', 'Chinampa gardens: Area 5: look near the main swim path!'],
     ['chinampa/pinata', 'Chinampa gardens: Area 5: look off the main path!'],
     ['chinampa/talavera-fountain', 'Chinampa gardens: Area 5: look in a cave or log, or past the current!'],
     ['chinampa/alebrije-statue', 'Chinampa gardens: Area 5: break a Dash pot with Tail Dash!'],
     ['chinampa/rainbow-serape-cape', 'Chinampa gardens: Area 5: break a Dash pot with Tail Dash!'],
     ['plum', 'Chinampa gardens: Area 5: look off the main path!'],
+    ['tie-dye-galaxy', 'Chinampa gardens: Area 5: break a Dash pot with Tail Dash!'],
   ])('hints at an unfound %s with "%s"', (id, expected) => {
     expect(hintOf(chestListing([]), id)).toBe(expected);
   });
@@ -933,9 +936,9 @@ describe('Treasure Chest fit with every treasure listed', () => {
     expect(fit.showsTitle).toBe(showsTitle);
   });
 
-  it('hides the title only on 320x440, 340x440, 360x440 and 460x320, where the short lines still leave no room for a row', () => {
+  it('hides the title only on 320x440, 340x440, 360x440, 460x320 and 480x320, where the short lines still leave no room for a row', () => {
     const hidden = supportedCanvases().filter((view) => !fitChest(view).showsTitle);
-    expect(hidden.map((view) => `${view.cssW}x${view.cssH}`)).toEqual(['320x440', '340x440', '360x440', '460x320']);
+    expect(hidden.map((view) => `${view.cssW}x${view.cssH}`)).toEqual(['320x440', '340x440', '360x440', '460x320', '480x320']);
     for (const view of hidden) {
       const fit = fitChest(view);
       expect(fit.length).toBe('short');

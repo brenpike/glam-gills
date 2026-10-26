@@ -7,13 +7,16 @@ import {
   CHINAMPA_TREASURES,
   DREAM_COLOURS,
   FIREFLY_GOLD,
+  GALAXY,
   LILY_GREEN,
   PERK_VALUES,
   PLUM,
   POND_2_TREASURES,
   POND_TREASURES,
   POPPY_RED,
+  RAINBOW,
   RARITIES,
+  TIE_DYE_GALAXY,
   TREASURE_CATEGORIES,
   WEARABLE_SLOTS,
   categoryName,
@@ -75,45 +78,30 @@ describe('CANAL_TREASURES', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('has at least one Decoration and one Wearable at every rarity', () => {
+  it('has a treasure at every rarity, a Decoration at every rarity and a Wearable at every rarity but Legendary', () => {
     for (const rarity of RARITIES) {
-      expect(DECORATIONS.some((treasure) => treasure.rarity === rarity)).toBe(true);
-      expect(WEARABLES.some((treasure) => treasure.rarity === rarity)).toBe(true);
+      expect(CANAL_TREASURES.some((treasure) => treasure.rarity === rarity), rarity).toBe(true);
+      expect(DECORATIONS.some((treasure) => treasure.rarity === rarity), rarity).toBe(true);
     }
+    expect([...new Set(WEARABLES.map((wearable) => wearable.rarity))].sort()).toEqual(['common', 'epic', 'rare']);
   });
 
-  it('has a Wearable for every one of the eight wearable slots', () => {
-    for (const slot of WEARABLE_SLOTS) {
-      expect(WEARABLES.some((wearable) => wearable.slot === slot)).toBe(true);
-    }
-    const slots = new Set(WEARABLES.map((wearable) => wearable.slot));
-    expect([...slots].sort()).toEqual([...WEARABLE_SLOTS].sort());
-  });
-
-  it('has exactly 4 Decorations, 8 Wearables and 24 treasures in total', () => {
-    expect(DECORATIONS).toHaveLength(4);
-    expect(WEARABLES).toHaveLength(8);
-    expect(CANAL_TREASURES).toHaveLength(24);
-  });
-
-  it('keeps the original 16 treasures first so placement by seed stays the same', () => {
-    expect(CANAL_TREASURES.slice(0, 16).map((treasure) => treasure.id)).toEqual([
-      'canal/pond-plant',
-      'canal/toy-boat',
-      'canal/castle-tower',
+  it('has exactly 1 Legendary, the Sun pyramid (issue #146)', () => {
+    expect(CANAL_TREASURES.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id)).toEqual([
       'canal/sun-pyramid',
-      'canal/sun-hat',
-      'canal/shell-necklace',
-      'canal/heart-glasses',
-      'canal/golden-bow',
-      ...CANAL_DREAM_COLOURS.map((colour) => `canal/paint-shell-${colour.id}`).slice(0, 8),
     ]);
-    expect(CANAL_TREASURES.slice(-4).map((treasure) => treasure.id)).toEqual([
-      'canal/tank-top',
-      'canal/diving-tank',
-      'canal/stripy-socks',
-      'canal/flippers',
-    ]);
+  });
+
+  it('has a Wearable for every wearable slot but Tail, since the Golden bow moved to the pond (issue #146)', () => {
+    const slots = new Set(WEARABLES.map((wearable) => wearable.slot));
+    expect([...slots].sort()).toEqual(WEARABLE_SLOTS.filter((slot) => slot !== 'tail').sort());
+  });
+
+  it('has exactly 4 Decorations, 7 Wearables, 9 Paint shells and 20 treasures in total', () => {
+    expect(DECORATIONS).toHaveLength(4);
+    expect(WEARABLES).toHaveLength(7);
+    expect(PAINT_SHELLS).toHaveLength(9);
+    expect(CANAL_TREASURES).toHaveLength(20);
   });
 
   it('has no Wearable in a set yet', () => {
@@ -131,7 +119,6 @@ describe('CANAL_TREASURES', () => {
       'canal/sun-hat',
       'canal/shell-necklace',
       'canal/heart-glasses',
-      'canal/golden-bow',
       'canal/paint-shell-mint',
       'canal/paint-shell-sky-blue',
       'canal/paint-shell-lavender',
@@ -141,9 +128,6 @@ describe('CANAL_TREASURES', () => {
       'canal/paint-shell-hearts',
       'canal/paint-shell-tie-dye',
       'canal/paint-shell-iridescent',
-      'canal/paint-shell-rainbow',
-      'canal/paint-shell-galaxy',
-      'canal/paint-shell-tie-dye-galaxy',
       'canal/tank-top',
       'canal/diving-tank',
       'canal/stripy-socks',
@@ -151,8 +135,8 @@ describe('CANAL_TREASURES', () => {
     ]);
   });
 
-  it('has exactly 12 Paint shells, one per canal Dream colour', () => {
-    expect(PAINT_SHELLS).toHaveLength(12);
+  it('has exactly 9 Paint shells, one per canal Dream colour', () => {
+    expect(PAINT_SHELLS).toHaveLength(9);
     const colours = PAINT_SHELLS.map((shell) => shell.dreamColour);
     expect(colours).toEqual(CANAL_DREAM_COLOURS.map((colour) => colour.id));
   });
@@ -168,9 +152,6 @@ describe('CANAL_TREASURES', () => {
       hearts: 'epic',
       'tie-dye': 'epic',
       iridescent: 'epic',
-      rainbow: 'legendary',
-      galaxy: 'legendary',
-      'tie-dye-galaxy': 'legendary',
     };
     const colourRarities = Object.fromEntries(CANAL_DREAM_COLOURS.map((colour) => [colour.id, colour.rarity]));
     expect(colourRarities).toEqual(expected);
@@ -181,7 +162,7 @@ describe('CANAL_TREASURES', () => {
 
   it('names and ids each Paint shell after its Dream colour', () => {
     expect(treasureById('canal/paint-shell-mint')?.name).toBe('Mint Paint shell');
-    expect(treasureById('canal/paint-shell-tie-dye-galaxy')?.name).toBe('Tie-dye galaxy Paint shell');
+    expect(treasureById('canal/paint-shell-iridescent')?.name).toBe('Iridescent Paint shell');
   });
 
   it('gives every Wearable exactly one perk at its PERK_VALUES value', () => {
@@ -276,6 +257,14 @@ describe('POND_TREASURES', () => {
         category: 'paintShell',
         dreamColour: 'lily-green',
       },
+      {
+        id: 'canal/golden-bow',
+        name: 'Golden bow',
+        rarity: 'legendary',
+        category: 'wearable',
+        slot: 'tail',
+        perk: { type: 'shell', value: 1 },
+      },
     ]);
   });
 
@@ -362,6 +351,13 @@ describe('POND_2_TREASURES', () => {
         category: 'paintShell',
         dreamColour: 'firefly-gold',
       },
+      {
+        id: 'canal/paint-shell-galaxy',
+        name: 'Galaxy Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'galaxy',
+      },
     ]);
     expect(Object.isFrozen(POND_2_TREASURES)).toBe(true);
   });
@@ -373,16 +369,19 @@ describe('POND_2_TREASURES', () => {
     }
   });
 
-  it('has 6 Decorations, 5 Wearables and the Firefly gold Paint shell', () => {
+  it('has 6 Decorations, 5 Wearables and the Firefly gold and Galaxy Paint shells', () => {
     expect(POND_2_TREASURES.filter(isDecoration)).toHaveLength(6);
     expect(POND_2_TREASURES.filter(isWearable)).toHaveLength(5);
-    expect(POND_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['pond/paint-shell-firefly-gold']);
+    expect(POND_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'pond/paint-shell-firefly-gold',
+      'canal/paint-shell-galaxy',
+    ]);
   });
 
   it('keeps the canal and pond lists unchanged ahead of it', () => {
-    expect(CANAL_TREASURES).toHaveLength(24);
-    expect(POND_TREASURES).toHaveLength(12);
-    expect(POND_TREASURES.at(-1)?.id).toBe('pond/paint-shell-lily-green');
+    expect(CANAL_TREASURES).toHaveLength(20);
+    expect(POND_TREASURES).toHaveLength(13);
+    expect(POND_TREASURES.at(-1)?.id).toBe('canal/golden-bow');
   });
 });
 
@@ -455,6 +454,13 @@ describe('CHINAMPA_TREASURES', () => {
         slot: 'back',
         perk: { type: 'speed', value: 10 },
       },
+      {
+        id: 'canal/paint-shell-rainbow',
+        name: 'Rainbow Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'rainbow',
+      },
     ]);
     expect(Object.isFrozen(CHINAMPA_TREASURES)).toBe(true);
   });
@@ -466,20 +472,21 @@ describe('CHINAMPA_TREASURES', () => {
     }
   });
 
-  it('has 6 Decorations, 5 Wearables and the Poppy red Paint shell', () => {
-    expect(CHINAMPA_TREASURES).toHaveLength(12);
+  it('has 6 Decorations, 5 Wearables and the Poppy red and Rainbow Paint shells', () => {
+    expect(CHINAMPA_TREASURES).toHaveLength(13);
     expect(CHINAMPA_TREASURES.filter(isDecoration)).toHaveLength(6);
     expect(CHINAMPA_TREASURES.filter(isWearable)).toHaveLength(5);
     expect(CHINAMPA_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
       'chinampa/paint-shell-poppy-red',
+      'canal/paint-shell-rainbow',
     ]);
   });
 
   it('keeps the canal, pond and pond Area 3 lists unchanged ahead of it', () => {
-    expect(CANAL_TREASURES).toHaveLength(24);
-    expect(POND_TREASURES).toHaveLength(12);
-    expect(POND_2_TREASURES).toHaveLength(12);
-    expect(POND_2_TREASURES.at(-1)?.id).toBe('pond/paint-shell-firefly-gold');
+    expect(CANAL_TREASURES).toHaveLength(20);
+    expect(POND_TREASURES).toHaveLength(13);
+    expect(POND_2_TREASURES).toHaveLength(13);
+    expect(POND_2_TREASURES.at(-1)?.id).toBe('canal/paint-shell-galaxy');
   });
 
   it('gives the straw sun hat its own slug, apart from the canal sun hat', () => {
@@ -558,6 +565,13 @@ describe('CHINAMPA_2_TREASURES', () => {
         slot: 'back',
         perk: { type: 'shell', value: 1 },
       },
+      {
+        id: 'canal/paint-shell-tie-dye-galaxy',
+        name: 'Tie-dye galaxy Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'tie-dye-galaxy',
+      },
     ]);
     expect(Object.isFrozen(CHINAMPA_2_TREASURES)).toBe(true);
   });
@@ -569,19 +583,22 @@ describe('CHINAMPA_2_TREASURES', () => {
     }
   });
 
-  it('has 5 Decorations, 6 Wearables and the Plum Paint shell', () => {
-    expect(CHINAMPA_2_TREASURES).toHaveLength(12);
+  it('has 5 Decorations, 6 Wearables and the Plum and Tie-dye galaxy Paint shells', () => {
+    expect(CHINAMPA_2_TREASURES).toHaveLength(13);
     expect(CHINAMPA_2_TREASURES.filter(isDecoration)).toHaveLength(5);
     expect(CHINAMPA_2_TREASURES.filter(isWearable)).toHaveLength(6);
-    expect(CHINAMPA_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['chinampa/paint-shell-plum']);
+    expect(CHINAMPA_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'chinampa/paint-shell-plum',
+      'canal/paint-shell-tie-dye-galaxy',
+    ]);
   });
 
   it('keeps the canal, pond, pond Area 3 and chinampa Area 4 lists unchanged ahead of it', () => {
-    expect(CANAL_TREASURES).toHaveLength(24);
-    expect(POND_TREASURES).toHaveLength(12);
-    expect(POND_2_TREASURES).toHaveLength(12);
-    expect(CHINAMPA_TREASURES).toHaveLength(12);
-    expect(CHINAMPA_TREASURES.at(-1)?.id).toBe('chinampa/monarch-wings');
+    expect(CANAL_TREASURES).toHaveLength(20);
+    expect(POND_TREASURES).toHaveLength(13);
+    expect(POND_2_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_TREASURES.at(-1)?.id).toBe('canal/paint-shell-rainbow');
   });
 });
 
@@ -608,8 +625,8 @@ describe('ALL_TREASURES', () => {
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
     const shellWearables = ALL_WEARABLES.filter((wearable) => wearable.perk.type === 'shell');
     expect(shellWearables.map((wearable) => wearable.id)).toEqual([
-      'canal/golden-bow',
       'pond/ladybug-backpack',
+      'canal/golden-bow',
       'pond/pearl-tail-charm',
       'chinampa/rainbow-serape-cape',
     ]);
@@ -666,9 +683,18 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the 12 canal colours, then Lily green, then Firefly gold, then Poppy red, then Plum', () => {
-    expect(CANAL_DREAM_COLOURS).toHaveLength(12);
-    expect(DREAM_COLOURS).toEqual([...CANAL_DREAM_COLOURS, LILY_GREEN, FIREFLY_GOLD, POPPY_RED, PLUM]);
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy', () => {
+    expect(CANAL_DREAM_COLOURS).toHaveLength(9);
+    expect(DREAM_COLOURS).toEqual([
+      ...CANAL_DREAM_COLOURS,
+      LILY_GREEN,
+      FIREFLY_GOLD,
+      GALAXY,
+      POPPY_RED,
+      RAINBOW,
+      PLUM,
+      TIE_DYE_GALAXY,
+    ]);
     expect(DREAM_COLOURS).toHaveLength(16);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
@@ -712,6 +738,16 @@ describe('Dream colours', () => {
     expect(dreamColourById('plum')).toBe(PLUM);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('keeps the three moved Legendary colours patterned, frozen and findable by id (issue #146)', () => {
+    expect(GALAXY).toEqual({ id: 'galaxy', name: 'Galaxy', rarity: 'legendary', kind: 'patterned' });
+    expect(RAINBOW).toEqual({ id: 'rainbow', name: 'Rainbow', rarity: 'legendary', kind: 'patterned' });
+    expect(TIE_DYE_GALAXY).toEqual({ id: 'tie-dye-galaxy', name: 'Tie-dye galaxy', rarity: 'legendary', kind: 'patterned' });
+    for (const colour of [GALAXY, RAINBOW, TIE_DYE_GALAXY]) {
+      expect(Object.isFrozen(colour), colour.id).toBe(true);
+      expect(dreamColourById(colour.id), colour.id).toBe(colour);
+    }
   });
 
   it('makes Lily green a rare solid', () => {

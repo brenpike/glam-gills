@@ -100,7 +100,7 @@ export interface DreamColour {
   readonly kind: DreamKind;
 }
 
-/** The 12 canal Dream colours with the PRD B3 rarities, in the canal Paint shell order. */
+/** The 9 canal Dream colours with the PRD B3 rarities, in the canal Paint shell order. */
 export const CANAL_DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   { id: 'mint', name: 'Mint', rarity: 'common', kind: 'solid' },
   { id: 'sky-blue', name: 'Sky blue', rarity: 'common', kind: 'solid' },
@@ -111,10 +111,31 @@ export const CANAL_DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   { id: 'hearts', name: 'Hearts', rarity: 'epic', kind: 'patterned' },
   { id: 'tie-dye', name: 'Tie-dye', rarity: 'epic', kind: 'patterned' },
   { id: 'iridescent', name: 'Iridescent', rarity: 'epic', kind: 'sheen' },
-  { id: 'rainbow', name: 'Rainbow', rarity: 'legendary', kind: 'patterned' },
-  { id: 'galaxy', name: 'Galaxy', rarity: 'legendary', kind: 'patterned' },
-  { id: 'tie-dye-galaxy', name: 'Tie-dye galaxy', rarity: 'legendary', kind: 'patterned' },
 ]);
+
+/** Area 3's Legendary Dream colour, held by its second Paint shell; once a canal colour (issue #146). */
+export const GALAXY: DreamColour = Object.freeze({
+  id: 'galaxy',
+  name: 'Galaxy',
+  rarity: 'legendary',
+  kind: 'patterned',
+});
+
+/** Area 4's Legendary Dream colour, held by its second Paint shell; once a canal colour (issue #146). */
+export const RAINBOW: DreamColour = Object.freeze({
+  id: 'rainbow',
+  name: 'Rainbow',
+  rarity: 'legendary',
+  kind: 'patterned',
+});
+
+/** Area 5's Legendary Dream colour, held by its second Paint shell; once a canal colour (issue #146). */
+export const TIE_DYE_GALAXY: DreamColour = Object.freeze({
+  id: 'tie-dye-galaxy',
+  name: 'Tie-dye galaxy',
+  rarity: 'legendary',
+  kind: 'patterned',
+});
 
 /** The pond's Dream colour, held by the pond's one Paint shell. */
 export const LILY_GREEN: DreamColour = Object.freeze({
@@ -148,13 +169,19 @@ export const PLUM: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
-/** Every Dream colour: the canal's 12, then Lily green, then Firefly gold, then Poppy red, then Plum. */
+/**
+ * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
+ * (Area 3), Poppy red and Rainbow (Area 4), then Plum and Tie-dye galaxy (Area 5).
+ */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
   LILY_GREEN,
   FIREFLY_GOLD,
+  GALAXY,
   POPPY_RED,
+  RAINBOW,
   PLUM,
+  TIE_DYE_GALAXY,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -218,9 +245,9 @@ function createPerk(type: PerkType, rarity: Rarity): Perk {
 }
 
 /**
- * The canal treasures: 4 Decorations and 4 Wearables, then one Paint shell per canal Dream colour,
+ * The canal treasures: 4 Decorations and 3 Wearables, then one Paint shell per canal Dream colour,
  * then 4 more Wearables. The newest entries come last so placement by seed stays the same for every
- * earlier treasure.
+ * earlier treasure. The Sun pyramid is the canal's one Legendary (issue #146).
  */
 export const CANAL_TREASURES: readonly Treasure[] = Object.freeze([
   { id: 'canal/pond-plant', name: 'Pond plant', rarity: 'common', category: 'decoration' },
@@ -250,14 +277,6 @@ export const CANAL_TREASURES: readonly Treasure[] = Object.freeze([
     category: 'wearable',
     slot: 'face',
     perk: { type: 'treasureSense', value: 35 },
-  },
-  {
-    id: 'canal/golden-bow',
-    name: 'Golden bow',
-    rarity: 'legendary',
-    category: 'wearable',
-    slot: 'tail',
-    perk: { type: 'shell', value: 1 },
   },
   ...CANAL_DREAM_COLOURS.map((colour) => createPaintShell(colour, 'canal')),
   {
@@ -295,8 +314,8 @@ export const CANAL_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
- * The pond treasures: 4 Decorations, 7 Wearables, then the Lily green Paint shell. Every perk is the
- * PERK_VALUES value for its type and rarity.
+ * The pond treasures: 4 Decorations, 7 Wearables, the Lily green Paint shell, then the Golden bow
+ * (issue #146). Every perk is the PERK_VALUES value for its type and rarity.
  */
 export const POND_TREASURES: readonly Treasure[] = Object.freeze([
   {
@@ -372,11 +391,20 @@ export const POND_TREASURES: readonly Treasure[] = Object.freeze([
     perk: { type: 'speed', value: 10 },
   },
   createPaintShell(LILY_GREEN, 'pond'),
+  // Moved from the canal by issue #146; the id keeps its 'canal/' prefix so saves stay valid (ADR 0012).
+  {
+    id: 'canal/golden-bow',
+    name: 'Golden bow',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'tail',
+    perk: { type: 'shell', value: 1 },
+  },
 ]);
 
 /**
- * The pond Area 3 treasures, with 'pond/' ids: 6 Decorations, 5 Wearables, then the Firefly gold
- * Paint shell. The Wooden duck decoy is the area's special treasure. Every perk is the PERK_VALUES
+ * The pond Area 3 treasures, with 'pond/' ids: 6 Decorations, 5 Wearables, the Firefly gold
+ * Paint shell, then the Galaxy Paint shell, whose 'canal/' id predates its move here (issue #146). The Wooden duck decoy is the area's special treasure. Every perk is the PERK_VALUES
  * value for its type and rarity.
  */
 export const POND_2_TREASURES: readonly Treasure[] = Object.freeze([
@@ -452,11 +480,14 @@ export const POND_2_TREASURES: readonly Treasure[] = Object.freeze([
     perk: { type: 'treasureSense', value: 50 },
   },
   createPaintShell(FIREFLY_GOLD, 'pond'),
+  // Moved from the canal by issue #146; the id keeps its 'canal/' prefix so saves stay valid (ADR 0012).
+  createPaintShell(GALAXY, 'canal'),
 ]);
 
 /**
  * The chinampa gardens' Area 4 treasures, with 'chinampa/' ids, by rarity: 6 Decorations, 5 Wearables
- * and the Poppy red Paint shell. The Scarecrow is the area's special treasure. Every perk is the
+ * and the Poppy red Paint shell, then the Rainbow Paint shell, whose 'canal/' id predates its move
+ * here (issue #146). The Scarecrow is the area's special treasure. Every perk is the
  * PERK_VALUES value for its type and rarity.
  */
 export const CHINAMPA_TREASURES: readonly Treasure[] = Object.freeze([
@@ -520,11 +551,14 @@ export const CHINAMPA_TREASURES: readonly Treasure[] = Object.freeze([
     slot: 'back',
     perk: { type: 'speed', value: 10 },
   },
+  // Moved from the canal by issue #146; the id keeps its 'canal/' prefix so saves stay valid (ADR 0012).
+  createPaintShell(RAINBOW, 'canal'),
 ]);
 
 /**
  * The chinampa gardens' Area 5 treasures, with 'chinampa/' ids, by rarity: 5 Decorations, 6 Wearables
- * and the Plum Paint shell. The Piñata is the area's special treasure. Every perk comes from
+ * and the Plum Paint shell, then the Tie-dye galaxy Paint shell, whose 'canal/' id predates its move
+ * here (issue #146). The Piñata is the area's special treasure. Every perk comes from
  * PERK_VALUES for its type and rarity.
  */
 export const CHINAMPA_2_TREASURES: readonly Treasure[] = Object.freeze([
@@ -594,6 +628,8 @@ export const CHINAMPA_2_TREASURES: readonly Treasure[] = Object.freeze([
     slot: 'back',
     perk: createPerk('shell', 'legendary'),
   },
+  // Moved from the canal by issue #146; the id keeps its 'canal/' prefix so saves stay valid (ADR 0012).
+  createPaintShell(TIE_DYE_GALAXY, 'canal'),
 ]);
 
 /**

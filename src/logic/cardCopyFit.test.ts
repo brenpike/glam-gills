@@ -388,8 +388,8 @@ describe('card copy fit', () => {
     expect(SORTED_AXOLOTL_NAMES[0]).toBe('Golden albino axolotl');
   });
 
-  it('brings home at most the 24 canal treasures on one trip, of the 72 in the catalogue', () => {
-    expect(MAX_TRIP_FINDS).toBe(24);
+  it('brings home at most the 20 canal treasures on one trip, of the 72 in the catalogue', () => {
+    expect(MAX_TRIP_FINDS).toBe(20);
     expect(SORTED_NAMES).toHaveLength(72);
   });
 

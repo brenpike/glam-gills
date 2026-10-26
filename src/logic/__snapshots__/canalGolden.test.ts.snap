@@ -2,14 +2,14 @@
 
 exports[`canal golden > keeps the default zone placements for trip seeds 1..25 1`] = `
 [
-  "canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/sun-hat@canal/spot-reeds-0-316-a,canal/heart-glasses@canal/spot-current-4,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-b,canal/paint-shell-lavender@canal/spot-reeds-0-428-b,canal/paint-shell-rainbow@canal/spot-current-1+pot,canal/tank-top@canal/spot-reeds-0-316-b",
+  "canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/sun-pyramid@canal/spot-cave-1+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/heart-glasses@canal/spot-current-6,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-a,canal/tank-top@canal/spot-reeds-0-372-b",
   "canal/toy-boat@canal/spot-pad-2,canal/sun-hat@canal/spot-reeds-0-428-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-a,canal/paint-shell-lavender@canal/spot-reeds-0-316-b,canal/paint-shell-tie-dye@canal/spot-current-6,canal/tank-top@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-484-a",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-reeds-1-580-top,canal/paint-shell-sunset-orange@canal/spot-reeds-2-1436-deep,canal/paint-shell-bubblegum@canal/spot-reeds-1-640-top,canal/diving-tank@canal/spot-pad-2,canal/stripy-socks@canal/spot-reeds-0-428-a,canal/flippers@canal/spot-reeds-2-1376-deep",
   "canal/toy-boat@canal/spot-pad-2,canal/sun-hat@canal/spot-reeds-0-428-a,canal/shell-necklace@canal/spot-reeds-1-640-top,canal/paint-shell-mint@canal/spot-reeds-0-316-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-a,canal/paint-shell-bubblegum@canal/spot-reeds-2-1376-deep,canal/paint-shell-midnight-blue@canal/spot-reeds-1-580-top",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-pad-2,canal/sun-hat@canal/spot-reeds-0-372-a,canal/paint-shell-lavender@canal/spot-reeds-0-316-b,canal/paint-shell-tie-dye@canal/spot-cave-4,canal/diving-tank@canal/spot-reeds-2-1376-deep,canal/stripy-socks@canal/spot-reeds-0-428-b",
   "canal/pond-plant@canal/spot-reeds-0-316-b,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-hat@canal/spot-reeds-0-372-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/paint-shell-sunset-orange@canal/spot-reeds-2-1436-deep,canal/paint-shell-bubblegum@canal/spot-reeds-1-640-top,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1316-deep",
   "canal/pond-plant@canal/spot-reeds-0-316-a,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-hat@canal/spot-reeds-0-484-b,canal/paint-shell-mint@canal/spot-reeds-0-372-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-a,canal/tank-top@canal/spot-reeds-0-428-a,canal/flippers@canal/spot-reeds-2-1436-deep",
-  "canal/toy-boat@canal/spot-reeds-1-640-top,canal/golden-bow@canal/spot-current-2+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-a,canal/paint-shell-bubblegum@canal/spot-pad-2,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1376-deep,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/flippers@canal/spot-reeds-3-1700-deep",
+  "canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-pyramid@canal/spot-current-2+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-a,canal/paint-shell-bubblegum@canal/spot-pad-2,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1376-deep,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/flippers@canal/spot-reeds-3-1700-deep",
   "canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-hat@canal/spot-reeds-0-428-b,canal/shell-necklace@canal/spot-reeds-2-1316-deep,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-b,canal/stripy-socks@canal/spot-reeds-0-428-a,canal/flippers@canal/spot-reeds-2-1376-deep",
   "canal/toy-boat@canal/spot-reeds-2-1436-deep,canal/sun-pyramid@canal/spot-current-3+pot,canal/shell-necklace@canal/spot-pad-2,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-b,canal/paint-shell-sunset-orange@canal/spot-reeds-2-1316-deep,canal/diving-tank@canal/spot-reeds-1-640-top,canal/stripy-socks@canal/spot-reeds-0-372-a",
   "canal/toy-boat@canal/spot-reeds-2-1436-deep,canal/castle-tower@canal/spot-current-4,canal/paint-shell-mint@canal/spot-reeds-0-316-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-a,canal/paint-shell-midnight-blue@canal/spot-pad-2,canal/tank-top@canal/spot-reeds-0-428-a,canal/stripy-socks@canal/spot-reeds-0-316-a",
@@ -32,14 +32,14 @@ exports[`canal golden > keeps the default zone placements for trip seeds 1..25 1
 
 exports[`canal golden > keeps the default zone placements with three banked treasures 1`] = `
 [
-  "canal/paint-shell-mint@canal/spot-reeds-0-316-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/paint-shell-hearts@canal/spot-current-4,canal/paint-shell-rainbow@canal/spot-current-3+pot,canal/tank-top@canal/spot-reeds-0-484-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
+  "canal/sun-pyramid@canal/spot-current-2+pot,canal/paint-shell-mint@canal/spot-reeds-0-316-a,canal/paint-shell-lavender@canal/spot-reeds-0-316-b,canal/paint-shell-hearts@canal/spot-current-6,canal/tank-top@canal/spot-reeds-0-484-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
   "canal/sun-hat@canal/spot-reeds-0-372-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-a,canal/paint-shell-lavender@canal/spot-reeds-0-428-a,canal/paint-shell-tie-dye@canal/spot-current-4,canal/tank-top@canal/spot-reeds-0-484-b,canal/stripy-socks@canal/spot-reeds-0-316-b",
   "canal/sun-hat@canal/spot-reeds-0-372-b,canal/paint-shell-sunset-orange@canal/spot-reeds-1-580-top,canal/paint-shell-bubblegum@canal/spot-reeds-2-1436-deep,canal/diving-tank@canal/spot-reeds-1-640-top,canal/stripy-socks@canal/spot-reeds-0-316-b,canal/flippers@canal/spot-pad-2",
   "canal/shell-necklace@canal/spot-pad-2,canal/paint-shell-mint@canal/spot-reeds-0-428-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-a,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/paint-shell-bubblegum@canal/spot-reeds-1-640-top,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1376-deep",
   "canal/sun-hat@canal/spot-reeds-0-372-b,canal/paint-shell-mint@canal/spot-reeds-0-316-b,canal/paint-shell-tie-dye@canal/spot-cave-5,canal/tank-top@canal/spot-reeds-0-484-a,canal/diving-tank@canal/spot-reeds-1-580-top,canal/stripy-socks@canal/spot-reeds-0-428-a",
   "canal/sun-hat@canal/spot-reeds-0-316-b,canal/paint-shell-mint@canal/spot-reeds-0-316-a,canal/paint-shell-lavender@canal/spot-reeds-0-372-b,canal/paint-shell-sunset-orange@canal/spot-reeds-1-640-top,canal/paint-shell-bubblegum@canal/spot-reeds-3-1700-deep,canal/paint-shell-midnight-blue@canal/spot-reeds-1-580-top",
   "canal/sun-hat@canal/spot-reeds-0-316-a,canal/paint-shell-mint@canal/spot-reeds-0-372-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-b,canal/tank-top@canal/spot-reeds-0-316-b,canal/flippers@canal/spot-reeds-2-1376-deep",
-  "canal/golden-bow@canal/spot-cave-2+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-bubblegum@canal/spot-reeds-2-1316-deep,canal/paint-shell-midnight-blue@canal/spot-pad-2,canal/diving-tank@canal/spot-reeds-2-1376-deep,canal/flippers@canal/spot-reeds-1-640-top",
+  "canal/sun-pyramid@canal/spot-cave-2+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-bubblegum@canal/spot-reeds-2-1316-deep,canal/paint-shell-midnight-blue@canal/spot-pad-2,canal/diving-tank@canal/spot-reeds-2-1376-deep,canal/flippers@canal/spot-reeds-1-640-top",
   "canal/sun-hat@canal/spot-reeds-0-372-a,canal/shell-necklace@canal/spot-pad-2,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-a,canal/paint-shell-lavender@canal/spot-reeds-0-428-b,canal/stripy-socks@canal/spot-reeds-0-372-b,canal/flippers@canal/spot-reeds-2-1436-deep",
   "canal/sun-pyramid@canal/spot-current-1+pot,canal/shell-necklace@canal/spot-pad-2,canal/paint-shell-sky-blue@canal/spot-reeds-0-372-b,canal/paint-shell-sunset-orange@canal/spot-reeds-2-1436-deep,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/stripy-socks@canal/spot-reeds-0-428-a",
   "canal/heart-glasses@canal/spot-current-4,canal/paint-shell-mint@canal/spot-reeds-0-316-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-484-a,canal/paint-shell-midnight-blue@canal/spot-reeds-3-1700-deep,canal/tank-top@canal/spot-reeds-0-428-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
@@ -62,16 +62,16 @@ exports[`canal golden > keeps the default zone placements with three banked trea
 
 exports[`canal golden > keeps the default zone placements with two returned treasures 1`] = `
 [
-  "canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/sun-pyramid@canal/spot-cave-1+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/heart-glasses@canal/spot-current-6,canal/paint-shell-mint@canal/spot-reeds-0-484-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-a,canal/paint-shell-galaxy@canal/spot-current-2+pot,canal/tank-top@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
+  "canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/sun-pyramid@canal/spot-cave-1+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/heart-glasses@canal/spot-current-6,canal/paint-shell-mint@canal/spot-reeds-0-484-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-a,canal/paint-shell-tie-dye@canal/spot-current-4,canal/tank-top@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-reeds-2-1316-deep,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-484-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-b,canal/paint-shell-lavender@canal/spot-reeds-0-428-a,canal/paint-shell-tie-dye@canal/spot-current-4,canal/tank-top@canal/spot-reeds-0-372-a,canal/stripy-socks@canal/spot-reeds-0-316-b",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-316-a,canal/paint-shell-sunset-orange@canal/spot-pad-2,canal/paint-shell-bubblegum@canal/spot-reeds-2-1376-deep,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/stripy-socks@canal/spot-reeds-0-372-a,canal/flippers@canal/spot-reeds-1-640-top",
   "canal/toy-boat@canal/spot-pad-2,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/shell-necklace@canal/spot-reeds-1-580-top,canal/paint-shell-mint@canal/spot-reeds-0-428-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/paint-shell-bubblegum@canal/spot-reeds-3-1700-deep,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1376-deep",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-pad-2,canal/sun-pyramid@canal/spot-cave-3+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/paint-shell-mint@canal/spot-reeds-0-316-a,canal/paint-shell-tie-dye@canal/spot-current-4,canal/tank-top@canal/spot-reeds-0-428-b,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/stripy-socks@canal/spot-reeds-0-484-b",
   "canal/pond-plant@canal/spot-reeds-0-316-b,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/paint-shell-mint@canal/spot-reeds-0-372-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/paint-shell-sunset-orange@canal/spot-reeds-1-640-top,canal/paint-shell-bubblegum@canal/spot-pad-2,canal/paint-shell-midnight-blue@canal/spot-reeds-3-1700-deep",
   "canal/pond-plant@canal/spot-reeds-0-316-a,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-pyramid@canal/spot-current-3+pot,canal/sun-hat@canal/spot-reeds-0-372-b,canal/paint-shell-mint@canal/spot-reeds-0-316-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-lavender@canal/spot-reeds-0-484-a,canal/tank-top@canal/spot-reeds-0-372-a,canal/flippers@canal/spot-reeds-3-1700-deep",
-  "canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/golden-bow@canal/spot-current-3+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-bubblegum@canal/spot-reeds-2-1436-deep,canal/paint-shell-midnight-blue@canal/spot-pad-2,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/flippers@canal/spot-reeds-2-1376-deep",
+  "canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/heart-glasses@canal/spot-current-5,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-bubblegum@canal/spot-reeds-2-1436-deep,canal/paint-shell-midnight-blue@canal/spot-pad-2,canal/diving-tank@canal/spot-reeds-2-1316-deep,canal/flippers@canal/spot-reeds-2-1376-deep",
   "canal/pond-plant@canal/spot-reeds-0-372-a,canal/toy-boat@canal/spot-pad-2,canal/sun-pyramid@canal/spot-cave-2+pot,canal/sun-hat@canal/spot-reeds-0-428-b,canal/shell-necklace@canal/spot-reeds-2-1436-deep,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-lavender@canal/spot-reeds-0-316-a,canal/stripy-socks@canal/spot-reeds-0-484-b,canal/flippers@canal/spot-reeds-1-580-top",
-  "canal/toy-boat@canal/spot-reeds-2-1436-deep,canal/sun-pyramid@canal/spot-current-3+pot,canal/sun-hat@canal/spot-reeds-0-372-b,canal/shell-necklace@canal/spot-pad-2,canal/golden-bow@canal/spot-current-1+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-sunset-orange@canal/spot-reeds-1-640-top,canal/diving-tank@canal/spot-reeds-1-580-top,canal/stripy-socks@canal/spot-reeds-0-316-a",
+  "canal/toy-boat@canal/spot-reeds-2-1436-deep,canal/castle-tower@canal/spot-current-6,canal/sun-pyramid@canal/spot-current-3+pot,canal/sun-hat@canal/spot-reeds-0-372-b,canal/shell-necklace@canal/spot-reeds-2-1376-deep,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-sunset-orange@canal/spot-reeds-1-640-top,canal/diving-tank@canal/spot-reeds-1-580-top,canal/stripy-socks@canal/spot-reeds-0-316-a",
   "canal/toy-boat@canal/spot-reeds-2-1436-deep,canal/castle-tower@canal/spot-current-4,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/paint-shell-mint@canal/spot-reeds-0-428-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-midnight-blue@canal/spot-reeds-1-580-top,canal/tank-top@canal/spot-reeds-0-484-a,canal/stripy-socks@canal/spot-reeds-0-372-b",
   "canal/pond-plant@canal/spot-reeds-0-372-a,canal/toy-boat@canal/spot-reeds-1-580-top,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-484-b,canal/paint-shell-mint@canal/spot-reeds-0-316-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-sunset-orange@canal/spot-pad-2,canal/tank-top@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-316-b",
   "canal/pond-plant@canal/spot-reeds-0-316-b,canal/toy-boat@canal/spot-reeds-2-1376-deep,canal/sun-pyramid@canal/spot-cave-1+pot,canal/sun-hat@canal/spot-reeds-0-316-a,canal/paint-shell-mint@canal/spot-reeds-0-372-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-bubblegum@canal/spot-reeds-1-580-top,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1436-deep,canal/stripy-socks@canal/spot-reeds-0-428-b",
@@ -79,7 +79,7 @@ exports[`canal golden > keeps the default zone placements with two returned trea
   "canal/pond-plant@canal/spot-reeds-0-372-a,canal/toy-boat@canal/spot-reeds-2-1376-deep,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-316-b,canal/shell-necklace@canal/spot-reeds-1-640-top,canal/paint-shell-lavender@canal/spot-reeds-0-372-b,canal/paint-shell-sunset-orange@canal/spot-pad-2,canal/paint-shell-midnight-blue@canal/spot-reeds-2-1316-deep,canal/diving-tank@canal/spot-reeds-1-580-top",
   "canal/pond-plant@canal/spot-reeds-0-316-b,canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-pyramid@canal/spot-current-3+pot,canal/sun-hat@canal/spot-reeds-0-428-a,canal/paint-shell-mint@canal/spot-reeds-0-372-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-a,canal/paint-shell-sunset-orange@canal/spot-pad-2,canal/tank-top@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-484-a",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-reeds-1-640-top,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-316-a,canal/paint-shell-mint@canal/spot-reeds-0-372-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-b,canal/paint-shell-lavender@canal/spot-reeds-0-484-a,canal/tank-top@canal/spot-reeds-0-316-b,canal/stripy-socks@canal/spot-reeds-0-428-a",
-  "canal/pond-plant@canal/spot-reeds-0-428-a,canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/golden-bow@canal/spot-current-3+pot,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-lavender@canal/spot-reeds-0-428-b,canal/paint-shell-midnight-blue@canal/spot-reeds-1-640-top,canal/tank-top@canal/spot-reeds-0-316-a",
+  "canal/pond-plant@canal/spot-reeds-0-428-a,canal/toy-boat@canal/spot-reeds-3-1700-deep,canal/castle-tower@canal/spot-current-4,canal/sun-pyramid@canal/spot-cave-3+pot,canal/sun-hat@canal/spot-reeds-0-428-b,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-b,canal/paint-shell-midnight-blue@canal/spot-reeds-1-640-top,canal/tank-top@canal/spot-reeds-0-316-a",
   "canal/pond-plant@canal/spot-reeds-0-316-a,canal/toy-boat@canal/spot-reeds-2-1316-deep,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-372-b,canal/shell-necklace@canal/spot-pad-2,canal/paint-shell-sky-blue@canal/spot-reeds-0-428-a,canal/paint-shell-lavender@canal/spot-reeds-0-316-b,canal/tank-top@canal/spot-reeds-0-484-a,canal/stripy-socks@canal/spot-reeds-0-428-b",
   "canal/pond-plant@canal/spot-reeds-0-372-b,canal/toy-boat@canal/spot-reeds-2-1376-deep,canal/sun-pyramid@canal/spot-current-2+pot,canal/sun-hat@canal/spot-reeds-0-372-a,canal/paint-shell-mint@canal/spot-reeds-0-484-a,canal/paint-shell-sky-blue@canal/spot-reeds-0-316-a,canal/paint-shell-lavender@canal/spot-reeds-0-428-b,canal/paint-shell-tie-dye@canal/spot-current-6,canal/stripy-socks@canal/spot-reeds-0-316-b",
   "canal/pond-plant@canal/spot-reeds-0-484-a,canal/toy-boat@canal/spot-reeds-2-1376-deep,canal/sun-pyramid@canal/spot-current-1+pot,canal/sun-hat@canal/spot-reeds-0-428-a,canal/shell-necklace@canal/spot-reeds-2-1436-deep,canal/paint-shell-mint@canal/spot-reeds-0-428-b,canal/paint-shell-lavender@canal/spot-reeds-0-372-b,canal/stripy-socks@canal/spot-reeds-0-372-a,canal/flippers@canal/spot-reeds-2-1316-deep",
@@ -301,17 +301,6 @@ exports[`canal golden > keeps the default zone projection 1`] = `
       ],
     },
     {
-      "id": "canal/golden-bow",
-      "pool": [
-        "canal/spot-cave-1",
-        "canal/spot-cave-2",
-        "canal/spot-cave-3",
-        "canal/spot-current-1",
-        "canal/spot-current-2",
-        "canal/spot-current-3",
-      ],
-    },
-    {
       "id": "canal/paint-shell-mint",
       "pool": [
         "canal/spot-reeds-0-316-a",
@@ -417,39 +406,6 @@ exports[`canal golden > keeps the default zone projection 1`] = `
         "canal/spot-current-4",
         "canal/spot-current-5",
         "canal/spot-current-6",
-      ],
-    },
-    {
-      "id": "canal/paint-shell-rainbow",
-      "pool": [
-        "canal/spot-cave-1",
-        "canal/spot-cave-2",
-        "canal/spot-cave-3",
-        "canal/spot-current-1",
-        "canal/spot-current-2",
-        "canal/spot-current-3",
-      ],
-    },
-    {
-      "id": "canal/paint-shell-galaxy",
-      "pool": [
-        "canal/spot-cave-1",
-        "canal/spot-cave-2",
-        "canal/spot-cave-3",
-        "canal/spot-current-1",
-        "canal/spot-current-2",
-        "canal/spot-current-3",
-      ],
-    },
-    {
-      "id": "canal/paint-shell-tie-dye-galaxy",
-      "pool": [
-        "canal/spot-cave-1",
-        "canal/spot-cave-2",
-        "canal/spot-cave-3",
-        "canal/spot-current-1",
-        "canal/spot-current-2",
-        "canal/spot-current-3",
       ],
     },
     {
@@ -1214,36 +1170,36 @@ exports[`canal golden > keeps the default zone projection 1`] = `
 exports[`canal golden > keeps the placements of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 1405380469,
-    "length": 8017,
+    "fnv1a": 2548318067,
+    "length": 8007,
   },
   "1234": {
-    "fnv1a": 2485977795,
-    "length": 8017,
+    "fnv1a": 2271395449,
+    "length": 8007,
   },
   "2": {
-    "fnv1a": 607601458,
-    "length": 8019,
+    "fnv1a": 624055624,
+    "length": 8009,
   },
   "3": {
-    "fnv1a": 607601458,
-    "length": 8019,
+    "fnv1a": 624055624,
+    "length": 8009,
   },
   "305419896": {
-    "fnv1a": 838075418,
-    "length": 8043,
+    "fnv1a": 230260894,
+    "length": 8033,
   },
   "3735928559": {
-    "fnv1a": 1097469913,
-    "length": 8017,
+    "fnv1a": 33213539,
+    "length": 8007,
   },
   "42": {
-    "fnv1a": 2485977795,
-    "length": 8017,
+    "fnv1a": 2271395449,
+    "length": 8007,
   },
   "987654321": {
-    "fnv1a": 607601458,
-    "length": 8019,
+    "fnv1a": 624055624,
+    "length": 8009,
   },
 }
 `;
@@ -1251,36 +1207,36 @@ exports[`canal golden > keeps the placements of every extra zone seed 1`] = `
 exports[`canal golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 3754429476,
-    "length": 16546,
+    "fnv1a": 1121592200,
+    "length": 15857,
   },
   "1234": {
-    "fnv1a": 3535408978,
-    "length": 16573,
+    "fnv1a": 2711066748,
+    "length": 15884,
   },
   "2": {
-    "fnv1a": 4110067119,
-    "length": 16504,
+    "fnv1a": 4941589,
+    "length": 15815,
   },
   "3": {
-    "fnv1a": 3536734020,
-    "length": 16571,
+    "fnv1a": 1018083408,
+    "length": 15882,
   },
   "305419896": {
-    "fnv1a": 2804358527,
-    "length": 16839,
+    "fnv1a": 1174632955,
+    "length": 16150,
   },
   "3735928559": {
-    "fnv1a": 3249015547,
-    "length": 16057,
+    "fnv1a": 3544563231,
+    "length": 15368,
   },
   "42": {
-    "fnv1a": 567586760,
-    "length": 16299,
+    "fnv1a": 2879941716,
+    "length": 15610,
   },
   "987654321": {
-    "fnv1a": 2270567804,
-    "length": 16065,
+    "fnv1a": 1987025742,
+    "length": 15376,
   },
 }
 `;

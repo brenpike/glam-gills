@@ -432,7 +432,7 @@ describe('Area 3 hiding spots', () => {
       const spots = layout.spots.filter((spot) => spot.rarity === rarity).length;
       expect(spots, rarity).toBeGreaterThanOrEqual(treasures);
     }
-    expect(RARITIES.map((rarity) => POND_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => POND_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
     for (const find of layout.finds) {
       expect(find.pool.length, find.id).toBeGreaterThan(0);
     }

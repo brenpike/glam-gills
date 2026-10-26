@@ -489,6 +489,17 @@ exports[`pond golden > keeps the default zone projection 1`] = `
         "pond-1/spot-pad-b",
       ],
     },
+    {
+      "id": "canal/golden-bow",
+      "pool": [
+        "pond-1/spot-cave-1",
+        "pond-1/spot-cave-2",
+        "pond-1/spot-cave-3",
+        "pond-1/spot-current-1",
+        "pond-1/spot-current-2",
+        "pond-1/spot-current-3",
+      ],
+    },
   ],
   "hazards": [
     {
@@ -1730,36 +1741,36 @@ exports[`pond golden > keeps the placements of every extra zone seed 1`] = `
 exports[`pond golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 573283415,
-    "length": 20612,
+    "fnv1a": 2902542180,
+    "length": 20782,
   },
   "1234": {
-    "fnv1a": 454495927,
-    "length": 20404,
+    "fnv1a": 2595674820,
+    "length": 20574,
   },
   "2": {
-    "fnv1a": 1736035613,
-    "length": 20640,
+    "fnv1a": 584803766,
+    "length": 20810,
   },
   "3": {
-    "fnv1a": 3754537781,
-    "length": 20631,
+    "fnv1a": 850532654,
+    "length": 20801,
   },
   "305419896": {
-    "fnv1a": 3495052687,
-    "length": 20649,
+    "fnv1a": 477465500,
+    "length": 20819,
   },
   "3735928559": {
-    "fnv1a": 3375878676,
-    "length": 20112,
+    "fnv1a": 1534661427,
+    "length": 20282,
   },
   "42": {
-    "fnv1a": 267841048,
-    "length": 20117,
+    "fnv1a": 3010314111,
+    "length": 20287,
   },
   "987654321": {
-    "fnv1a": 265097873,
-    "length": 20142,
+    "fnv1a": 1258662018,
+    "length": 20312,
   },
 }
 `;

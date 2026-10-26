@@ -898,7 +898,7 @@ describe('Dream colour step', () => {
     expect(optionIds(state)).toEqual(ALL_DREAMS.slice(7, 15));
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
-    expect(optionIds(state)).toEqual(['plum']);
+    expect(optionIds(state)).toEqual(['tie-dye-galaxy']);
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
     expect(state.dreamPage).toBe(0);

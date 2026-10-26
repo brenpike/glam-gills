@@ -415,7 +415,8 @@ describe('placeTreasures', () => {
   });
 
   it('uses all five hiding kinds for some trip seed with nothing banked', () => {
-    expect(SEEDS_300.some((seed) => usesAllHidingKinds(zone, placeAll(zone, seed)))).toBe(true);
+    // 1000 seeds: since the canal keeps one Legendary (issue #146), the first such seed is 342.
+    expect(SEEDS_1000.some((seed) => usesAllHidingKinds(zone, placeAll(zone, seed)))).toBe(true);
   });
 
   it.each([

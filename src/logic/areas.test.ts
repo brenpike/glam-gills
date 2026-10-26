@@ -31,7 +31,7 @@ import {
   type AreaData,
   type NewThings,
 } from './areas';
-import { CANAL_TREASURES, CHINAMPA_2_TREASURES, CHINAMPA_TREASURES, POND_2_TREASURES, POND_TREASURES, treasureById } from './catalogue';
+import { ALL_TREASURES, CANAL_TREASURES, CHINAMPA_2_TREASURES, CHINAMPA_TREASURES, POND_2_TREASURES, POND_TREASURES, treasureById } from './catalogue';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
@@ -980,4 +980,45 @@ describe('snack drift', () => {
       }
     }
   }, 30_000);
+});
+
+describe('Legendary treasures by area (issue #146)', () => {
+  const legendaryIds = (area: Readonly<AreaData>): string[] =>
+    area.layout.treasures.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
+
+  it('keeps exactly 1 Legendary in the canal, the Sun pyramid, and 3 in each later area', () => {
+    expect(legendaryIds(CANAL_AREA)).toEqual(['canal/sun-pyramid']);
+    expect(legendaryIds(POND_AREA)).toEqual(['pond/rainbow-dragonfly-wings', 'pond/froggy-boots', 'canal/golden-bow']);
+    expect(legendaryIds(POND_2_AREA)).toEqual(['pond/golden-lotus-throne', 'pond/firefly-cape', 'canal/paint-shell-galaxy']);
+    expect(legendaryIds(CHINAMPA_AREA)).toEqual(['chinampa/golden-corn', 'chinampa/monarch-wings', 'canal/paint-shell-rainbow']);
+    expect(legendaryIds(CHINAMPA_2_AREA)).toEqual([
+      'chinampa/alebrije-statue',
+      'chinampa/rainbow-serape-cape',
+      'canal/paint-shell-tie-dye-galaxy',
+    ]);
+  });
+
+  it('puts each catalogue treasure in exactly one area', () => {
+    const ids = AREAS.flatMap((area) => area.layout.treasures.map((treasure) => treasure.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual(ALL_TREASURES.map((treasure) => treasure.id).sort());
+  });
+
+  it.each(AREAS.map((area) => [area.id, area] as const))(
+    'hides every %s Legendary only in Dash pots, with a pot free for each one',
+    (_id, area) => {
+      for (const seed of [DEFAULT_ZONE_SEED, 1, 2, 3]) {
+        const zone = buildZone(area.layout, seed);
+        const spots = new Map(zone.spots.map((spot) => [spot.id, spot]));
+        const ids = legendaryIds(area);
+        for (const id of ids) {
+          const pool = zone.finds.find((find) => find.id === id)?.pool ?? [];
+          expect(pool.length, id).toBeGreaterThanOrEqual(ids.length);
+          for (const spotId of pool) {
+            expect(spots.get(spotId)?.container, `${id} at ${spotId}`).toBe(true);
+          }
+        }
+      }
+    },
+  );
 });

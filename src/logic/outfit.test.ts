@@ -39,7 +39,11 @@ const CROWN = PARTY_CROWN.id;
 const DECORATION = 'canal/pond-plant';
 const PAINT_SHELL = 'canal/paint-shell-mint';
 
-const ALL_WEARABLES = CANAL_TREASURES.filter((treasure) => treasure.category === 'wearable').map((item) => item.id);
+/** The canal Wearables plus the Golden bow, the canal's Tail Wearable until it moved to the pond (issue #146). */
+const ALL_WEARABLES = [
+  ...CANAL_TREASURES.filter((treasure) => treasure.category === 'wearable').map((item) => item.id),
+  BOW,
+];
 const BANKED = [...ALL_WEARABLES, CROWN, DECORATION, PAINT_SHELL];
 
 interface TestAxolotl {
