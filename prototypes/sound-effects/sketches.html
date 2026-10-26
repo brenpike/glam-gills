@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Glam Gills Sound Sketches</title>
+<style>
+/* Layout: a pond window that shows each sound as a bubble, a mixing desk (music under, volumes, key), a scripted "short trip", then one group of sound tiles per part of the game, then the open decisions. Tokens match the music sketches so the two pages read as one set. */
+:root {
+  --bg: #e9f4f1;
+  --surface: #f8fcfb;
+  --ink: #213041;
+  --muted: #586b74;
+  --line: #c9dfda;
+  --accent: #d9577f;
+  --accent-ink: #ffffff;
+  --water-top: #8fd3cf;
+  --water-bottom: #2f7f8a;
+  --c-music: #3aa6a0;
+  --c-sfx: #e2668e;
+  --c-first: #2f7f5a;
+  --c-later: #8a6d1f;
+  --c-silent: #6b7a83;
+  --f-display: "Trebuchet MS", system-ui, sans-serif;
+  --f-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1d22; --surface: #152a2f; --ink: #e5f1ee; --muted: #9ab4b6; --line: #24434a;
+    --accent: #ff8fb1; --accent-ink: #2a0d18; --water-top: #1f5a63; --water-bottom: #0a2229;
+    --c-music: #5fd0c8; --c-sfx: #ff8fb1; --c-first: #7fd6a4; --c-later: #e7c56a; --c-silent: #9ab4b6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1d22; --surface: #152a2f; --ink: #e5f1ee; --muted: #9ab4b6; --line: #24434a;
+  --accent: #ff8fb1; --accent-ink: #2a0d18; --water-top: #1f5a63; --water-bottom: #0a2229;
+  --c-music: #5fd0c8; --c-sfx: #ff8fb1; --c-first: #7fd6a4; --c-later: #e7c56a; --c-silent: #9ab4b6;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; }
+h2 { font-size: 1.6rem; font-weight: 800; }
+h3 { font-size: 1.12rem; font-weight: 800; }
+p { margin: 0; max-width: 68ch; }
+header { display: grid; gap: 8px; }
+.lede { color: var(--muted); font-size: 1.08rem; }
+
+.pond { position: relative; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--line); aspect-ratio: 16 / 5; min-height: 170px; max-width: 100%; }
+.pond canvas { width: 100%; height: 100%; display: block; }
+.pond .now { position: absolute; left: 14px; bottom: 12px; right: 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.now strong { font-family: var(--f-display); font-size: 1.3rem; }
+.now span { font-size: .95rem; }
+
+.desk { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
+.desk-row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.desk-row > .lbl { font-weight: 800; min-width: 7.5em; }
+.desk label { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+.desk input[type=range] { width: 150px; accent-color: var(--accent); }
+.desk input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+.hint { color: var(--muted); font-size: .9rem; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 2px solid var(--line); border-radius: 18px; overflow: hidden; }
+.seg button { font: 700 .88rem var(--f-body); background: transparent; color: var(--ink); border: 0; padding: 6px 12px; cursor: pointer; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.trip { display: grid; gap: 10px; }
+.trip-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.play { font: 800 1.05rem var(--f-display); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px; padding: 8px 20px; cursor: pointer; min-height: 44px; }
+.timeline { display: flex; flex-wrap: wrap; gap: 6px; font-size: .85rem; }
+.timeline span { padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.timeline span.on { background: var(--c-sfx); border-color: var(--c-sfx); color: var(--accent-ink); }
+
+.group { display: grid; gap: 14px; }
+.group-head { display: grid; gap: 4px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.tile { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.tile.flash { border-color: var(--c-sfx); }
+.tile.silent { border-style: dashed; background: transparent; }
+.tile-top { display: flex; gap: 10px; align-items: start; justify-content: space-between; }
+.badge { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1.5px solid currentColor; white-space: nowrap; }
+.badge.first { color: var(--c-first); }
+.badge.later { color: var(--c-later); }
+.badge.silent { color: var(--c-silent); }
+.when { color: var(--muted); font-size: .88rem; }
+.idea { font-size: .95rem; }
+.gentle { font-size: .88rem; color: var(--muted); }
+.gentle b { color: var(--ink); }
+.tile-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.snd { font: 700 .9rem var(--f-body); background: transparent; color: var(--ink); border: 2px solid var(--c-sfx); border-radius: 999px; padding: 5px 14px; cursor: pointer; min-height: 40px; }
+.snd:hover { background: color-mix(in srgb, var(--c-sfx) 14%, transparent); }
+.snd.main { background: var(--c-sfx); color: var(--accent-ink); }
+.play:focus-visible, .snd:focus-visible, .seg button:focus-visible, input:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.plan { display: grid; gap: 14px; border-top: 2px solid var(--line); padding-top: 24px; }
+.qs { display: grid; gap: 12px; }
+.q { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.q h3 { font-size: 1.05rem; }
+.q .rec { font-weight: 700; }
+code { font-size: .9em; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Glam Gills Sound Sketches</h1>
+    <p class="lede">A sound for each moment in the game, made live in the browser with Web Audio, like the music: no audio files and no downloads. Pick a cue to play underneath, then tap the sounds to hear how they sit with the music. Tiles marked <b>First slice</b> are the ones I suggest building first. Dashed tiles are moments I suggest keeping silent.</p>
+  </header>
+
+  <div class="pond">
+    <canvas id="viz" aria-hidden="true"></canvas>
+    <div class="now" aria-live="polite"><strong id="nowName">Tap a sound to start</strong><span id="nowMusic"></span></div>
+  </div>
+
+  <section class="desk" aria-label="Mixing desk">
+    <div class="desk-row">
+      <span class="lbl">Music under</span>
+      <div class="seg" role="group" aria-label="Music under the sounds" id="musicSeg"></div>
+    </div>
+    <div class="desk-row">
+      <span class="lbl">Volumes</span>
+      <label for="musicVol">Music <input id="musicVol" type="range" min="0" max="100" value="60"></label>
+      <label for="sfxVol">Sounds <input id="sfxVol" type="range" min="0" max="100" value="60"></label>
+      <span class="hint" id="ratio"></span>
+    </div>
+    <div class="desk-row">
+      <span class="lbl">Tuning</span>
+      <label for="matchKey"><input id="matchKey" type="checkbox" checked> Match the music's key</label>
+      <span class="hint" id="keyNow">Sounds play in G major.</span>
+    </div>
+    <div class="desk-row">
+      <span class="lbl">Pause</span>
+      <label for="paused"><input id="paused" type="checkbox"> Trip paused (music at half volume)</label>
+    </div>
+  </section>
+
+  <section class="trip" aria-label="A short trip">
+    <h2>A short trip, in 30 seconds</h2>
+    <p>Plays a run of moments in order, as they might happen on a canal trip, so you can hear how often sounds come and how they mix with the music. It starts Canal Paddle if no music is playing.</p>
+    <div class="trip-row"><button class="play" type="button" id="tripBtn">Play the trip</button></div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <div id="groups" class="wrap" style="padding:0;max-width:none"></div>
+
+  <section class="plan" aria-label="Open decisions">
+    <h2>Open decisions, with my recommendations</h2>
+    <div class="qs">
+      <div class="q"><h3>The switch</h3><p><span class="rec">Recommend "Sounds on" and "Sounds off"</span>, a speaker icon with a sparkle, on by default, kept on the device under <code>glam-gills:sounds</code>, outside the save, so Start over keeps it, like the music switch. It goes beside the music switch on the title screen, the pause screen and the Home Tank. "Sounds" is the word kids use; "Sound effects" is long for a 131 pixel tile.</p></div>
+      <div class="q"><h3>Room in the Home Tank</h3><p><span class="rec">Recommend one "Sound" hub tile that opens a small card with both switches.</span> The hub already wrapped onto two rows at 1024 x 768 when the music tile came in (open question 419); a seventh tile makes it worse. On the title and pause screens there is room for the two tiles side by side. The other choice is a seventh hub tile.</p></div>
+      <div class="q"><h3>Volume next to the music</h3><p><span class="rec">Recommend the two sliders above at the same setting (both 60).</span> The sounds are short, so they cut through at the same level without being loud. No ducking: the music never dips for a sound, so nothing changes in the music when danger is near (M5). One limiter after both keeps the loudest moment gentle (M11).</p></div>
+      <div class="q"><h3>Does a warning sound count as "reacting to danger"?</h3><p><span class="rec">Recommend the "Ripple" warning, kept soft.</span> M5 is about the music: it sets the mood of a place, and that never changes. A warning sound is a one-off cue for one event, like the telegraph on screen, at the same level as a snack. It never repeats, builds or drones. It also helps a player who is looking at another part of the screen. If it feels tense in play-tests, drop it; the telegraph stays.</p></div>
+      <div class="q"><h3>Reduced motion</h3><p><span class="rec">Recommend no change.</span> Reduced motion is about what moves on screen. Every sound stays the same, and no sound is ever the only sign that something happened, so the game works with sounds off.</p></div>
+      <div class="q"><h3>One audio engine or two</h3><p><span class="rec">Recommend one shared engine with two buses.</span> One audio context, one unlock on the first input, one page-hidden pause, one reverb and one limiter, with a music bus and a sounds bus, each with its own switch and level. Two contexts would double the cost on phones, and iPhones limit how many can run. The voices (kalimba, marimba, bubble and the rest) move from <code>musicPlayer.ts</code> into a shared voices file both use.</p></div>
+      <div class="q"><h3>Match the music's key</h3><p><span class="rec">Recommend yes.</span> Pitched sounds use the five notes of the playing cue's major pentatonic scale: G for Sunny Tank and Canal Paddle, F for Lily Pad Hop, D for Garden Boats. So they never clash with the tune. Turn the box off above to hear the difference in Lily Pad Hop. This is a pure rule in <code>src/logic/</code> with tests.</p></div>
+      <div class="q"><h3>Too many at once</h3><p><span class="rec">Recommend a simple limit.</span> The same sound plays at most once every 60 ms, and only one treasure fanfare plays at a time; a new one starts after the last ends. Mash the snack button to hear it.</p></div>
+      <div class="q"><h3>First slice</h3><p><span class="rec">Recommend: the shared engine, the switch, and the 12 tiles marked First slice.</span> These are the moments a player hits every trip: menu taps, snacks, the snack ladder, finds by rarity, Tail Dash, a lost leg and its regrowth, banking, the exit opening, beating an area with stars, and the music key rule. Slice 2 is hazards and rescue; slice 3 is the Home Tank and menus.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- Notes ----------
+  const LETTERS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  function midi(name) {
+    const m = /^([A-G])([#b]?)(-?\d)$/.exec(name);
+    const n = LETTERS[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+    return (Number(m[3]) + 1) * 12 + n;
+  }
+  const notes = (s) => s.split(' ').map(midi);
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function mulberry32(a) {
+    return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const melody = (bars) => bars.map((bar) => bar.map(([step, n, len]) => ({ step, m: midi(n), len })));
+  const pick = (rng, list) => list[Math.floor(rng() * list.length)];
+
+  // ---------- Audio graph: one context, a music bus and a sounds bus, one reverb, one limiter ----------
+  let ctx = null, master, reverbIn, musicBus, musicPause, sfxBus, sfxVerb, noiseBuf;
+  function initAudio() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -14; limiter.knee.value = 6; limiter.ratio.value = 8; limiter.attack.value = 0.003; limiter.release.value = 0.25;
+    const warm = ctx.createBiquadFilter();
+    warm.type = 'lowpass'; warm.frequency.value = 7500;
+    master = ctx.createGain(); master.gain.value = 1;
+    master.connect(warm); warm.connect(limiter); limiter.connect(ctx.destination);
+    const conv = ctx.createConvolver();
+    const len = Math.floor(ctx.sampleRate * 2.4);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+    conv.buffer = ir;
+    reverbIn = ctx.createGain(); reverbIn.gain.value = 1;
+    reverbIn.connect(conv); conv.connect(master);
+    // Music bus: its own level and a pause half-volume stage, sending 0.32 to the room.
+    musicPause = ctx.createGain(); musicPause.gain.value = 1;
+    musicBus = ctx.createGain(); musicBus.gain.value = level(musicVol);
+    musicBus.connect(musicPause); musicPause.connect(master);
+    const mSend = ctx.createGain(); mSend.gain.value = 0.32; musicPause.connect(mSend); mSend.connect(reverbIn);
+    // Sounds bus: its own level and a smaller room send, so sounds stay close and clear.
+    sfxBus = ctx.createGain(); sfxBus.gain.value = level(sfxVol);
+    sfxBus.connect(master);
+    sfxVerb = ctx.createGain(); sfxVerb.gain.value = 0.18; sfxBus.connect(sfxVerb); sfxVerb.connect(reverbIn);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  }
+  const level = (input) => (Number(input.value) / 100) ** 2 * 0.9;
+  // A voice's output: music voices name a part (a string) and go to the music bus; sounds go to the sounds bus.
+  const dst = (o) => (typeof o === 'string' ? musicBus : sfxBus);
+
+  function env(g, t, attack, peak, decay) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+  }
+  function tone(t, freq, type, attack, peak, decay, dest) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    env(g, t, attack, peak, decay);
+    o.connect(g); g.connect(dest);
+    o.start(t); o.stop(t + attack + decay + 0.05);
+    return o;
+  }
+  function noise(t, dur, dest) {
+    const s = ctx.createBufferSource();
+    s.buffer = noiseBuf; s.connect(dest);
+    s.start(t, Math.random() * 0.8); s.stop(t + dur);
+  }
+  // Plucked strings by Karplus-Strong, with the game's in-tune loop length (issue #152).
+  const PLUCKS = { guitar: { dur: 1.6, keep: 0.996, soft: 0.6 }, uke: { dur: 0.9, keep: 0.992, soft: 0.35 }, pizz: { dur: 0.45, keep: 0.982, soft: 0.7 } };
+  const pluckCache = new Map();
+  function pluckBuffer(m, kind) {
+    const key = kind + m;
+    if (pluckCache.has(key)) return pluckCache.get(key);
+    const sr = ctx.sampleRate, f = mtof(m), cfg = PLUCKS[kind];
+    const n = Math.max(2, Math.floor(sr / f - 0.5));
+    const len = Math.floor(sr * cfg.dur), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    let prev = 0;
+    for (let i = 0; i <= n; i++) { prev = prev * cfg.soft + (Math.random() * 2 - 1) * (1 - cfg.soft); d[i] = prev * 2; }
+    for (let i = n + 1; i < len; i++) d[i] = (d[i - n] + d[i - n - 1]) * 0.5 * cfg.keep;
+    const entry = { buf, rate: f / (sr / (n + 0.5)) };
+    pluckCache.set(key, entry);
+    return entry;
+  }
+
+  // ---------- Voices (shared by music and sounds) ----------
+  const V = {
+    kalimba(t, m, v, o) {
+      const f = mtof(m), out = dst(o);
+      tone(t, f, 'sine', 0.004, v, 1.3, out); tone(t, f * 2, 'triangle', 0.003, v * 0.12, 0.25, out); tone(t, f * 5.4, 'sine', 0.002, v * 0.1, 0.05, out);
+      viz(t, m, o, v);
+    },
+    marimba(t, m, v, o) {
+      const f = mtof(m), out = dst(o);
+      tone(t, f, 'sine', 0.003, v, 0.55, out); tone(t, f * 3.98, 'sine', 0.002, v * 0.22, 0.07, out); tone(t, f * 9.2, 'sine', 0.001, v * 0.05, 0.02, out);
+      viz(t, m, o, v);
+    },
+    musicBox(t, m, v, o) {
+      const f = mtof(m), out = dst(o);
+      tone(t, f, 'sine', 0.002, v, 1.8, out); tone(t, f * 4.01, 'sine', 0.001, v * 0.12, 0.3, out); tone(t, f * 2, 'sine', 0.002, v * 0.08, 0.6, out);
+      viz(t, m, o, v);
+    },
+    glass(t, m, v, o, ring = 2.6) {
+      const f = mtof(m), out = dst(o);
+      tone(t, f, 'sine', 0.004, v, ring, out); tone(t, f * 2.76, 'sine', 0.003, v * 0.25, ring * 0.35, out); tone(t, f * 5.4, 'sine', 0.002, v * 0.08, 0.3, out);
+      viz(t, m, o, v);
+    },
+    whistle(t, m, v, dur, o) {
+      const f = mtof(m), out = dst(o);
+      const osc = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      osc.frequency.value = f;
+      lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.006, t + 0.25);
+      lfo.connect(lg); lg.connect(osc.frequency);
+      const hold = Math.max(0.08, dur * 0.85);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.035); g.gain.setValueAtTime(v, t + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + hold + 0.14);
+      osc.connect(g); g.connect(out);
+      osc.start(t); lfo.start(t); osc.stop(t + hold + 0.2); lfo.stop(t + hold + 0.2);
+      const bp = ctx.createBiquadFilter(), bg = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 3;
+      env(bg, t, 0.01, v * 0.5, 0.06); bp.connect(bg); bg.connect(out); noise(t, 0.1, bp);
+      viz(t, m, o, v * 3);
+    },
+    firefly(t, m, v, o) {
+      const osc = tone(t, mtof(m), 'sine', 0.02, v, 0.7, dst(o));
+      osc.detune.setValueAtTime(-8, t); osc.detune.linearRampToValueAtTime(8, t + 0.7);
+      viz(t, m, o, v);
+    },
+    pluck(t, m, v, kind, o) {
+      const { buf, rate } = pluckBuffer(m, kind);
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = buf; s.playbackRate.value = rate; g.gain.value = v;
+      s.connect(g); g.connect(dst(o)); s.start(t);
+      viz(t, m, o, v * 0.6);
+    },
+    strumPluck(t, ns, v, kind, o, gap = 0.014) {
+      ns.forEach((m, i) => {
+        const { buf, rate } = pluckBuffer(m, kind);
+        const s = ctx.createBufferSource(), g = ctx.createGain();
+        s.buffer = buf; s.playbackRate.value = rate; g.gain.value = v * (1 - i * 0.08);
+        s.connect(g); g.connect(dst(o)); s.start(t + i * gap);
+      });
+      if (v > 0.08) viz(t, ns[ns.length - 1], o, v);
+    },
+    strum(t, ns, v, o) {
+      ns.forEach((m, i) => {
+        const at = t + i * 0.012, f = mtof(m), out = dst(o);
+        tone(at, f, 'triangle', 0.003, v * 0.7, 0.28, out); tone(at, f * 2, 'sine', 0.002, v * 0.2, 0.12, out);
+      });
+      if (v > 0.08) viz(t, ns[ns.length - 1], o, v);
+    },
+    pad(t, ns, dur, v, o) {
+      const out = dst(o);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 950; lp.Q.value = 0.4;
+      const g = ctx.createGain();
+      const attack = Math.min(0.9, dur * 0.3), release = 1.2;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + attack); g.gain.setValueAtTime(v, t + Math.max(attack, dur - 0.05)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + release);
+      lp.connect(g); g.connect(out);
+      for (const m of ns) for (const cents of [-7, 7]) {
+        const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = mtof(m); osc.detune.value = cents;
+        osc.connect(lp); osc.start(t); osc.stop(t + dur + release + 0.1);
+      }
+      viz(t, ns[0], o, v * 4);
+    },
+    bass(t, m, v, dur, o) {
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.connect(dst(o));
+      const f = mtof(m);
+      tone(t, f, 'triangle', 0.006, v, Math.min(dur, 0.7), lp); tone(t, f, 'sine', 0.006, v * 0.6, Math.min(dur, 0.7), lp);
+      viz(t, m, o, v);
+    },
+    shaker(t, v, o, dur = 0.05) {
+      const hp = ctx.createBiquadFilter(), g = ctx.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 6000;
+      env(g, t, 0.004, v, dur); hp.connect(g); g.connect(dst(o)); noise(t, dur + 0.03, hp);
+    },
+    tap(t, v, o) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 1.2;
+      env(g, t, 0.002, v, 0.04); bp.connect(g); g.connect(dst(o)); noise(t, 0.06, bp);
+      tone(t, 330, 'sine', 0.002, v * 0.5, 0.04, dst(o));
+      viz(t, 44, o, v * 0.8);
+    },
+    woodblock(t, v, pitch, o) {
+      const out = dst(o);
+      tone(t, 880 * pitch, 'sine', 0.001, v, 0.045, out); tone(t, 1430 * pitch, 'sine', 0.001, v * 0.4, 0.025, out);
+      viz(t, 46, o, v * 2);
+    },
+    slap(t, v, o) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.9;
+      env(g, t, 0.002, v, 0.09); bp.connect(g); g.connect(dst(o)); noise(t, 0.12, bp);
+      tone(t, 190, 'sine', 0.002, v * 1.2, 0.07, dst(o));
+    },
+    guiro(t, v, dur, o) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 2;
+      const ridges = Math.max(4, Math.round(dur / 0.018));
+      g.gain.setValueAtTime(0.0001, t);
+      for (let k = 0; k < ridges; k++) { const at = t + k * 0.018; g.gain.setValueAtTime(v * (0.6 + 0.4 * (k / ridges)), at); g.gain.setValueAtTime(0.0001, at + 0.008); }
+      bp.connect(g); g.connect(dst(o)); noise(t, ridges * 0.018 + 0.02, bp);
+    },
+    kick(t, v, o) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.frequency.setValueAtTime(130, t); osc.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+      env(g, t, 0.004, v, 0.18); osc.connect(g); g.connect(dst(o)); osc.start(t); osc.stop(t + 0.25);
+    },
+    bubble(t, v, o, base) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      const f = base ?? 500 + Math.random() * 400;
+      osc.frequency.setValueAtTime(f, t); osc.frequency.exponentialRampToValueAtTime(f * 2.6, t + 0.07);
+      env(g, t, 0.003, v, 0.08); osc.connect(g); g.connect(dst(o)); osc.start(t); osc.stop(t + 0.12);
+      viz(t, 84 + Math.random() * 10, o, v * 2, true);
+    },
+    boing(t, v, o, lo = 260, hi = 720, end = 380) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(lo, t); osc.frequency.exponentialRampToValueAtTime(hi, t + 0.09); osc.frequency.exponentialRampToValueAtTime(end, t + 0.28);
+      env(g, t, 0.005, v, 0.3); osc.connect(g); g.connect(dst(o)); osc.start(t); osc.stop(t + 0.36);
+      viz(t, 80, o, v * 2, true);
+    },
+    // ---- Voices only the sounds use ----
+    // A swoosh: noise through a band that slides from one pitch to another.
+    swoosh(t, dur, from, to, v, o, q = 1.4) {
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.Q.value = q;
+      bp.frequency.setValueAtTime(from, t); bp.frequency.exponentialRampToValueAtTime(to, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + dur * 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      bp.connect(g); g.connect(dst(o)); noise(t, dur + 0.02, bp);
+      viz(t, 60, o, v * 3, true);
+    },
+    // A soft puff of air: low-passed noise that blooms and fades, the sparkle poof's body.
+    puff(t, v, o, top = 1600, dur = 0.32) {
+      const lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(top, t); lp.frequency.exponentialRampToValueAtTime(top * 0.4, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      lp.connect(g); g.connect(dst(o)); noise(t, dur + 0.02, lp);
+      viz(t, 58, o, v * 3, true);
+    },
+    // A glide: one tone sliding between pitches, for spits, stretches and blips.
+    glide(t, f0, f1, dur, v, o, type = 'triangle', wobble = 0) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(f0, t); osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      if (wobble) {
+        const lfo = ctx.createOscillator(), lg = ctx.createGain();
+        lfo.frequency.value = wobble; lg.gain.value = f0 * 0.06; lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t); lfo.stop(t + dur + 0.1);
+      }
+      env(g, t, 0.006, v, dur); osc.connect(g); g.connect(dst(o)); osc.start(t); osc.stop(t + dur + 0.1);
+      viz(t, 64, o, v * 2, true);
+    },
+    // A clay knock, the Dash pot: a low hollow tone with a burst of grit.
+    clay(t, v, o) {
+      tone(t, 210, 'sine', 0.002, v, 0.12, dst(o)); tone(t, 520, 'triangle', 0.001, v * 0.3, 0.05, dst(o));
+      const bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.8;
+      env(g, t, 0.002, v * 0.8, 0.08); bp.connect(g); g.connect(dst(o)); noise(t, 0.1, bp);
+      viz(t, 50, o, v * 2, true);
+    },
+  };
+
+  // ---------- The music, as in the approved sketches ----------
+  function duskStep(tr, e) {
+    const { t, bar, st, pass, rng, stepDur, chord, chordStart, chordSteps } = e;
+    const beat = tr.stepsPerBeat;
+    if (chordStart) { V.pad(t, chord.notes, stepDur * chordSteps * 1.02, 0.05, 'chords'); V.bass(t, chord.root, 0.28, stepDur * Math.min(4, chordSteps), 'bass'); }
+    else if (st % beat === 0) { V.kalimba(t, chord.notes[1], 0.06, 'chords'); V.kalimba(t + 0.015, chord.notes[2], 0.05, 'chords'); }
+    if (st % beat === beat - 1) V.shaker(t, 0.012, 'rhythm');
+    const p = pass % 4;
+    const hit = tr.tune[bar].find((n) => n.step === st);
+    if (hit) {
+      V.musicBox(t, hit.m < midi('C5') ? hit.m + 12 : hit.m, p === 2 ? 0.14 : 0.22, 'melody');
+      if (p === 1 && rng() < 0.4) V.musicBox(t + stepDur, hit.m + 12, 0.06, 'melody');
+    }
+    if (rng() < 0.14) V.firefly(t + rng() * stepDur, midi(tr.tonic + '6') + pick(rng, [0, 2, 4, 7, 9]) + (rng() < 0.3 ? 12 : 0), 0.045, 'sparkles');
+  }
+  const TRACKS = [
+    {
+      id: 'home', name: 'Sunny Tank', tonic: 'G', bpm: 96, beatsPerBar: 4, stepsPerBeat: 2, swing: 0.16,
+      chords: [['G', 'G3 B3 D4', 'G2'], ['Bm', 'F#3 B3 D4', 'B2'], ['C', 'G3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D3'], ['G', 'G3 B3 D4', 'G2'], ['E7', 'G#3 B3 D4 E4', 'E2'], [['Am', 'A3 C4 E4', 'A2'], ['Cm', 'G3 C4 Eb4', 'C3']], [['G', 'G3 B3 D4', 'G2'], ['D', 'F#3 A3 D4', 'D3']]],
+      tune: melody([
+        [[0, 'B4', 1], [1, 'D5', 1], [2, 'G5', 3], [5, 'F#5', 1], [6, 'G5', 2]], [[0, 'F#5', 2], [2, 'D5', 2], [4, 'B4', 3], [7, 'D5', 1]],
+        [[0, 'E5', 1], [1, 'E5', 1], [2, 'G5', 2], [4, 'E5', 2], [6, 'C5', 2]], [[0, 'D5', 4], [4, 'A4', 2], [6, 'B4', 1], [7, 'C5', 1]],
+        [[0, 'B4', 1], [1, 'D5', 1], [2, 'G5', 3], [5, 'A5', 1], [6, 'B5', 2]], [[0, 'G#5', 2], [2, 'E5', 2], [4, 'D5', 2], [6, 'B4', 2]],
+        [[0, 'C5', 2], [2, 'E5', 2], [4, 'Eb5', 2], [6, 'C5', 2]], [[0, 'B4', 2], [2, 'G4', 2], [4, 'A4', 4]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        if (st === 0 || st === 4) V.bass(t, chord.root + (st === 4 && rng() < 0.4 ? 7 : 0), st === 0 ? 0.34 : 0.26, stepDur * 3, 'bass');
+        if (st === 3 || st === 7) V.bass(t, chord.root + 12, 0.1, stepDur, 'bass');
+        if (st === 2 || st === 6) V.strumPluck(t, chord.notes.map((m) => m + 12), 0.14, 'uke', 'chords');
+        else if (st % 2 === 1) V.strumPluck(t, chord.notes.slice(1).map((m) => m + 12), 0.05, 'uke', 'chords');
+        if (st === 2 || st === 6) V.tap(t, 0.12, 'rhythm');
+        if (st % 2 === 1) V.shaker(t, 0.022, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (hit && p !== 3) {
+          V.kalimba(t, hit.m, 0.3, 'melody');
+          if (p === 1) V.whistle(t, hit.m + 12, 0.045, hit.len * stepDur, 'melody');
+          if (p === 2 && st % 4 === 0) V.kalimba(t, hit.m - 5, 0.1, 'melody');
+        }
+        if (p === 3 && st % 2 === 0 && rng() < 0.5) V.kalimba(t, midi('G5') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.16, 'melody');
+        if ((bar === 3 || bar === 7) && st === 7) V.bubble(t, 0.07, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'canal', name: 'Canal Paddle', tonic: 'G', bpm: 68, beatsPerBar: 2, stepsPerBeat: 3, swing: 0,
+      chords: [['G', 'G3 B3 D4', 'G2'], ['C', 'G3 C4 E4', 'C3'], ['D', 'F#3 A3 D4', 'D3'], ['G', 'G3 B3 D4', 'G2'], ['C', 'G3 C4 E4', 'C3'], ['G', 'G3 B3 D4', 'G2'], [['Am', 'A3 C4 E4', 'A2'], ['D', 'F#3 A3 D4', 'D3']], ['G', 'G3 B3 D4', 'G2']],
+      tune: melody([
+        [[0, 'D5', 2], [2, 'B4', 1], [3, 'D5', 2], [5, 'G5', 1]], [[0, 'E5', 2], [2, 'C5', 1], [3, 'E5', 2], [5, 'G5', 1]],
+        [[0, 'F#5', 1], [1, 'E5', 1], [2, 'D5', 1], [3, 'C5', 1], [4, 'B4', 1], [5, 'A4', 1]], [[0, 'B4', 3], [3, 'G4', 3]],
+        [[0, 'E5', 2], [2, 'E5', 1], [3, 'G5', 2], [5, 'E5', 1]], [[0, 'D5', 2], [2, 'B4', 1], [3, 'G4', 2], [5, 'B4', 1]],
+        [[0, 'C5', 1], [1, 'B4', 1], [2, 'A4', 1], [3, 'F#4', 1], [4, 'A4', 1], [5, 'C5', 1]], [[0, 'B4', 2], [2, 'A4', 1], [3, 'G4', 3]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const hemiola = bar === 3 || bar === 7;
+        const accent = (hemiola ? [0, 2, 4] : [0, 3]).includes(st);
+        V.strum(t, chord.notes, accent ? 0.13 : 0.045, 'chords');
+        if (accent) { const fifth = st !== 0 && !(hemiola && st === 4); V.bass(t, chord.root + (fifth ? 7 : 0), st === 0 ? 0.42 : 0.3, stepDur * 2, 'bass'); V.kick(t, st === 0 ? 0.32 : 0.16, 'rhythm'); }
+        V.shaker(t, accent ? 0.06 : 0.028, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        const improvise = p === 3 && bar >= 4;
+        if (hit && !improvise) {
+          V.marimba(t, hit.m, 0.32, 'melody');
+          if (p === 1) V.kalimba(t, hit.m + 12, 0.1, 'melody');
+          if (p === 2 && st % 3 === 0) V.marimba(t, hit.m - 4, 0.12, 'melody');
+        }
+        if (improvise && rng() < 0.55) V.marimba(t, midi('G4') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.24, 'melody');
+        if (hemiola && st === 5) { V.bubble(t, 0.09, 'sparkles'); V.bubble(t + stepDur * 0.5, 0.07, 'sparkles'); }
+        else if (rng() < 0.04) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'pond', name: 'Lily Pad Hop', tonic: 'F', bpm: 104, beatsPerBar: 4, stepsPerBeat: 2, swing: 0,
+      chords: [['F', 'F3 A3 C4', 'F2'], ['Dm', 'F3 A3 D4', 'D3'], ['Gm', 'G3 Bb3 D4', 'G2'], ['C', 'G3 C4 E4', 'C3'], ['F', 'F3 A3 C4', 'F2'], ['A7', 'G3 C#4 E4', 'A2'], [['Bb', 'F3 Bb3 D4', 'Bb2'], ['C', 'G3 C4 E4', 'C3']], ['F', 'F3 A3 C4', 'F2']],
+      tune: melody([
+        [[0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'G5', 1], [5, 'F5', 1], [6, 'C5', 2]], [[0, 'D5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'F5', 2], [6, 'D5', 2]],
+        [[0, 'Bb4', 1], [1, 'D5', 1], [2, 'G5', 2], [4, 'F5', 1], [5, 'D5', 1], [6, 'Bb4', 2]], [[0, 'C5', 2], [2, 'E5', 2], [4, 'G5', 4]],
+        [[0, 'C5', 1], [1, 'F5', 1], [2, 'A5', 2], [4, 'C6', 2], [6, 'A5', 2]], [[0, 'C#5', 1], [1, 'E5', 1], [2, 'A5', 2], [4, 'G5', 2], [6, 'E5', 2]],
+        [[0, 'D5', 2], [2, 'F5', 2], [4, 'E5', 2], [6, 'G5', 2]], [[0, 'F5', 3], [3, 'C5', 1], [4, 'F5', 4]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (st % 4 === 0) V.pluck(t, chord.root + (st === 4 ? 7 : 0), 0.38, 'pizz', 'bass');
+        if (st === 7 && rng() < 0.5) V.pluck(t, chord.root + 11, 0.2, 'pizz', 'bass');
+        if (st % 4 === 2) V.strumPluck(t, chord.notes, 0.1, 'pizz', 'chords');
+        if (st % 2 === 0) V.woodblock(t, st % 4 === 0 ? 0.06 : 0.035, st % 4 === 0 ? 1 : 1.3, 'rhythm');
+        if (st % 2 === 1) V.shaker(t, 0.02, 'rhythm');
+        if (hit && p !== 3) { V.whistle(t, hit.m, 0.075, hit.len * stepDur, 'melody'); if (p !== 0) V.marimba(t, hit.m, p === 2 ? 0.16 : 0.1, 'melody'); }
+        if (p === 3 && rng() < 0.4) V.marimba(t, midi('F5') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.22, 'melody');
+        if ((bar === 3 || bar === 7) && st === 6) V.boing(t, 0.08, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+    {
+      id: 'chinampa', name: 'Garden Boats', tonic: 'D', bpm: 112, beatsPerBar: 4, stepsPerBeat: 2, swing: 0.06,
+      chords: [['D', 'F#3 A3 D4', 'D2'], ['C', 'E3 G3 C4', 'C3'], ['G', 'G3 B3 D4', 'G2'], ['D', 'F#3 A3 D4', 'D2'], ['Bm', 'F#3 B3 D4', 'B2'], ['G', 'G3 B3 D4', 'G2'], [['Em', 'G3 B3 E4', 'E2'], ['A', 'E3 A3 C#4', 'A2']], ['D', 'F#3 A3 D4', 'D2']],
+      tune: melody([
+        [[0, 'A4', 1], [1, 'D5', 1], [3, 'F#5', 2], [5, 'E5', 1], [6, 'D5', 2]], [[0, 'E5', 1], [1, 'G5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'C5', 2]],
+        [[0, 'B4', 1], [1, 'D5', 1], [3, 'G5', 2], [5, 'F#5', 1], [6, 'E5', 1], [7, 'D5', 1]], [[0, 'F#5', 3], [3, 'A5', 3], [6, 'F#5', 2]],
+        [[0, 'F#5', 1], [1, 'F#5', 1], [3, 'D5', 2], [5, 'B4', 1], [6, 'D5', 2]], [[0, 'G5', 1], [1, 'F#5', 1], [3, 'E5', 2], [5, 'D5', 1], [6, 'B4', 2]],
+        [[0, 'E5', 2], [2, 'G5', 2], [4, 'E5', 1], [5, 'C#5', 1], [6, 'A4', 2]], [[0, 'D5', 3], [3, 'A4', 1], [4, 'D5', 4]],
+      ]),
+      step(e) {
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        const tresillo = st === 0 || st === 3 || st === 6;
+        if (tresillo) V.bass(t, chord.root + (st === 3 ? 7 : st === 6 ? 12 : 0), st === 0 ? 0.42 : 0.3, stepDur * 2.5, 'bass');
+        if (tresillo) V.strumPluck(t, chord.notes.concat(chord.notes[0] + 12), 0.15, 'guitar', 'chords');
+        else if (st === 1 || st === 5) V.strumPluck(t, chord.notes.slice(1).map((m) => m + 12), 0.05, 'guitar', 'chords');
+        if (st === 0) V.kick(t, 0.3, 'rhythm');
+        if (st === 2 || st === 6) V.slap(t, 0.09, 'rhythm');
+        if (st === 1 || st === 5) V.guiro(t, 0.05, stepDur * 0.8, 'rhythm');
+        if (st === 3 || st === 7) V.shaker(t, 0.03, 'rhythm');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        if (hit && !(p === 3 && bar >= 4)) { V.marimba(t, hit.m, 0.3, 'melody'); if (p === 1 || p === 2) V.whistle(t, hit.m + (p === 2 ? 12 : 0), 0.04, hit.len * stepDur, 'melody'); }
+        if (p === 3 && bar >= 4 && rng() < 0.5) V.marimba(t, midi('D5') + pick(rng, [0, 2, 4, 7, 9, 10, 12]), 0.24, 'melody');
+        if (bar === 7 && st === 6) V.bubble(t, 0.08, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
+      },
+    },
+  ];
+  for (const tr of TRACKS) tr.chords = tr.chords.map((c) => { const one = (x) => ({ name: x[0], notes: notes(x[1]), root: midi(x[2]) }); return Array.isArray(c[0]) ? [one(c[0]), one(c[1])] : [one(c)]; });
+  const CHOICES = [
+    { id: 'none', label: 'No music' },
+    { id: 'home', label: 'Sunny Tank' },
+    { id: 'canal', label: 'Canal Paddle' },
+    { id: 'pond', label: 'Lily Pad Hop' },
+    { id: 'pond-dusk', label: 'Lily Pad Hop (dusk)', dusk: { bpm: 80, swing: 0.12 } },
+    { id: 'chinampa', label: 'Garden Boats' },
+  ];
+  let choice = CHOICES[0], track = null, stepIndex = 0, nextTime = 0, timer = null;
+  const trackOf = (c) => TRACKS.find((tr) => c.id.startsWith(tr.id)) || null;
+  function musicTick() {
+    const tr = track, dusk = choice.dusk;
+    const spb = tr.beatsPerBar * tr.stepsPerBeat;
+    const sd = 60 / (dusk ? dusk.bpm : tr.bpm) / tr.stepsPerBeat, sw = dusk ? dusk.swing : tr.swing;
+    while (nextTime < ctx.currentTime + 0.15) {
+      const bar = Math.floor(stepIndex / spb) % tr.chords.length;
+      const pass = Math.floor(stepIndex / (spb * tr.chords.length));
+      const st = stepIndex % spb;
+      const half = tr.chords[bar];
+      const split = half.length === 2;
+      const chord = split && st >= spb / 2 ? half[1] : half[0];
+      const rng = mulberry32((pass * 977 + bar * 131 + st * 17 + tr.id.length * 7919) >>> 0);
+      const e = { t: nextTime + (st % 2 === 1 ? sd * sw : 0), bar, st, pass, rng, stepDur: sd, chord, chordStart: st === 0 || (split && st === spb / 2), chordSteps: split ? spb / 2 : spb };
+      if (dusk) duskStep(tr, e); else tr.step(e);
+      nextTime += sd; stepIndex++;
+    }
+  }
+  function setMusic(c) {
+    initAudio(); ctx.resume();
+    choice = c; track = trackOf(c);
+    clearInterval(timer); timer = null;
+    // A quick fade so the swap is not a jump.
+    musicBus.gain.cancelScheduledValues(ctx.currentTime);
+    musicBus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    if (track) {
+      musicBus.gain.linearRampToValueAtTime(level(musicVol), ctx.currentTime + 0.6);
+      stepIndex = 0; nextTime = ctx.currentTime + 0.12;
+      timer = setInterval(musicTick, 25); musicTick();
+    }
+    document.querySelectorAll('#musicSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === c.id)));
+    nowMusic.textContent = track ? `Music: ${c.label}` : '';
+    showKey();
+  }
+
+  // ---------- The key rule: pitched sounds use the playing cue's major pentatonic ----------
+  const PENTA = [0, 2, 4, 7, 9];
+  const TONIC_MIDI = { G: midi('G5'), F: midi('F5'), D: midi('D5') };
+  const matchKey = document.getElementById('matchKey');
+  const tonicNow = () => (matchKey.checked && track ? track.tonic : 'G');
+  // K(i): the i-th note of the pentatonic from the home note in octave 5; i may be negative or past 4.
+  function K(i) {
+    const o = Math.floor(i / 5), d = ((i % 5) + 5) % 5;
+    return TONIC_MIDI[tonicNow()] + o * 12 + PENTA[d];
+  }
+  const chordOf = (shift = 0) => [K(-5) + shift, K(-3) + shift, K(-1) + shift + 0]; // home triad an octave down (1, 3, 5)
+  function showKey() {
+    const name = { G: 'G major', F: 'F major', D: 'D major' }[tonicNow()];
+    document.getElementById('keyNow').textContent = `Sounds play in ${name}${matchKey.checked ? '' : ' (fixed)'}.`;
+  }
+  matchKey.addEventListener('change', showKey);
+
+  // ---------- The sounds ----------
+  // Each returns its length in seconds. `S` is the sounds bus marker for the voices.
+  const S = null;
+  let ladder = 0, ladderAt = -10;
+  const FX = {
+    tap() { V.bubble(now(), 0.07, S, 700); V.woodblock(now(), 0.035, 1.3, S); return 0.12; },
+    back() { V.bubble(now(), 0.06, S, 420); V.woodblock(now(), 0.03, 0.9, S); return 0.12; },
+    focus() { V.woodblock(now(), 0.014, 1.6, S); return 0.05; },
+    toggleOn() { const t = now(); V.kalimba(t, K(2), 0.14, S); V.kalimba(t + 0.08, K(5), 0.16, S); return 0.3; },
+    toggleOff() { const t = now(); V.kalimba(t, K(5), 0.12, S); V.kalimba(t + 0.08, K(2), 0.1, S); return 0.3; },
+    snack(variant) {
+      const t = now();
+      if (variant !== 'same' && ctx.currentTime - ladderAt > 2.2) ladder = 0;
+      const step = variant === 'same' ? 2 : ladder;
+      ladder = Math.min(ladder + 1, 9); ladderAt = ctx.currentTime;
+      V.bubble(t, 0.09, S, 260);
+      V.marimba(t + 0.03, K(step), 0.2, S);
+      return 0.3;
+    },
+    lastThree() {
+      const t = now();
+      V.bubble(t, 0.09, S, 260);
+      V.marimba(t + 0.03, K(5), 0.2, S);
+      V.firefly(t + 0.1, K(9), 0.06, S); V.firefly(t + 0.18, K(10), 0.05, S);
+      return 0.5;
+    },
+    catchSnack() { const t = now(); V.bubble(t, 0.09, S, 260); V.marimba(t + 0.03, K(4), 0.2, S); V.boing(t + 0.05, 0.05, S, 400, 900, 600); return 0.4; },
+    shrimpFlick() { const t = now(); V.swoosh(t, 0.12, 2500, 5000, 0.04, S, 2); V.woodblock(t, 0.025, 1.8, S); return 0.15; },
+    find(rarity) {
+      const t = now();
+      if (rarity === 'common') { V.bubble(t, 0.07, S); V.kalimba(t, K(3), 0.22, S); V.kalimba(t + 0.12, K(5), 0.24, S); return 0.9; }
+      if (rarity === 'rare') { [0, 2, 5].forEach((d, i) => V.marimba(t + i * 0.08, K(d + 3), 0.22, S)); V.kalimba(t + 0.16, K(8), 0.14, S); V.bubble(t + 0.22, 0.06, S); V.bubble(t + 0.3, 0.05, S); return 1.1; }
+      if (rarity === 'epic') {
+        [0, 2, 3, 5].forEach((d, i) => V.musicBox(t + i * 0.085, K(d + 3), 0.2, S));
+        V.glass(t + 0.34, K(10), 0.12, S, 1.6); V.shaker(t + 0.3, 0.04, S, 0.25);
+        [0, 1, 2].forEach((k) => V.bubble(t + 0.4 + k * 0.07, 0.05, S));
+        return 1.6;
+      }
+      // Legendary: a run up the scale, a held glassy chord with a soft pad under it, then fireflies.
+      for (let i = 0; i <= 7; i++) V.musicBox(t + i * 0.06, K(i + 3), 0.16, S);
+      [8, 10, 12].forEach((d) => V.glass(t + 0.5, K(d), 0.09, S, 2));
+      V.pad(t + 0.45, chordOf(12), 1.0, 0.035, S);
+      V.whistle(t + 0.5, K(10), 0.04, 0.6, S);
+      for (let k = 0; k < 5; k++) V.firefly(t + 0.9 + k * 0.13, K(12 + (k % 3)), 0.04, S);
+      return 2.3;
+    },
+    paintShell() { const t = now(); for (let i = 0; i < 6; i++) V.glass(t + i * 0.045, K(i + 5), 0.08, S, 0.9); V.swoosh(t, 0.4, 3000, 7000, 0.03, S, 2); return 1.0; },
+    dash() { const t = now(); V.swoosh(t, 0.28, 500, 2600, 0.11, S); [0, 1, 2].forEach((k) => V.bubble(t + 0.12 + k * 0.06, 0.05, S, 450 + k * 120)); return 0.45; },
+    dashReady() { const t = now(); V.bubble(t, 0.05, S, 600); V.kalimba(t + 0.02, K(5), 0.1, S); return 0.4; },
+    potWobble() { const t = now(); V.clay(t, 0.1, S); V.clay(t + 0.12, 0.06, S); return 0.3; },
+    shellBlock() { const t = now(); V.glass(t, K(7), 0.1, S, 0.6); V.woodblock(t, 0.04, 1.5, S); V.bubble(t + 0.08, 0.05, S, 600); return 0.6; },
+    dashPot() {
+      const t = now();
+      V.clay(t, 0.2, S);
+      for (let k = 0; k < 5; k++) V.woodblock(t + 0.05 + k * 0.028 + Math.random() * 0.01, 0.025, 0.6 + Math.random() * 0.5, S);
+      [0, 1, 2, 3].forEach((k) => V.bubble(t + 0.18 + k * 0.07, 0.05, S, 380 + k * 90));
+      return 0.6;
+    },
+    warning(variant) {
+      const t = now();
+      if (variant === 'ripple') { V.swoosh(t, 0.45, 1400, 600, 0.05, S, 1); V.marimba(t + 0.05, K(-3), 0.08, S); V.marimba(t + 0.25, K(-3), 0.07, S); return 0.6; }
+      if (variant === 'tiktik') { V.woodblock(t, 0.06, 1.2, S); V.woodblock(t + 0.13, 0.06, 1.2, S); return 0.25; }
+      return 0;
+    },
+    poof(variant) {
+      const t = now();
+      V.puff(t, 0.13, S);
+      if (variant === 'sparkle') { [5, 7, 9].forEach((d, i) => V.firefly(t + 0.08 + i * 0.07, K(d), 0.05, S)); }
+      else { V.boing(t + 0.02, 0.05, S, 300, 500, 340); }
+      return 0.6;
+    },
+    regrow() { const t = now(); [2, 3, 5].forEach((d, i) => V.marimba(t + i * 0.1, K(d), 0.18, S)); V.bubble(t + 0.3, 0.05, S); return 0.7; },
+    exitClosed() { const t = now(); V.marimba(t, K(-2), 0.14, S); V.marimba(t + 0.16, K(-2), 0.12, S); V.bubble(t + 0.08, 0.04, S, 300); return 0.4; },
+    exitOpens() {
+      const t = now();
+      [[0, 0, 0.14], [2, 0.14, 0.14], [4, 0.28, 0.14], [5, 0.42, 0.5]].forEach(([d, at, len]) => { V.whistle(t + at, K(d), 0.05, len, S); V.marimba(t + at, K(d), 0.16, S); });
+      V.strumPluck(t + 0.42, chordOf(12), 0.12, 'uke', S, 0.02);
+      V.boing(t + 0.75, 0.05, S);
+      return 1.3;
+    },
+    areaBeaten(stars) {
+      const t = now(), n = Number(stars);
+      V.strumPluck(t, chordOf(12), 0.12, 'uke', S, 0.025);
+      const starNotes = [K(5), K(7), K(10)];
+      for (let i = 0; i < n; i++) { V.glass(t + 0.45 + i * 0.4, starNotes[i], 0.14, S, 1.4); V.firefly(t + 0.52 + i * 0.4, starNotes[i] + 12, 0.04, S); }
+      const end = t + 0.45 + n * 0.4 + 0.1;
+      V.strumPluck(end, chordOf(12), 0.13, 'uke', S, 0.03); V.kalimba(end, K(5), 0.16, S);
+      [0, 1, 2].forEach((k) => V.bubble(end + 0.1 + k * 0.08, 0.05, S));
+      return end - t + 1;
+    },
+    bank(count) {
+      const t = now(), n = Number(count);
+      for (let i = 0; i < n; i++) { V.bubble(t + i * 0.12, 0.06, S, 500 + i * 60); V.kalimba(t + i * 0.12, K(i + 2), 0.16, S); }
+      const end = t + n * 0.12 + 0.05;
+      V.strumPluck(end, chordOf(12), 0.12, 'uke', S, 0.02); V.kalimba(end, K(5), 0.2, S);
+      return end - t + 1;
+    },
+    rescueMeet() { const t = now(); V.whistle(t, K(2), 0.05, 0.12, S); V.whistle(t + 0.16, K(5), 0.055, 0.25, S); return 0.6; },
+    rescueSafe() {
+      const t = now();
+      [0, 2, 4, 5].forEach((d, i) => V.kalimba(t + i * 0.09, K(d + 2), 0.18, S));
+      V.whistle(t + 0.36, K(7), 0.045, 0.35, S); V.boing(t + 0.5, 0.05, S); V.strumPluck(t + 0.36, chordOf(12), 0.1, 'uke', S, 0.02);
+      return 1.2;
+    },
+    carried(variant) {
+      const t = now();
+      V.pad(t, chordOf(0), 2.2, 0.04, S);
+      if (variant === 'float') { [0, 2, 4, 5, 7].forEach((d, i) => V.musicBox(t + i * 0.32, K(d), 0.16, S)); }
+      else { [7, 4, 3, 2, 0].forEach((d, i) => V.musicBox(t + i * 0.36, K(d), 0.16, S)); }
+      for (let k = 0; k < 6; k++) V.bubble(t + 0.2 + k * 0.28, 0.04, S, 350 + k * 70);
+      return 2.6;
+    },
+    bleh() { const t = now(); V.swoosh(t, 0.1, 1800, 1200, 0.07, S, 1); V.glide(t + 0.05, 520, 230, 0.22, 0.09, S, 'triangle'); V.bubble(t + 0.25, 0.05, S, 500); return 0.45; },
+    snag() { const t = now(); V.glide(t, 200, 150, 0.45, 0.09, S, 'triangle', 9); V.pluck(t, K(-5) - 12, 0.12, 'guitar', S); return 0.6; },
+    wriggleFree() { const t = now(); [0, 2, 4].forEach((d, i) => V.pluck(t + i * 0.06, K(d), 0.16, 'pizz', S)); V.bubble(t + 0.2, 0.08, S, 700); return 0.5; },
+    matsOpen() { const t = now(); V.swoosh(t, 0.6, 2500, 4500, 0.025, S, 0.8); V.boing(t + 0.3, 0.035, S, 220, 420, 300); return 0.7; },
+    factCard() { const t = now(); V.swoosh(t, 0.14, 2000, 6000, 0.04, S, 1.5); V.musicBox(t + 0.08, K(3), 0.14, S); V.musicBox(t + 0.2, K(5), 0.16, S); return 0.9; },
+    pageTurn() { V.swoosh(now(), 0.16, 2200, 6500, 0.035, S, 1.5); return 0.2; },
+    pickUp() { V.bubble(now(), 0.06, S, 420); return 0.12; },
+    place() { const t = now(); V.bubble(t, 0.08, S, 200); V.puff(t + 0.02, 0.05, S, 900, 0.18); V.marimba(t + 0.04, K(-3), 0.06, S); return 0.3; },
+    wearOn() { const t = now(); V.shaker(t, 0.04, S, 0.15); V.firefly(t + 0.06, K(7), 0.06, S); V.firefly(t + 0.14, K(9), 0.055, S); return 0.6; },
+    wearOff() { V.shaker(now(), 0.035, S, 0.12); return 0.2; },
+    dreamColour() { const t = now(); for (let i = 0; i < 9; i++) V.glass(t + i * 0.04, K(i + 3), 0.07, S, 0.8); V.swoosh(t, 0.5, 2500, 7000, 0.03, S, 2); return 1.0; },
+    surprise() {
+      const t = now();
+      for (let i = 0; i < 7; i++) V.marimba(t + i * 0.06, K(Math.floor(Math.random() * 8)), 0.14, S);
+      V.strumPluck(t + 0.45, chordOf(12), 0.12, 'uke', S, 0.02); V.boing(t + 0.5, 0.05, S);
+      return 1.0;
+    },
+    unlock() { const t = now(); V.boing(t, 0.06, S); V.whistle(t + 0.15, K(5), 0.05, 0.14, S); V.whistle(t + 0.3, K(7), 0.05, 0.3, S); return 0.8; },
+    refuge() {
+      const t = now();
+      [[0, 0], [2, 0.12], [4, 0.24], [5, 0.36], [7, 0.6]].forEach(([d, at]) => V.marimba(t + at, K(d), 0.18, S));
+      V.whistle(t + 0.6, K(7), 0.045, 0.45, S); V.strumPluck(t + 0.6, chordOf(12), 0.12, 'uke', S, 0.02);
+      [0, 1, 2, 3].forEach((k) => V.bubble(t + 0.75 + k * 0.08, 0.05, S));
+      return 1.4;
+    },
+    arrive() { const t = now(); V.bubble(t, 0.06, S, 300); V.bubble(t + 0.09, 0.05, S, 420); V.kalimba(t + 0.12, K(5), 0.14, S); return 0.6; },
+  };
+  const now = () => ctx.currentTime + 0.02;
+  const lastPlayed = {};
+  function play(id, arg, label) {
+    initAudio(); ctx.resume();
+    const key = id + (arg || '');
+    // The repeat limit: the same sound at most once every 60 ms.
+    if (lastPlayed[key] && ctx.currentTime - lastPlayed[key] < 0.06) return;
+    lastPlayed[key] = ctx.currentTime;
+    FX[id](arg);
+    if (label) nowName.textContent = label;
+    showKey();
+  }
+
+  // ---------- The moments, grouped ----------
+  const GROUPS = [
+    {
+      name: 'Snacks and finds', blurb: 'The sounds a player hears most. Each one is short, bright and in the music\'s key.',
+      sounds: [
+        { id: 'snack', name: 'Eat a snack', when: 'Every worm, bug, tadpole or shrimp eaten. About 20 to 30 a trip.', idea: 'A soft gulp (a low bubble) with one marimba note. Snacks eaten close together climb the scale, one note higher each time, and start again after a short pause.', gentle: 'Very short and quiet, so 30 of them never wear thin.', slice: 'first',
+          btns: [['Eat (ladder)', null], ['Eat (same note)', 'same']] },
+        { id: 'lastThree', name: 'One of the last 3 snacks', when: 'Each of the last 3 snacks, which sparkle on screen (H2).', idea: 'The gulp on a high note, with two firefly twinkles, so you can hear the exit is close.', gentle: 'The same size as a snack; only the twinkle is new.', slice: 'first' },
+        { id: 'catchSnack', name: 'Catch a tadpole or shrimp', when: 'A mobile snack eaten (Areas 3 to 5).', idea: 'The gulp with a tiny upward boing: "got it!"', gentle: 'A touch more fun than a plain snack, never louder.', slice: 'later' },
+        { id: 'shrimpFlick', name: 'Shrimp flicks away', when: 'A shrimp hops to its next spot.', idea: 'A tiny high flick and tick.', gentle: 'Almost under the music.', slice: 'later' },
+        { id: 'find', name: 'Find a treasure', when: 'A treasure picked up, with the find pop-up. Plays the rarity.', idea: 'More notes, higher and longer as rarity goes up: Common is two kalimba dings; Rare a marimba run with bubbles; Epic a music box run with a glass chime; Legendary a full run up the scale, a held glassy chord and fireflies.', gentle: 'Even Legendary is under 2.5 seconds and stays at the same loudness. You can tell the rarity without seeing the colour.', slice: 'first',
+          btns: [['Common', 'common'], ['Rare', 'rare'], ['Epic', 'epic'], ['Legendary', 'legendary']] },
+        { id: 'paintShell', name: 'Paint shell, extra shimmer', when: 'Plays after the find sound when the treasure is a Paint shell.', idea: 'A quick glassy sparkle that slides up, like colour pouring out.', gentle: 'Soft and high; it decorates the find, not a second fanfare.', slice: 'later' },
+      ],
+    },
+    {
+      name: 'Tail Dash and Dash pots', blurb: 'Action sounds. Watery, not mechanical.',
+      sounds: [
+        { id: 'dash', name: 'Tail Dash', when: 'The Dash starts (Dash button or key).', idea: 'A watery whoosh that rises, with a trail of three bubbles.', gentle: 'A filtered swish, not a jet. No bang.', slice: 'first' },
+        { id: 'dashReady', name: 'Dash ready again', when: 'The Dash has charged back up.', idea: 'One soft bloop and a high kalimba note.', gentle: 'Quiet; it tells you without making you look.', slice: 'later' },
+        { id: 'potWobble', name: 'Bump a sealed pot', when: 'Touching a Dash pot without a Tail Dash; it wobbles (B6).', idea: 'One soft, hollow clay knock: "try a Dash".', gentle: 'Quieter than the break, and never an error buzz.', slice: 'later' },
+        { id: 'dashPot', name: 'Dash pot breaks', when: 'A Tail Dash breaks a sealed pot (B6).', idea: 'A hollow clay "tok", a little crumble, then bubbles rising out. The find sound follows when the treasure is picked up.', gentle: 'A knock, not a smash. No breaking glass.', slice: 'later' },
+      ],
+    },
+    {
+      name: 'Bumps, hazards and predators', blurb: 'The hardest group. Each one marks what happened, kindly, and nothing builds tension. None of them is ever the only sign; everything still shows on screen.',
+      sounds: [
+        { id: 'warning', name: 'Predator warning', when: 'A tilapia, carp, heron or garter snake starts its telegraph, before it lunges (A1). Punting poles could share it in their warn phase.', idea: 'Ripple: a soft water swish with two low marimba notes, like "uh-oh, move". Tik-tik: two light wood ticks. Or none: the telegraph on screen is enough.', gentle: 'Once per warning, never repeating or building, at snack loudness. No low drones, no rising pitch. The music does not change (M5).', slice: 'later',
+          btns: [['Ripple', 'ripple'], ['Tik-tik', 'tiktik'], ['None', 'none']] },
+        { id: 'poof', name: 'Lose a leg', when: 'A lunge or strike connects: the sparkle poof (A3).', idea: 'A soft puff of air with three twinkles going up, matching the sparkle poof. Or a puff with a small boing.', gentle: 'Pitches go up, not down, so it never sounds sad. No hit, crunch or "ouch".', slice: 'first',
+          btns: [['Puff and sparkle', 'sparkle'], ['Puff and boing', 'boing']] },
+        { id: 'shellBlock', name: 'Shell perk blocks a hit', when: 'A Shell perk Wearable stops a hit, so no leg is lost (A22).', idea: 'A bright shell "tink" and a bubble: "safe!"', gentle: 'A small, proud sound, not a clang.', slice: 'later' },
+        { id: 'regrow', name: 'Leg grows back', when: 'A leg finishes regrowing (A4).', idea: 'Three rising marimba notes and a bubble: "all better".', gentle: 'Cheerful and small.', slice: 'first' },
+        { id: 'carried', name: 'Carried home', when: 'The fourth leg is lost and the axolotl is carried home (A6, ADR 0008).', idea: 'A soft held chord with a slow music box line and bubbles floating up. Float: the tune rises, like being lifted up and home. Lullaby: it falls gently and settles on the home note.', gentle: 'Calm, major, slow. It sounds like "let\'s go home and rest", never like losing.', slice: 'later',
+          btns: [['Float home', 'float'], ['Lullaby', 'lullaby']] },
+        { id: 'bleh', name: 'Plastic worm "bleh"', when: 'The explorer bites a plastic worm and spits it out (N3).', idea: 'A little "pthh" spit and a droopy, comic "bwoip", then a bubble.', gentle: 'Funny, not gross. No gagging.', slice: 'later' },
+        { id: 'snag', name: 'Snagged on a ghost net', when: 'A ghost net snags the explorer (N3).', idea: 'A wobbly, stretchy twang, like a rubber band.', gentle: 'Springy and silly, not a trap snapping shut.', slice: 'later' },
+        { id: 'wriggleFree', name: 'Wriggle free', when: 'The snag ends.', idea: 'Three quick plucks up and a pop: "free!"', gentle: 'A little win.', slice: 'later' },
+        { id: 'exitClosed', name: 'Bump the closed exit', when: 'Swimming into the exit while snacks are left (H2).', idea: 'Two soft, same-pitch marimba "boop boop": "not yet".', gentle: 'Friendly, not an error buzz.', slice: 'later' },
+        { id: 'matsOpen', name: 'Hyacinth mats open', when: 'A water hyacinth mat opens a gap (Area 5).', idea: 'A leafy rustle with a low, slow boing.', gentle: 'Soft; a hint, not a timer.', slice: 'later' },
+      ],
+    },
+    {
+      name: 'Wins: banking, rescue, the exit and stars', blurb: 'The proud moments. These may be a little longer, and they all end on the home chord of the music\'s key.',
+      sounds: [
+        { id: 'bank', name: 'Bank finds at the Home Spot', when: 'Finds banked, with the banking card (A7).', idea: 'One bubble and kalimba note per find, climbing, then a ukulele strum of the home chord: "safe!"', gentle: 'Warm and cozy; it plays the number of finds, up to 5.', slice: 'first',
+          btns: [['1 find', '1'], ['3 finds', '3'], ['5 finds', '5']] },
+        { id: 'rescueMeet', name: 'Meet a stranded axolotl', when: 'Swimming up to a stranded axolotl, which starts to follow (C1).', idea: 'A two-note whistle "hi!", up.', gentle: 'A friendly hello.', slice: 'later' },
+        { id: 'rescueSafe', name: 'Rescued axolotl is safe', when: 'The following axolotl is banked (C2).', idea: 'A kalimba run, a whistle, a strum and a happy boing.', gentle: 'Bigger than banking, smaller than a Legendary.', slice: 'later' },
+        { id: 'exitOpens', name: 'The exit opens', when: 'The last snack is eaten (H2).', idea: 'A tiny "ta-da": whistle and marimba up four notes, a strum and a boing.', gentle: 'About 1 second and gentle; it says "you can go now".', slice: 'first' },
+        { id: 'areaBeaten', name: 'Beat the area, with stars', when: 'The tank arrival card after reaching the open exit (H5, H6). The stars show together today; the chimes play one per star as they show.', idea: 'A strum, then one glass chime per star, each higher, then the home chord and bubbles.', gentle: 'One star still ends on the happy home chord, so fewer stars never sounds like failing.', slice: 'first',
+          btns: [['1 star', '1'], ['2 stars', '2'], ['3 stars', '3']] },
+      ],
+    },
+    {
+      name: 'Home Tank, dress-up and the book', blurb: 'Cozy, small sounds for making things yours.',
+      sounds: [
+        { id: 'arrive', name: 'Back in the Home Tank', when: 'The tank arrival card after Go home or being carried home. Beating an area plays the stars sound instead.', idea: 'Two bubbles and a kalimba note: "home".', gentle: 'Tiny; Sunny Tank does the welcoming.', slice: 'later' },
+        { id: 'pickUp', name: 'Pick up a Decoration', when: 'Lifting a Decoration to move it (C7).', idea: 'A small rising bloop.', gentle: 'Quiet.', slice: 'later' },
+        { id: 'place', name: 'Place a Decoration', when: 'Setting it down in the tank.', idea: 'A soft plop into the sand, with a low note.', gentle: 'A cozy settle.', slice: 'later' },
+        { id: 'wearOn', name: 'Put on a Wearable', when: 'Choosing an outfit item (F).', idea: 'A cloth swish and two twinkles.', gentle: 'Dress-up sparkle.', slice: 'later' },
+        { id: 'wearOff', name: 'Take off a Wearable', when: 'Removing an outfit item.', idea: 'Just the swish.', gentle: 'Plain and neutral.', slice: 'later' },
+        { id: 'dreamColour', name: 'Put on a Dream colour', when: 'Giving an axolotl a Dream colour.', idea: 'A glassy run up the scale, like a magic wash of colour.', gentle: 'Soft and high.', slice: 'later' },
+        { id: 'factCard', name: 'Open a fact card', when: 'A fact card shows on a trip or in the Collection Book (C14).', idea: 'A page flip and a two-note music box "ooh".', gentle: 'Curious, not alarming, even for a predator card.', slice: 'later' },
+        { id: 'pageTurn', name: 'Turn a Collection Book page', when: 'Next or back in the book.', idea: 'A paper flip.', gentle: 'Quiet.', slice: 'later' },
+        { id: 'refuge', name: 'Refuge milestone', when: 'A refuge milestone card: trash cleared (N2).', idea: 'A marimba run, a whistle, a strum and bubbles.', gentle: 'Proud and happy.', slice: 'later' },
+        { id: 'unlock', name: 'New area unlocked', when: 'The area map shows a newly opened area.', idea: 'A boing and two whistle notes up.', gentle: 'Short and exciting.', slice: 'later' },
+      ],
+    },
+    {
+      name: 'Menus and the creator', blurb: 'One tap sound for every button, so the whole game feels the same.',
+      sounds: [
+        { id: 'tap', name: 'Tap a button', when: 'Any button press: Start, Go exploring, Keep exploring, Go home, picture buttons in the creator.', idea: 'A soft bubble with a light wood tick.', gentle: 'Very short. The first tap is also what lets the game make sound (M7).', slice: 'first' },
+        { id: 'back', name: 'Close or go back', when: 'Close, Back, Done on cards.', idea: 'The same tap, lower.', gentle: 'Neutral.', slice: 'later' },
+        { id: 'toggleOn', name: 'Turn Sounds on', when: 'Pressing the switch to on. It plays a sample so you hear the level.', idea: 'Two kalimba notes up.', gentle: 'Says "on" by sound.', slice: 'first',
+          btns: [['On', null]] },
+        { id: 'toggleOff', name: 'Turn Sounds off', when: 'Pressing the switch to off. Plays nothing, because sounds are now off.', idea: 'Silent. (Here, two notes down, for comparison only.)', gentle: 'Off means off.', slice: 'silent',
+          btns: [['Hear the "down" idea', null]] },
+        { id: 'surprise', name: 'Surprise me', when: 'The creator\'s Surprise me button.', idea: 'A quick tumble of random marimba notes landing on a strum and a boing, like dice.', gentle: 'Fun and short.', slice: 'later' },
+        { id: 'focus', name: 'Keyboard focus moves', when: 'Tab or arrow keys move the focus ring.', idea: 'A very faint tick. I suggest silent.', gentle: 'Silent avoids a click on every key press.', slice: 'silent' },
+      ],
+    },
+    {
+      name: 'Kept silent', blurb: 'Moments I suggest leave to the music, because they are constant, already covered by another sound, or would make danger feel tense.',
+      silentList: [
+        ['Swimming and steering', 'Constant; the music\'s bubbles already give the water. A swim sound would play all the time.'],
+        ['The current, reeds and drifting snacks', 'Constant background.'],
+        ['Predators patrolling or chasing', 'A chase sound would be danger music.'],
+        ['Bumping a predator that is not lunging', 'Nothing is lost, so nothing needs marking.'],
+        ['The hidden-treasure hint sparkle', 'Finding it by looking is the fun; a sound would give it away.'],
+        ['Entering the Home Spot ring', 'The Go home button shows; banking has its own sound.'],
+        ['A lunge or strike that misses', 'Missing is the good outcome; the warning was the cue.'],
+        ['Protected time after a hit, and regrowth in progress', 'Only the moment a leg is back gets a sound.'],
+        ['Snack magnet pull', 'Constant while it pulls.'],
+        ['Find toasts and the first-trip hint', 'The find sound already played.'],
+        ['Pause and resume', 'The tap plays; the music goes soft (M9).'],
+        ['Typing a name', 'A sound per letter is noisy on phones.'],
+        ['The update prompt', 'Nothing to celebrate or warn about.'],
+        ['Rescued axolotls swimming in the Home Tank', 'Constant.'],
+      ],
+    },
+  ];
+
+  const groupsEl = document.getElementById('groups');
+  const BADGE = { first: 'First slice', later: 'Later', silent: 'Silent' };
+  for (const g of GROUPS) {
+    const sec = document.createElement('section');
+    sec.className = 'group';
+    sec.innerHTML = `<div class="group-head"><h2>${g.name}</h2><p class="hint">${g.blurb}</p></div><div class="tiles"></div>`;
+    const tiles = sec.querySelector('.tiles');
+    if (g.silentList) {
+      for (const [name, why] of g.silentList) {
+        const el = document.createElement('article');
+        el.className = 'tile silent';
+        el.innerHTML = `<div class="tile-top"><h3>${name}</h3><span class="badge silent">Silent</span></div><p class="gentle">${why}</p>`;
+        tiles.appendChild(el);
+      }
+    } else {
+      for (const s of g.sounds) {
+        const el = document.createElement('article');
+        el.className = 'tile' + (s.slice === 'silent' ? ' silent' : '');
+        const btns = s.btns || [['Play', null]];
+        el.innerHTML = `<div class="tile-top"><h3>${s.name}</h3><span class="badge ${s.slice}">${BADGE[s.slice]}</span></div>
+          <p class="when">${s.when}</p><p class="idea">${s.idea}</p><p class="gentle"><b>Gentle:</b> ${s.gentle}</p>
+          <div class="tile-btns">${btns.map(([label], i) => `<button type="button" class="snd${i === 0 ? ' main' : ''}" id="snd-${s.id}-${i}">${label}</button>`).join('')}</div>`;
+        btns.forEach(([label, arg], i) => {
+          el.querySelector(`#snd-${s.id}-${i}`).addEventListener('click', () => {
+            play(s.id, arg, btns.length > 1 ? `${s.name}: ${label}` : s.name);
+            el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 400);
+          });
+        });
+        tiles.appendChild(el);
+      }
+    }
+    groupsEl.appendChild(sec);
+  }
+
+  // ---------- Mixing desk ----------
+  const nowName = document.getElementById('nowName');
+  const nowMusic = document.getElementById('nowMusic');
+  const musicVol = document.getElementById('musicVol');
+  const sfxVol = document.getElementById('sfxVol');
+  const ratioEl = document.getElementById('ratio');
+  const seg = document.getElementById('musicSeg');
+  for (const c of CHOICES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = c.label; b.dataset.id = c.id; b.id = `music-${c.id}`;
+    b.setAttribute('aria-pressed', String(c.id === 'none'));
+    b.addEventListener('click', () => setMusic(c));
+    seg.appendChild(b);
+  }
+  function showRatio() {
+    const m = Number(musicVol.value), s = Number(sfxVol.value);
+    if (m === 0 || s === 0) { ratioEl.textContent = ''; return; }
+    const db = 20 * Math.log10((s / m) ** 2);
+    ratioEl.textContent = Math.abs(db) < 0.5 ? 'Sounds level with the music.' : `Sounds ${Math.abs(db).toFixed(0)} dB ${db > 0 ? 'above' : 'below'} the music.`;
+  }
+  musicVol.addEventListener('input', () => { showRatio(); if (ctx && track) musicBus.gain.setTargetAtTime(level(musicVol), ctx.currentTime, 0.05); });
+  sfxVol.addEventListener('input', () => { showRatio(); if (ctx) sfxBus.gain.setTargetAtTime(level(sfxVol), ctx.currentTime, 0.05); });
+  document.getElementById('paused').addEventListener('change', (e) => { initAudio(); musicPause.gain.setTargetAtTime(e.target.checked ? 0.5 : 1, ctx.currentTime, 0.1); });
+  showRatio();
+
+  // ---------- A short trip ----------
+  const TRIP = [
+    [0.5, 'tap', null, 'Start the trip'],
+    [2.0, 'snack', null, 'Snack'], [2.6, 'snack', null, 'Snack'], [3.2, 'snack', null, 'Snack'],
+    [4.5, 'find', 'common', 'Common find'],
+    [6.5, 'dash', null, 'Tail Dash'], [6.8, 'dashPot', null, 'Dash pot'], [7.6, 'find', 'rare', 'Rare find'],
+    [9.5, 'snack', null, 'Snack'], [10.0, 'snack', null, 'Snack'],
+    [11.5, 'warning', 'ripple', 'Warning'], [12.6, 'poof', 'sparkle', 'Lose a leg'],
+    [14.0, 'snack', null, 'Snack'], [14.5, 'bleh', null, 'Plastic worm'],
+    [16.0, 'regrow', null, 'Leg back'],
+    [17.5, 'find', 'epic', 'Epic find'],
+    [19.5, 'bank', '3', 'Bank 3'],
+    [22.0, 'lastThree', null, 'Last 3'], [22.7, 'lastThree', null, 'Last 3'], [23.4, 'exitOpens', null, 'Exit opens'],
+    [26.0, 'areaBeaten', '3', '3 stars'],
+  ];
+  const timeline = document.getElementById('timeline');
+  TRIP.forEach(([, , , label], i) => { const s = document.createElement('span'); s.id = `tl-${i}`; s.textContent = label; timeline.appendChild(s); });
+  let tripTimers = [];
+  const tripBtn = document.getElementById('tripBtn');
+  function stopTrip() { tripTimers.forEach(clearTimeout); tripTimers = []; tripBtn.textContent = 'Play the trip'; timeline.querySelectorAll('span').forEach((s) => s.classList.remove('on')); }
+  tripBtn.addEventListener('click', () => {
+    if (tripTimers.length) { stopTrip(); return; }
+    initAudio(); ctx.resume();
+    if (!track) setMusic(CHOICES.find((c) => c.id === 'canal'));
+    tripBtn.textContent = 'Stop the trip';
+    TRIP.forEach(([at, id, arg, label], i) => {
+      tripTimers.push(setTimeout(() => {
+        play(id, arg, label);
+        timeline.querySelectorAll('span').forEach((s, k) => s.classList.toggle('on', k === i));
+      }, at * 1000));
+    });
+    tripTimers.push(setTimeout(stopTrip, 30000));
+  });
+
+  // ---------- Pond: music notes as teal bubbles, sounds as pink ones ----------
+  const canvas = document.getElementById('viz');
+  const g2 = canvas.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let bubbles = [];
+  function viz(t, m, o, v, pop) {
+    const delay = Math.max(0, (t - ctx.currentTime) * 1000);
+    const kind = typeof o === 'string' ? 'music' : 'sfx';
+    setTimeout(() => {
+      if (bubbles.length > 200) bubbles.shift();
+      bubbles.push({ x: Math.min(1, Math.max(0, (m - 30) / 70)), born: performance.now(), kind, r: (kind === 'sfx' ? 5 : 3) + Math.min(1, v * 3) * 9, pop: !!pop, wob: Math.random() * 6 });
+    }, delay);
+  }
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  function frame(nowMs) {
+    const css = getComputedStyle(document.documentElement);
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const grad = g2.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, css.getPropertyValue('--water-top')); grad.addColorStop(1, css.getPropertyValue('--water-bottom'));
+    g2.fillStyle = grad; g2.fillRect(0, 0, w, h);
+    g2.globalAlpha = 0.12; g2.fillStyle = '#ffffff';
+    for (let i = 0; i < 5; i++) { const y = 10 + i * 9, off = reduce.matches ? 0 : Math.sin(nowMs / 1400 + i) * 30; g2.fillRect(w * 0.1 + off + i * 60, y, w * 0.3, 2); }
+    g2.globalAlpha = 1;
+    const life = 2600;
+    bubbles = bubbles.filter((b) => nowMs - b.born < life);
+    for (const b of bubbles) {
+      const age = (nowMs - b.born) / life;
+      const rise = reduce.matches ? 0 : age * h * 0.8;
+      const x = 20 + b.x * (w - 40) + (reduce.matches ? 0 : Math.sin(age * 8 + b.wob) * 6);
+      const y = h - 30 - rise;
+      g2.globalAlpha = (1 - age) * 0.9;
+      g2.beginPath(); g2.arc(x, y, b.r * (b.pop ? 1 + age : 1), 0, Math.PI * 2);
+      g2.fillStyle = css.getPropertyValue(b.kind === 'sfx' ? '--c-sfx' : '--c-music'); g2.fill();
+      g2.globalAlpha = (1 - age) * 0.7; g2.fillStyle = '#ffffff';
+      g2.beginPath(); g2.arc(x - b.r * 0.35, y - b.r * 0.35, Math.max(1, b.r * 0.25), 0, Math.PI * 2); g2.fill();
+    }
+    g2.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
