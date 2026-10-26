@@ -185,7 +185,7 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    */
   predatorRoutes: Object.freeze([carpRoute(0, 729, 749, 204, 296), carpRoute(1, 1860, 1870, 100, 190)]),
   /**
-   * Six plastic worms spread from the first Common reeds to before `tilapia-2` (issue #145): near
+   * Six plastic worms spread from the top Rare reeds to before `tilapia-2` (issue #145): near
    * the surface past `tilapia-0`, on the bed before `carp-0`, near the surface either side of
    * `carp-0`, near the surface past `tilapia-1`, and in the open water before `tilapia-2`. Each is
    * at least 180 px from every other, farther than a lunge from every tilapia route and a sweep from
@@ -254,8 +254,7 @@ export const POND_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * loop along the bed between `tilapia-1` and `tilapia-2`, half a lap out of step, so the west
    * water is free for plastic worms (issue #145); then a shrimp home near the surface between the
    * hollow log and the stream, and one on the bed below it. The shrimp turn the one-time darters off
-   * (issue #121, ND-6), and the Snack
-   * magnet pulls at 48 px/s (issue #131, ND-8).
+   * (issue #121, ND-6), and the Snack magnet pulls at 48 px/s (issue #131, ND-8).
    */
   mobileSnacks: mobileSnackMix({
     tadpole: POND_TADPOLE,

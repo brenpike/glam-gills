@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-10-26
+
+### Fixed
+
+- In Area 2, the lily pad pond, the six plastic worms no longer sit in one clump. They are spread across the pond, at the surface and on the bed. To make room, the two tadpoles now swim the same loop, half a lap apart, and one freshwater shrimp moved next to the hollow log (#145).
+
 ## [0.45.0] - 2026-10-26
 
 ### Added
