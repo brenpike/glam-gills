@@ -8,7 +8,8 @@
  * comes first. A player who already knows never sees it: one whose save has the tip seen, or who
  * has a Legendary banked (Legendaries always hide in Dash pots). Breaking a pot before the tip
  * shows counts as knowing too. It waits while the axolotl is in any threat's reach, and a threat
- * reaching the axolotl while it shows closes it. It pauses and slows nothing.
+ * reaching the axolotl while it shows closes it. It pauses and slows nothing. Its time runs, and it
+ * counts as seen, only while it is on screen: not while the HUD holds it for want of room (X10).
  */
 import { treasureById } from './catalogue';
 import { predatorSpecies, type EncounterContext } from './encounter';
@@ -32,13 +33,13 @@ export const DASH_POT_TIP_TEXT: Readonly<Record<TipInput, string>> = Object.free
 
 /**
  * Where the tip is in a trip. 'unseen': not met yet. 'waiting': met, held until the axolotl is out
- * of every threat's reach. 'showing': up, with `leftS` seconds left. 'done': shown, closed or not
- * needed; it never shows again.
+ * of every threat's reach. 'showing': up, with `leftS` seconds left; `seen` once it was on screen
+ * for a step (not held for want of room). 'done': seen, closed or not needed; it never shows again.
  */
 export type DashPotTipState =
   | { phase: 'unseen' }
   | { phase: 'waiting' }
-  | { phase: 'showing'; leftS: number }
+  | { phase: 'showing'; leftS: number; seen: boolean }
   | { phase: 'done' };
 
 /** What the HUD does with the tip after a step: show it, hide it, or nothing. */
@@ -75,9 +76,9 @@ export function createDashPotTip(save: DashPotTipSave): DashPotTipState {
   return knowsDashPots(save) ? DONE : UNSEEN;
 }
 
-/** Whether the tip counts as seen for the save: showing or done. */
+/** Whether the tip counts as seen for the save: done, or showing and already on screen. */
 export function dashPotTipSeen(state: DashPotTipState): boolean {
-  return state.phase === 'showing' || state.phase === 'done';
+  return state.phase === 'done' || (state.phase === 'showing' && state.seen);
 }
 
 /** Whether a sealed Dash pot is within `nearPx` of `pos` (inclusive). */
@@ -110,12 +111,16 @@ export function inThreatReach(trip: Pick<TripState, 'encounter'>, pos: Point, ct
   );
 }
 
-/** Input for one tip step: the trip after its step, that step's events, the axolotl centre and the step in seconds. */
+/**
+ * Input for one tip step: the trip after its step, that step's events, the axolotl centre, the step
+ * in seconds, and whether the HUD holds the tip off screen for want of room (`held`, absent false).
+ */
 export interface DashPotTipInput {
   trip: Pick<TripState, 'phase' | 'placed' | 'encounter'>;
   events: readonly TripEvent[];
   pos: Point;
   dt: number;
+  held?: boolean;
   ctx?: EncounterContext;
 }
 
@@ -124,8 +129,9 @@ export interface DashPotTipInput {
  * hides the tip when it shows. Only swimming steps with `dt` above 0 do anything else.
  * 'unseen' becomes 'waiting' on a `dashNeeded` event or with a sealed pot near (nearSealedPot).
  * 'waiting' (also on the step it was met) shows the tip when the axolotl is not in a threat's
- * reach (inThreatReach). 'showing' counts down by `dt` and hides the tip once no time is left or a
- * threat reaches the axolotl. Leaving 'swimming' while it shows hides it.
+ * reach (inThreatReach). 'showing' counts down by `dt` only while not `held`, and becomes seen on
+ * the first such step; it hides once no time is left or a threat reaches the axolotl. Leaving
+ * 'swimming' or a threat hides it; a tip never seen goes back to 'waiting' and shows again later.
  */
 export function stepDashPotTip(state: DashPotTipState, input: DashPotTipInput): DashPotTipStep {
   if (state.phase === 'done') return { state, cue: null };
@@ -133,12 +139,17 @@ export function stepDashPotTip(state: DashPotTipState, input: DashPotTipInput): 
   if (input.events.some((event) => event.type === 'containerBroken')) {
     return { state: DONE, cue: showing ? 'hide' : null };
   }
-  if (input.trip.phase !== 'swimming') return showing ? { state: DONE, cue: 'hide' } : { state, cue: null };
+  if (state.phase === 'showing' && input.trip.phase !== 'swimming') {
+    return { state: state.seen ? DONE : WAITING, cue: 'hide' };
+  }
+  if (input.trip.phase !== 'swimming') return { state, cue: null };
   if (!(input.dt > 0) || !Number.isFinite(input.dt)) return { state, cue: null };
   if (state.phase === 'showing') {
+    if (inThreatReach(input.trip, input.pos, input.ctx)) return { state: state.seen ? DONE : WAITING, cue: 'hide' };
+    if (input.held === true) return { state, cue: null };
     const leftS = state.leftS - input.dt;
-    if (leftS <= 0 || inThreatReach(input.trip, input.pos, input.ctx)) return { state: DONE, cue: 'hide' };
-    return { state: { phase: 'showing', leftS }, cue: null };
+    if (leftS <= 0) return { state: DONE, cue: 'hide' };
+    return { state: { phase: 'showing', leftS, seen: true }, cue: null };
   }
   const met =
     state.phase === 'waiting' ||
@@ -146,7 +157,7 @@ export function stepDashPotTip(state: DashPotTipState, input: DashPotTipInput): 
     nearSealedPot(input.trip.placed, input.pos);
   if (!met) return { state, cue: null };
   if (inThreatReach(input.trip, input.pos, input.ctx)) return { state: WAITING, cue: null };
-  return { state: { phase: 'showing', leftS: DASH_POT_TIP.holdS }, cue: 'show' };
+  return { state: { phase: 'showing', leftS: DASH_POT_TIP.holdS, seen: false }, cue: 'show' };
 }
 
 /** The tip closed by the player (a tap or a key): 'done' with the tip hidden when it shows, else unchanged. */

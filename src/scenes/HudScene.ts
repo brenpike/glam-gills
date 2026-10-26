@@ -135,7 +135,14 @@ export const HUD_EVENTS = Object.freeze({
   FACT_CARD_SEEN: 'fact-card-seen',
   /** The player closed the Dash pot tip with a tap or a key (PRD B11); no payload. */
   DASH_POT_TIP_CLOSED: 'dash-pot-tip-closed',
+  /** Whether the Dash pot tip is held off screen for want of room (PRD B11, X10); payload DashPotTipHeldPayload. */
+  DASH_POT_TIP_HELD: 'dash-pot-tip-held',
 } as const);
+
+/** Payload of HUD_EVENTS.DASH_POT_TIP_HELD: true while the tip has no room and is hidden. */
+export interface DashPotTipHeldPayload {
+  held: boolean;
+}
 
 /** Payload of HUD_EVENTS.FACT_CARD_SEEN: the id of the fact card closed. */
 export interface FactCardSeenPayload {
@@ -888,6 +895,10 @@ export class HudScene extends Phaser.Scene {
       placeTopBanner(this.hint, this.hintPanel, this.hintText, rect, textPx, boxes);
       holdTimer(this.hintTimer, this.hintHeld);
       this.placeDashTipHit(rect);
+      if (this.dashTipActive) {
+        const payload: DashPotTipHeldPayload = { held: this.hintHeld };
+        this.game.events.emit(HUD_EVENTS.DASH_POT_TIP_HELD, payload);
+      }
       return;
     }
     this.bannerHeld = rect === null;
@@ -1403,7 +1414,8 @@ export class HudScene extends Phaser.Scene {
   /**
    * The swim scene's Dash pot tip cue (PRD B11). Show: the hint banner shows the tip, in place of
    * the banking hint when that is still up, faded in under full motion; only while swimming. The
-   * swim scene owns its time, so it has no timer here. Hide: hides the tip when it shows.
+   * swim scene owns its time, so it has no timer here; each placing tells it whether the tip is held
+   * for want of room (HUD_EVENTS.DASH_POT_TIP_HELD). Hide: hides the tip when it shows.
    */
   private handleDashPotTip(payload: DashPotTipPayload): void {
     if (!payload.show) {
@@ -1422,9 +1434,9 @@ export class HudScene extends Phaser.Scene {
     }
   }
 
-  /** A tap on the tip, Enter or Space: hides the Dash pot tip when it shows and tells the swim scene. */
+  /** A tap on the tip, Enter or Space: hides the Dash pot tip when it is on screen and tells the swim scene. */
   private closeDashPotTip(): void {
-    if (!this.dashTipActive || this.paused) return;
+    if (!this.dashTipActive || this.hintHeld || this.paused) return;
     this.hideHint();
     this.game.events.emit(HUD_EVENTS.DASH_POT_TIP_CLOSED);
   }

@@ -50,7 +50,8 @@ const BROKEN: TripEvent = { type: 'containerBroken', id: POT.id, spotId: POT.spo
 
 const UNSEEN: DashPotTipState = { phase: 'unseen' };
 const WAITING: DashPotTipState = { phase: 'waiting' };
-const SHOWING: DashPotTipState = { phase: 'showing', leftS: DASH_POT_TIP.holdS };
+const SHOWING: DashPotTipState = { phase: 'showing', leftS: DASH_POT_TIP.holdS, seen: false };
+const SHOWN: DashPotTipState = { phase: 'showing', leftS: DASH_POT_TIP.holdS - 1, seen: true };
 const DONE: DashPotTipState = { phase: 'done' };
 
 describe('dashPotTipText', () => {
@@ -87,10 +88,11 @@ describe('knowsDashPots and createDashPotTip', () => {
 });
 
 describe('dashPotTipSeen', () => {
-  it('is true only while showing or done', () => {
+  it('is true only once done, or showing after a step on screen', () => {
     expect(dashPotTipSeen(UNSEEN)).toBe(false);
     expect(dashPotTipSeen(WAITING)).toBe(false);
-    expect(dashPotTipSeen(SHOWING)).toBe(true);
+    expect(dashPotTipSeen(SHOWING)).toBe(false);
+    expect(dashPotTipSeen(SHOWN)).toBe(true);
     expect(dashPotTipSeen(DONE)).toBe(true);
   });
 });
@@ -159,15 +161,22 @@ describe('stepDashPotTip', () => {
     expect(stepDashPotTip(WAITING, input())).toEqual({ state: SHOWING, cue: 'show' });
   });
 
-  it('counts down while showing and hides once no time is left', () => {
+  it('counts down while on screen, becomes seen, and hides once no time is left', () => {
     const next = stepDashPotTip(SHOWING, input({ dt: 1 }));
-    expect(next).toEqual({ state: { phase: 'showing', leftS: DASH_POT_TIP.holdS - 1 }, cue: null });
+    expect(next).toEqual({ state: SHOWN, cue: null });
     expect(stepDashPotTip(next.state, input({ dt: DASH_POT_TIP.holdS }))).toEqual({ state: DONE, cue: 'hide' });
   });
 
-  it('hides at once when a threat reaches the axolotl while it shows', () => {
+  it('holds its time, and is not seen, while the HUD has no room for it (X10)', () => {
+    expect(stepDashPotTip(SHOWING, input({ dt: 1, held: true }))).toEqual({ state: SHOWING, cue: null });
+    expect(stepDashPotTip(SHOWN, input({ dt: 10, held: true }))).toEqual({ state: SHOWN, cue: null });
+  });
+
+  it('hides at once when a threat reaches the axolotl: done once seen, else waiting to show again', () => {
     const warning = tripWith([tilapiaAt({ x: 5000, y: 400 }, 'telegraph')]);
-    expect(stepDashPotTip(SHOWING, input({ trip: warning }))).toEqual({ state: DONE, cue: 'hide' });
+    expect(stepDashPotTip(SHOWN, input({ trip: warning }))).toEqual({ state: DONE, cue: 'hide' });
+    expect(stepDashPotTip(SHOWING, input({ trip: warning }))).toEqual({ state: WAITING, cue: 'hide' });
+    expect(stepDashPotTip(SHOWING, input({ trip: warning, held: true }))).toEqual({ state: WAITING, cue: 'hide' });
   });
 
   it('a pot broken first means the player knows: done with no tip, and a showing tip hides', () => {
@@ -185,7 +194,8 @@ describe('stepDashPotTip', () => {
     expect(stepDashPotTip(SHOWING, input({ dt: Number.NaN }))).toEqual({ state: SHOWING, cue: null });
     const banked = { ...tripWith(), phase: 'banked' as const };
     expect(stepDashPotTip(UNSEEN, input({ trip: banked, pos: NEAR }))).toEqual({ state: UNSEEN, cue: null });
-    expect(stepDashPotTip(SHOWING, input({ trip: banked }))).toEqual({ state: DONE, cue: 'hide' });
+    expect(stepDashPotTip(SHOWN, input({ trip: banked }))).toEqual({ state: DONE, cue: 'hide' });
+    expect(stepDashPotTip(SHOWING, input({ trip: banked }))).toEqual({ state: WAITING, cue: 'hide' });
   });
 });
 

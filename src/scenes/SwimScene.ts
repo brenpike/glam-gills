@@ -118,7 +118,7 @@ import { GarterSnakeView } from './GarterSnakeView';
 import { GhostNetView } from './GhostNetView';
 import { HeronView } from './HeronView';
 import { HomeSpotView } from './HomeSpotView';
-import { HUD_EVENTS, type FactCardSeenPayload } from './HudScene';
+import { HUD_EVENTS, type DashPotTipHeldPayload, type FactCardSeenPayload } from './HudScene';
 import { HyacinthMatView } from './HyacinthMatView';
 import { MobileSnackView } from './MobileSnackView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
@@ -280,6 +280,8 @@ export class SwimScene extends Phaser.Scene {
   private tripCtx!: TripContext;
   /** The Dash pot tip this trip (PRD B11). */
   private dashPotTip: DashPotTipState = { phase: 'done' };
+  /** Whether the HUD holds the Dash pot tip off screen for want of room (X10). */
+  private dashPotTipHeld = false;
   private snapshot!: TripSnapshot;
   /** Whether the ended trip has been handed back and the Home Tank asked for; once per trip. */
   private leaving = false;
@@ -465,6 +467,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.on(TRIP_EVENTS.REQUEST_GO_HOME, this.handleRequestGoHome, this);
     this.game.events.on(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
     this.game.events.on(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
+    this.game.events.on(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.events.on(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -1110,14 +1113,22 @@ export class SwimScene extends Phaser.Scene {
       this.placeCarried();
     }
     this.dispatchTripEvents(result.events);
-    const tipInput = { trip: this.trip, events: result.events, pos: input.axolotlPos, dt, ctx: this.tripCtx.encounter };
+    const tipInput = {
+      trip: this.trip,
+      events: result.events,
+      pos: input.axolotlPos,
+      dt,
+      held: this.dashPotTipHeld,
+      ctx: this.tripCtx.encounter,
+    };
     this.applyDashPotTip(stepDashPotTip(this.dashPotTip, tipInput));
     this.syncSnapshot();
   }
 
   /**
-   * Takes a Dash pot tip step (PRD B11): saves the tip as seen the first time it shows or a pot
-   * breaks first, and tells the HUD to show or hide it.
+   * Takes a Dash pot tip step (PRD B11): saves the tip as seen the first time it is on screen or a
+   * pot breaks first, and tells the HUD to show or hide it. A show starts unheld; the HUD's placing,
+   * during the emit, reports a hold at once.
    */
   private applyDashPotTip(step: DashPotTipStep): void {
     const wasSeen = dashPotTipSeen(this.dashPotTip);
@@ -1126,8 +1137,14 @@ export class SwimScene extends Phaser.Scene {
       writeSession(this.registry, markDashPotTipSeen(readSession(this.registry)));
     }
     if (step.cue === null) return;
+    this.dashPotTipHeld = false;
     const payload: DashPotTipPayload = { show: step.cue === 'show' };
     this.game.events.emit(GAME_EVENTS.DASH_POT_TIP, payload);
+  }
+
+  /** The HUD placed the Dash pot tip, or held it for want of room. */
+  private handleDashPotTipHeld(payload: DashPotTipHeldPayload): void {
+    this.dashPotTipHeld = payload.held;
   }
 
   /** The player closed the Dash pot tip in the HUD: it never shows again. */
@@ -1315,6 +1332,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.off(TRIP_EVENTS.REQUEST_GO_HOME, this.handleRequestGoHome, this);
     this.game.events.off(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
+    this.game.events.off(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.events.off(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.strandedView.destroy();
     this.heronView?.destroy();
