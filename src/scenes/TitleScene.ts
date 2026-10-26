@@ -129,6 +129,8 @@ export class TitleScene extends Phaser.Scene {
   private versionText!: Phaser.GameObjects.Text;
   private startButton!: UiButton;
   private musicButton!: UiButton;
+  /** Whether the music switch shows: it hides only when the title panel would not fit above it (PRD open question 420). */
+  private musicShown = true;
   private startOver: StartOverControls | null = null;
   private startOverShown = false;
   /** Index into focusOrder(); Start is 0. */
@@ -261,7 +263,7 @@ export class TitleScene extends Phaser.Scene {
   /** The title buttons that take the focus, in order: Start, Start over while it shows, then the music switch. */
   private focusOrder(): UiButton[] {
     const startOverButton = this.startOver !== null && this.startOverShown ? [this.startOver.button] : [];
-    return [this.startButton, ...startOverButton, this.musicButton];
+    return [this.startButton, ...startOverButton, ...(this.musicShown ? [this.musicButton] : [])];
   }
 
   /** Shows the focus ring on the focused title button, only while the Start over card is hidden. */
@@ -405,14 +407,32 @@ export class TitleScene extends Phaser.Scene {
       image.setPosition(i * info.w * zoom, top).setScale(zoom / info.scale);
     });
 
-    const buttonsTop = this.layoutButtons(cssW, cssH);
-    const lowerTop = this.layoutPrompt(cssW, buttonsTop);
+    const lowerTop = this.layoutLower(cssW, cssH);
     const panelBottom = this.layoutTitlePanel(cssW, lowerTop);
 
     const axoY = Math.min(top + AXO_WORLD_Y * zoom, lowerTop - 60 * zoom);
     this.axoBaseY = Math.max(panelBottom + 50 * zoom, axoY);
     this.axolotl.setPosition(cssW / 2, this.axoBaseY);
     this.axolotl.setScale((AXO_SCENE_SCALE * zoom) / this.assets.axolotl.scale);
+  }
+
+  /**
+   * Places the buttons and the update prompt, and returns the top of the lower UI. The music switch
+   * hides when its row would leave no room above for the title panel (name, subtitle and version),
+   * as on a short screen with the update prompt showing, and shows again once there is room. The
+   * focus moves off it when it hides.
+   */
+  private layoutLower(cssW: number, cssH: number): number {
+    this.musicShown = true;
+    let lowerTop = this.layoutPrompt(cssW, this.layoutButtons(cssW, cssH));
+    if (MARGIN + this.titlePanelHeight(false) + BUTTON_GAP > lowerTop) {
+      this.musicShown = false;
+      lowerTop = this.layoutPrompt(cssW, this.layoutButtons(cssW, cssH));
+    }
+    this.musicButton.container.setVisible(this.musicShown);
+    this.focusIndex = Math.min(this.focusIndex, this.focusOrder().length - 1);
+    this.refreshFocus();
+    return lowerTop;
   }
 
   /**
@@ -430,7 +450,8 @@ export class TitleScene extends Phaser.Scene {
       bottomY -= BUTTON_GAP;
     }
     const update = this.updatePrompt?.button;
-    const items = [...(update === undefined ? [] : [update]), this.startButton, this.musicButton];
+    const music = this.musicShown ? [this.musicButton] : [];
+    const items = [...(update === undefined ? [] : [update]), this.startButton, ...music];
     const rows = splitButtonRows(items, cssW - 2 * MARGIN);
     let rowBottom = bottomY;
     for (const row of [...rows].reverse()) {
