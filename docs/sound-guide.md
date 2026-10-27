@@ -8,7 +8,7 @@ Requirements are in the [PRD](prds/axolotl-mvp.md) (N7, S1 to S16). The decision
 | Item | Value |
 |---|---|
 | Approved sketches | [`prototypes/sound-effects/sketches.html`](../prototypes/sound-effects/sketches.html), approved by the owner on 2026-10-26. Open it in a browser, pick a cue to play under the sounds, and tap a sound. "Play the trip" plays 30 seconds of a canal trip. |
-| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164); the Home Tank, book and menu sounds (issue #167); the first trip's sounds, for snacks, the last 3 snacks, finds, Tail Dash, a lost leg and its regrowth, banking, the exit opening and the stars (issue #165), with their rules in `src/logic/snackLadder.ts`, `src/logic/findWait.ts`, `src/logic/soundQueue.ts` (the sound queue) and `src/logic/tripSounds.ts`, and the trip's sound router in `src/scenes/TripSoundRouter.ts`. |
+| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164); the Home Tank, book and menu sounds (issue #167); the first trip's sounds, for snacks, the last 3 snacks, finds, Tail Dash, a lost leg and its regrowth, banking, the exit opening and the stars (issue #165), with their rules in `src/logic/snackLadder.ts`, `src/logic/findWait.ts`, `src/logic/soundQueue.ts` (the sound queue) and `src/logic/tripSounds.ts`, and the trip's sound router in `src/scenes/TripSoundRouter.ts`; the hazard and rescue sounds, for the warning ripple, the lullaby, the hazards, tadpoles and shrimp, Dash pots and rescues (issue #166), with the hazard edges (wriggling free, a punting pole's warning and the mats opening) in `src/logic/hazardSounds.ts`, the shrimp that start a flick in `src/logic/shrimpFlick.ts`, and their other rules in `src/logic/soundQueue.ts` and `src/logic/tripSounds.ts`. |
 | When they disagree | The game code is the record once it ships. Before that, the sketches are. Correct this guide to match. |
 
 Every sound is made live in code with Web Audio. There are no audio files (PRD S1).
@@ -51,7 +51,7 @@ Unpitched sounds (swishes, puffs, taps, clay knocks) do not change with the key.
 - Each sound's level is data next to its recipe. The sketches measured every sound offline and set its level so that every sound landed within 1 dB of its target (they had spanned about 40 dB).
 - A new sound is measured the same way before it ships: render it, measure its loudest 0.2 seconds, and set its level. The sketches page holds the voices and recipes to try it in.
 - The sounds bus and the music bus start at the same volume. The music never dips for a sound. One limiter after both keeps the loudest moment gentle.
-- The same sound starts at most once every 60 ms. One asked for sooner waits its turn instead of being dropped; except for snacks and finds, at most one such repeat waits at a time. Snacks eaten at the same moment sound 80 ms apart. Only one treasure find sound plays at a time; a second waits until the first ends.
+- The same sound starts at most once every 60 ms. One asked for sooner waits its turn instead of being dropped; except for snacks and finds, at most one such repeat waits at a time. Snacks eaten at the same moment sound 80 ms apart, tadpoles and shrimp caught included: a catch waits in the snacks' line. Only one treasure find sound plays at a time; a second waits until the first ends. The Paint shell's shimmer waits in the finds' line too, so it plays after its find has ended. The lullaby waits until the "uh-oh" of the hit that started the carry has rung out, and a rescued axolotl's "safe" sound until the bank it arrives with has rung out. A trip plays at most one ripple a frame: a predator's warning and any punting poles starting theirs in the same frame are one ripple.
 
 ## 5. The sounds
 
@@ -61,27 +61,27 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 |---|---|---|---|
 | Snacks and finds | Eat a snack | A soft gulp (a low bubble) and one marimba note. The snack ladder: snacks eaten within 2.2 seconds of game time of each other climb the scale one step each, up to step 9, where it stays; a longer pause starts it again at step 0. The ladder starts at step 0 each trip, and its clock stops while the game is paused or hidden. Snacks eaten at the same moment sound 80 ms apart, in the order eaten, so each climbs one step and is heard. | 1 |
 | | One of the last 3 snacks | The gulp on step 5, with two firefly twinkles, in place of the ladder note. The ladder does not climb for them. Only the 3 snacks that sparkle play it, not the 4th-from-last snack that starts the sparkle. Last snacks eaten at the same moment each play it, 80 ms apart. | 1 |
-| | Catch a tadpole or shrimp | The gulp with a tiny upward boing. | 2 |
-| | Shrimp flicks away | A tiny high flick and tick (touch level). | 2 |
+| | Catch a tadpole or shrimp | The gulp, the snack ladder's marimba note and a tiny upward boing. A catch climbs the snack ladder one step like any snack, and one of the last 3 snacks plays the last-3 sound instead. | 2 |
+| | Shrimp flicks away | A tiny high flick and tick (touch level), once for each shrimp as its flick starts, also when the flick lands at once under reduced motion. Shrimp that flick together follow the repeat rule (section 4). A hop, or resting again, plays nothing. | 2 |
 | | Find a treasure | Grows with rarity: Common two kalimba dings; Rare a marimba run and bubbles; Epic a music box run, a glass chime and a shaker; Legendary a run up the scale, a held glassy chord over a soft pad, a whistle and fireflies. Only one find sound plays at a time: a second waits until the first ends, even when both have the same rarity, and a waiting find is dropped if sounds turn off, the page hides or the trip ends before it starts. | 1 |
 | | Paint shell, extra shimmer | A glassy sparkle that slides up, after the find sound. | 2 |
 | Tail Dash and Dash pots | Tail Dash | A watery whoosh that rises, and a trail of three bubbles, once per Dash as it starts. | 1 |
-| | Dash ready again | One soft bloop and a high kalimba note. | 2 |
-| | Bump a sealed pot | One soft, hollow clay knock, and a quieter echo. | 2 |
-| | Dash pot breaks | A hollow clay "tok", a little crumble, bubbles rising. | 2 |
-| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. | 2 |
+| | Dash ready again | One soft bloop and a high kalimba note, when Tail Dash goes from recharging to ready, once per recharge. The start of a trip plays nothing. | 2 |
+| | Bump a sealed pot | One soft, hollow clay knock, and a quieter echo, once each time the axolotl touches a sealed pot without dashing. | 2 |
+| | Dash pot breaks | A hollow clay "tok", a little crumble, bubbles rising. The crumble's knocks land at fixed times and pitches, where the sketch picks them at random. | 2 |
+| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. A punting pole on screen plays it too, once when its warning starts; a pole off screen plays nothing. At most one ripple plays a frame (section 4). | 2 |
 | | Lose a leg | Uh-oh: a soft puff with two low marimba notes falling a minor third (steps −2 then −3), left unresolved. Only a hit that costs a leg plays it. | 1 |
 | | Shell perk blocks a hit | A bright shell tink and a bubble. | 2 |
 | | Leg grows back | Three rising marimba notes ending on the home note an octave up (steps 2, 3, 5), and a bubble. | 1 |
-| | Carried home | Lullaby: a soft held home chord with a slow music box line falling gently to the home note, and bubbles floating up. | 2 |
+| | Carried home | Lullaby: a soft held home chord with a slow music box line falling gently to the home note, and bubbles floating up, when the carry starts, after the uh-oh (section 4). | 2 |
 | | Plastic worm "bleh" | A little "pthh" spit and a droopy, comic "bwoip", then a bubble. | 2 |
 | | Snagged on a ghost net | A wobbly, stretchy twang. | 2 |
-| | Wriggle free | Three quick plucks up and a pop. | 2 |
-| | Bump the closed exit | Two soft, same-pitch marimba "boops": "not yet". | 2 |
-| | Hyacinth mats open | A leafy rustle with a low, slow boing. | 2 |
+| | Wriggle free | Three quick plucks up and a pop, when a snag ends while swimming. A snag ended by being carried home plays nothing. | 2 |
+| | Bump the closed exit | Two soft, same-pitch marimba "boops" and a small bubble: "not yet". Once each time the axolotl swims into the exit while it is closed. | 2 |
+| | Hyacinth mats open | A leafy rustle with a low, slow boing, when a pair of mats on screen starts opening. Mats off screen play nothing, and several pairs in one frame play it once. | 2 |
 | Wins | Bank finds | One bubble and kalimba note per find, climbing (up to 5), then a ukulele strum of the home chord. Rescued axolotls count as finds, and more than 5 play the 5-find version. | 1 |
 | | Meet a stranded axolotl | A two-note whistle "hi!", up. | 2 |
-| | Rescued axolotl is safe | A kalimba run, a whistle, a strum and a boing. | 2 |
+| | Rescued axolotl is safe | A kalimba run, a whistle, a strum and a boing, once per bank that holds a rescued axolotl, after the bank sound (section 4). At Go home or the exit the trip ends with that bank, so the waiting sound is dropped. | 2 |
 | | The exit opens | A tiny "ta-da": whistle and marimba up four notes, a strum, a boing. Once per trip, after the last snack's own sound has rung out. | 1 |
 | | Beat an area, with stars | A strum, one glass chime per star (steps 5, 7, 10), then the home chord and bubbles. One star still ends on the home chord. It plays on the arrival card, by the stars earned this trip, while the stars show together. The 3-star win is about 2.75 seconds: only the finds must be under 2.5 seconds, and every sound is at most 3 seconds. | 1 |
 | Home Tank and the book | Back in the Home Tank | Two bubbles and a kalimba note. | 3 |

@@ -369,6 +369,14 @@ _Avoid_: combo
 The sound for a lost leg: two soft, low notes falling a small step, answered by the leg-back sound (S5).
 _Avoid_: hit sound, hurt sound
 
+**Ripple**:
+The warning sound: a soft water swish with two low notes, played once when a **Predator**'s **Telegraph** starts, or a **Moving hazard**'s on screen, never repeating or building (S9). Not the ripple rings drawn in some telegraphs.
+_Avoid_: alarm, warning beep
+
+**Lullaby**:
+The sound for being **Carried home**: a soft held home chord under a slow music box line falling gently to the home note, with bubbles floating up; it waits for the **Uh-oh** to finish (S10).
+_Avoid_: carry sound, defeat sound
+
 ## Relationships
 
 - A **Trip** has exactly one **Explorer**, starts at the **Home Spot** in the **Area** picked on the **Area map**, and ends by **Go home**, **Carried home**, or reaching the open **Exit**
