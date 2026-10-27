@@ -23,6 +23,7 @@ import { areaById, habitatById, type AreaData } from '../logic/areas';
 import { ownedDreamColours, type Decoration } from '../logic/catalogue';
 import { dueFirstFindCards, tryItNowAxolotlId, type FirstFindKind } from '../logic/firstFind';
 import { GAME_EVENTS, REGISTRY_KEYS, type ReducedMotionPayload } from '../logic/gameEvents';
+import { restyleSound } from '../logic/homeSounds';
 import type { Rect, Size } from '../logic/hudLayout';
 import { motionProfile, type MotionProfile } from '../logic/motion';
 import { wornIds } from '../logic/outfit';
@@ -76,6 +77,7 @@ import {
 import type { TripEnding } from '../logic/tripEvents';
 import { SURF, waveY } from '../logic/zone';
 import { setMusicScreen } from '../platform/musicPlayer';
+import { playSound } from '../platform/soundPlayer';
 import { AxolotlStyler, type StyledAxolotl } from './AxolotlStyler';
 import {
   SCENE_KEYS,
@@ -681,8 +683,9 @@ export class HomeTankScene extends Phaser.Scene {
 
   /**
    * Shows the first pending refuge milestone (PRD N2, in habitat order) as a milestone card naming
-   * the explorer, which takes every key and press until it closes; with none pending, runs `then`.
-   * Throws when a pending milestone names no habitat.
+   * the explorer, playing the refuge sound as it shows (issue #167, ND-8), which takes every key and
+   * press until it closes; with none pending, runs `then` and plays nothing. Throws when a pending
+   * milestone names no habitat.
    */
   private showMilestones(then: () => void): void {
     this.destroyMilestoneCard();
@@ -706,6 +709,7 @@ export class HomeTankScene extends Phaser.Scene {
       explorerName,
       () => this.closeMilestone(habitatId, then),
     );
+    playSound('refuge');
   }
 
   /** A milestone card closed: drops its milestone from the pending ones, then shows the next or runs `then`. */
@@ -998,12 +1002,14 @@ export class HomeTankScene extends Phaser.Scene {
 
   /**
    * Done in restyle: stores the new name, look, Dream colour and outfit (the morph and every other
-   * field stay; a Wearable put on comes off any other axolotl), saving once (D1). Re-bakes that
-   * axolotl's swimmer in them, and any other swimmer whose outfit changed, then goes back to where
-   * the restyle was opened from.
+   * field stay; a Wearable put on comes off any other axolotl), saving once (D1). Plays this
+   * axolotl's restyle sound, or the tap when the restyle has none (issue #167, ND-4, ND-5). Re-bakes
+   * that axolotl's swimmer in them, and any other swimmer whose outfit changed, then goes back to
+   * where the restyle was opened from.
    */
   private finishRestyle(index: number, styled: StyledAxolotl, from: RestyleFrom): void {
-    const { id } = this.swimmerAxolotl(index);
+    const { id, dreamColour, outfit } = this.swimmerAxolotl(index);
+    playSound(restyleSound({ dreamColour, outfit }, styled) ?? 'tap');
     let next = restyleAxolotl(readSession(this.registry), id, { name: styled.name, look: styled.look });
     next = setDreamColour(next, id, styled.dreamColour);
     next = setOutfit(next, id, styled.outfit);

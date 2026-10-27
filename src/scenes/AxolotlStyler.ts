@@ -36,6 +36,7 @@ import {
 } from '../logic/catalogue';
 import { MAX_DREAM_OPTIONS, REAL_COLOUR_OPTION_ID } from '../logic/dreamPaint';
 import { MAX_MARK_LABEL } from '../logic/explorerCard';
+import { surprisePressed } from '../logic/homeSounds';
 import type { Rect, Size } from '../logic/hudLayout';
 import { morphById, type RealMorphId } from '../logic/morphs';
 import type { MotionProfile } from '../logic/motion';
@@ -110,6 +111,7 @@ import {
   type StylerScreen,
 } from '../logic/stylerUi';
 import { tankKeyFor } from '../logic/tankUi';
+import { playSound } from '../platform/soundPlayer';
 import { openTextEntry, type TextEntry, type TextEntryRect } from '../platform/textEntry';
 import {
   blinkAt,
@@ -973,6 +975,11 @@ export class AxolotlStyler {
     };
   }
 
+  /**
+   * A nav button. Back and Cancel play the close or back tap (issue #167, ND-2). Surprise me plays no
+   * tap, since dispatch plays its own sound (ND-10), and nor does Restyle's Done, whose restyle sound
+   * plays when the restyle finishes.
+   */
   private createNavButton(control: NavControl): UiButton {
     const spec = NAV_SPECS[control];
     return createButton(this.scene, this.baked, {
@@ -984,6 +991,8 @@ export class AxolotlStyler {
       icon: spec.icon,
       dpr: this.dpr,
       pressOnDown: false,
+      taps: control !== 'surprise' && !(control === 'done' && this.state.mode === 'restyle'),
+      backTap: control === 'back' || control === 'cancel',
       onPress: () => this.dispatch({ type: control }),
     });
   }
@@ -1180,11 +1189,13 @@ export class AxolotlStyler {
 
   /**
    * Runs one action through the reducer, redraws, and acts on its effect. A press while typing
-   * keeps the typed name first. The tab row goes back to the page holding the current step.
+   * keeps the typed name first. The tab row goes back to the page holding the current step. A Surprise
+   * me press, by button or by confirm key, plays the surprise sound once (issue #167, ND-10).
    */
   private dispatch(action: StylerAction): void {
     if (this.finished) return;
     this.closeEntry();
+    if (surprisePressed(this.state, action)) playSound('surprise');
     const result = reduceStyler(this.state, action, Math.random);
     this.state = result.state;
     this.tabPage = null;

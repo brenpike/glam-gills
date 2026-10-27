@@ -1,7 +1,8 @@
 /**
  * Pure sound effect rules (PRD N7, S1 to S16; ADR 0026; docs/sound-guide.md): the sound recipes and
  * their levels, the key each cue's sounds play in, the notes a recipe plays in a key, the repeat
- * limit, and the sounds switch's stored value and labels. The voices that play the notes are browser
+ * limit, and the sounds switch's stored value and labels. Slice 3 (issue #167) adds the Home Tank, book
+ * and menu sounds. The voices that play the notes are browser
  * glue in src/platform/audioVoices.ts, and src/platform/soundPlayer.ts plays a sound on the sounds bus.
  */
 import { MUSIC_LEVELS, noteMidi, type MusicCue, type SoundKey } from './music';
@@ -98,7 +99,21 @@ export interface SoundVersion {
 }
 
 /** The id of every sound. */
-export type SoundId = 'tap' | 'soundsOn';
+export type SoundId =
+  | 'tap'
+  | 'soundsOn'
+  | 'arrive'
+  | 'pickUp'
+  | 'place'
+  | 'wearOn'
+  | 'wearOff'
+  | 'dreamColour'
+  | 'factCard'
+  | 'pageTurn'
+  | 'refuge'
+  | 'unlock'
+  | 'back'
+  | 'surprise';
 
 /** The version of a sound that has only one. */
 export const ONLY_VERSION = 'only';
@@ -113,6 +128,9 @@ export interface SoundRecipe {
 function only(levelDb: number, seconds: number, notes: readonly SoundNote[]): Readonly<Record<string, Readonly<SoundVersion>>> {
   return Object.freeze({ [ONLY_VERSION]: Object.freeze({ levelDb, seconds, notes: Object.freeze(notes.map((n) => Object.freeze(n))) }) });
 }
+
+/** The Surprise me sound's seven marimba steps, each in 0 to 7, fixed so the sound never changes. */
+const SURPRISE_STEPS: readonly number[] = Object.freeze([2, 5, 0, 7, 3, 6, 4]);
 
 /**
  * Every sound's recipe by id (docs/sound-guide.md, section 5), ported from the approved sketches
@@ -135,6 +153,129 @@ export const SOUNDS: Readonly<Record<SoundId, Readonly<SoundRecipe>>> = Object.f
     versions: only(2, 0.3, [
       { voice: 'kalimba', at: 0, velocity: 0.14, steps: [2] },
       { voice: 'kalimba', at: 0.08, velocity: 0.16, steps: [5] },
+    ]),
+  }),
+  /** Two bubbles and a kalimba note, when the player arrives back in the Home Tank. */
+  arrive: Object.freeze({
+    id: 'arrive',
+    touch: false,
+    versions: only(4.5, 0.6, [
+      { voice: 'bubble', at: 0, velocity: 0.06, steps: [], hz: [300] },
+      { voice: 'bubble', at: 0.09, velocity: 0.05, steps: [], hz: [420] },
+      { voice: 'kalimba', at: 0.12, velocity: 0.14, steps: [5] },
+    ]),
+  }),
+  /** A small bubble, when the player picks up a decoration. */
+  pickUp: Object.freeze({
+    id: 'pickUp',
+    touch: true,
+    versions: only(21.5, 0.12, [{ voice: 'bubble', at: 0, velocity: 0.06, steps: [], hz: [420] }]),
+  }),
+  /** A low bubble, a sand puff and a low marimba note, when a decoration settles in the tank. */
+  place: Object.freeze({
+    id: 'place',
+    touch: false,
+    versions: only(15.5, 0.3, [
+      { voice: 'bubble', at: 0, velocity: 0.08, steps: [], hz: [200] },
+      { voice: 'puff', at: 0.02, velocity: 0.05, steps: [], hz: [900], seconds: 0.18 },
+      { voice: 'marimba', at: 0.04, velocity: 0.06, steps: [-3] },
+    ]),
+  }),
+  /** A shaker and two fireflies, when a Wearable goes on. */
+  wearOn: Object.freeze({
+    id: 'wearOn',
+    touch: false,
+    versions: only(9.5, 0.6, [
+      { voice: 'shaker', at: 0, velocity: 0.04, steps: [], seconds: 0.15 },
+      { voice: 'firefly', at: 0.06, velocity: 0.06, steps: [7] },
+      { voice: 'firefly', at: 0.14, velocity: 0.055, steps: [9] },
+    ]),
+  }),
+  /** A short shaker, when a Wearable comes off. */
+  wearOff: Object.freeze({
+    id: 'wearOff',
+    touch: true,
+    versions: only(22.5, 0.2, [{ voice: 'shaker', at: 0, velocity: 0.035, steps: [], seconds: 0.12 }]),
+  }),
+  /** Nine glass notes up the scale over a swoosh, when a Dream colour goes on. */
+  dreamColour: Object.freeze({
+    id: 'dreamColour',
+    touch: false,
+    versions: only(3.5, 1.0, [
+      ...Array.from({ length: 9 }, (_, i): SoundNote => ({
+        voice: 'glass',
+        at: i * 0.04,
+        velocity: 0.07,
+        steps: [i + 3],
+        seconds: 0.8,
+      })),
+      { voice: 'swoosh', at: 0, velocity: 0.03, steps: [], seconds: 0.5, hz: [2500, 7000], q: 2 },
+    ]),
+  }),
+  /** A swoosh and two music box notes, when a fact card opens. */
+  factCard: Object.freeze({
+    id: 'factCard',
+    touch: false,
+    versions: only(1.5, 0.9, [
+      { voice: 'swoosh', at: 0, velocity: 0.04, steps: [], seconds: 0.14, hz: [2000, 6000], q: 1.5 },
+      { voice: 'musicBox', at: 0.08, velocity: 0.14, steps: [3] },
+      { voice: 'musicBox', at: 0.2, velocity: 0.16, steps: [5] },
+    ]),
+  }),
+  /** A paper swoosh, when a book or chest page turns. */
+  pageTurn: Object.freeze({
+    id: 'pageTurn',
+    touch: true,
+    versions: only(28, 0.2, [{ voice: 'swoosh', at: 0, velocity: 0.035, steps: [], seconds: 0.16, hz: [2200, 6500], q: 1.5 }]),
+  }),
+  /** A marimba run up to a whistle and a ukulele chord, then bubbles, when the Refuge opens. */
+  refuge: Object.freeze({
+    id: 'refuge',
+    touch: false,
+    versions: only(1.5, 1.4, [
+      { voice: 'marimba', at: 0, velocity: 0.18, steps: [0] },
+      { voice: 'marimba', at: 0.12, velocity: 0.18, steps: [2] },
+      { voice: 'marimba', at: 0.24, velocity: 0.18, steps: [4] },
+      { voice: 'marimba', at: 0.36, velocity: 0.18, steps: [5] },
+      { voice: 'marimba', at: 0.6, velocity: 0.18, steps: [7] },
+      { voice: 'whistle', at: 0.6, velocity: 0.045, steps: [7], seconds: 0.45 },
+      { voice: 'strumPluck', at: 0.6, velocity: 0.12, steps: [0, 2, 3], pluck: 'ukulele', gap: 0.02 },
+      { voice: 'bubble', at: 0.75, velocity: 0.05, steps: [] },
+      { voice: 'bubble', at: 0.83, velocity: 0.05, steps: [] },
+      { voice: 'bubble', at: 0.91, velocity: 0.05, steps: [] },
+      { voice: 'bubble', at: 0.99, velocity: 0.05, steps: [] },
+    ]),
+  }),
+  /** A boing and two whistles up, when a new area unlocks on the area map. */
+  unlock: Object.freeze({
+    id: 'unlock',
+    touch: false,
+    versions: only(8.5, 0.8, [
+      { voice: 'boing', at: 0, velocity: 0.06, steps: [] },
+      { voice: 'whistle', at: 0.15, velocity: 0.05, steps: [5], seconds: 0.14 },
+      { voice: 'whistle', at: 0.3, velocity: 0.05, steps: [7], seconds: 0.3 },
+    ]),
+  }),
+  /** A lower bubble and wood tick than the tap, on a Back or Close press. */
+  back: Object.freeze({
+    id: 'back',
+    touch: true,
+    versions: only(20.5, 0.12, [
+      { voice: 'bubble', at: 0, velocity: 0.06, steps: [], hz: [420] },
+      { voice: 'woodBlock', at: 0, velocity: 0.03, steps: [], hz: [880 * 0.9] },
+    ]),
+  }),
+  /**
+   * Seven marimba notes on fixed scale steps, then a ukulele chord and a boing, on a Surprise me press.
+   * The sketch picks the steps at random; here they are chosen once (issue #167, ND-10).
+   */
+  surprise: Object.freeze({
+    id: 'surprise',
+    touch: false,
+    versions: only(3, 1.0, [
+      ...SURPRISE_STEPS.map((step, i): SoundNote => ({ voice: 'marimba', at: i * 0.06, velocity: 0.14, steps: [step] })),
+      { voice: 'strumPluck', at: 0.45, velocity: 0.12, steps: [0, 2, 3], pluck: 'ukulele', gap: 0.02 },
+      { voice: 'boing', at: 0.5, velocity: 0.05, steps: [] },
     ]),
   }),
 });

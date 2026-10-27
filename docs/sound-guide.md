@@ -8,7 +8,7 @@ Requirements are in the [PRD](prds/axolotl-mvp.md) (N7, S1 to S16). The decision
 | Item | Value |
 |---|---|
 | Approved sketches | [`prototypes/sound-effects/sketches.html`](../prototypes/sound-effects/sketches.html), approved by the owner on 2026-10-26. Open it in a browser, pick a cue to play under the sounds, and tap a sound. "Play the trip" plays 30 seconds of a canal trip. |
-| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164). |
+| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164); the Home Tank, book and menu sounds (issue #167). |
 | When they disagree | The game code is the record once it ships. Before that, the sketches are. Correct this guide to match. |
 
 Every sound is made live in code with Web Audio. There are no audio files (PRD S1).
@@ -85,8 +85,8 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | | The exit opens | A tiny "ta-da": whistle and marimba up four notes, a strum, a boing. | 1 |
 | | Beat an area, with stars | A strum, one glass chime per star (steps 5, 7, 10), then the home chord and bubbles. One star still ends on the home chord. | 1 |
 | Home Tank and the book | Back in the Home Tank | Two bubbles and a kalimba note. | 3 |
-| | Pick up a Decoration | A small rising bloop (touch level). | 3 |
-| | Place a Decoration | A soft plop into the sand, with a low note. | 3 |
+| | Pick up a Decoration | A small rising bloop (touch level), when a drag lifts a placed Decoration. | 3 |
+| | Place a Decoration | A soft plop into the sand, with a low note, when a drag drops it or a tap on a tray square places it. | 3 |
 | | Put on a Wearable | A cloth swish and two twinkles. | 3 |
 | | Take off a Wearable | Just the swish (touch level). | 3 |
 | | Put on a Dream colour | A glassy run up the scale. | 3 |
@@ -97,7 +97,7 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | Menus | Tap a button | A soft bubble with a light wood tick (touch level), for every button press, by touch or by keyboard. | 1 |
 | | Turn Sounds on | Two kalimba notes up, so the player hears the level. | 1 |
 | | Close or go back | The tap, lower (touch level). | 3 |
-| | Surprise me | A tumble of random marimba notes landing on a strum and a boing. | 3 |
+| | Surprise me | A fixed tumble of seven marimba notes landing on a strum and a boing. | 3 |
 
 ## 6. Kept silent
 

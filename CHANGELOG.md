@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-10-27
+
+### Added
+
+- The Home Tank has sounds now. Coming back home plays two bubbles and a kalimba note. Lifting a Decoration plays a small rising bloop, and placing one plays a soft plop into the sand. Putting on a Wearable plays a cloth swish and two twinkles, taking one off plays just the swish, and putting on a Dream colour plays a glassy run up the scale (#167).
+- The Collection Book and the Treasure Chest have sounds too. Turning a page plays a paper flip, and opening a fact card plays a page flip and a little music box "ooh" (#167).
+- A Refuge milestone plays a marimba run, a whistle, a strum and bubbles, and a new area on the map plays a boing and two whistle notes up (#167).
+- Surprise me plays a tumble of marimba notes landing on a strum and a boing, and close and back buttons play a lower tap (#167).
+
 ## [0.47.2] - 2026-10-27
 
 ### Changed

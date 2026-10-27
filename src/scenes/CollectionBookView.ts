@@ -24,6 +24,7 @@ import type { RealMorphId } from '../logic/morphs';
 import { CLOSE_LABEL, NEXT_PAGE_LABEL, PREVIOUS_PAGE_LABEL } from '../logic/tankText';
 import { CHEST_BUTTON, UI, chestLayout, nextFocusIndex, rowsPerPage, type ChestLayout, type TankKey } from '../logic/tankUi';
 import { pageText } from '../logic/treasureChest';
+import { playSound } from '../platform/soundPlayer';
 import { createButton, cssColor, drawPanel, uiTextStyle, type SceneView, type UiButton } from './BootScene';
 
 const TITLE_PX = 28;
@@ -300,6 +301,8 @@ export class CollectionBookView {
       icon,
       dpr: this.dpr,
       pressOnDown: false,
+      taps: index === CLOSE_INDEX,
+      backTap: index === CLOSE_INDEX,
       onPress: () => this.pressButton(index),
     });
   }
@@ -479,6 +482,7 @@ export class CollectionBookView {
     const count = this.pages.length;
     this.pageIndex = step > 0 ? nextPageIndex(this.pageIndex, count) : previousPageIndex(this.pageIndex, count);
     this.showPage();
+    playSound('pageTurn');
   }
 
   private setFocus(index: number): void {
