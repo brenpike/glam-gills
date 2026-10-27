@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-10-27
+
+### Added
+
+- A Menu button in the Home Tank opens the menu and hides it again, so you can just look at your tank (#148).
+
+### Changed
+
+- On tablets turned sideways and other near-square screens, the tank in the Home Tank is a little smaller, so the Menu button has room beside it (#148).
+
+### Fixed
+
+- The Home Tank's menu no longer covers the tank. It folds into a Menu button, and covers the tank only while you have it open (#148).
+
 ## [0.50.0] - 2026-10-27
 
 ### Added
