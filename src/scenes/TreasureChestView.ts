@@ -32,6 +32,7 @@ import {
   type ChestMeasure,
   type TankKey,
 } from '../logic/tankUi';
+import { playSound } from '../platform/soundPlayer';
 import { createButton, cssColor, drawPanel, uiTextStyle, type SceneView, type UiButton } from './BootScene';
 import { addGlowingTreasureIcon, addRarityGlow } from './FindPopup';
 
@@ -456,6 +457,8 @@ export class TreasureChestView {
       icon,
       dpr: this.dpr,
       pressOnDown: false,
+      taps: index === CLOSE_INDEX,
+      backTap: index === CLOSE_INDEX,
       onPress: () => this.pressButton(index),
     });
   }
@@ -602,6 +605,7 @@ export class TreasureChestView {
   private turnPage(step: number): void {
     this.pageIndex = nextFocusIndex(this.pageIndex, this.pages.length, step);
     this.showPage();
+    playSound('pageTurn');
   }
 
   private setFocus(index: number): void {

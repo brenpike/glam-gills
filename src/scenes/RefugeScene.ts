@@ -372,6 +372,7 @@ export class RefugeScene extends Phaser.Scene {
       icon: 'left',
       dpr,
       pressOnDown: false,
+      backTap: true,
       onPress: () => this.goBack(),
     });
     this.prevButton = this.createPanTile(REFUGE_PREV_LABEL, REFUGE_PREV_TILE.w, 'left', -1);

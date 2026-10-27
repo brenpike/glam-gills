@@ -40,13 +40,14 @@ import {
 import { AREA_MAP_TITLE, NEW_AREA_LABEL, lockedAreaText } from '../logic/areaText';
 import { AREAS, habitatById, isAreaUnlocked, isNewArea, type AreaData } from '../logic/areas';
 import { GAME_EVENTS, REGISTRY_KEYS, type ReducedMotionPayload } from '../logic/gameEvents';
+import { newAreaSound } from '../logic/homeSounds';
 import type { Rect, Size } from '../logic/hudLayout';
 import { motionProfile, type MotionProfile } from '../logic/motion';
 import { bestStarsFor, starCount, type AreaStarsRecord } from '../logic/stars';
 import { UI, tankKeyFor } from '../logic/tankUi';
 import type { Vec2 } from '../logic/vec';
 import { setMusicScreen } from '../platform/musicPlayer';
-import { playTap } from '../platform/soundPlayer';
+import { playSound, playTap } from '../platform/soundPlayer';
 import {
   SCENE_KEYS,
   createButton,
@@ -311,6 +312,13 @@ export class AreaMapScene extends Phaser.Scene {
     this.layout();
     this.startPathDraw();
     this.startBob();
+    this.playNewAreaSound();
+  }
+
+  /** Plays the unlock sound once per scene start when an unlocked area is new (issue #167, ND-9). */
+  private playNewAreaSound(): void {
+    const sound = newAreaSound(this.entries);
+    if (sound !== null) playSound(sound);
   }
 
   /** Counts the marker press wait and shows the tweened scroll, path draw-in and pill bob. */
@@ -341,6 +349,7 @@ export class AreaMapScene extends Phaser.Scene {
       icon: 'left',
       dpr,
       pressOnDown: false,
+      backTap: true,
       onPress: () => this.goBack(),
     });
     this.messagePanel = this.add.image(0, 0, '__DEFAULT');

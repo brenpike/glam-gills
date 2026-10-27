@@ -52,6 +52,7 @@ export class SoundCard {
       icon: 'close',
       dpr,
       pressOnDown: false,
+      backTap: true,
       onPress: () => this.hide(),
     });
     this.container = scene.add

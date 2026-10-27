@@ -112,6 +112,7 @@ export class AxolotlChoicesCard {
         icon: CHOICE_ICONS[button],
         dpr,
         pressOnDown: false,
+        backTap: button === 'back',
         onPress: () => this.dispatch({ type: 'press', button }),
       }),
     );

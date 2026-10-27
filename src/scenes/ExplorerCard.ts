@@ -483,6 +483,7 @@ export class ExplorerCard {
       icon,
       dpr: this.dpr,
       pressOnDown: false,
+      backTap: action.type === 'back',
       onPress: () => this.dispatch(action),
     });
   }
