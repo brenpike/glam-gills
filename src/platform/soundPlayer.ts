@@ -12,6 +12,8 @@
  * or the page hides, and an owner's waiting sounds when the owner drops them (SoundOwner.dropWaiting).
  * A sound that has started rings out, even when its scene ends, so a scene change never cuts it short.
  * The queue waits while the audio is paused and its clock stands still, and goes on when it runs again.
+ * A started sound's life runs on the audio clock too, so when the audio pauses (the page hides, both
+ * switches turn off, or the device interrupts it) the sound finishes when the audio resumes (issue #165).
  *
  * Scenes say which sound to play (playSound); the sound router owns its trip's sounds (ownSounds); the
  * sounds switch reads and sets soundsAreOn and setSoundsOn.
@@ -140,12 +142,31 @@ function startSound(graph: AudioGraph, turn: Readonly<SoundTurn>): void {
   stage.gain.value = soundGain(sound.levelDb);
   stage.connect(graph.sounds);
   for (const note of soundNotes(turn.id, turn.version, soundKeyFor(musicCueNow()))) playSoundNote(graph, stage, note, start + note.at);
-  window.setTimeout(() => stage.disconnect(), (start - now + sound.seconds + TAIL_S) * 1000);
+  releaseStageOnClock(ctx, stage, start, start + sound.seconds + TAIL_S);
+}
+
+/**
+ * Disconnects `stage` when the audio clock reaches `endAt`, timed by a silent end marker on the stage
+ * from `startAt`. The wait runs on the audio clock, not a wall-clock timer, so it stands still while the
+ * audio is paused and a started sound finishes when the audio runs again (issue #165).
+ */
+function releaseStageOnClock(ctx: AudioContext, stage: GainNode, startAt: number, endAt: number): void {
+  const marker = ctx.createConstantSource();
+  marker.offset.value = 0;
+  marker.connect(stage);
+  marker.onended = () => {
+    marker.disconnect();
+    stage.disconnect();
+  };
+  marker.start(startAt);
+  marker.stop(endAt);
 }
 
 /**
  * Arms the pump for when the next waiting turn falls due, or clears it when no turn waits or the audio
- * clock is not running; clockResumed arms it again when the clock runs.
+ * clock is not running; clockResumed arms it again when the clock runs. The pump is the one wall-clock
+ * timer here, and it only wakes the queue: it is armed only while the audio clock runs, every turn's
+ * start is read from the audio clock when it fires, and a pause re-pumps on statechange (issue #165).
  */
 function armPump(graph: AudioGraph): void {
   clearPump();
