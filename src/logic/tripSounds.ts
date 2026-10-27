@@ -6,8 +6,7 @@
  */
 import type { CollectedPayload, DashStatePayload } from './gameEvents';
 import { climbSnackLadder, isLastThreeSnack, NEW_SNACK_LADDER, type SnackLadder } from './snackLadder';
-import { ONLY_VERSION, soundVersion, type SoundId } from './sounds';
-import { snackTurnStart } from './soundQueue';
+import { ONLY_VERSION, type SoundId } from './sounds';
 import { starCount, type AreaStars } from './stars';
 import type { DashPhase } from './tailDash';
 import type { TripEvent } from './trip';
@@ -23,17 +22,13 @@ export interface SoundRequest {
 export const BANK_SOUND_MAX = 5;
 
 /**
- * A trip's sound state: the snack ladder, the last Dash phase seen (undefined before the first), whether
- * the exit has played its sound, and when the last snack's sound starts and rings out, in game time
- * seconds (undefined before the first snack). Snacks eaten at the same moment start
- * SOUND_LEVELS.snackGapS apart (S3; issue #165).
+ * A trip's sound state: the snack ladder, the last Dash phase seen (undefined before the first), and
+ * whether the exit has played its sound.
  */
 export interface TripSoundState {
   readonly ladder: SnackLadder;
   readonly dashPhase: DashPhase | undefined;
   readonly exitOpened: boolean;
-  readonly snackStartsAt: number | undefined;
-  readonly snackEndsAt: number | undefined;
 }
 
 /** The sound state at the start of a trip. */
@@ -41,8 +36,6 @@ export const NEW_TRIP_SOUNDS: TripSoundState = Object.freeze({
   ladder: NEW_SNACK_LADDER,
   dashPhase: undefined,
   exitOpened: false,
-  snackStartsAt: undefined,
-  snackEndsAt: undefined,
 });
 
 /** A trip sound state after a game event, and the sound the event plays (null for none). */
@@ -100,33 +93,23 @@ function bankSound(count: number): SoundRequest | null {
 
 /**
  * A snack eaten at game time `now` (COLLECTED): one of the last 3 snacks plays the last-3 twinkle
- * and leaves the ladder as it is (ND-8); any other snack plays its ladder step and climbs (S3). Its
- * sound starts SOUND_LEVELS.snackGapS after the last snack's if that is later than `now` (issue #165).
+ * and leaves the ladder as it is (ND-8); any other snack plays its ladder step and climbs (S3). The
+ * sound queue starts snacks eaten at the same moment SOUND_LEVELS.snackGapS apart (issue #165).
  */
 export function collectedSound(state: Readonly<TripSoundState>, payload: Readonly<CollectedPayload>, now: number): TripSoundStep {
-  const startAt = snackTurnStart(state.snackStartsAt, now);
-  if (isLastThreeSnack(payload)) {
-    return {
-      state: { ...state, snackStartsAt: startAt, snackEndsAt: startAt + soundVersion('lastThree').seconds },
-      request: soundRequest('lastThree'),
-    };
-  }
+  if (isLastThreeSnack(payload)) return { state, request: soundRequest('lastThree') };
   const { step, ladder } = climbSnackLadder(state.ladder, now);
-  const version = String(step);
-  return {
-    state: { ...state, ladder, snackStartsAt: startAt, snackEndsAt: startAt + soundVersion('snack', version).seconds },
-    request: soundRequest('snack', version),
-  };
+  return { state: { ...state, ladder }, request: soundRequest('snack', String(step)) };
 }
 
 /**
- * Every snack eaten at game time `now` (ALL_COLLECTED): the exit opens, once per trip, starting once
- * the last snack's sound has rung out (S8; ND-9).
+ * Every snack eaten (ALL_COLLECTED): the exit opens, once per trip (S8; ND-9). It is asked for at once,
+ * after the last snack's own ask, and the sound queue starts it once the last snack's sound has rung
+ * out on the audio clock (issue #165).
  */
-export function allCollectedSound(state: Readonly<TripSoundState>, now: number): TripSoundStep {
+export function allCollectedSound(state: Readonly<TripSoundState>): TripSoundStep {
   if (state.exitOpened) return { state, request: null };
-  const delayS = state.snackEndsAt === undefined ? 0 : Math.max(0, state.snackEndsAt - now);
-  return { state: { ...state, exitOpened: true }, request: soundRequest('exitOpens', ONLY_VERSION, delayS) };
+  return { state: { ...state, exitOpened: true }, request: soundRequest('exitOpens') };
 }
 
 /** A Dash state (DASH_STATE): Tail Dash plays only when the phase goes into 'dashing', once per Dash (S6; ND-10). */

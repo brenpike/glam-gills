@@ -25,8 +25,6 @@ export class TripSoundRouter {
   private state: TripSoundState = NEW_TRIP_SOUNDS;
   /** The trip's sounds, so the ones still waiting their turn can be dropped when the trip ends. */
   private readonly sounds: SoundOwner = ownSounds();
-  /** A delayed sound waiting on the scene's clock: the exit sound until the last snack's sound rings out. */
-  private pendingSound: Phaser.Time.TimerEvent | null = null;
 
   /**
    * Listens on `scene`'s game events for one trip. `gameTime` gives the trip's game time in seconds,
@@ -50,15 +48,13 @@ export class TripSoundRouter {
   }
 
   /**
-   * Stops listening, drops a waiting delayed sound, and drops the trip's sounds still waiting their
-   * turn (S3, S4; issue #165). Its sounds that have started ring out.
+   * Stops listening and drops the trip's sounds still waiting their turn, the exit's included (S3, S4,
+   * S8; issue #165). Its sounds that have started ring out.
    */
   destroy(): void {
     this.scene.game.events.off(GAME_EVENTS.COLLECTED, this.handleCollected, this);
     this.scene.game.events.off(GAME_EVENTS.ALL_COLLECTED, this.handleAllCollected, this);
     this.scene.game.events.off(GAME_EVENTS.DASH_STATE, this.handleDashState, this);
-    this.pendingSound?.remove();
-    this.pendingSound = null;
     this.sounds.dropWaiting();
   }
 
@@ -67,7 +63,7 @@ export class TripSoundRouter {
   }
 
   private handleAllCollected(): void {
-    this.applyStep(allCollectedSound(this.state, this.gameTime()));
+    this.applyStep(allCollectedSound(this.state));
   }
 
   private handleDashState(payload: DashStatePayload): void {
@@ -79,18 +75,8 @@ export class TripSoundRouter {
     if (step.request !== null) this.playRequest(step.request);
   }
 
-  /** Plays `request` now, or after its delay on the scene's clock, which stops while paused or hidden. */
+  /** Asks the sound queue for `request` as one of the trip's sounds; the queue gives it its turn. */
   private playRequest(request: SoundRequest): void {
-    if (request.delayS <= 0) {
-      this.sounds.play(request.id, request.version);
-      return;
-    }
-    this.pendingSound?.remove();
-    this.pendingSound = this.scene.time.delayedCall(request.delayS * 1000, this.playDelayed, [request], this);
-  }
-
-  private playDelayed(request: SoundRequest): void {
-    this.pendingSound = null;
     this.sounds.play(request.id, request.version);
   }
 }

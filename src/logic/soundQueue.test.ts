@@ -105,6 +105,37 @@ describe('the snack line (S3; issue #165)', () => {
   });
 });
 
+describe("the exit's wait for the snacks (S8; issue #165)", () => {
+  it('starts the exit asked for right after 3 last snacks at the same moment once the last snack ends', () => {
+    const { turns } = takeTurnsAt([soundAsk('lastThree'), soundAsk('lastThree'), soundAsk('lastThree'), soundAsk('exitOpens')], 5);
+    expect(turns[3].startAt).toBe(turns[2].endsAt);
+    expect(turns[3].startAt).toBeCloseTo(5 + START_DELAY_S + 2 * SNACK_GAP_S + soundVersion('lastThree').seconds, CLOSE_DIGITS);
+  });
+
+  it('starts the exit with no wait when no snack is in the queue', () => {
+    const tap = playAsk(EMPTY_SOUND_QUEUE, soundAsk('tap'), 0);
+    const exit = takeTurn(tap.queue, soundAsk('exitOpens'), 3);
+    expect(exit.turn?.startAt).toBe(3 + START_DELAY_S);
+  });
+
+  it('waits for a snack that has not started yet', () => {
+    const queue: SoundQueue = [waitingTurn('snack', 4, null, '2')];
+    expect(takeTurn(queue, soundAsk('exitOpens'), 1).turn?.startAt).toBe(queue[0].endsAt);
+  });
+
+  it('waits for a started snack still ringing, and not for one that has rung out', () => {
+    const snack = playAsk(EMPTY_SOUND_QUEUE, soundAsk('snack', '0'), 0);
+    const endsAt = snack.turn?.endsAt ?? 0;
+    expect(takeTurn(snack.queue, soundAsk('exitOpens'), 0.01).turn?.startAt).toBe(endsAt);
+    expect(takeTurn(snack.queue, soundAsk('exitOpens'), endsAt + 1).turn?.startAt).toBe(endsAt + 1 + START_DELAY_S);
+  });
+
+  it("drops a waiting exit with its owner's other waiting turns", () => {
+    const { queue } = takeTurnsAt([soundAsk('lastThree', ONLY_VERSION, 1), soundAsk('exitOpens', ONLY_VERSION, 1)], 2);
+    expect(dropWaitingTurns(queue, 1)).toEqual([]);
+  });
+});
+
 describe('the find line (S4; issue #165)', () => {
   it('gives 2 finds at the same moment turns, the second starting as the first ends', () => {
     const { turns } = takeTurnsAt([soundAsk('find', 'common'), soundAsk('find', 'common')], 1);

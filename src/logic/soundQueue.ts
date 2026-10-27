@@ -3,8 +3,9 @@
  * starts at least SOUND_LEVELS.startDelayS after it is asked for, and the same sound and version starts
  * at most once in SOUND_LEVELS.repeatS, so one asked for sooner waits. Sounds also wait on their line:
  * snacks start SOUND_LEVELS.snackGapS apart, and only one find plays at a time. A sound on its own line
- * keeps at most one waiting turn per version; a later ask for it while one waits plays nothing. Times
- * are in seconds on one clock, such as the audio clock.
+ * keeps at most one waiting turn per version; a later ask for it while one waits plays nothing. Some
+ * sounds also wait until every snack-line sound in the queue has rung out. Times are in seconds on one
+ * clock, such as the audio clock.
  */
 import { nextFindSlot } from './findWait';
 import { repeatKey, SOUND_LEVELS, soundVersion, type SoundId } from './sounds';
@@ -14,6 +15,12 @@ export type SoundLine = 'snack' | 'find' | 'own';
 
 /** Sounds that wait in the snack line. Later snack-like sounds join it. */
 const SNACK_LINE_SOUNDS: readonly SoundId[] = Object.freeze(['snack', 'lastThree']);
+
+/**
+ * Sounds that start only once the last snack-line turn in the queue, started or waiting, has rung out:
+ * the exit's "ta-da" waits for the last snack's sound on the same clock the snack plays on (issue #165).
+ */
+const AFTER_SNACKS_SOUNDS: readonly SoundId[] = Object.freeze(['exitOpens']);
 
 /** The line sound `id` waits in. */
 export function soundLine(id: SoundId): SoundLine {
@@ -82,6 +89,16 @@ function latestOf(queue: SoundQueue, matches: (turn: SoundTurn) => boolean, pick
   return latest;
 }
 
+/**
+ * When the snack line lets the ask's sound, which could start at `soonest`, start: once the last
+ * snack-line turn has rung out for a sound in AFTER_SNACKS_SOUNDS, at `soonest` for any other sound.
+ */
+function afterSnacksStart(queue: SoundQueue, ask: Readonly<SoundAsk>, soonest: number): number {
+  if (!AFTER_SNACKS_SOUNDS.includes(ask.id)) return soonest;
+  const lastSnackEndsAt = latestOf(queue, (turn) => soundLine(turn.id) === 'snack', (turn) => turn.endsAt);
+  return lastSnackEndsAt === undefined ? soonest : Math.max(soonest, lastSnackEndsAt);
+}
+
 /** When the ask's line lets a sound `seconds` long that could start at `soonest` start. */
 function lineStart(queue: SoundQueue, ask: Readonly<SoundAsk>, soonest: number, seconds: number): number {
   const line = soundLine(ask.id);
@@ -100,7 +117,9 @@ function lineStart(queue: SoundQueue, ask: Readonly<SoundAsk>, soonest: number, 
  * The turn of `ask`, asked for at `now`, and the queue with it added. Started turns that have rung
  * out and no longer hold back an ask leave the queue first. The turn starts at the latest of: `now`
  * plus SOUND_LEVELS.startDelayS, SOUND_LEVELS.repeatS after the last start of the same sound and
- * version, and its line's rule (snacks SOUND_LEVELS.snackGapS apart, one find at a time). An own-line
+ * version, its line's rule (snacks SOUND_LEVELS.snackGapS apart, one find at a time), and for a sound
+ * in AFTER_SNACKS_SOUNDS the end of the last snack-line turn in the queue. A started turn leaves only
+ * once it has rung out, so a snack's end still holds back such a sound while it rings. An own-line
  * ask whose sound and version already has a waiting turn gets no turn (null) and adds nothing; snack
  * and find asks always get a turn.
  */
@@ -115,7 +134,7 @@ export function takeTurn(queue: SoundQueue, ask: Readonly<SoundAsk>, now: number
   const soonest = now + SOUND_LEVELS.startDelayS;
   const lastKeyStartAt = latestOf(kept, sameKey, (turn) => turn.startAt);
   const repeatStart = lastKeyStartAt === undefined ? soonest : lastKeyStartAt + SOUND_LEVELS.repeatS;
-  const startAt = Math.max(soonest, repeatStart, lineStart(kept, ask, soonest, seconds));
+  const startAt = Math.max(soonest, repeatStart, lineStart(kept, ask, soonest, seconds), afterSnacksStart(kept, ask, soonest));
   const turn: SoundTurn = { id: ask.id, version: ask.version, owner: ask.owner, startAt, endsAt: startAt + seconds, started: false };
   return { queue: [...kept, turn], turn };
 }

@@ -143,19 +143,6 @@ describe('snacks (S3; issue #165, ND-5, ND-8)', () => {
     expect([first, second, third].map((step) => step.request?.version)).toEqual(['0', '1', '0']);
   });
 
-  it('starts the sounds of snacks eaten at the same moment 80 ms apart (issue #165)', () => {
-    let state: TripSoundState = NEW_TRIP_SOUNDS;
-    const starts: (number | undefined)[] = [];
-    for (let collected = 1; collected <= 3; collected++) {
-      state = collectedSound(state, { id: `snack-${collected}`, collected, total: 10 }, 2).state;
-      starts.push(state.snackStartsAt);
-    }
-    expect(NEW_TRIP_SOUNDS.snackStartsAt).toBeUndefined();
-    expect(starts[0]).toBe(2);
-    expect(starts[1]).toBeCloseTo(2.08);
-    expect(starts[2]).toBeCloseTo(2.16);
-  });
-
   it('plays every snack sound at once', () => {
     const step = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 1, total: 10 }, 0);
     expect(step.request?.delayS).toBe(0);
@@ -163,30 +150,19 @@ describe('snacks (S3; issue #165, ND-5, ND-8)', () => {
 });
 
 describe('the exit opens (S8; issue #165, ND-9)', () => {
-  it("plays once the last snack's sound has rung out", () => {
-    const last = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 10, total: 10 }, 5);
-    const exit = allCollectedSound(last.state, 5);
-    expect(exit.request).toEqual({ id: 'exitOpens', version: ONLY_VERSION, delayS: soundVersion('lastThree').seconds });
-  });
-
-  it('waits for the last of 3 last snacks eaten at the same moment to ring out (issue #165)', () => {
+  it('asks for the exit sound at once after the last snacks, leaving the wait to the sound queue (issue #165)', () => {
     let state: TripSoundState = NEW_TRIP_SOUNDS;
     for (let collected = 8; collected <= 10; collected++) {
       state = collectedSound(state, { id: `snack-${collected}`, collected, total: 10 }, 5).state;
     }
-    expect(allCollectedSound(state, 5).request?.delayS).toBeCloseTo(0.16 + soundVersion('lastThree').seconds);
+    expect(allCollectedSound(state).request).toEqual({ id: 'exitOpens', version: ONLY_VERSION, delayS: 0 });
   });
 
   it('plays once per trip', () => {
-    const first = allCollectedSound(NEW_TRIP_SOUNDS, 3);
+    const last = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 10, total: 10 }, 5);
+    const first = allCollectedSound(last.state);
     expect(first.request?.id).toBe('exitOpens');
-    expect(allCollectedSound(first.state, 4).request).toBeNull();
-  });
-
-  it('plays at once when no snack sound is still ringing', () => {
-    expect(allCollectedSound(NEW_TRIP_SOUNDS, 3).request?.delayS).toBe(0);
-    const last = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 10, total: 10 }, 1);
-    expect(allCollectedSound(last.state, 9).request?.delayS).toBe(0);
+    expect(allCollectedSound(first.state).request).toBeNull();
   });
 });
 
