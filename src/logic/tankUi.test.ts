@@ -1183,3 +1183,76 @@ describe('hideChestTitle', () => {
     expect(chest).toEqual(copy);
   });
 });
+
+/** A Menu button with its nudge in the top-left corner inside the margins (issue #148, ND-5): 65 x 64 plus a 3 px overhang. */
+const TOP_LEFT_MENU: Rect = { x: UI.margin, y: UI.margin - 3, w: 65 + 3, h: 64 + 3 };
+
+/** Every hub rect of `layout`: the actions and the title when shown. */
+function hubRectsOf(layout: HubLayout): Rect[] {
+  const rects = layout.actions.map((action) => action.rect);
+  return layout.title === null ? rects : [...rects, layout.title];
+}
+
+describe('hubLayout with the Menu button to keep clear of (issue #148, ND-5)', () => {
+  it('lays out exactly as without it when the button is far from every hub rect', () => {
+    const far: Rect = { x: -1000, y: -1000, w: 65, h: 64 };
+    for (const view of supportedCanvases()) {
+      const frame = tankFrame(view.cssW, view.cssH);
+      for (const title of [hubTitle(view), null]) {
+        expect(hubLayout(view, frame, HUB_ACTIONS, title, far)).toEqual(hubLayout(view, frame, HUB_ACTIONS, title));
+      }
+    }
+  });
+
+  it('keeps every hub rect at least a gap from the button on every supported canvas', () => {
+    const problems: string[] = [];
+    for (const view of supportedCanvases()) {
+      const layout = hubLayout(view, tankFrame(view.cssW, view.cssH), HUB_ACTIONS, hubTitle(view), TOP_LEFT_MENU);
+      for (const rect of hubRectsOf(layout)) {
+        if (clearance(rect, TOP_LEFT_MENU) < UI.gap - 1e-9) problems.push(`${view.cssW}x${view.cssH}: within a gap of the button`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('moves the titled wall hub under the button at 390 x 844', () => {
+    const view = { cssW: 390, cssH: 844 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const before = hubLayout(view, frame, HUB_ACTIONS, hubTitle(view));
+    expect(before.title).not.toBeNull();
+    expect(clearance(before.title ?? TOP_LEFT_MENU, TOP_LEFT_MENU)).toBeLessThan(UI.gap);
+    const after = hubLayout(view, frame, HUB_ACTIONS, hubTitle(view), TOP_LEFT_MENU);
+    expect(after.title?.y).toBe(TOP_LEFT_MENU.y + TOP_LEFT_MENU.h + UI.gap);
+    expect(after.compact).toBe(before.compact);
+    expect(after.reach).toBe(false);
+  });
+
+  it('keeps the hub where it is when its rows already clear the button at 1280 x 720', () => {
+    const view = { cssW: 1280, cssH: 720 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const bottomLeft: Rect = { x: UI.margin, y: view.cssH - UI.margin - 64 - 3, w: 68, h: 67 };
+    expect(hubLayout(view, frame, HUB_ACTIONS, hubTitle(view), bottomLeft)).toEqual(hubLayout(view, frame, HUB_ACTIONS, hubTitle(view)));
+  });
+
+  it('splits the compact rows between the wall under the button and the open water at 320 x 440', () => {
+    const view = { cssW: 320, cssH: 440 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const layout = hubLayout(view, frame, HUB_ACTIONS, hubTitle(view), TOP_LEFT_MENU);
+    const [wall, water] = tankRooms(view, frame);
+    expect(layout.compact).toBe(true);
+    expect(layout.reach).toBe(false);
+    expect(layout.title).toBeNull();
+    expect(layout.actions[0].rect.y).toBe(TOP_LEFT_MENU.y + TOP_LEFT_MENU.h + UI.gap);
+    expect(bottomOf(layout.actions[1].rect)).toBeLessThanOrEqual(wall.bottom);
+    expect(layout.actions.slice(2).every(({ rect }) => rect.y >= water.top - 1e-9)).toBe(true);
+  });
+
+  it('lets the hub focus caption keep a gap from the button through its obstacles', () => {
+    const view = { cssW: 390, cssH: 844 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const layout = hubLayout(view, frame, HUB_ACTIONS, null, TOP_LEFT_MENU);
+    const caption = hubCaptionRect(view, frame, layout, HUB_CAPTION, [TOP_LEFT_MENU]);
+    expect(caption).not.toBeNull();
+    expect(clearance(caption ?? TOP_LEFT_MENU, TOP_LEFT_MENU)).toBeGreaterThanOrEqual(UI.gap);
+  });
+});
