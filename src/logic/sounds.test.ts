@@ -104,6 +104,18 @@ describe('sound recipes (S13, S15)', () => {
   it("keeps the sketches' measured levels (prototypes/sound-effects/sketches.html, LEVEL_DB)", () => {
     expect(soundVersion('tap').levelDb).toBe(19);
     expect(soundVersion('soundsOn').levelDb).toBe(2);
+    expect(soundVersion('arrive').levelDb).toBe(4.5);
+    expect(soundVersion('pickUp').levelDb).toBe(21.5);
+    expect(soundVersion('place').levelDb).toBe(15.5);
+    expect(soundVersion('wearOn').levelDb).toBe(9.5);
+    expect(soundVersion('wearOff').levelDb).toBe(22.5);
+    expect(soundVersion('dreamColour').levelDb).toBe(3.5);
+    expect(soundVersion('factCard').levelDb).toBe(1.5);
+    expect(soundVersion('pageTurn').levelDb).toBe(28);
+    expect(soundVersion('refuge').levelDb).toBe(1.5);
+    expect(soundVersion('unlock').levelDb).toBe(8.5);
+    expect(soundVersion('back').levelDb).toBe(20.5);
+    expect(soundVersion('surprise').levelDb).toBe(3);
   });
 
   it('makes the tap a touch sound, 3 dB under the event sounds', () => {
@@ -225,5 +237,32 @@ describe('sounds switch (S14)', () => {
     expect(soundsSwitchLabel(false)).toBe(SOUNDS_OFF_LABEL);
     expect(SOUNDS_ON_LABEL).toBe('Sounds on');
     expect(SOUNDS_OFF_LABEL).toBe('Sounds off');
+  });
+});
+
+describe('Home Tank, book and menu sounds (issue #167)', () => {
+  it('makes only pick up, take off, page turn and back touch sounds', () => {
+    const touchIds: SoundId[] = ['pickUp', 'wearOff', 'pageTurn', 'back'];
+    const eventIds: SoundId[] = ['arrive', 'place', 'wearOn', 'dreamColour', 'factCard', 'refuge', 'unlock', 'surprise'];
+    for (const id of touchIds) expect(SOUNDS[id].touch).toBe(true);
+    for (const id of eventIds) expect(SOUNDS[id].touch).toBe(false);
+  });
+
+  it('plays seven marimba notes on whole steps before the Surprise me strum and boing', () => {
+    const notes = soundVersion('surprise').notes;
+    const marimbas = notes.filter((note) => note.voice === 'marimba');
+    expect(marimbas).toHaveLength(7);
+    for (const note of marimbas) {
+      expect(note.steps).toHaveLength(1);
+      expect(Number.isInteger(note.steps[0])).toBe(true);
+      expect(note.steps[0]).toBeGreaterThanOrEqual(0);
+      expect(note.steps[0]).toBeLessThanOrEqual(7);
+    }
+    const strum = notes.find((note) => note.voice === 'strumPluck');
+    const boing = notes.find((note) => note.voice === 'boing');
+    expect(strum?.steps).toEqual([0, 2, 3]);
+    const lastMarimbaAt = Math.max(...marimbas.map((note) => note.at));
+    expect(strum!.at).toBeGreaterThan(lastMarimbaAt);
+    expect(boing!.at).toBeGreaterThan(lastMarimbaAt);
   });
 });
