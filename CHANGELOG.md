@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-10-27
+
+### Added
+
+- A predator's warning now plays a soft ripple, once when its warning starts. A punting pole on screen plays the same ripple when its warning starts, and only one ripple plays at a time (#166).
+- Being carried home plays a lullaby, after the last leg's "uh-oh" has rung out (#166).
+- The hazards have sounds. A ghost net plays a twang when it snags you and a wriggle when you get free, a plastic worm plays a "bleh", the Shell perk plays a sound when it blocks a hit, and hyacinth mats on screen play a rustle and a boing as they open (#166).
+- Swimming into the closed exit plays two soft "not yet" boops (#166).
+- Catching a tadpole or shrimp plays the snack's gulp and note with a small boing, and climbs the snack scale like any snack. A shrimp flicking away plays a tiny flick (#166).
+- Tail Dash plays a bloop when it is ready again. Bumping a sealed pot plays a clay knock, and breaking a Dash pot plays a "tok", a crumble and bubbles (#166).
+- A Paint shell plays a shimmer after its find sound (#166).
+- Meeting a stranded axolotl plays a rescue sound, and banking a rescued axolotl plays a happy "safe" sound after the bank sound (#166).
+
 ## [0.49.0] - 2026-10-27
 
 ### Added

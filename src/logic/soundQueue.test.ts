@@ -104,9 +104,16 @@ describe('soundLine (issue #165)', () => {
   });
 
   it('gives every other sound its own line', () => {
-    const others = (Object.keys(SOUNDS) as SoundId[]).filter((id) => !['snack', 'lastThree', 'find'].includes(id));
+    const others = (Object.keys(SOUNDS) as SoundId[]).filter((id) => !['snack', 'lastThree', 'find', 'catchSnack', 'paintShell'].includes(id));
     expect(others.length).toBeGreaterThan(0);
     for (const id of others) expect(soundLine(id)).toBe('own');
+  });
+});
+
+describe('soundLine (issue #166)', () => {
+  it('puts a caught snack in the snack line and a painted shell in the find line', () => {
+    expect(soundLine('catchSnack')).toBe('snack');
+    expect(soundLine('paintShell')).toBe('find');
   });
 });
 
@@ -157,6 +164,23 @@ describe('the snack line (S3; issue #165)', () => {
     const { starts } = pumpAll(queue, 2, onTime);
     expect(starts.map(({ turn }) => turn.id)).toEqual(['snack', 'lastThree']);
     expect(starts[1].turn.startAt - starts[0].turn.startAt).toBeCloseTo(SNACK_GAP_S, CLOSE_DIGITS);
+  });
+});
+
+describe('a caught snack in the snack line (S3; issue #166, ND-2)', () => {
+  it('starts caught snacks and snacks eaten at the same moment 80 ms apart, in ask order', () => {
+    const queue = takeTurnsAt([soundAsk('snack', '0', 0), soundAsk('catchSnack', '1', 1), soundAsk('snack', '2', 2), soundAsk('catchSnack', '3', 3)], 1);
+    const { starts } = pumpAll(queue, 1, onTime);
+    expect(starts.map(({ turn }) => turn.owner)).toEqual([0, 1, 2, 3]);
+    starts.forEach(({ turn }, i) => expect(turn.startAt).toBeCloseTo(1 + START_DELAY_S + i * SNACK_GAP_S, CLOSE_DIGITS));
+  });
+
+  it('starts the exit asked for after a caught snack once the caught snack really ends', () => {
+    const queue = takeTurnsAt([soundAsk('snack', '8', 0), soundAsk('catchSnack', '9', 1), soundAsk('exitOpens')], 2);
+    const { starts } = pumpAll(queue, 2, onTime);
+    const caught = startOf(starts, 'catchSnack', 1, '9');
+    expect(caught.startAt).toBeCloseTo(2 + START_DELAY_S + SNACK_GAP_S, CLOSE_DIGITS);
+    expect(startOf(starts, 'exitOpens', null).startAt).toBe(caught.endsAt);
   });
 });
 
@@ -226,6 +250,73 @@ describe('the find line (S4; issue #165)', () => {
     const { starts } = pumpAll(third.queue, 0.2, onTime);
     expect(startOf(starts, 'find', 1, 'rare').startAt).toBe(first.due[0].endsAt);
   });
+});
+
+describe('a painted shell in the find line (S4; issue #166, ND-11)', () => {
+  it('starts a painted shell as its find really ends, and the next find as the painted shell ends', () => {
+    const queue = takeTurnsAt([soundAsk('find', 'rare', 0), soundAsk('paintShell', ONLY_VERSION, 0), soundAsk('find', 'common', 1)], 1);
+    const { starts } = pumpAll(queue, 1, onTime);
+    const find = startOf(starts, 'find', 0, 'rare');
+    const shell = startOf(starts, 'paintShell', 0);
+    expect(find.startAt).toBeCloseTo(1 + START_DELAY_S, CLOSE_DIGITS);
+    expect(shell.startAt).toBe(find.endsAt);
+    expect(startOf(starts, 'find', 1, 'common').startAt).toBe(shell.endsAt);
+  });
+
+  it('makes a painted shell asked for while a find plays wait for its end', () => {
+    const find = playAsk(EMPTY_SOUND_QUEUE, soundAsk('find', 'common'), 0);
+    const shell = playAsk(find.queue, soundAsk('paintShell'), 0.1);
+    expect(shell.due).toEqual([]);
+    const { starts } = pumpAll(shell.queue, 0.1, onTime);
+    expect(startOf(starts, 'paintShell', null).startAt).toBe(find.due[0].endsAt);
+  });
+});
+
+describe('a sound that waits for the end of another (S5, S10; issue #166, ND-14, ND-16)', () => {
+  const pairs: readonly (readonly [SoundId, SoundId, string])[] = [
+    ['lullaby', 'uhOh', ONLY_VERSION],
+    ['rescueSafe', 'bank', '3'],
+  ];
+
+  for (const [waiterId, awaitedId, awaitedVersion] of pairs) {
+    it(`starts a ${waiterId} asked for right after a ${awaitedId} as the ${awaitedId} really ends`, () => {
+      const queue = takeTurnsAt([soundAsk(awaitedId, awaitedVersion, 1), soundAsk(waiterId, ONLY_VERSION, 1)], 2);
+      const { starts } = pumpAll(queue, 2, onTime);
+      const awaited = startOf(starts, awaitedId, 1, awaitedVersion);
+      expect(awaited.startAt).toBeCloseTo(2 + START_DELAY_S, CLOSE_DIGITS);
+      expect(startOf(starts, waiterId, 1).startAt).toBe(awaited.endsAt);
+    });
+
+    it(`starts a ${waiterId} asked for while a ${awaitedId} rings at the ${awaitedId}'s end`, () => {
+      const awaited = playAsk(EMPTY_SOUND_QUEUE, soundAsk(awaitedId, awaitedVersion), 0);
+      const waiter = playAsk(awaited.queue, soundAsk(waiterId), 0.1);
+      expect(waiter.due).toEqual([]);
+      const { starts } = pumpAll(waiter.queue, 0.1, onTime);
+      expect(startOf(starts, waiterId, null).startAt).toBe(awaited.due[0].endsAt);
+    });
+
+    it(`starts a ${waiterId} with no wait when no ${awaitedId} is ahead of it`, () => {
+      const tap = playAsk(EMPTY_SOUND_QUEUE, soundAsk('tap'), 0);
+      const waiter = playAsk(tap.queue, soundAsk(waiterId), 0);
+      expect(waiter.due.map((turn) => [turn.id, turn.startAt])).toEqual([[waiterId, START_DELAY_S]]);
+    });
+
+    it(`starts a ${waiterId} with no wait once the ${awaitedId} has rung out`, () => {
+      const awaited = playAsk(EMPTY_SOUND_QUEUE, soundAsk(awaitedId, awaitedVersion), 0);
+      const later = awaited.due[0].endsAt + 1;
+      const waiter = playAsk(awaited.queue, soundAsk(waiterId), later);
+      expect(waiter.due.map((turn) => turn.startAt)).toEqual([later + START_DELAY_S]);
+    });
+
+    it(`never starts a dropped owner's waiting ${waiterId}`, () => {
+      const queue = takeTurnsAt([soundAsk(awaitedId, awaitedVersion, 1), soundAsk(waiterId, ONLY_VERSION, 1)], 2);
+      const started = startDueTurns(queue, 2, true);
+      expect(started.due.map((turn) => turn.id)).toEqual([awaitedId]);
+      const dropped = dropWaitingTurns(started.queue, 1);
+      expect(nextWaitingStart(dropped, 2)).toBeUndefined();
+      expect(pumpAll(dropped, 2, onTime).starts).toEqual([]);
+    });
+  }
 });
 
 describe('the repeat limit on own-line sounds (S13; issue #165)', () => {
@@ -509,6 +600,8 @@ const MIXED_ASKS: readonly SoundAsk[] = [
   soundAsk('find', 'common', null),
   soundAsk('areaBeaten', '3', 2),
   soundAsk('dash', ONLY_VERSION, 2),
+  soundAsk('catchSnack', '5', 1),
+  soundAsk('paintShell', ONLY_VERSION, 2),
 ];
 
 /** Counts the waiting own-line turns of each sound and version in `queue`. */
@@ -584,6 +677,7 @@ const TRIP_FIRST_ASKS: readonly (readonly [SoundId, string])[] = [
   ['snack', '0'],
   ['snack', '1'],
   ['snack', '2'],
+  ['catchSnack', '4'],
   ['lastThree', ONLY_VERSION],
   ['lastThree', ONLY_VERSION],
   ['lastThree', ONLY_VERSION],
@@ -591,6 +685,11 @@ const TRIP_FIRST_ASKS: readonly (readonly [SoundId, string])[] = [
   ['find', 'common'],
   ['find', 'common'],
   ['find', 'rare'],
+  ['paintShell', ONLY_VERSION],
+  ['uhOh', ONLY_VERSION],
+  ['lullaby', ONLY_VERSION],
+  ['bank', '2'],
+  ['rescueSafe', ONLY_VERSION],
   ['tap', ONLY_VERSION],
   ['tap', ONLY_VERSION],
   ['tap', ONLY_VERSION],
@@ -646,6 +745,17 @@ function runTrip(lateS: (wake: number) => number): TripRun {
   throw new Error('soundQueue.test: the trip never emptied the queue');
 }
 
+/** Checks that every `waiterId` start in `starts` comes after every `awaitedId` asked for ahead of it has ended. */
+function expectAfterEnds(starts: readonly StartedTurn[], waiterId: SoundId, awaitedId: SoundId): void {
+  const waiters = starts.filter((turn) => turn.id === waiterId);
+  expect(waiters.length).toBeGreaterThan(0);
+  for (const waiter of waiters) {
+    for (const awaited of starts.filter((turn) => turn.id === awaitedId && (turn.owner ?? 0) < (waiter.owner ?? 0))) {
+      expect(waiter.startAt).toBeGreaterThanOrEqual(awaited.endsAt - SLACK_S);
+    }
+  }
+}
+
 /** Checks every queue rule over trip `run`; snack-line starts exactly the snack gap apart when `onTimeGaps`. */
 function expectTripRules(run: TripRun, onTimeGaps: boolean): void {
   const owners = run.starts.map(({ turn }) => turn.owner);
@@ -671,6 +781,8 @@ function expectTripRules(run: TripRun, onTimeGaps: boolean): void {
   for (const exit of startedTurns.filter((turn) => turn.id === 'exitOpens')) {
     for (const snack of snackLine.filter((turn) => (turn.owner ?? 0) < (exit.owner ?? 0))) expect(exit.startAt).toBeGreaterThanOrEqual(snack.endsAt - SLACK_S);
   }
+  expectAfterEnds(startedTurns, 'lullaby', 'uhOh');
+  expectAfterEnds(startedTurns, 'rescueSafe', 'bank');
 }
 
 describe('every queue rule, however late the pump wakes (issue #165)', () => {

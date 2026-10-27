@@ -56,10 +56,15 @@ export interface ShrimpFlickState {
   readonly hops: readonly ShrimpGlide[];
 }
 
-/** Outcome of a flick step: the new items (input untouched) and the new flick state. */
+/**
+ * Outcome of a flick step: the new items (input untouched), the new flick state and the ids of the
+ * shrimp that start a flick in this step (issue #166, ND-15), in resting order. A hop or a rest
+ * again adds no id; a flick that lands at once under reduced motion still does.
+ */
 export interface ShrimpFlickStep {
   items: Collectible[];
   state: ShrimpFlickState;
+  readonly flickStarts: readonly string[];
 }
 
 /** What a ready shrimp does this frame: flick, hop, or rest again when no hop spot is clear; `at` is its index in `resting`. */
@@ -486,7 +491,8 @@ function glideAll(
  *
  * Returns null when nothing starts and nothing moves, allocating nothing except for that blocked
  * flick's two small objects. Otherwise returns a new
- * items array (input untouched) in which unmoved items are the same objects, and the new state.
+ * items array (input untouched) in which unmoved items are the same objects, the new state and
+ * the ids of the shrimp that start a flick in this step (issue #166, ND-15).
  */
 export function stepShrimpFlicks(
   items: readonly Collectible[],
@@ -506,6 +512,7 @@ export function stepShrimpFlicks(
 
   const sinks: ShrimpStepSinks = { resting: [], flicks: [], hops: [] };
   collectStarts(items, head, frame, state, avoid, first, sinks);
+  const flickStarts = sinks.flicks.map((glide) => glide.id);
   const updated = items.slice();
   const resting = sinks.resting;
   const flicks = glideAll(updated, state.flicks, sinks.flicks, flickStep, avoid.bounds, {
@@ -520,5 +527,5 @@ export function stepShrimpFlicks(
     afterFlick: false,
     resting,
   });
-  return { items: updated, state: { rule, indexById: state.indexById, resting, flicks, hops } };
+  return { items: updated, state: { rule, indexById: state.indexById, resting, flicks, hops }, flickStarts };
 }

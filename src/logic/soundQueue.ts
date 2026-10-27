@@ -1,12 +1,13 @@
 /**
- * Pure sound queue rules (PRD S3, S4, S13; issue #165): when each asked-for sound starts. A turn holds no
+ * Pure sound queue rules (PRD S3, S4, S13; issues #165 and #166): when each asked-for sound starts. A turn holds no
  * start while it waits; the queue sets its start only when it starts the turn, from when the sounds
  * ahead of it really started and ended. Every sound starts at least SOUND_LEVELS.startDelayS after it
  * is asked for, and the same sound and version starts at most once in SOUND_LEVELS.repeatS, so one
  * asked for sooner waits. Sounds also wait on their line: snacks start SOUND_LEVELS.snackGapS apart,
  * and only one find plays at a time. A sound on its own line keeps at most one waiting turn per
  * version; a later ask for it while one waits plays nothing. Some sounds also wait until every
- * snack-line sound ahead of them has rung out. The pump only wakes the queue: a late wake starts a turn
+ * snack-line sound ahead of them has rung out, and some until every turn ahead of them of one other
+ * sound has rung out: the lullaby waits for the uh-oh, and the rescue's "safe" for the bank. The pump only wakes the queue: a late wake starts a turn
  * late, and every turn behind it counts from that real start, so no rule is broken. Times are in
  * seconds on one clock, such as the audio clock.
  */
@@ -17,7 +18,10 @@ import { repeatKey, SOUND_LEVELS, soundVersion, type SoundId } from './sounds';
 export type SoundLine = 'snack' | 'find' | 'own';
 
 /** Sounds that wait in the snack line. Later snack-like sounds join it. */
-const SNACK_LINE_SOUNDS: readonly SoundId[] = Object.freeze(['snack', 'lastThree']);
+const SNACK_LINE_SOUNDS: readonly SoundId[] = Object.freeze(['snack', 'lastThree', 'catchSnack']);
+
+/** Sounds that wait in the find line: only one of them plays at a time (issue #166, ND-11). */
+const FIND_LINE_SOUNDS: readonly SoundId[] = Object.freeze(['find', 'paintShell']);
 
 /**
  * Sounds that start only once every snack-line turn ahead of them, started or waiting, has rung out:
@@ -25,10 +29,17 @@ const SNACK_LINE_SOUNDS: readonly SoundId[] = Object.freeze(['snack', 'lastThree
  */
 const AFTER_SNACKS_SOUNDS: readonly SoundId[] = Object.freeze(['exitOpens']);
 
+/**
+ * Sounds that start only once every turn of another sound ahead of them, started or waiting, has rung
+ * out: the lullaby waits for the uh-oh of the hit that started the carry, and a rescued axolotl's
+ * "safe" waits for the bank it arrives with (issue #166, ND-16).
+ */
+const AFTER_SOUND_ENDS: Readonly<Partial<Record<SoundId, SoundId>>> = Object.freeze({ lullaby: 'uhOh', rescueSafe: 'bank' });
+
 /** The line sound `id` waits in. */
 export function soundLine(id: SoundId): SoundLine {
   if (SNACK_LINE_SOUNDS.includes(id)) return 'snack';
-  if (id === 'find') return 'find';
+  if (FIND_LINE_SOUNDS.includes(id)) return 'find';
   return 'own';
 }
 
@@ -127,7 +138,8 @@ function latestOf(
  * The earliest start of waiting `turn`, a sound `seconds` long, behind the turns in `placed`: the latest
  * of its ask time plus SOUND_LEVELS.startDelayS, SOUND_LEVELS.repeatS after the last start of the same
  * sound and version, its line's rule (snacks SOUND_LEVELS.snackGapS apart, one find at a time), and for
- * a sound in AFTER_SNACKS_SOUNDS the end of the last snack-line turn.
+ * a sound in AFTER_SNACKS_SOUNDS the end of the last snack-line turn, and for a sound in AFTER_SOUND_ENDS
+ * the end of the last turn of the sound it waits for.
  */
 function earliestStart(placed: readonly PlacedTurn[], turn: Readonly<WaitingTurn>, seconds: number): number {
   const soonest = turn.askedAt + SOUND_LEVELS.startDelayS;
@@ -138,6 +150,8 @@ function earliestStart(placed: readonly PlacedTurn[], turn: Readonly<WaitingTurn
   if (line === 'snack') earliest = Math.max(earliest, snackTurnStart(latestOf(placed, isSnackLine, (other) => other.startAt), soonest));
   if (line === 'find') earliest = Math.max(earliest, nextFindSlot(latestOf(placed, isFindLine, (other) => other.endsAt), soonest, seconds).startAt);
   if (AFTER_SNACKS_SOUNDS.includes(turn.id)) earliest = Math.max(earliest, latestOf(placed, isSnackLine, (other) => other.endsAt) ?? soonest);
+  const awaitedId = AFTER_SOUND_ENDS[turn.id];
+  if (awaitedId !== undefined) earliest = Math.max(earliest, latestOf(placed, (other) => other.id === awaitedId, (other) => other.endsAt) ?? soonest);
   return earliest;
 }
 
@@ -188,9 +202,10 @@ function walkQueue(queue: SoundQueue, now: number): QueueWalk {
  * The turn of `ask`, asked for at `now`, and the queue with it added. Started turns that have rung
  * out and no longer hold back an ask leave the queue first. The turn waits with no start: the queue
  * sets its start only when it starts the turn (startDueTurns). A started turn leaves only once it has
- * rung out, so a snack's end still holds back a sound in AFTER_SNACKS_SOUNDS while it rings. An
- * own-line ask whose sound and version already has a waiting turn gets no turn (null) and adds
- * nothing; snack and find asks always get a turn.
+ * rung out, so a snack's end still holds back a sound in AFTER_SNACKS_SOUNDS, and an uh-oh's or a
+ * bank's end the sound in AFTER_SOUND_ENDS waiting for it, while it rings. An own-line ask whose
+ * sound and version already has a waiting turn gets no turn (null) and adds nothing; snack and find
+ * asks always get a turn.
  */
 export function takeTurn(queue: SoundQueue, ask: Readonly<SoundAsk>, now: number): TurnTaken {
   const kept = queue.filter((turn) => !isSpent(turn, now));

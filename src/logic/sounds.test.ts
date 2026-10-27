@@ -135,6 +135,22 @@ describe('sound recipes (S13, S15)', () => {
     expect(soundVersion('areaBeaten', '1').levelDb).toBe(2.5);
     expect(soundVersion('areaBeaten', '2').levelDb).toBe(2.5);
     expect(soundVersion('areaBeaten', '3').levelDb).toBe(2);
+    for (let step = 0; step <= 9; step++) expect(soundVersion('catchSnack', String(step)).levelDb).toBe(5.5);
+    expect(soundVersion('shrimpFlick').levelDb).toBe(25.5);
+    expect(soundVersion('paintShell').levelDb).toBe(3);
+    expect(soundVersion('dashReady').levelDb).toBe(7.5);
+    expect(soundVersion('potWobble').levelDb).toBe(17);
+    expect(soundVersion('dashPot').levelDb).toBe(12.5);
+    expect(soundVersion('ripple').levelDb).toBe(14);
+    expect(soundVersion('shellBlock').levelDb).toBe(9);
+    expect(soundVersion('lullaby').levelDb).toBe(1.5);
+    expect(soundVersion('bleh').levelDb).toBe(18);
+    expect(soundVersion('snag').levelDb).toBe(7.5);
+    expect(soundVersion('wriggleFree').levelDb).toBe(10);
+    expect(soundVersion('exitClosed').levelDb).toBe(7.5);
+    expect(soundVersion('matsOpen').levelDb).toBe(23.5);
+    expect(soundVersion('rescueMeet').levelDb).toBe(9);
+    expect(soundVersion('rescueSafe').levelDb).toBe(-1.5);
   });
 
   it('makes the tap a touch sound, 3 dB under the event sounds', () => {
@@ -352,6 +368,7 @@ describe('the wins end on the home chord (S7, S8; issue #165, ND-14)', () => {
     ['areaBeaten', '1'],
     ['areaBeaten', '2'],
     ['areaBeaten', '3'],
+    ['rescueSafe', ONLY_VERSION],
   ];
 
   it('plays only home chord notes, in any octave, in the pitched notes that start last', () => {
@@ -367,5 +384,60 @@ describe('the wins end on the home chord (S7, S8; issue #165, ND-14)', () => {
   it('has a version for every bank count from 1 to 5 and every star count from 1 to 3', () => {
     expect(Object.keys(SOUNDS.bank.versions).sort()).toEqual(['1', '2', '3', '4', '5']);
     expect(Object.keys(SOUNDS.areaBeaten.versions).sort()).toEqual(['1', '2', '3']);
+  });
+});
+
+describe('hazard and rescue sounds (S9 to S11; issue #166)', () => {
+  const NEW_IDS: readonly SoundId[] = [
+    'ripple',
+    'shellBlock',
+    'lullaby',
+    'bleh',
+    'snag',
+    'wriggleFree',
+    'exitClosed',
+    'matsOpen',
+    'catchSnack',
+    'shrimpFlick',
+    'paintShell',
+    'dashReady',
+    'potWobble',
+    'dashPot',
+    'rescueMeet',
+    'rescueSafe',
+  ];
+
+  it('makes the shrimp flick the only touch sound among them', () => {
+    for (const id of NEW_IDS) expect(SOUNDS[id].touch).toBe(id === 'shrimpFlick');
+  });
+
+  it("ends the lullaby's last pitched note on the home note (S10)", () => {
+    for (const key of KEYS) {
+      const last = lastPitchedNotes(soundNotes('lullaby', ONLY_VERSION, key));
+      expect(last).toHaveLength(1);
+      expect(last[0].midis).toHaveLength(1);
+      expect(isHomeNote(key, last[0].midis[0])).toBe(true);
+    }
+  });
+
+  it('plays the same Dash pot notes on every read (issue #166, ND-12)', () => {
+    for (const key of KEYS) expect(soundNotes('dashPot', ONLY_VERSION, key)).toEqual(soundNotes('dashPot', ONLY_VERSION, key));
+    const knocks = soundVersion('dashPot').notes.filter((note) => note.voice === 'woodBlock');
+    expect(knocks).toHaveLength(5);
+    knocks.forEach((note, k) => {
+      expect(note.at).toBeGreaterThanOrEqual(0.05 + k * 0.028);
+      expect(note.at).toBeLessThan(0.05 + k * 0.028 + 0.01);
+      expect(note.hz![0]).toBeGreaterThanOrEqual(880 * 0.6);
+      expect(note.hz![0]).toBeLessThan(880 * 1.1);
+    });
+  });
+
+  it('plays marimba step n in catchSnack version n, a version for every ladder step (issue #166, ND-2)', () => {
+    expect(Object.keys(SOUNDS.catchSnack.versions).sort()).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    for (let step = 0; step <= 9; step++) {
+      const marimbas = soundVersion('catchSnack', String(step)).notes.filter((note) => note.voice === 'marimba');
+      expect(marimbas).toHaveLength(1);
+      expect(marimbas[0].steps).toEqual([step]);
+    }
   });
 });
