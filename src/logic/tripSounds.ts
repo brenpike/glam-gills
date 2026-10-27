@@ -7,6 +7,7 @@
 import type { CollectedPayload, DashStatePayload } from './gameEvents';
 import { climbSnackLadder, isLastThreeSnack, NEW_SNACK_LADDER, type SnackLadder } from './snackLadder';
 import { ONLY_VERSION, soundVersion, type SoundId } from './sounds';
+import { snackTurnStart } from './soundQueue';
 import { starCount, type AreaStars } from './stars';
 import type { DashPhase } from './tailDash';
 import type { TripEvent } from './trip';
@@ -23,13 +24,15 @@ export const BANK_SOUND_MAX = 5;
 
 /**
  * A trip's sound state: the snack ladder, the last Dash phase seen (undefined before the first), whether
- * the exit has played its sound, and when the last snack's sound rings out, in game time seconds
- * (undefined before the first snack).
+ * the exit has played its sound, and when the last snack's sound starts and rings out, in game time
+ * seconds (undefined before the first snack). Snacks eaten at the same moment start
+ * SOUND_LEVELS.snackGapS apart (S3; issue #165).
  */
 export interface TripSoundState {
   readonly ladder: SnackLadder;
   readonly dashPhase: DashPhase | undefined;
   readonly exitOpened: boolean;
+  readonly snackStartsAt: number | undefined;
   readonly snackEndsAt: number | undefined;
 }
 
@@ -38,6 +41,7 @@ export const NEW_TRIP_SOUNDS: TripSoundState = Object.freeze({
   ladder: NEW_SNACK_LADDER,
   dashPhase: undefined,
   exitOpened: false,
+  snackStartsAt: undefined,
   snackEndsAt: undefined,
 });
 
@@ -96,19 +100,21 @@ function bankSound(count: number): SoundRequest | null {
 
 /**
  * A snack eaten at game time `now` (COLLECTED): one of the last 3 snacks plays the last-3 twinkle
- * and leaves the ladder as it is (ND-8); any other snack plays its ladder step and climbs (S3).
+ * and leaves the ladder as it is (ND-8); any other snack plays its ladder step and climbs (S3). Its
+ * sound starts SOUND_LEVELS.snackGapS after the last snack's if that is later than `now` (issue #165).
  */
 export function collectedSound(state: Readonly<TripSoundState>, payload: Readonly<CollectedPayload>, now: number): TripSoundStep {
+  const startAt = snackTurnStart(state.snackStartsAt, now);
   if (isLastThreeSnack(payload)) {
     return {
-      state: { ...state, snackEndsAt: now + soundVersion('lastThree').seconds },
+      state: { ...state, snackStartsAt: startAt, snackEndsAt: startAt + soundVersion('lastThree').seconds },
       request: soundRequest('lastThree'),
     };
   }
   const { step, ladder } = climbSnackLadder(state.ladder, now);
   const version = String(step);
   return {
-    state: { ...state, ladder, snackEndsAt: now + soundVersion('snack', version).seconds },
+    state: { ...state, ladder, snackStartsAt: startAt, snackEndsAt: startAt + soundVersion('snack', version).seconds },
     request: soundRequest('snack', version),
   };
 }

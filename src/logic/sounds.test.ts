@@ -229,6 +229,11 @@ describe('the repeat limit (S13)', () => {
     expect(passesRepeatLimit(1, 2)).toBe(true);
   });
 
+  it('starts snacks eaten at the same moment 80 ms apart, no closer than the repeat limit (issue #165)', () => {
+    expect(SOUND_LEVELS.snackGapS).toBe(0.08);
+    expect(SOUND_LEVELS.snackGapS).toBeGreaterThanOrEqual(SOUND_LEVELS.repeatS);
+  });
+
   it('keeps each sound and version apart', () => {
     expect(repeatKey('tap', ONLY_VERSION)).not.toBe(repeatKey('soundsOn', ONLY_VERSION));
     expect(repeatKey('tap', 'a')).not.toBe(repeatKey('tap', 'b'));

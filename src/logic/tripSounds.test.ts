@@ -143,6 +143,19 @@ describe('snacks (S3; issue #165, ND-5, ND-8)', () => {
     expect([first, second, third].map((step) => step.request?.version)).toEqual(['0', '1', '0']);
   });
 
+  it('starts the sounds of snacks eaten at the same moment 80 ms apart (issue #165)', () => {
+    let state: TripSoundState = NEW_TRIP_SOUNDS;
+    const starts: (number | undefined)[] = [];
+    for (let collected = 1; collected <= 3; collected++) {
+      state = collectedSound(state, { id: `snack-${collected}`, collected, total: 10 }, 2).state;
+      starts.push(state.snackStartsAt);
+    }
+    expect(NEW_TRIP_SOUNDS.snackStartsAt).toBeUndefined();
+    expect(starts[0]).toBe(2);
+    expect(starts[1]).toBeCloseTo(2.08);
+    expect(starts[2]).toBeCloseTo(2.16);
+  });
+
   it('plays every snack sound at once', () => {
     const step = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 1, total: 10 }, 0);
     expect(step.request?.delayS).toBe(0);
@@ -154,6 +167,14 @@ describe('the exit opens (S8; issue #165, ND-9)', () => {
     const last = collectedSound(NEW_TRIP_SOUNDS, { id: 'a', collected: 10, total: 10 }, 5);
     const exit = allCollectedSound(last.state, 5);
     expect(exit.request).toEqual({ id: 'exitOpens', version: ONLY_VERSION, delayS: soundVersion('lastThree').seconds });
+  });
+
+  it('waits for the last of 3 last snacks eaten at the same moment to ring out (issue #165)', () => {
+    let state: TripSoundState = NEW_TRIP_SOUNDS;
+    for (let collected = 8; collected <= 10; collected++) {
+      state = collectedSound(state, { id: `snack-${collected}`, collected, total: 10 }, 5).state;
+    }
+    expect(allCollectedSound(state, 5).request?.delayS).toBeCloseTo(0.16 + soundVersion('lastThree').seconds);
   });
 
   it('plays once per trip', () => {

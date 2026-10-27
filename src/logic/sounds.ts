@@ -533,8 +533,13 @@ export const SOUND_LEVELS = Object.freeze({
   reverbSend: 0.18,
   /** Seconds after it is asked for that a sound starts. */
   startDelayS: 0.02,
-  /** The same sound (and version) plays at most once in this many seconds (S13). */
+  /**
+   * The same sound (and version) starts at most once in this many seconds, and one asked for sooner
+   * waits (S13; issue #165).
+   */
   repeatS: 0.06,
+  /** Seconds between the starts of snacks eaten at the same moment (S3; issue #165). */
+  snackGapS: 0.08,
 });
 
 /** The key of the sounds while `cue` plays, or would play with music off (S12). */

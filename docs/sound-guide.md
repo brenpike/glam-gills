@@ -8,7 +8,7 @@ Requirements are in the [PRD](prds/axolotl-mvp.md) (N7, S1 to S16). The decision
 | Item | Value |
 |---|---|
 | Approved sketches | [`prototypes/sound-effects/sketches.html`](../prototypes/sound-effects/sketches.html), approved by the owner on 2026-10-26. Open it in a browser, pick a cue to play under the sounds, and tap a sound. "Play the trip" plays 30 seconds of a canal trip. |
-| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164); the Home Tank, book and menu sounds (issue #167); the first trip's sounds, for snacks, the last 3 snacks, finds, Tail Dash, a lost leg and its regrowth, banking, the exit opening and the stars (issue #165), with their rules in `src/logic/snackLadder.ts`, `src/logic/findWait.ts` and `src/logic/tripSounds.ts`, and the trip's sound router in `src/scenes/TripSoundRouter.ts`. |
+| Game code | Sound recipes, levels and rules in `src/logic/sounds.ts`; the shared engine in `src/platform/audioEngine.ts`, the voices in `src/platform/audioVoices.ts`, and the sound player in `src/platform/soundPlayer.ts`. Built so far: the button tap and the sounds-on sample (issue #164); the Home Tank, book and menu sounds (issue #167); the first trip's sounds, for snacks, the last 3 snacks, finds, Tail Dash, a lost leg and its regrowth, banking, the exit opening and the stars (issue #165), with their rules in `src/logic/snackLadder.ts`, `src/logic/findWait.ts`, `src/logic/soundQueue.ts` (the sound queue) and `src/logic/tripSounds.ts`, and the trip's sound router in `src/scenes/TripSoundRouter.ts`. |
 | When they disagree | The game code is the record once it ships. Before that, the sketches are. Correct this guide to match. |
 
 Every sound is made live in code with Web Audio. There are no audio files (PRD S1).
@@ -51,7 +51,7 @@ Unpitched sounds (swishes, puffs, taps, clay knocks) do not change with the key.
 - Each sound's level is data next to its recipe. The sketches measured every sound offline and set its level so that every sound landed within 1 dB of its target (they had spanned about 40 dB).
 - A new sound is measured the same way before it ships: render it, measure its loudest 0.2 seconds, and set its level. The sketches page holds the voices and recipes to try it in.
 - The sounds bus and the music bus start at the same volume. The music never dips for a sound. One limiter after both keeps the loudest moment gentle.
-- The same sound plays at most once every 60 ms. Only one treasure find sound plays at a time; a second waits until the first ends.
+- The same sound starts at most once every 60 ms. One asked for sooner waits its turn instead of being dropped; except for snacks and finds, at most one such repeat waits at a time. Snacks eaten at the same moment sound 80 ms apart. Only one treasure find sound plays at a time; a second waits until the first ends.
 
 ## 5. The sounds
 
@@ -59,11 +59,11 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 
 | Group | Moment | Sound | Slice |
 |---|---|---|---|
-| Snacks and finds | Eat a snack | A soft gulp (a low bubble) and one marimba note. The snack ladder: snacks eaten within 2.2 seconds of game time of each other climb the scale one step each, up to step 9, where it stays; a longer pause starts it again at step 0. The ladder starts at step 0 each trip, and its clock stops while the game is paused or hidden. | 1 |
-| | One of the last 3 snacks | The gulp on step 5, with two firefly twinkles, in place of the ladder note. The ladder does not climb for them. Only the 3 snacks that sparkle play it, not the 4th-from-last snack that starts the sparkle. | 1 |
+| Snacks and finds | Eat a snack | A soft gulp (a low bubble) and one marimba note. The snack ladder: snacks eaten within 2.2 seconds of game time of each other climb the scale one step each, up to step 9, where it stays; a longer pause starts it again at step 0. The ladder starts at step 0 each trip, and its clock stops while the game is paused or hidden. Snacks eaten at the same moment sound 80 ms apart, in the order eaten, so each climbs one step and is heard. | 1 |
+| | One of the last 3 snacks | The gulp on step 5, with two firefly twinkles, in place of the ladder note. The ladder does not climb for them. Only the 3 snacks that sparkle play it, not the 4th-from-last snack that starts the sparkle. Last snacks eaten at the same moment each play it, 80 ms apart. | 1 |
 | | Catch a tadpole or shrimp | The gulp with a tiny upward boing. | 2 |
 | | Shrimp flicks away | A tiny high flick and tick (touch level). | 2 |
-| | Find a treasure | Grows with rarity: Common two kalimba dings; Rare a marimba run and bubbles; Epic a music box run, a glass chime and a shaker; Legendary a run up the scale, a held glassy chord over a soft pad, a whistle and fireflies. Only one find sound plays at a time: a second waits until the first ends, and a waiting find is dropped if sounds turn off, the page hides or the trip ends before it starts. | 1 |
+| | Find a treasure | Grows with rarity: Common two kalimba dings; Rare a marimba run and bubbles; Epic a music box run, a glass chime and a shaker; Legendary a run up the scale, a held glassy chord over a soft pad, a whistle and fireflies. Only one find sound plays at a time: a second waits until the first ends, even when both have the same rarity, and a waiting find is dropped if sounds turn off, the page hides or the trip ends before it starts. | 1 |
 | | Paint shell, extra shimmer | A glassy sparkle that slides up, after the find sound. | 2 |
 | Tail Dash and Dash pots | Tail Dash | A watery whoosh that rises, and a trail of three bubbles, once per Dash as it starts. | 1 |
 | | Dash ready again | One soft bloop and a high kalimba note. | 2 |
