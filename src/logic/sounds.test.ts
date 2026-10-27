@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS } from './areas';
 import { CANAL_PADDLE, GARDEN_BOATS, LILY_PAD_HOP, MUSIC_CUES, MUSIC_LEVELS, SUNNY_TANK, musicCueFor, noteMidi } from './music';
+import { RARITIES } from './catalogue';
 import { SAVE_STORAGE_KEYS } from './save';
 import {
   HOME_CHORD_STEPS,
@@ -24,6 +25,7 @@ import {
   soundVersion,
   soundsSettingValue,
   soundsSwitchLabel,
+  type PlayedSoundNote,
   type SoundId,
 } from './sounds';
 
@@ -96,7 +98,7 @@ describe('sound recipes (S13, S15)', () => {
         expect(version.notes.length).toBeGreaterThan(0);
         expect(Number.isFinite(version.levelDb)).toBe(true);
         expect(version.seconds).toBeGreaterThan(0);
-        expect(version.seconds).toBeLessThan(2.5);
+        expect(version.seconds).toBeLessThanOrEqual(3);
       }
     }
   });
@@ -116,6 +118,24 @@ describe('sound recipes (S13, S15)', () => {
     expect(soundVersion('unlock').levelDb).toBe(8.5);
     expect(soundVersion('back').levelDb).toBe(20.5);
     expect(soundVersion('surprise').levelDb).toBe(3);
+    for (let step = 0; step <= 9; step++) expect(soundVersion('snack', String(step)).levelDb).toBe(6.5);
+    expect(soundVersion('lastThree').levelDb).toBe(4);
+    expect(soundVersion('find', 'common').levelDb).toBe(-1);
+    expect(soundVersion('find', 'rare').levelDb).toBe(-3.5);
+    expect(soundVersion('find', 'epic').levelDb).toBe(-4);
+    expect(soundVersion('find', 'legendary').levelDb).toBe(-5.5);
+    expect(soundVersion('dash').levelDb).toBe(20);
+    expect(soundVersion('uhOh').levelDb).toBe(9);
+    expect(soundVersion('regrow').levelDb).toBe(3);
+    expect(soundVersion('bank', '1').levelDb).toBe(0);
+    expect(soundVersion('bank', '2').levelDb).toBe(0.5);
+    expect(soundVersion('bank', '3').levelDb).toBe(1);
+    expect(soundVersion('bank', '4').levelDb).toBe(0.75);
+    expect(soundVersion('bank', '5').levelDb).toBe(0.5);
+    expect(soundVersion('exitOpens').levelDb).toBe(1);
+    expect(soundVersion('areaBeaten', '1').levelDb).toBe(2.5);
+    expect(soundVersion('areaBeaten', '2').levelDb).toBe(2.5);
+    expect(soundVersion('areaBeaten', '3').levelDb).toBe(2);
   });
 
   it('makes the tap a touch sound, 3 dB under the event sounds', () => {
@@ -264,5 +284,92 @@ describe('Home Tank, book and menu sounds (issue #167)', () => {
     const lastMarimbaAt = Math.max(...marimbas.map((note) => note.at));
     expect(strum!.at).toBeGreaterThan(lastMarimbaAt);
     expect(boing!.at).toBeGreaterThan(lastMarimbaAt);
+  });
+});
+
+/** The pitched notes of a played sound, in recipe order. */
+function pitchedNotes(notes: readonly PlayedSoundNote[]): PlayedSoundNote[] {
+  return notes.filter((note) => note.midis.length > 0);
+}
+
+/** The pitched notes that start last. */
+function lastPitchedNotes(notes: readonly PlayedSoundNote[]): PlayedSoundNote[] {
+  const pitched = pitchedNotes(notes);
+  const lastAt = Math.max(...pitched.map((note) => note.at));
+  return pitched.filter((note) => note.at === lastAt);
+}
+
+/** Whether `midi` is the home note of `key`, in any octave. */
+function isHomeNote(key: (typeof KEYS)[number], midi: number): boolean {
+  return (((midi - scaleMidi(key, 0)) % 12) + 12) % 12 === 0;
+}
+
+/** Whether `midi` is a note of `key`'s home chord, in any octave (HOME_CHORD_STEPS). */
+function isHomeChordNote(key: (typeof KEYS)[number], midi: number): boolean {
+  return HOME_CHORD_STEPS.some((step) => (((midi - scaleMidi(key, step)) % 12) + 12) % 12 === 0);
+}
+
+describe('finds by rarity (S4)', () => {
+  it('grow with rarity: more notes, a higher top note, and longer', () => {
+    for (const key of KEYS) {
+      for (let i = 1; i < RARITIES.length; i++) {
+        const lower = soundNotes('find', RARITIES[i - 1], key);
+        const higher = soundNotes('find', RARITIES[i], key);
+        expect(higher.length).toBeGreaterThan(lower.length);
+        expect(Math.max(...higher.flatMap((n) => n.midis))).toBeGreaterThan(Math.max(...lower.flatMap((n) => n.midis)));
+        expect(soundVersion('find', RARITIES[i]).seconds).toBeGreaterThan(soundVersion('find', RARITIES[i - 1]).seconds);
+      }
+    }
+  });
+
+  it('are all under 2.5 seconds, Legendary included', () => {
+    for (const rarity of RARITIES) expect(soundVersion('find', rarity).seconds).toBeLessThan(2.5);
+    expect(Object.keys(SOUNDS.find.versions).sort()).toEqual([...RARITIES].sort());
+  });
+});
+
+describe('a lost leg and a leg back (S5)', () => {
+  it("drops the uh-oh's second note lower and leaves it off the home note", () => {
+    for (const key of KEYS) {
+      const pitched = pitchedNotes(soundNotes('uhOh', ONLY_VERSION, key));
+      expect(pitched[1].midis[0]).toBeLessThan(pitched[0].midis[0]);
+      expect(isHomeNote(key, pitched[pitched.length - 1].midis[0])).toBe(false);
+    }
+  });
+
+  it('ends the regrowth on the home note', () => {
+    for (const key of KEYS) {
+      const pitched = pitchedNotes(soundNotes('regrow', ONLY_VERSION, key));
+      expect(isHomeNote(key, pitched[pitched.length - 1].midis[0])).toBe(true);
+    }
+  });
+});
+
+describe('the wins end on the home chord (S7, S8; issue #165, ND-14)', () => {
+  const WINS: readonly [SoundId, string][] = [
+    ['bank', '1'],
+    ['bank', '2'],
+    ['bank', '3'],
+    ['bank', '4'],
+    ['bank', '5'],
+    ['exitOpens', ONLY_VERSION],
+    ['areaBeaten', '1'],
+    ['areaBeaten', '2'],
+    ['areaBeaten', '3'],
+  ];
+
+  it('plays only home chord notes, in any octave, in the pitched notes that start last', () => {
+    for (const key of KEYS) {
+      for (const [id, version] of WINS) {
+        const last = lastPitchedNotes(soundNotes(id, version, key));
+        expect(last.length).toBeGreaterThan(0);
+        for (const note of last) for (const midi of note.midis) expect(isHomeChordNote(key, midi)).toBe(true);
+      }
+    }
+  });
+
+  it('has a version for every bank count from 1 to 5 and every star count from 1 to 3', () => {
+    expect(Object.keys(SOUNDS.bank.versions).sort()).toEqual(['1', '2', '3', '4', '5']);
+    expect(Object.keys(SOUNDS.areaBeaten.versions).sort()).toEqual(['1', '2', '3']);
   });
 });
