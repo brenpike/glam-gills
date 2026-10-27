@@ -74,6 +74,15 @@ export function stepFoldedTankFocus(
 }
 
 /**
+ * The focus index while the hub menu is folded (PRD C16, issue #148, ND-6): the Menu button at hub
+ * index `menuIndex` when `current` is another hub index (a folded action), else `current`.
+ */
+export function foldedFocusIndex(current: number, menuIndex: number, hubCount: number): number {
+  const onFoldedAction = Number.isInteger(current) && current >= 0 && current < wholeCount(hubCount) && current !== menuIndex;
+  return onFoldedAction ? menuIndex : current;
+}
+
+/**
  * The tap area of a sprite whose frame is `size` (in frame units, origin top-left): the whole frame,
  * grown about its centre to at least TOUCH_TARGET_PX CSS px each way. `cssPerUnit` is the CSS px one
  * frame unit shows at; when it is not finite and positive the frame is used as it is.

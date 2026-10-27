@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areaLabel } from './areaText';
 import { isSupportedCanvas } from './cardFit';
-import { hubFit, startHubMenu, stepHubMenu, type HubFit, type HubFitSizes, type HubMenuState } from './hubFit';
+import { hubFit, modeTankFrame, startHubMenu, stepHubMenu, type HubFit, type HubFitSizes, type HubMenuState } from './hubFit';
 import type { HudView, Rect, Size } from './hudLayout';
 import { HUB_STARS_BADGE } from './starsUi';
 import { TANK, tankBoxCss, tankFrame, tankFrameAt, topKeepClearCss, type TankFrame } from './tank';
@@ -321,6 +321,25 @@ describe('hubFit', () => {
       const fit = hubFit(view, sizesOn(view));
       expect(fit.frame.scale).toBeGreaterThan(0);
       expect(Number.isFinite(fit.frame.scale)).toBe(true);
+    }
+  });
+});
+
+describe('modeTankFrame (issue #148, ND-3)', () => {
+  it('draws decorate mode on the full-size tankFrame and every other mode on the hub fit frame', () => {
+    for (const [cssW, cssH] of [[1024, 768], [460, 320], [1280, 720], [390, 844]] as const) {
+      const view = { cssW, cssH };
+      const hubFrame = hubFit(view, sizesOn(view)).frame;
+      expect(modeTankFrame(view, hubFrame, true)).toEqual(tankFrame(cssW, cssH));
+      expect(modeTankFrame(view, hubFrame, false)).toBe(hubFrame);
+    }
+  });
+
+  it('gives two frames only on the shrunk set', () => {
+    for (const view of SWEEP) {
+      const hubFrame = hubFit(view, sizesOn(view)).frame;
+      const same = JSON.stringify(modeTankFrame(view, hubFrame, true)) === JSON.stringify(modeTankFrame(view, hubFrame, false));
+      expect(same, `${view.cssW}x${view.cssH}`).toBe(!isShrunkCanvas(view));
     }
   });
 });

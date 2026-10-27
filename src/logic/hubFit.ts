@@ -153,6 +153,15 @@ function menuOnFrame(view: HudView, placement: MenuPlacement, sizes: HubFitSizes
   return { frame, spot, menu, menuFootprint: footprint, hub, badge, caption, openByDefault };
 }
 
+/**
+ * The tank frame a Home Tank mode draws on (issue #148, ND-3): the full-size tankFrame in decorate
+ * mode, so decorating (PRD C9) keeps its size, else `hubFrame`, the hub fit's frame (HubFit.frame).
+ * The two differ only on the shrunk set.
+ */
+export function modeTankFrame(view: HudView, hubFrame: TankFrame, decorating: boolean): TankFrame {
+  return decorating ? tankFrame(view.cssW, view.cssH) : hubFrame;
+}
+
 /** Whether the hub menu is open, and the canvas default it was last set from (PRD C16, issue #148, ND-6). Never saved. */
 export interface HubMenuState {
   open: boolean;

@@ -4,6 +4,7 @@ import {
   NAME_TAG_GAP,
   TOUCH_TARGET_PX,
   axolotlFocusIndex,
+  foldedFocusIndex,
   nameTagRect,
   stepFoldedTankFocus,
   stepTankFocus,
@@ -144,6 +145,21 @@ describe('stepTankFocus', () => {
 
   it('is -1 when there is nothing to focus', () => {
     expect(stepTankFocus(0, 0, 0, 1)).toBe(-1);
+  });
+});
+
+describe('foldedFocusIndex', () => {
+  it('moves a focus on a folded action to the Menu button', () => {
+    for (let action = 0; action < 6; action++) expect(foldedFocusIndex(action, 6, 7)).toBe(6);
+    expect(foldedFocusIndex(4, 0, 7)).toBe(0);
+  });
+
+  it('keeps a focus on the Menu button, on an axolotl or off every target', () => {
+    expect(foldedFocusIndex(6, 6, 7)).toBe(6);
+    expect(foldedFocusIndex(7, 6, 7)).toBe(7);
+    expect(foldedFocusIndex(9, 6, 7)).toBe(9);
+    expect(foldedFocusIndex(-1, 6, 7)).toBe(-1);
+    expect(foldedFocusIndex(1.5, 6, 7)).toBe(1.5);
   });
 });
 
