@@ -60,3 +60,7 @@ Pinning every action to a commit SHA, with a bot that updates the pins, is out o
 - A `workflow_run` workflow runs from the default branch's copy of the file, so the new deploy is proven only after this change merges to `main`.
 - CI's `dist` artifact is kept for 7 days. Re-running a deploy for a CI run older than that fails, because the artifact is gone; a manual deploy is the fallback.
 - A failed CI on `main` deploys nothing and leaves the live build as it was.
+- The head check keeps the trade-offs accepted in PR #71. Pages can lag `main` when the newest run never deploys: its CI or deploy fails, it is cancelled, or it never starts.
+  Older runs then skip, and Pages stays on the build before them until the next push to `main` or a manual run on `main`.
+  The `pages` group can cause that cancel itself: it keeps only one waiting deploy, so a deploy that joins later, even an older commit's, replaces the one waiting.
+- The head check fails open, also as accepted in PR #71. If it cannot read the head of `main`, an older build can deploy over a newer one. It shows as a warning, and the next push to `main` or a manual run on `main` fixes it.
