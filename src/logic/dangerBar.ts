@@ -1,7 +1,8 @@
 /**
- * The danger bar and the ramp bar measures (PRD N2, PRD open question 259, ND-12): an area's moving
- * threats, their kinds, and the longest stretch of its main path with none in reach. Only this
- * measure counts a chaser's leash (PRD open question 252, ND-5).
+ * The danger bar and the ramp bar (PRD N2, PRD open question 259, ND-12) are the whole-water bars
+ * (issue #130): an area's moving threats, their kinds, and the longest quiet swim in its water.
+ * Only this measure counts a chaser's leash (PRD open question 252, ND-5). `longestQuietStretch`,
+ * the longest stretch of the main path with none in reach, stays as a measure (issue #136, ND-3).
  */
 import { shapeDistance, type HazardShape } from './hazards';
 import { movingHazardSweep } from './movingHazards';
@@ -47,9 +48,6 @@ type ThreatGeometry = Pick<ZoneLayout, 'tilapiaRoutes' | 'tilapia' | 'predatorRo
 
 /** The moving threats and the main path they cover. */
 type PathGeometry = ThreatGeometry & Pick<ZoneLayout, 'mainPath'>;
-
-/** Everything a bar reads: the threats, the main path and the area's size. */
-type DangerGeometry = PathGeometry & Pick<ZoneLayout, 'width' | 'height'>;
 
 /** One moving threat's reach: px from a patrol loop or from a moving hazard sweep. */
 type Reach =
@@ -171,38 +169,6 @@ export function longestQuietStretch(layout: PathGeometry): number {
   }
   if (quietSinceFence) longest = Math.max(longest, samples[samples.length - 1].along - fence);
   return longest;
-}
-
-/**
- * Whether the area meets the full danger bar (PRD N2): at least ⌈0.75 × screens⌉ moving threats,
- * at least 2 predator species, at least 1 moving hazard type, every predator chases, and the
- * longest quiet stretch is at most one screen across. Screens are the area's width over SCREEN_W
- * times its height over WORLD_H.
- */
-export function meetsFullDangerBar(layout: DangerGeometry): boolean {
-  return (
-    movingThreatCount(layout) >= Math.ceil(THREATS_PER_SCREEN * screenCount(layout)) &&
-    predatorTypeCount(layout) >= MIN_PREDATOR_TYPES &&
-    movingHazardTypeCount(layout) >= MIN_MOVING_HAZARD_TYPES &&
-    everyPredatorChases(layout) &&
-    longestQuietStretch(layout) <= QUIET_STRETCH_LIMIT
-  );
-}
-
-/**
- * Whether Area `areaNumber` meets the ramp bar (PRD N2): it has a tilapia route and the area's
- * tilapia tuning has a chase, the longest quiet stretch is at most one screen across, and it has
- * no moving hazard type in Area 2 and at most one in Area 3. Throws a RangeError for any area
- * other than 2 or 3.
- */
-export function meetsRampDangerBar(areaNumber: number, layout: PathGeometry): boolean {
-  const hazardTypeLimit = rampMovingHazardTypeLimit(areaNumber);
-  return (
-    layout.tilapiaRoutes.length > 0 &&
-    layout.tilapia?.chase !== undefined &&
-    longestQuietStretch(layout) <= QUIET_STRETCH_LIMIT &&
-    movingHazardTypeCount(layout) <= hazardTypeLimit
-  );
 }
 
 /**
@@ -355,7 +321,7 @@ function rampMovingHazardTypeLimit(areaNumber: number): number {
     case 3:
       return 1;
     default:
-      throw new RangeError(`meetsRampDangerBar: area ${areaNumber} has no ramp bar; only Areas 2 and 3 do`);
+      throw new RangeError(`meetsWholeWaterRampBar: area ${areaNumber} has no ramp bar; only Areas 2 and 3 do`);
   }
 }
 
