@@ -11,6 +11,7 @@
  * sound's notes are built only when its turn starts. Waiting sounds are dropped when sounds turn off
  * or the page hides, and an owner's waiting sounds when the owner drops them (SoundOwner.dropWaiting).
  * A sound that has started rings out, even when its scene ends, so a scene change never cuts it short.
+ * The queue waits while the audio is paused and its clock stands still, and goes on when it runs again.
  *
  * Scenes say which sound to play (playSound); the sound router owns its trip's sounds (ownSounds); the
  * sounds switch reads and sets soundsAreOn and setSoundsOn.
@@ -18,7 +19,7 @@
 import {
   dropWaitingTurns,
   EMPTY_SOUND_QUEUE,
-  nextWaitingStart,
+  pumpWaitMs,
   startDueTurns,
   takeTurn,
   type SoundAsk,
@@ -35,8 +36,6 @@ import { readSoundsSetting, writeSoundsSetting } from './soundSetting';
 const OFF_FADE_S = 0.05;
 /** Seconds a sound's level stage is kept after it has rung out, for its reverb. */
 const TAIL_S = 3;
-/** The shortest wait, in milliseconds, before the pump looks for due turns again; it never fires at once. */
-const PUMP_FLOOR_MS = 10;
 
 const state = {
   on: true,
@@ -47,6 +46,8 @@ const state = {
   pump: null as number | null,
   /** The last owner id handed out by ownSounds. */
   lastOwner: 0,
+  /** Whether the audio context's statechange listener is in place. */
+  watchingClock: false,
 };
 
 /** Joins the shared audio engine and reads the sounds switch from device storage. Call once, before the game starts. */
@@ -54,7 +55,7 @@ export function installSounds(): void {
   if (state.installed) return;
   state.installed = true;
   state.on = readSoundsSetting();
-  joinAudio({ wantsAudio: () => state.on, started: showLevel, resumed: showLevel });
+  joinAudio({ wantsAudio: () => state.on, started: startedAudio, resumed: showLevel });
   document.addEventListener('visibilitychange', dropWaitingIfHidden);
 }
 
@@ -142,13 +143,16 @@ function startSound(graph: AudioGraph, turn: Readonly<SoundTurn>): void {
   window.setTimeout(() => stage.disconnect(), (start - now + sound.seconds + TAIL_S) * 1000);
 }
 
-/** Arms the pump for when the next waiting turn falls due, or clears it when no turn waits. */
+/**
+ * Arms the pump for when the next waiting turn falls due, or clears it when no turn waits or the audio
+ * clock is not running; clockResumed arms it again when the clock runs.
+ */
 function armPump(graph: AudioGraph): void {
   clearPump();
-  const nextStart = nextWaitingStart(state.queue);
-  if (nextStart === undefined) return;
-  const waitMs = (nextStart - SOUND_LEVELS.startDelayS - graph.ctx.currentTime) * 1000;
-  state.pump = window.setTimeout(runPump, Math.max(PUMP_FLOOR_MS, waitMs));
+  const { ctx } = graph;
+  const waitMs = pumpWaitMs(state.queue, ctx.state === 'running', ctx.currentTime);
+  if (waitMs === null) return;
+  state.pump = window.setTimeout(runPump, waitMs);
 }
 
 /** Stops the pump, if armed. */
@@ -161,6 +165,17 @@ function clearPump(): void {
 /** Starts the turns now due and re-arms, or drops every waiting turn if sounds are off or the page is hidden. */
 function runPump(): void {
   state.pump = null;
+  pumpQueue();
+}
+
+/** Starts the turns now due and re-arms the pump when the audio clock runs again after a pause. */
+function clockResumed(graph: AudioGraph): void {
+  if (graph.ctx.state !== 'running') return;
+  pumpQueue();
+}
+
+/** Starts the turns now due and re-arms, or drops every waiting turn if sounds are off or the page is hidden. */
+function pumpQueue(): void {
   const graph = audioGraph();
   if (!state.on || graph === null || document.visibilityState === 'hidden') {
     dropEveryWaitingTurn();
@@ -190,6 +205,14 @@ function dropOwnersWaitingTurns(owner: number): void {
 /** Drops every waiting sound when the page hides (S1). */
 function dropWaitingIfHidden(): void {
   if (document.visibilityState === 'hidden') dropEveryWaitingTurn();
+}
+
+/** Shows the sounds bus level on the new graph, and listens for its audio clock to run again (once). */
+function startedAudio(graph: AudioGraph): void {
+  showLevel(graph);
+  if (state.watchingClock) return;
+  state.watchingClock = true;
+  graph.ctx.addEventListener('statechange', () => clockResumed(graph));
 }
 
 /** Sets the sounds bus to its level while sounds are on, and silent while off. */

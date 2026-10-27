@@ -3,6 +3,8 @@ import {
   EMPTY_SOUND_QUEUE,
   dropWaitingTurns,
   nextWaitingStart,
+  PUMP_FLOOR_MS,
+  pumpWaitMs,
   snackTurnStart,
   soundLine,
   startDueTurns,
@@ -219,6 +221,33 @@ describe('nextWaitingStart (issue #165)', () => {
 
   it('is the earliest waiting start', () => {
     expect(nextWaitingStart([startedTurn('tap', 0.5), waitingTurn('find', 3, null, 'rare'), waitingTurn('snack', 2, null, '1')])).toBe(2);
+  });
+});
+
+describe('pumpWaitMs (issue #165)', () => {
+  it('is null when no turn waits', () => {
+    expect(pumpWaitMs(EMPTY_SOUND_QUEUE, true, 0)).toBeNull();
+    expect(pumpWaitMs([startedTurn('tap', 1)], true, 0)).toBeNull();
+  });
+
+  it('is null while the clock is not running, even with turns waiting', () => {
+    expect(pumpWaitMs([waitingTurn('snack', 2, null, '1')], false, 0)).toBeNull();
+  });
+
+  it('waits until the next waiting turn falls due', () => {
+    const queue = [startedTurn('tap', 0.5), waitingTurn('find', 3, null, 'rare'), waitingTurn('snack', 2, null, '1')];
+    expect(pumpWaitMs(queue, true, 1)).toBeCloseTo((2 - START_DELAY_S - 1) * 1000, CLOSE_DIGITS - 3);
+  });
+
+  it('never waits less than PUMP_FLOOR_MS, even for a turn already due or past', () => {
+    expect(pumpWaitMs([waitingTurn('snack', 1, null, '1')], true, 1)).toBe(PUMP_FLOOR_MS);
+    expect(pumpWaitMs([waitingTurn('snack', 1, null, '1')], true, 50)).toBe(PUMP_FLOOR_MS);
+  });
+
+  it('is never 0', () => {
+    const dueNow = waitingTurn('snack', 1 + START_DELAY_S, null, '1');
+    expect(pumpWaitMs([dueNow], true, 1)).toBeGreaterThan(0);
+    expect(PUMP_FLOOR_MS).toBeGreaterThan(0);
   });
 });
 

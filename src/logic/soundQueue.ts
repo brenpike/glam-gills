@@ -157,3 +157,19 @@ export function nextWaitingStart(queue: SoundQueue): number | undefined {
   }
   return earliest;
 }
+
+/** The shortest wait, in milliseconds, before the pump looks for due turns again; it never fires at once. */
+export const PUMP_FLOOR_MS = 10;
+
+/**
+ * Milliseconds the pump waits at `now` before looking for due turns again: until the next waiting turn
+ * falls due (its start minus SOUND_LEVELS.startDelayS), and never less than PUMP_FLOOR_MS. Null when no
+ * turn waits, or when the clock is not running (`clockRunning` false), since a paused clock never
+ * brings a turn due; the pump waits for the clock to run again instead (issue #165).
+ */
+export function pumpWaitMs(queue: SoundQueue, clockRunning: boolean, now: number): number | null {
+  if (!clockRunning) return null;
+  const nextStart = nextWaitingStart(queue);
+  if (nextStart === undefined) return null;
+  return Math.max(PUMP_FLOOR_MS, (nextStart - SOUND_LEVELS.startDelayS - now) * 1000);
+}
