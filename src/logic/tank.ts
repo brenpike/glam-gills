@@ -387,9 +387,23 @@ function positiveOrOne(value: number): number {
  * so the stand sits on the canvas bottom. Degenerate sizes count as 1 CSS px.
  */
 export function tankFrame(cssW: number, cssH: number): TankFrame {
+  return tankFrameAt(cssW, cssH, Number.POSITIVE_INFINITY);
+}
+
+/**
+ * Places the 480 x 360 tank scene on a CSS canvas at `scale` CSS px per tank unit, capped at the
+ * contain-fit scale, centred across and bottom-aligned as tankFrame does. A `scale` that is not
+ * positive (or NaN) means the contain-fit scale. Degenerate sizes count as 1 CSS px.
+ */
+export function tankFrameAt(cssW: number, cssH: number, scale: number): TankFrame {
   const width = positiveOrOne(cssW);
   const height = positiveOrOne(cssH);
-  const scale = Math.min(width / TANK.viewW, height / TANK.viewH);
+  const containScale = Math.min(width / TANK.viewW, height / TANK.viewH);
+  return frameOf(width, height, scale > 0 ? Math.min(scale, containScale) : containScale);
+}
+
+/** The frame of the tank scene at `scale` on a `width` x `height` canvas: centred across, bottom-aligned. */
+function frameOf(width: number, height: number, scale: number): TankFrame {
   const w = TANK.viewW * scale;
   const h = TANK.viewH * scale;
   return { scale, x: (width - w) / 2, y: height - h, w, h };
@@ -413,6 +427,19 @@ export function decorationBandTop(frame: TankFrame): number {
 /** CSS y of the top of the tank lid. */
 export function lidTopCss(frame: TankFrame): number {
   return frame.y + TANK.lidTop * frame.scale;
+}
+
+/**
+ * The tank box in CSS px (issue #148, ND-1): the glass and the lid, from `TANK.glass.x0` to
+ * `TANK.glass.x1` across and from `TANK.lidTop` down to `TANK.glass.y1`, through `frame`.
+ */
+export function tankBoxCss(frame: TankFrame): Rect {
+  return {
+    x: frame.x + TANK.glass.x0 * frame.scale,
+    y: frame.y + TANK.lidTop * frame.scale,
+    w: (TANK.glass.x1 - TANK.glass.x0) * frame.scale,
+    h: (TANK.glass.y1 - TANK.lidTop) * frame.scale,
+  };
 }
 
 /** CSS y range of `TOP_KEEP_CLEAR`, the band UI must keep clear for Floating and Hanging items. */

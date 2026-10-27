@@ -52,6 +52,37 @@ export function stepTankFocus(current: number, hubCount: number, axolotlCount: n
 }
 
 /**
+ * The focus index `step` places from `current` while the hub menu is folded (PRD C16, issue #148,
+ * ND-6): over the Menu button at hub index `menuIndex` and the axolotls only, wrapping; the folded
+ * actions are skipped. From a focus off those targets, a forward or zero step gives the Menu button
+ * and a backward step the last axolotl (nextFocusIndex). Throws unless `menuIndex` is a whole number
+ * inside the hub buttons.
+ */
+export function stepFoldedTankFocus(
+  current: number,
+  menuIndex: number,
+  hubCount: number,
+  axolotlCount: number,
+  step: number,
+): number {
+  if (!Number.isInteger(menuIndex) || menuIndex < 0 || menuIndex >= wholeCount(hubCount)) {
+    throw new RangeError(`stepFoldedTankFocus: invalid Menu button index ${menuIndex}`);
+  }
+  const axolotlIndices = Array.from({ length: wholeCount(axolotlCount) }, (_, i) => axolotlFocusIndex(i, hubCount));
+  const targets = [menuIndex, ...axolotlIndices];
+  return targets[nextFocusIndex(targets.indexOf(current), targets.length, step)];
+}
+
+/**
+ * The focus index while the hub menu is folded (PRD C16, issue #148, ND-6): the Menu button at hub
+ * index `menuIndex` when `current` is another hub index (a folded action), else `current`.
+ */
+export function foldedFocusIndex(current: number, menuIndex: number, hubCount: number): number {
+  const onFoldedAction = Number.isInteger(current) && current >= 0 && current < wholeCount(hubCount) && current !== menuIndex;
+  return onFoldedAction ? menuIndex : current;
+}
+
+/**
  * The tap area of a sprite whose frame is `size` (in frame units, origin top-left): the whole frame,
  * grown about its centre to at least TOUCH_TARGET_PX CSS px each way. `cssPerUnit` is the CSS px one
  * frame unit shows at; when it is not finite and positive the frame is used as it is.

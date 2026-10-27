@@ -329,3 +329,60 @@ describe('hubStarsBadgeRect', () => {
     expect(rect.x).not.toBe((view.cssW - badge.w) / 2);
   });
 });
+
+/** A Menu button with its nudge in the top-left corner inside the margins (issue #148, ND-5): 65 x 64 plus a 3 px overhang. */
+const TOP_LEFT_MENU: Rect = { x: UI.margin, y: UI.margin - 3, w: 65 + 3, h: 64 + 3 };
+
+describe('hubStarsBadgeRect with the Menu button to keep clear of (issue #148, ND-5)', () => {
+  it('places the badge exactly as without it when the button is far from everything', () => {
+    const far: Rect = { x: -1000, y: -1000, w: 65, h: 64 };
+    for (const view of supportedCanvases()) {
+      for (const withTitle of [true, false]) {
+        const hub = hubOn(view, withTitle);
+        const frame = tankFrame(view.cssW, view.cssH);
+        for (const [, badge] of badgesFor(hub)) {
+          expect(hubStarsBadgeRect(view, frame, hub, badge, far)).toEqual(hubStarsBadgeRect(view, frame, hub, badge));
+        }
+      }
+    }
+  });
+
+  it('keeps the badge a gap from the button and the hub on every supported canvas', () => {
+    const problems: string[] = [];
+    for (const view of supportedCanvases()) {
+      const frame = tankFrame(view.cssW, view.cssH);
+      const hub = hubLayout(view, frame, HUB_ACTIONS, titleSize(view), TOP_LEFT_MENU);
+      for (const [badgeName, badge] of badgesFor(hub)) {
+        const label = `${badgeName} ${view.cssW}x${view.cssH}`;
+        const rect = hubStarsBadgeRect(view, frame, hub, badge, TOP_LEFT_MENU);
+        if (!insideMargins(view, rect)) problems.push(`${label}: outside the margins`);
+        if (clearance(rect, TOP_LEFT_MENU) < UI.gap - 1e-9) problems.push(`${label}: closer than ${UI.gap} to the button`);
+        for (const [name, other] of hubRects(hub)) {
+          if (clearance(rect, other) < UI.gap - 1e-9) problems.push(`${label}: closer than ${UI.gap} to ${name}`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('gives up the centred place under the hub when it comes within a gap of the button', () => {
+    const view = { cssW: 1366, cssH: 768 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const hub = hubLayout(view, frame, HUB_ACTIONS, titleSize(view));
+    const badge = besideBadge();
+    const centred = hubStarsBadgeRect(view, frame, hub, badge);
+    const onCentre: Rect = { x: centred.x - 70, y: centred.y, w: 68, h: 67 };
+    expect(hubStarsBadgeRect(view, frame, hub, badge, onCentre)).toEqual(cornerOf(view, badge));
+  });
+
+  it('moves the corner badge to the top-right corner when the reaching rows come within a gap of the bottom one at 380 x 440', () => {
+    const view = { cssW: 380, cssH: 440 };
+    const frame = tankFrame(view.cssW, view.cssH);
+    const hub = hubLayout(view, frame, HUB_ACTIONS, titleSize(view), TOP_LEFT_MENU);
+    expect(hub.reach).toBe(true);
+    const badge = stackedBadge();
+    const corner = cornerOf(view, badge);
+    expect(hubRects(hub).some(([, rect]) => clearance(corner, rect) < UI.gap)).toBe(true);
+    expect(hubStarsBadgeRect(view, frame, hub, badge, TOP_LEFT_MENU)).toEqual({ ...corner, y: UI.margin });
+  });
+});

@@ -19,6 +19,12 @@ export const SOUND_LABEL = 'Sound';
 /** Home Tank button that starts placing Decorations. */
 export const DECORATE_LABEL = 'Decorate';
 
+/** Home Tank button that opens the folded hub menu (PRD C16, issue #148, ND-5). */
+export const MENU_LABEL = 'Menu';
+
+/** The Menu button's label while the hub menu is open: it folds the menu again (PRD C16, issue #148, ND-5). */
+export const HIDE_MENU_LABEL = 'Hide';
+
 /** Button that finishes decorating. */
 export const DONE_LABEL = 'Done';
 

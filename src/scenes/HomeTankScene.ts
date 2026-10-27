@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { createAxolotlRigBake, createAxolotlRigView, type AxolotlRigBake, type AxolotlRigView } from '../art/axolotlRig';
 import type { AxolotlPose } from '../art/drawAxolotl';
 import { dreamSheenAt } from '../art/drawDreamOverlay';
-import { REFUGE_NUDGE_INSET } from '../art/drawRefuge';
+import { REFUGE_NUDGE_INSET, REFUGE_NUDGE_SIZE } from '../art/drawRefuge';
 import { artOutfit } from '../art/drawWearables';
 import { DEPTH } from '../art/layers';
 import {
@@ -24,6 +24,16 @@ import { ownedDreamColours, type Decoration } from '../logic/catalogue';
 import { dueFirstFindCards, tryItNowAxolotlId, type FirstFindKind } from '../logic/firstFind';
 import { GAME_EVENTS, REGISTRY_KEYS, type ReducedMotionPayload } from '../logic/gameEvents';
 import { restyleSound } from '../logic/homeSounds';
+import {
+  hubFit,
+  modeTankFrame,
+  startHubMenu,
+  stepHubMenu,
+  type HubFit,
+  type HubFitSizes,
+  type HubMenuEvent,
+  type HubMenuState,
+} from '../logic/hubFit';
 import type { Rect, Size } from '../logic/hudLayout';
 import { motionProfile, type MotionProfile } from '../logic/motion';
 import { wornIds } from '../logic/outfit';
@@ -44,13 +54,15 @@ import {
   type OwnedAxolotl,
   type Session,
 } from '../logic/session';
-import { hubStarsBadgeRect, hubStarsBadgeShape } from '../logic/starsUi';
+import { hubStarsBadgeShape, type HubBadgeShape } from '../logic/starsUi';
 import { restyleStart, type RestyleOptions, type StylerWearer } from '../logic/styler';
 import type { StylerStep } from '../logic/stylerSteps';
 import { SHIPPED_DECORATIONS, TANK, tankFrame, tankToCss, type TankFrame, type TankLayout } from '../logic/tank';
 import {
   axolotlFocusIndex,
+  foldedFocusIndex,
   nameTagRect,
+  stepFoldedTankFocus,
   stepTankFocus,
   tankFocusTarget,
   touchHitRect,
@@ -61,17 +73,17 @@ import { HOME_TANK_NAME } from '../logic/tankText';
 import {
   HUB_BUTTONS,
   ICON_TILE,
+  MENU_BUTTON,
+  MENU_BUTTON_LOOK,
   TILE_BUTTON,
   UI,
   hubButtonCompactLook,
   hubButtonLook,
   hubCaptionRect,
-  hubLayout,
   tankKeyFor,
   type HubAction,
   type HubActionId,
   type HubButtonSpec,
-  type HubLayout,
   type TankKey,
 } from '../logic/tankUi';
 import type { TripEnding } from '../logic/tripEvents';
@@ -134,6 +146,12 @@ const RING_RADIUS_PX = 18;
 const RING_LINE_PX = 3;
 const RING_INNER_PX = LW / 2 + 1.5;
 const RING_OUTER_PX = LW / 2 + 4.5;
+/** How far the Refuge nudge reaches past the top-right corner of the button it sits on (issue #148, ND-5). */
+const NUDGE_OVERHANG_PX = REFUGE_NUDGE_SIZE / 2 - REFUGE_NUDGE_INSET;
+/** The Menu button's icon, the same folded and open (issue #148, ND-7). */
+const MENU_ICON: IconKind = 'menu';
+/** The best-stars badge shapes hubFit measures (issue #148, ND-5). */
+const BADGE_SHAPES: readonly HubBadgeShape[] = ['beside', 'stacked'];
 
 /** The icon on each hub action button. */
 const HUB_ICONS: Readonly<Record<HubActionId, IconKind>> = Object.freeze({
@@ -290,6 +308,10 @@ function placeTankLayer(image: Phaser.GameObjects.Image, info: TexInfo, frame: T
  * runs over the hub buttons and then the axolotls, and a tap on an axolotl, or Enter or Space on a
  * focused one, opens the axolotl choices card for it (PRD F6), whose Restyle, Outfit and Dream colour
  * open the restyle screen on that step and whose Back comes back to the hub with that axolotl focused.
+ * The Menu button (PRD C16, issue #148, ND-5, ND-6), last of the hub buttons, folds and opens the hub
+ * menu (the actions, the name panel, the best-stars badge and the focus caption); it and its Refuge
+ * nudge never cover the tank, whose hub frame comes from hubFit (ND-2) and goes full size while
+ * decorating (ND-3).
  */
 export class HomeTankScene extends Phaser.Scene {
   private assets!: GameAssets;
@@ -322,11 +344,14 @@ export class HomeTankScene extends Phaser.Scene {
   private titlePanel!: Phaser.GameObjects.Graphics;
   private titleText!: Phaser.GameObjects.Text;
   private hubButtons: HubButton[] = [];
+  /** The Menu button that folds and opens the hub menu (PRD C16, issue #148, ND-5); last in the hub focus order. */
+  private menuButton!: UiButton;
   /** Whether the hub uses its compact variants, as the last hubLayout picked. */
   private hubCompact = false;
-  /** The last hub layout and best-stars badge rect, for the hub focus caption; null before the first layout. */
-  private hubPlan: HubLayout | null = null;
-  private hubBadgeRect: Rect | null = null;
+  /** The last hub fit (issue #148, ND-2), for the hub focus caption; null before the first layout. */
+  private hubPlan: HubFit | null = null;
+  /** Whether the hub menu is open (PRD C16, issue #148, ND-6); null before the first layout. */
+  private hubMenu: HubMenuState | null = null;
   private hubCaptionPanel!: Phaser.GameObjects.Graphics;
   private hubCaptionText!: Phaser.GameObjects.Text;
   /** The nudge badge on the shown Refuge tile variant, while a refuge clean-up is pending. */
@@ -369,7 +394,7 @@ export class HomeTankScene extends Phaser.Scene {
     this.hubButtons = [];
     this.hubCompact = false;
     this.hubPlan = null;
-    this.hubBadgeRect = null;
+    this.hubMenu = null;
     this.titleFits = false;
     this.restyler = null;
     this.explorerCard = null;
@@ -439,7 +464,8 @@ export class HomeTankScene extends Phaser.Scene {
       this.openExplorerCard('go', this.session.hub.explorerId);
       return;
     }
-    this.showHub(this.focusRefugeOnCreate ? this.hubIndexOf('refuge') : GO_EXPLORING_INDEX);
+    if (this.focusRefugeOnCreate) this.showHubAfterAction('refuge');
+    else this.showHub(GO_EXPLORING_INDEX);
   }
 
   /**
@@ -557,15 +583,17 @@ export class HomeTankScene extends Phaser.Scene {
   }
 
   /**
-   * The hub actions in focus order (Go exploring first), the Home Tank name panel, the Refuge tile's
-   * nudge badge (over the tiles), and the hub focus caption that names a focused icon-only tile (a
-   * white panel with the label in bold ink 18 px, like the name tag).
+   * The hub actions in focus order (Go exploring first), the Menu button after them (issue #148,
+   * ND-5), the Home Tank name panel, the Refuge tile's nudge badge (over the tiles), and the hub focus
+   * caption that names a focused icon-only tile (a white panel with the label in bold ink 18 px, like
+   * the name tag).
    */
   private buildHub(): void {
     const dpr = this.view.fit.dpr;
     this.titlePanel = this.add.graphics().setDepth(TANK_DEPTH.hub);
     this.titleText = this.add.text(0, 0, HOME_TANK_NAME, uiTextStyle(TITLE_PX, dpr)).setDepth(TANK_DEPTH.hub);
     this.hubButtons = HUB_BUTTONS.map((spec) => this.addHubButton(spec));
+    this.menuButton = this.addMenuButton();
     const nudge = this.assets.refuge.nudge;
     this.refugeNudge = this.add
       .image(0, 0, nudge.key)
@@ -620,6 +648,27 @@ export class HomeTankScene extends Phaser.Scene {
     });
     compact.container.setDepth(TANK_DEPTH.hub).setVisible(false);
     return { id, full, compact };
+  }
+
+  /**
+   * The Menu button (PRD C16, issue #148, ND-5): a square labelled tile of MENU_BUTTON_LOOK round the
+   * menu icon (ND-7), which taps on a press (PRD S15) and plays nothing else. It folds or opens the
+   * hub menu.
+   */
+  private addMenuButton(): UiButton {
+    const button = createButton(this, this.assets.baked, {
+      fill: 'secondary',
+      shape: MENU_BUTTON_LOOK.shape,
+      size: 1,
+      width: MENU_BUTTON_LOOK.w,
+      label: MENU_BUTTON.label,
+      icon: MENU_ICON,
+      dpr: this.view.fit.dpr,
+      pressOnDown: false,
+      onPress: () => this.toggleHubMenu(),
+    });
+    button.container.setDepth(TANK_DEPTH.hub);
+    return button;
   }
 
   /** The variant of `hubButton` the hub shows now: the compact one when the hub is compact and it has one. */
@@ -730,12 +779,72 @@ export class HomeTankScene extends Phaser.Scene {
     writeSession(this.registry, this.session);
   }
 
-  /** Gives the hub the input again, showing its buttons with the focus on `focusIndex`. */
-  private showHub(focusIndex: number): void {
+  /**
+   * Gives the hub the input again, showing its buttons with the focus on `focusIndex`. After `event`
+   * the hub menu takes the state the fold and open rules give (stepHubMenu; PRD C16, issue #148,
+   * ND-6), and the focus the action they name; with no event the menu keeps its state. While the menu
+   * is folded, a focus on a folded action goes to the Menu button.
+   */
+  private showHub(focusIndex: number, event?: HubMenuEvent): void {
     this.mode = 'hub';
     this.focusIndex = focusIndex;
+    if (event !== undefined) {
+      const step = stepHubMenu(this.menuState(), event);
+      this.hubMenu = step.state;
+      if (step.focus !== null) this.focusIndex = this.hubIndexOf(step.focus);
+    }
+    this.applyHubMenu();
+  }
+
+  /** Back in the hub from the screen the menu action `id` opened: the menu opens with `id` focused (issue #148, ND-6). */
+  private showHubAfterAction(id: HubActionId): void {
+    this.showHub(this.hubIndexOf(id), { kind: 'returnFromAction', id });
+  }
+
+  /** Back in the hub from a screen the axolotl at `index` opened, with it focused; the menu keeps its state (issue #148, ND-6). */
+  private showHubAfterAxolotl(index: number): void {
+    this.showHub(axolotlFocusIndex(index, this.hubFocusCount()), { kind: 'returnFromAxolotl' });
+  }
+
+  /** The hub menu state. Throws before the first layout sets it. */
+  private menuState(): HubMenuState {
+    if (this.hubMenu === null) throw new Error('HomeTankScene: hub menu used before the first layout');
+    return this.hubMenu;
+  }
+
+  /**
+   * A Menu button press, by touch, Enter or Space, only while the hub has the input: folds an open
+   * menu and opens a folded one (PRD C16, issue #148, ND-6). The button keeps its rect and the
+   * focus; nothing is laid out again.
+   */
+  private toggleHubMenu(): void {
+    if (this.mode !== 'hub') return;
+    this.hubMenu = stepHubMenu(this.menuState(), { kind: 'toggle' }).state;
+    this.applyHubMenu();
+  }
+
+  /**
+   * Shows the hub menu's state (issue #148, ND-6): the Menu button's label (Menu while folded, Hide
+   * while open, no sound), the focus off a folded action, the Refuge nudge, the hub visibility and the
+   * hub focus.
+   */
+  private applyHubMenu(): void {
+    const { open } = this.menuState();
+    this.menuButton.setLabel(open ? MENU_BUTTON.openLabel : MENU_BUTTON.label, MENU_ICON);
+    if (!open) this.focusIndex = foldedFocusIndex(this.focusIndex, this.menuFocusIndex(), this.hubFocusCount());
+    this.placeRefugeNudge();
     this.applyHubVisibility();
     this.refreshHubFocus();
+  }
+
+  /** How many hub focus targets come before the axolotls: the hub actions, then the Menu button (issue #148, ND-6). */
+  private hubFocusCount(): number {
+    return this.hubButtons.length + 1;
+  }
+
+  /** The Menu button's focus index: last of the hub targets, after Sound (issue #148, ND-6). */
+  private menuFocusIndex(): number {
+    return this.hubButtons.length;
   }
 
   /**
@@ -798,7 +907,7 @@ export class HomeTankScene extends Phaser.Scene {
 
   private closeSoundCard(): void {
     this.destroySoundCard();
-    this.showHub(this.hubIndexOf('sound'));
+    this.showHubAfterAction('sound');
   }
 
   /** Removes the Sound card, if any. */
@@ -863,7 +972,7 @@ export class HomeTankScene extends Phaser.Scene {
   /** Back or Escape on the explorer card: removes it and goes back to the hub with Go exploring focused. */
   private closeExplorerCard(): void {
     this.destroyExplorerCard();
-    this.showHub(GO_EXPLORING_INDEX);
+    this.showHubAfterAction('goExploring');
   }
 
   /** Opens the Treasure Chest over the hub (PRD C11) with the treasures banked so far. */
@@ -874,7 +983,7 @@ export class HomeTankScene extends Phaser.Scene {
 
   /** The Treasure Chest closed: back to the hub with Treasure Chest focused. */
   private closeChest(): void {
-    this.showHub(this.hubIndexOf('treasureChest'));
+    this.showHubAfterAction('treasureChest');
   }
 
   /** Opens the Collection Book over the hub (PRD C12, C14) with the found morphs and the hazards met. */
@@ -885,19 +994,27 @@ export class HomeTankScene extends Phaser.Scene {
 
   /** The Collection Book closed: back to the hub with Collection Book focused. */
   private closeBook(): void {
-    this.showHub(this.hubIndexOf('collectionBook'));
+    this.showHubAfterAction('collectionBook');
   }
 
-  /** Starts decorate mode (PRD C9); the hub hides while the decorate toolbar shows. */
+  /**
+   * Starts decorate mode (PRD C9); the hub hides while the decorate toolbar shows. The tank goes to
+   * its full-size frame first (issue #148, ND-3).
+   */
   private startDecorating(): void {
     this.leaveHub('decorate');
+    this.layout();
     this.decorator.enter();
   }
 
-  /** Done or cancel in decorate mode: ends it and goes back to the hub with Decorate focused. */
+  /**
+   * Done or cancel in decorate mode: ends it and goes back to the hub with Decorate focused, then lays
+   * out again on the hub's frame (issue #148, ND-3).
+   */
   private stopDecorating(): void {
     this.decorator.exit();
-    this.showHub(this.hubIndexOf('decorate'));
+    this.showHubAfterAction('decorate');
+    this.layout();
   }
 
   /**
@@ -953,7 +1070,7 @@ export class HomeTankScene extends Phaser.Scene {
   /** Back or Escape on the choices card: removes it and goes back to the hub with the axolotl at `index` focused. */
   private closeAxolotlChoices(index: number): void {
     this.destroyChoicesCard();
-    this.showHub(axolotlFocusIndex(index, this.hubButtons.length));
+    this.showHubAfterAxolotl(index);
   }
 
   /** The owned axolotl the swimmer at `index` shows. Throws when the session does not own it. */
@@ -1036,7 +1153,7 @@ export class HomeTankScene extends Phaser.Scene {
       this.openExplorerCard('changeOutfit', this.swimmerAxolotl(index).id);
       return;
     }
-    this.showHub(axolotlFocusIndex(index, this.hubButtons.length));
+    this.showHubAfterAxolotl(index);
   }
 
   /**
@@ -1120,7 +1237,9 @@ export class HomeTankScene extends Phaser.Scene {
 
   /**
    * Confirm presses the focused hub button or opens the choices card for the focused axolotl,
-   * ignoring key repeat; the arrows and Tab move the focus over the hub buttons, then the axolotls.
+   * ignoring key repeat; the arrows and Tab move the focus over the hub buttons (the actions, then the
+   * Menu button), then the axolotls. While the menu is folded they move over the Menu button and the
+   * axolotls only (issue #148, ND-6).
    */
   private handleHubKey(action: TankKey, event: KeyboardEvent): void {
     if (action === 'confirm') {
@@ -1129,38 +1248,45 @@ export class HomeTankScene extends Phaser.Scene {
     }
     const step = hubFocusStep(action);
     if (step === 0) return;
-    this.focusIndex = stepTankFocus(this.focusIndex, this.hubButtons.length, this.swimmers.length, step);
+    const hubCount = this.hubFocusCount();
+    const axolotlCount = this.swimmers.length;
+    this.focusIndex = this.menuState().open
+      ? stepTankFocus(this.focusIndex, hubCount, axolotlCount, step)
+      : stepFoldedTankFocus(this.focusIndex, this.menuFocusIndex(), hubCount, axolotlCount, step);
     this.refreshHubFocus();
   }
 
-  /** What the hub focus is on: a hub button or an axolotl, or null when nothing is focused. */
+  /** What the hub focus is on: a hub button (the Menu button last) or an axolotl, or null when nothing is focused. */
   private focusTarget(): TankFocusTarget | null {
-    return tankFocusTarget(this.focusIndex, this.hubButtons.length, this.swimmers.length);
+    return tankFocusTarget(this.focusIndex, this.hubFocusCount(), this.swimmers.length);
   }
 
-  /** Presses the focused hub button, or opens the choices card for the focused axolotl. */
+  /** Presses the focused hub button or the Menu button, or opens the choices card for the focused axolotl. */
   private pressFocused(): void {
     const target = this.focusTarget();
     if (target === null) return;
-    if (target.kind === 'hub') {
-      this.runHubAction(this.hubButtons[target.i].id);
+    if (target.kind === 'axolotl') {
+      this.openAxolotlChoices(target.i);
       return;
     }
-    this.openAxolotlChoices(target.i);
+    if (target.i === this.menuFocusIndex()) this.toggleHubMenu();
+    else this.runHubAction(this.hubButtons[target.i].id);
   }
 
   /**
    * Shows the focus ring on the shown variant of the focused hub button, only while the hub has the
-   * input (a hidden variant never shows focus), with the hub focus caption, and lets the axolotls take
-   * taps only then.
+   * input and the menu is open (a hidden variant never shows focus), or on the Menu button, with the
+   * hub focus caption, and lets the axolotls take taps only then.
    */
   private refreshHubFocus(): void {
+    const menuOpen = this.menuState().open;
     this.hubButtons.forEach((hubButton, index) => {
-      const focused = this.mode === 'hub' && index === this.focusIndex;
+      const focused = this.mode === 'hub' && menuOpen && index === this.focusIndex;
       const shown = this.shownHubButton(hubButton);
       hubButton.full.setFocused(focused && shown === hubButton.full);
       hubButton.compact?.setFocused(focused && shown === hubButton.compact);
     });
+    this.menuButton.setFocused(this.mode === 'hub' && this.focusIndex === this.menuFocusIndex());
     this.applySwimmerInput();
     this.renderPickFocus();
     this.renderHubCaption();
@@ -1201,6 +1327,7 @@ export class HomeTankScene extends Phaser.Scene {
       hubButton.full.setResolution(dpr);
       hubButton.compact?.setResolution(dpr);
     }
+    this.menuButton.setResolution(dpr);
     this.hubCaptionText.setResolution(dpr);
     this.decorator.setResolution(dpr);
     this.chest.setResolution(dpr);
@@ -1250,12 +1377,19 @@ export class HomeTankScene extends Phaser.Scene {
   // ---- layout --------------------------------------------------------------
 
   /**
-   * Fits the tank to the canvas, sizes the axolotl tap areas, then places the Decorations, the hub,
-   * the Treasure Chest, the Collection Book, the arrival card, an open restyle screen, an open
-   * explorer card, an open choices card and a showing milestone card.
+   * Fits the hub to the canvas by hubFit (issue #148, ND-2) from the measured hub sizes, which sets
+   * or resizes the hub menu's state (ND-6), then fits the tank to the frame of the mode (the hub's,
+   * or the full-size one in decorate mode; ND-3), sizes the axolotl tap areas, then places the
+   * Decorations, the hub, the Treasure Chest, the Collection Book, the arrival card, an open restyle
+   * screen, an open explorer card, an open choices card and a showing milestone card.
    */
   private layout(): void {
-    this.frame = tankFrame(this.view.cssW, this.view.cssH);
+    const fit = hubFit(this.view, this.measureHub());
+    this.hubMenu =
+      this.hubMenu === null
+        ? startHubMenu(fit.openByDefault)
+        : stepHubMenu(this.hubMenu, { kind: 'resize', openByDefault: fit.openByDefault }).state;
+    this.frame = modeTankFrame(this.view, fit.frame, this.mode === 'decorate');
     const tank = this.assets.tank;
     placeTankLayer(this.back, tank.back, this.frame);
     placeTankLayer(this.glass, tank.glass, this.frame);
@@ -1264,7 +1398,7 @@ export class HomeTankScene extends Phaser.Scene {
       this.fitSwimmerHitArea(swimmer);
     }
     this.decorator.layout(this.view, this.frame);
-    this.layoutHub();
+    this.layoutHub(fit);
     this.chest.layout(this.view);
     this.book.layout(this.view);
     this.arrivalCard.layout(this.view);
@@ -1276,71 +1410,108 @@ export class HomeTankScene extends Phaser.Scene {
   }
 
   /**
-   * Shows the hub buttons (only the variant hubLayout picked; a hidden variant takes no press) and the
-   * best-stars badge unless the Treasure Chest, the Collection Book, decorate mode, restyle, the
-   * explorer card or the choices card is up, the name panel only when it fits, and the Refuge tile's
-   * nudge badge only while a refuge clean-up is pending.
+   * The hub sizes hubFit needs (issue #148, ND-5): the Menu button, the Refuge nudge's overhang past
+   * its corner, each hub action (full and compact), the name panel, the best-stars badge in each
+   * shape and the longest focus caption. The badge keeps the shape it had.
    */
-  private applyHubVisibility(): void {
-    const shown = this.mode === 'hub' || this.mode === 'arrival' || this.mode === 'milestone' || this.mode === 'sound';
-    for (const hubButton of this.hubButtons) {
-      const active = this.shownHubButton(hubButton);
-      hubButton.full.container.setVisible(shown && active === hubButton.full);
-      hubButton.compact?.container.setVisible(shown && active === hubButton.compact);
-    }
-    this.starsBadge.setVisible(shown);
-    this.titlePanel.setVisible(shown && this.titleFits);
-    this.titleText.setVisible(shown && this.titleFits);
-    this.refugeNudge.setVisible(shown && hasPendingCleanUps(readRefugePending(this.registry)));
-  }
-
-  /**
-   * Puts the nudge badge's centre at the top-right corner of the shown Refuge tile variant, pulled in
-   * REFUGE_NUDGE_INSET on each axis (the full tile or the icon-only tile).
-   */
-  private placeRefugeNudge(): void {
-    const tile = this.shownHubButton(this.hubButtons[this.hubIndexOf('refuge')]);
-    const { x, y } = tile.container;
-    this.refugeNudge.setPosition(x + tile.width - REFUGE_NUDGE_INSET, y + REFUGE_NUDGE_INSET);
-  }
-
-  /**
-   * Places the hub buttons through hubLayout() in the full or compact variants it picks, the Refuge
-   * tile's nudge badge on the shown variant, the best-stars badge in the shape hubStarsBadgeShape()
-   * picks under them (or in the corner) through hubStarsBadgeRect(), the name panel only when it
-   * fits, then the focus and the hub focus caption.
-   */
-  private layoutHub(): void {
+  private measureHub(): HubFitSizes {
     const actions = this.hubButtons.map((hubButton): HubAction => {
       const { full, compact } = hubButton;
       const compactSize: Size = compact === null ? { w: full.width, h: full.height } : { w: compact.width, h: compact.height };
       return { id: hubButton.id, w: full.width, h: full.height, compact: compactSize };
     });
-    const titleSize: Size = { w: this.titleText.width + 2 * UI.pad, h: this.titleText.height + 2 * UI.pad };
-    const hub = hubLayout(this.view, this.frame, actions, titleSize);
-    this.hubPlan = hub;
+    const shownShape = this.hubPlan === null ? BADGE_SHAPES[0] : hubStarsBadgeShape(this.hubPlan.hub);
+    const [beside, stacked] = BADGE_SHAPES.map((shape) => {
+      this.starsBadge.setShape(shape);
+      return this.starsBadge.measure();
+    });
+    this.starsBadge.setShape(shownShape);
+    return {
+      menu: { w: this.menuButton.width, h: this.menuButton.height },
+      nudgeOverhang: NUDGE_OVERHANG_PX,
+      actions,
+      title: { w: this.titleText.width + 2 * UI.pad, h: this.titleText.height + 2 * UI.pad },
+      badge: { beside, stacked },
+      caption: this.measureLongestCaption(),
+    };
+  }
+
+  /** The hub focus caption's size for the longest label of an icon-only tile; empty when there is none. */
+  private measureLongestCaption(): Size {
+    let longest: Size = { w: 0, h: 0 };
+    for (const { compact } of this.hubButtons) {
+      if (compact === null) continue;
+      this.hubCaptionText.setText(compact.label);
+      longest = {
+        w: Math.max(longest.w, this.hubCaptionText.width + 2 * UI.pad),
+        h: Math.max(longest.h, this.hubCaptionText.height + 2 * UI.pad),
+      };
+    }
+    return longest;
+  }
+
+  /**
+   * In the hub, arrival, milestone and Sound modes the Menu button shows (issue #148, ND-6), and while
+   * the menu is open the hub buttons (only the variant hubLayout picked; a hidden variant takes no
+   * press), the best-stars badge and the name panel when it fits. The Refuge nudge shows in those
+   * modes only while a refuge clean-up is pending.
+   */
+  private applyHubVisibility(): void {
+    const shown = this.mode === 'hub' || this.mode === 'arrival' || this.mode === 'milestone' || this.mode === 'sound';
+    const menuShown = shown && this.menuState().open;
+    for (const hubButton of this.hubButtons) {
+      const active = this.shownHubButton(hubButton);
+      hubButton.full.container.setVisible(menuShown && active === hubButton.full);
+      hubButton.compact?.container.setVisible(menuShown && active === hubButton.compact);
+    }
+    this.menuButton.container.setVisible(shown);
+    this.starsBadge.setVisible(menuShown);
+    this.titlePanel.setVisible(menuShown && this.titleFits);
+    this.titleText.setVisible(menuShown && this.titleFits);
+    this.refugeNudge.setVisible(shown && hasPendingCleanUps(readRefugePending(this.registry)));
+  }
+
+  /**
+   * Puts the nudge badge's centre at the top-right corner of the shown Refuge tile variant while the
+   * menu is open, or of the Menu button while it is folded (issue #148, ND-5), pulled in
+   * REFUGE_NUDGE_INSET on each axis.
+   */
+  private placeRefugeNudge(): void {
+    const tile = this.menuState().open ? this.shownHubButton(this.hubButtons[this.hubIndexOf('refuge')]) : this.menuButton;
+    const { x, y } = tile.container;
+    this.refugeNudge.setPosition(x + tile.width - REFUGE_NUDGE_INSET, y + REFUGE_NUDGE_INSET);
+  }
+
+  /**
+   * Places the hub where `fit` says (issue #148, ND-2, ND-5): the hub buttons in the full or compact
+   * variants its hub layout picks, the Menu button in its spot, the best-stars badge in the shape
+   * hubStarsBadgeShape() picks, the name panel only when it fits, then the hub menu's state with the
+   * Refuge nudge, the focus and the hub focus caption.
+   */
+  private layoutHub(fit: HubFit): void {
+    const hub = fit.hub;
+    this.hubPlan = fit;
     this.hubCompact = hub.compact;
     hub.actions.forEach((placement, index) => {
       this.shownHubButton(this.hubButtons[index]).container.setPosition(placement.rect.x, placement.rect.y);
     });
-    this.placeRefugeNudge();
+    this.menuButton.container.setPosition(fit.menu.x, fit.menu.y);
     this.starsBadge.setShape(hubStarsBadgeShape(hub));
-    this.hubBadgeRect = hubStarsBadgeRect(this.view, this.frame, hub, this.starsBadge.measure());
-    this.starsBadge.layout(this.hubBadgeRect);
+    this.starsBadge.layout(fit.badge);
     const title = hub.title;
     this.titleFits = title !== null;
-    this.applyHubVisibility();
     if (title !== null) {
       drawPanel(this.titlePanel, title.x, title.y, title.w, title.h, UI_PANEL);
       this.titleText.setPosition(title.x + UI.pad, title.y + UI.pad);
     }
-    this.refreshHubFocus();
+    this.applyHubMenu();
   }
 
   /**
    * The hub focus caption: a white panel (padding 12) naming the focused hub tile in bold ink 18 px,
-   * shown only in the hub while that tile shows icon-only, where hubCaptionRect() puts it, clear of the
-   * best-stars badge; hidden when there is no place.
+   * shown only in the hub while the menu is open and that tile shows icon-only, where hubCaptionRect()
+   * puts it, clear of the best-stars badge and the Menu button (issue #148, ND-5); hidden when there is
+   * no place.
    */
   private renderHubCaption(): void {
     const rect = this.hubCaptionPlace();
@@ -1353,14 +1524,13 @@ export class HomeTankScene extends Phaser.Scene {
 
   /** Sets the hub focus caption text and returns its rect, or null when it hides. */
   private hubCaptionPlace(): Rect | null {
-    const target = this.mode === 'hub' ? this.focusTarget() : null;
+    const target = this.mode === 'hub' && this.menuState().open ? this.focusTarget() : null;
     const hubButton = target?.kind === 'hub' ? this.hubButtons[target.i] : undefined;
     const plan = this.hubPlan;
     if (hubButton === undefined || plan === null || this.shownHubButton(hubButton) !== hubButton.compact) return null;
     this.hubCaptionText.setText(hubButton.compact.label);
     const size: Size = { w: this.hubCaptionText.width + 2 * UI.pad, h: this.hubCaptionText.height + 2 * UI.pad };
-    const obstacles = this.hubBadgeRect === null ? [] : [this.hubBadgeRect];
-    return hubCaptionRect(this.view, this.frame, plan, size, obstacles);
+    return hubCaptionRect(this.view, plan.frame, plan.hub, size, [plan.badge, plan.menuFootprint]);
   }
 
   // ---- rendering -----------------------------------------------------------

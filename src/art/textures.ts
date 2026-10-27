@@ -136,6 +136,7 @@ const ICON_KINDS: readonly IconKind[] = [
   'musicOff',
   'soundsOn',
   'soundsOff',
+  'menu',
 ];
 
 export const bgKey = (i: number): string => `bg-${i}`;

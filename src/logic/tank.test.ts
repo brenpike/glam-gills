@@ -34,7 +34,9 @@ import {
   sanitizeLayout,
   snapPlacement,
   suggestSpot,
+  tankBoxCss,
   tankFrame,
+  tankFrameAt,
   tankToCss,
   topKeepClearCss,
   type TankLayout,
@@ -813,5 +815,61 @@ describe('top band CSS helpers', () => {
     expect(band.y0).toBeCloseTo(tankToCss(frame, { x: 0, y: TOP_KEEP_CLEAR.y0 }).y);
     expect(band.y1).toBeCloseTo(tankToCss(frame, { x: 0, y: TOP_KEEP_CLEAR.y1 }).y);
     expect(band.y1).toBeLessThan(decorationBandTop(frame));
+  });
+});
+
+describe('tankFrameAt', () => {
+  it('equals tankFrame at its own scale', () => {
+    for (const [cssW, cssH] of [
+      [480, 360],
+      [460, 320],
+      [320, 440],
+      [1024, 768],
+      [1366, 768],
+      [390, 844],
+      [0, Number.NaN],
+    ]) {
+      const frame = tankFrame(cssW, cssH);
+      expect(tankFrameAt(cssW, cssH, frame.scale)).toEqual(frame);
+    }
+  });
+
+  it('places the tank at a smaller scale, centred across and bottom-aligned', () => {
+    expect(tankFrameAt(1024, 768, 2)).toEqual({ scale: 2, x: 32, y: 48, w: 960, h: 720 });
+    const frame = tankFrameAt(460, 320, 0.5);
+    expect(frame.scale).toBe(0.5);
+    expect(frame.x).toBeCloseTo((460 - 240) / 2);
+    expect(frame.y + frame.h).toBeCloseTo(320);
+  });
+
+  it('caps the scale at the contain-fit one', () => {
+    expect(tankFrameAt(1024, 768, 5)).toEqual(tankFrame(1024, 768));
+    expect(tankFrameAt(1024, 768, Number.POSITIVE_INFINITY)).toEqual(tankFrame(1024, 768));
+  });
+
+  it('uses the contain-fit scale for a scale that is not positive', () => {
+    for (const scale of [0, -1, Number.NaN]) {
+      expect(tankFrameAt(1280, 720, scale)).toEqual(tankFrame(1280, 720));
+    }
+  });
+});
+
+describe('tankBoxCss', () => {
+  it('gives the glass and the lid in CSS px', () => {
+    expect(tankBoxCss(tankFrame(480, 360))).toEqual({ x: 16, y: 16, w: 448, h: 324 });
+    expect(tankBoxCss(tankFrame(960, 720))).toEqual({ x: 32, y: 32, w: 896, h: 648 });
+  });
+
+  it('runs from the glass sides and the lid top to the glass bottom through the frame', () => {
+    for (const frame of [tankFrame(320, 440), tankFrame(1366, 768), tankFrameAt(1024, 768, 2)]) {
+      const box = tankBoxCss(frame);
+      const topLeft = tankToCss(frame, { x: TANK.glass.x0, y: TANK.lidTop });
+      const bottomRight = tankToCss(frame, { x: TANK.glass.x1, y: TANK.glass.y1 });
+      expect(box.x).toBeCloseTo(topLeft.x, 9);
+      expect(box.y).toBeCloseTo(topLeft.y, 9);
+      expect(box.x + box.w).toBeCloseTo(bottomRight.x, 9);
+      expect(box.y + box.h).toBeCloseTo(bottomRight.y, 9);
+      expect(box.y).toBeCloseTo(lidTopCss(frame), 9);
+    }
   });
 });

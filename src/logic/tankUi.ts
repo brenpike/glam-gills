@@ -12,6 +12,8 @@ import {
   DECORATE_LABEL,
   DONE_LABEL,
   GO_EXPLORING_LABEL,
+  HIDE_MENU_LABEL,
+  MENU_LABEL,
   NEXT_PAGE_LABEL,
   PREVIOUS_PAGE_LABEL,
   REFUGE_LABEL,
@@ -145,6 +147,27 @@ export function hubButtonCompactLook(spec: Pick<HubButtonSpec, 'label' | 'primar
   if (spec.primary) return { shape: 'wide', w: wideButtonWidth(spec.label), h: WIDE_BUTTON.h };
   return { shape: 'icon', w: ICON_TILE.w, h: ICON_TILE.h };
 }
+
+/** The Menu button that folds and opens the hub menu (PRD C16, issue #148, ND-5): its label while folded and while open. */
+export interface MenuButtonSpec {
+  id: 'menu';
+  label: string;
+  openLabel: string;
+}
+
+/** The Menu button: "Menu" while the hub menu is folded, "Hide" while it is open; one menu icon serves both (ND-7). */
+export const MENU_BUTTON: MenuButtonSpec = Object.freeze({ id: 'menu', label: MENU_LABEL, openLabel: HIDE_MENU_LABEL });
+
+/**
+ * The look of the Menu button (issue #148, ND-5): a square labelled tile round the menu icon, its
+ * size-1 body widened to hold the wider of its two labels, so it keeps one size folded or open. The
+ * compact hub keeps this look too, so the Menu button is never icon-only.
+ */
+export const MENU_BUTTON_LOOK: HubButtonLook = Object.freeze({
+  shape: 'square',
+  w: Math.max(tileButtonWidth(MENU_BUTTON.label), tileButtonWidth(MENU_BUTTON.openLabel)),
+  h: TILE_BUTTON.h,
+});
 
 /** Size of every Treasure Chest button: square tiles wide enough for the widest of Back, Close and Next. */
 export const CHEST_BUTTON: Size = Object.freeze({
@@ -419,8 +442,12 @@ interface RowPlan {
  * then the last (compact) look split across the rooms in order; else the last look from the top of
  * the tallest room.
  */
-function planRows(view: HudView, frame: TankFrame, looks: readonly (readonly Size[])[]): RowPlan {
-  const rooms = tankRooms(view, frame);
+function planRows(
+  view: HudView,
+  frame: TankFrame,
+  looks: readonly (readonly Size[])[],
+  rooms: readonly TankRoom[] = tankRooms(view, frame),
+): RowPlan {
   const maxW = view.cssW - 2 * UI.margin;
   for (let look = 0; look < looks.length; look++) {
     const rows = splitRows(looks[look], maxW);
@@ -487,6 +514,12 @@ function fullSize(action: HubAction): Size {
   return { w: action.w, h: action.h };
 }
 
+/** The rooms the hub rows may use: the tank rooms, then the reach rooms (trayReachRooms) for rows that fit none. */
+interface HubRooms {
+  rooms: readonly TankRoom[];
+  reach: readonly TankRoom[];
+}
+
 /**
  * The hub layout. The actions take the first of: their full sizes in one room (the wall, then the
  * water); their compact sizes in one room; compact rows split across the rooms in order; compact rows
@@ -494,16 +527,41 @@ function fullSize(action: HubAction): Size {
  * compact rows from the top of the tallest room. The title (measured at `cssW - 2 * UI.margin`) sits
  * at the top of a single room, above the actions, only when it fits across and the actions still fit
  * that room; never when the rows reach.
+ *
+ * `avoid` (hub only, issue #148, ND-5) is the Menu button's rect with its nudge. When the layout above
+ * comes within `UI.gap` of it, the hub is laid out again by the same rule in the rooms with the band
+ * of y from a gap above `avoid` to a gap below it taken out. Without `avoid`, the layout is as above.
  */
-export function hubLayout(view: HudView, frame: TankFrame, actions: readonly HubAction[], title: Size | null): HubLayout {
+export function hubLayout(
+  view: HudView,
+  frame: TankFrame,
+  actions: readonly HubAction[],
+  title: Size | null,
+  avoid?: Rect,
+): HubLayout {
+  const rooms = tankRooms(view, frame);
+  const reach = trayReachRooms(view, frame);
+  const layout = hubLayoutIn(view, frame, actions, title, { rooms, reach });
+  if (avoid === undefined || isHubApart(layout, avoid)) return layout;
+  return hubLayoutIn(view, frame, actions, title, { rooms: roomsClearOf(rooms, avoid), reach: roomsClearOf(reach, avoid) });
+}
+
+/** The hub layout rule of hubLayout in `hubRooms`. */
+function hubLayoutIn(
+  view: HudView,
+  frame: TankFrame,
+  actions: readonly HubAction[],
+  title: Size | null,
+  hubRooms: HubRooms,
+): HubLayout {
   const full = actions.map(fullSize);
   const compact = actions.map((action) => action.compact ?? fullSize(action));
-  const plan = planRows(view, frame, [full, compact]);
+  const plan = planRows(view, frame, [full, compact], hubRooms.rooms);
   const sizes = plan.look === 0 ? full : compact;
   const rows = splitRows(sizes, view.cssW - 2 * UI.margin);
   const isCompact = plan.look === 1;
   const titled = plan.rooms.length === 1 ? titledFill(view, rows, plan.rooms[0], title) : null;
-  const reached = titled === null ? reachFill(view, frame, rows, plan) : null;
+  const reached = titled === null ? reachFill(rows, plan, hubRooms.reach) : null;
   const fill = titled ?? reached ?? fillPlan(rows, plan);
   const rects = placeRows(sizes, rows, view.cssW / 2, fill.tops);
   return {
@@ -515,10 +573,31 @@ export function hubLayout(view: HudView, frame: TankFrame, actions: readonly Hub
   };
 }
 
-/** `rows` in the reach rooms when they fit none of the plan's rooms; null when they fit the plan or not the reach rooms either. */
-function reachFill(view: HudView, frame: TankFrame, rows: readonly FlowRow[], plan: RowPlan): RoomFill | null {
+/** True when every hub action and the title are at least `UI.gap` from `avoid`. */
+function isHubApart(layout: HubLayout, avoid: Rect): boolean {
+  const rects = layout.actions.map((action) => action.rect);
+  if (layout.title !== null) rects.push(layout.title);
+  return rects.every((rect) => isApart(rect, avoid));
+}
+
+/** `rooms` with the band of y from a gap above `avoid` to a gap below it taken out; parts under ICON_TILE.h tall are dropped. */
+function roomsClearOf(rooms: readonly TankRoom[], avoid: Rect): TankRoom[] {
+  const bandTop = avoid.y - UI.gap;
+  const bandBottom = avoid.y + avoid.h + UI.gap;
+  const parts = rooms.flatMap((room): TankRoom[] => {
+    if (room.bottom <= bandTop || room.top >= bandBottom) return [room];
+    return [
+      { top: room.top, bottom: Math.min(room.bottom, bandTop) },
+      { top: Math.max(room.top, bandBottom), bottom: room.bottom },
+    ];
+  });
+  return parts.filter((room) => room.bottom - room.top >= ICON_TILE.h);
+}
+
+/** `rows` in the `reach` rooms when they fit none of the plan's rooms; null when they fit the plan or not the reach rooms either. */
+function reachFill(rows: readonly FlowRow[], plan: RowPlan, reach: readonly TankRoom[]): RoomFill | null {
   if (fillRooms(rows, plan.rooms) !== null) return null;
-  return fillReach(rows, trayReachRooms(view, frame));
+  return fillReach(rows, reach);
 }
 
 /** `rows` under `title` at the top of `room`; null without a title or when it and the rows do not fit across and down. */

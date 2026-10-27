@@ -4,7 +4,9 @@ import {
   NAME_TAG_GAP,
   TOUCH_TARGET_PX,
   axolotlFocusIndex,
+  foldedFocusIndex,
   nameTagRect,
+  stepFoldedTankFocus,
   stepTankFocus,
   tankFocusCount,
   tankFocusTarget,
@@ -143,6 +145,66 @@ describe('stepTankFocus', () => {
 
   it('is -1 when there is nothing to focus', () => {
     expect(stepTankFocus(0, 0, 0, 1)).toBe(-1);
+  });
+});
+
+describe('foldedFocusIndex', () => {
+  it('moves a focus on a folded action to the Menu button', () => {
+    for (let action = 0; action < 6; action++) expect(foldedFocusIndex(action, 6, 7)).toBe(6);
+    expect(foldedFocusIndex(4, 0, 7)).toBe(0);
+  });
+
+  it('keeps a focus on the Menu button, on an axolotl or off every target', () => {
+    expect(foldedFocusIndex(6, 6, 7)).toBe(6);
+    expect(foldedFocusIndex(7, 6, 7)).toBe(7);
+    expect(foldedFocusIndex(9, 6, 7)).toBe(9);
+    expect(foldedFocusIndex(-1, 6, 7)).toBe(-1);
+    expect(foldedFocusIndex(1.5, 6, 7)).toBe(1.5);
+  });
+});
+
+describe('stepFoldedTankFocus', () => {
+  it('steps from the Menu button onto the axolotls and wraps back, skipping the folded actions', () => {
+    const visited: number[] = [];
+    let focus = 6;
+    for (let step = 0; step < 4; step++) {
+      visited.push(focus);
+      focus = stepFoldedTankFocus(focus, 6, 7, 3, 1);
+    }
+    expect(visited).toEqual([6, 7, 8, 9]);
+    expect(focus).toBe(6);
+    expect(stepFoldedTankFocus(6, 6, 7, 3, -1)).toBe(9);
+    expect(stepFoldedTankFocus(7, 6, 7, 3, -1)).toBe(6);
+  });
+
+  it('works with the Menu button anywhere among the hub buttons', () => {
+    expect(stepFoldedTankFocus(0, 0, 7, 2, 1)).toBe(7);
+    expect(stepFoldedTankFocus(8, 0, 7, 2, 1)).toBe(0);
+    expect(stepFoldedTankFocus(7, 3, 7, 2, -1)).toBe(3);
+  });
+
+  it('stays on the Menu button when no axolotl is owned', () => {
+    expect(stepFoldedTankFocus(6, 6, 7, 0, 1)).toBe(6);
+    expect(stepFoldedTankFocus(6, 6, 7, 0, -1)).toBe(6);
+  });
+
+  it('goes to the Menu button forward and the last axolotl backward from a folded action or no focus', () => {
+    expect(stepFoldedTankFocus(2, 6, 7, 3, 1)).toBe(6);
+    expect(stepFoldedTankFocus(2, 6, 7, 3, -1)).toBe(9);
+    expect(stepFoldedTankFocus(-1, 6, 7, 3, 0)).toBe(6);
+    expect(stepFoldedTankFocus(Number.NaN, 6, 7, 3, 1)).toBe(6);
+  });
+
+  it('throws for a Menu button index that is not a whole number inside the hub buttons', () => {
+    expect(() => stepFoldedTankFocus(0, -1, 7, 3, 1)).toThrow(RangeError);
+    expect(() => stepFoldedTankFocus(0, 7, 7, 3, 1)).toThrow(RangeError);
+    expect(() => stepFoldedTankFocus(0, 0.5, 7, 3, 1)).toThrow(RangeError);
+    expect(() => stepFoldedTankFocus(0, 0, 0, 3, 1)).toThrow(RangeError);
+  });
+
+  it('leaves stepTankFocus stepping over every target', () => {
+    expect(stepTankFocus(6, 7, 3, 1)).toBe(7);
+    expect(stepTankFocus(0, 7, 3, 1)).toBe(1);
   });
 });
 
