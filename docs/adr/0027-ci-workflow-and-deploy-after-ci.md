@@ -27,7 +27,7 @@ So the tests already gate the deploy, but a pull request's check shows up as "De
 - After CI, it downloads CI's `dist` artifact from the triggering run with `actions/download-artifact` (`run-id` of that run and the workflow token), so the deployed files are the tested files. It does not check out or build.
 - A manual run has no CI run to take a build from. It checks out the dispatched commit, runs `npm ci`, lint, tests and build, and deploys that build.
 - Before deploying, it checks that the commit being deployed is still the head of `main`: `github.event.workflow_run.head_sha` after CI, `github.sha` for a manual run. A newer head skips the deploy, because the run for the newer commit deploys. If the head cannot be read, it warns and deploys anyway.
-- The deploy job keeps the `pages` concurrency group (no cancelling in progress) and the `github-pages` environment.
+- The deploy job keeps the `pages` concurrency group (no cancelling in progress) and the `github-pages` environment. The group sets `queue: max`, so waiting deploys run in order and a later deploy never replaces one already waiting.
 - Permissions: `contents: read` for the workflow. The build job has `contents: read` and `actions: read` (to download another run's artifact). The deploy job has `pages: write` and `id-token: write`.
 
 **Named defaults.** Issue #144 had no owner reply when this was built, so these build choices were posted on the issue as defaults, each open to change:
@@ -62,5 +62,5 @@ Pinning every action to a commit SHA, with a bot that updates the pins, is out o
 - A failed CI on `main` deploys nothing and leaves the live build as it was.
 - The head check keeps the trade-offs accepted in PR #71. Pages can lag `main` when the newest run never deploys: its CI or deploy fails, it is cancelled, or it never starts.
   Older runs then skip, and Pages stays on the build before them until the next push to `main` or a manual run on `main`.
-  The `pages` group can cause that cancel itself: it keeps only one waiting deploy, so a deploy that joins later, even an older commit's, replaces the one waiting.
+  The `pages` group does not cause that cancel: with `queue: max` it keeps every waiting deploy in order, up to 100, so a deploy that joins later, even an older commit's, never replaces the one waiting. An older commit's deploy skips at the head check when its turn comes.
 - The head check fails open, also as accepted in PR #71. If it cannot read the head of `main`, an older build can deploy over a newer one. It shows as a warning, and the next push to `main` or a manual run on `main` fixes it.
