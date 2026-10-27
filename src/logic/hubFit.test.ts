@@ -321,6 +321,25 @@ describe('hubFit', () => {
       const fit = hubFit(view, sizesOn(view));
       expect(fit.frame.scale).toBeGreaterThan(0);
       expect(Number.isFinite(fit.frame.scale)).toBe(true);
+      const rects = [fit.menu, fit.menuFootprint, ...fit.hub.actions.map((action) => action.rect), fit.badge];
+      if (fit.hub.title !== null) rects.push(fit.hub.title);
+      if (fit.caption !== null) rects.push(fit.caption);
+      for (const rect of rects) {
+        expect([rect.x, rect.y, rect.w, rect.h].every(Number.isFinite)).toBe(true);
+        expect(rect.w).toBeGreaterThanOrEqual(0);
+        expect(rect.h).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it('counts a zero, negative or not finite canvas size as 1 CSS px, as tankFrame does', () => {
+    const one = hubFit({ cssW: 1, cssH: 1 }, sizesOn({ cssW: 1, cssH: 1 }));
+    for (const view of [
+      { cssW: 0, cssH: 0 },
+      { cssW: -5, cssH: Number.NaN },
+      { cssW: Number.POSITIVE_INFINITY, cssH: Number.NEGATIVE_INFINITY },
+    ]) {
+      expect(hubFit(view, sizesOn({ cssW: 1, cssH: 1 }))).toEqual(one);
     }
   });
 });

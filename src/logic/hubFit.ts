@@ -71,6 +71,11 @@ function lengthOrZero(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+/** `value` when it is finite and positive, else 1: the canvas length tankFrame uses for a degenerate size. */
+function canvasLength(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
 /** The Menu button's rect at `spot`: a corner inside the `UI.margin` edges. */
 function menuRectAt(view: HudView, menu: Size, spot: MenuSpot): Rect {
   const y = spot === 'bottomLeft' ? view.cssH - UI.margin - menu.h : UI.margin;
@@ -132,9 +137,11 @@ function menuRects(fit: Pick<HubFit, 'hub' | 'badge' | 'caption'>): Rect[] {
  * scale below the contain-fit one that frees a spot, centred across and bottom-aligned, and the button
  * takes that spot. The menu goes on the frame by hubLayout, hubStarsBadgeRect and hubCaptionRect, each
  * a gap from the button's footprint. The menu opens by default only when none of it overlaps the tank
- * box. Degenerate canvases keep tankFrame and the first spot.
+ * box. Degenerate canvases keep tankFrame and the first spot. A canvas size that is zero, negative or
+ * not finite counts as 1 CSS px, as tankFrame counts it, for every rect, so each rect is finite.
  */
-export function hubFit(view: HudView, sizes: HubFitSizes): HubFit {
+export function hubFit(rawView: HudView, sizes: HubFitSizes): HubFit {
+  const view: HudView = { ...rawView, cssW: canvasLength(rawView.cssW), cssH: canvasLength(rawView.cssH) };
   const full = tankFrame(view.cssW, view.cssH);
   const placement = firstFreeSpot(view, full, sizes) ?? shrunkPlacement(view, sizes) ?? { frame: full, spot: MENU_SPOTS[0] };
   return menuOnFrame(view, placement, sizes);
