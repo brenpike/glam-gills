@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-24
 - Amends: [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (replaces only its danger bar part (ND-12), where the main path measure gives way to the whole-water test with the depth, floor and carp rules, and its fairness harness's safe start (ND-17), which no longer counts sight and is searched over the whole area; every other ADR 0021 rule stays in force)
-- Updated: 2026-10-26. Issue #136 removed `meetsFullDangerBar` and `meetsRampDangerBar`. `longestQuietStretch` stays, because the whole-water tests compare with it.
+- Updated: 2026-10-27. Issue #136 removed `meetsFullDangerBar` and `meetsRampDangerBar`. `longestQuietStretch` stays, because the whole-water tests compare with it. The sentences that said the old functions stay until #136 were taken out at the owner's request on #136, because the danger pass ADRs from ADR 0021 on are living records under ADR 0022. Earlier ADRs keep their original text.
 
 This ADR records the owner's decisions of 2026-10-24 on issue #130 (danger pass phase 3, the shared parts), made after the owner's play test of phase 2. The provisional parts are [PRD](../prds/axolotl-mvp.md) open questions 343 to 353, one per named default, ND-k being open question 342 + k.
 
