@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-10-27
+
+### Changed
+
+- Behind the scenes, the game's old danger check along one path is gone. Only the whole-water check is left, and no area plays differently (#136).
+
 ## [0.48.0] - 2026-10-27
 
 ### Added
