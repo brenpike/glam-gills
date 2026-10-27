@@ -615,6 +615,41 @@ describe('shrimp hops (issue #131, ND-5, ND-6)', () => {
   });
 });
 
+describe('flick starts for the flick sound (issue #166, ND-15)', () => {
+  it('gives the id of a shrimp that starts a flick, and none while the flick only glides', () => {
+    const { items, state } = oneShrimp();
+    const started = stepOrFail(items, HEAD, state, GLIDING, 0.1);
+    expect(started.flickStarts).toEqual(['s0']);
+    const gliding = stepOrFail(started.items, HEAD, started.state, GLIDING, 0.1);
+    expect(isShrimpFlicking(gliding.state, 's0')).toBe(true);
+    expect(gliding.flickStarts).toEqual([]);
+  });
+
+  it('gives both ids when two shrimp start a flick in one step', () => {
+    const items = [snackOf('shrimp', SHRIMP, 0), snackOf('shrimp', { x: 400, y: 200 }, 1)];
+    const step = stepOrFail(items, HEAD, createShrimpFlicks(items, RULE), GLIDING, 0.1);
+    expect(step.flickStarts).toEqual(['s0', 's1']);
+  });
+
+  it('gives no id for a hop, and only the flick id when a hop and a flick start together', () => {
+    const hopper = oneHopper();
+    const hop = stepOrFail(hopper.items, FAR_HEAD, hopper.state, GLIDING, 0.1, frameAt(0));
+    expect(hop.state.hops.map((glide) => glide.id)).toEqual(['s0']);
+    expect(hop.flickStarts).toEqual([]);
+    const items = [shrimpWithHome(SQUARE, 0), snackOf('shrimp', SHRIMP, 1)];
+    const both = stepOrFail(items, HEAD, createShrimpFlicks(items, HOP_RULE), GLIDING, 0.1, frameAt(0));
+    expect(both.state.hops.map((glide) => glide.id)).toEqual(['s0']);
+    expect(both.flickStarts).toEqual(['s1']);
+  });
+
+  it('gives the id under reduced motion, though the flick lands in the same step', () => {
+    const { items, state } = oneShrimp();
+    const step = stepOrFail(items, HEAD, state, REDUCED, 0.016);
+    expect(step.state.flicks).toEqual([]);
+    expect(step.flickStarts).toEqual(['s0']);
+  });
+});
+
 /** Counts reads of the `id` of every object made by withCountedId. */
 interface IdReads {
   count: number;

@@ -7,6 +7,8 @@
  * The trip's sounds (S3 to S8; issue #165) are here too: the snack ladder's notes, the last 3 snacks,
  * finds by rarity, Tail Dash, the uh-oh and the regrowth, banking, the exit opening and the stars.
  * src/logic/snackLadder.ts and src/logic/tripSounds.ts pick which of them a trip moment plays.
+ * The hazard and rescue sounds (S9 to S11; issue #166) are here too: the warning ripple, the lullaby,
+ * the hazards, tadpoles and shrimp, Dash pots and rescues.
  */
 import { MUSIC_LEVELS, noteMidi, type MusicCue, type SoundKey } from './music';
 
@@ -125,7 +127,23 @@ export type SoundId =
   | 'regrow'
   | 'bank'
   | 'exitOpens'
-  | 'areaBeaten';
+  | 'areaBeaten'
+  | 'ripple'
+  | 'shellBlock'
+  | 'lullaby'
+  | 'bleh'
+  | 'snag'
+  | 'wriggleFree'
+  | 'exitClosed'
+  | 'matsOpen'
+  | 'catchSnack'
+  | 'shrimpFlick'
+  | 'paintShell'
+  | 'dashReady'
+  | 'potWobble'
+  | 'dashPot'
+  | 'rescueMeet'
+  | 'rescueSafe';
 
 /** The version of a sound that has only one. */
 export const ONLY_VERSION = 'only';
@@ -152,6 +170,9 @@ function versionsOf(versions: Readonly<Record<string, SoundVersion>>): Readonly<
   }
   return Object.freeze(frozen);
 }
+
+/** The home chord: the home note, its third and its fifth, an octave down (steps −5, −3, −2). */
+export const HOME_CHORD_STEPS: readonly number[] = Object.freeze([-5, -3, -2]);
 
 /** The home chord an octave up from HOME_CHORD_STEPS, the chord the wins strum. */
 const STRUM_CHORD_STEPS: readonly number[] = Object.freeze([0, 2, 3]);
@@ -204,12 +225,37 @@ function areaBeatenVersion(levelDb: number, stars: number): SoundVersion {
   return { levelDb, seconds: end + 1, notes };
 }
 
-/** The snack's versions, one per ladder step, named by the step. */
-function snackVersions(): Record<string, SoundVersion> {
+/** A snack caught from a tadpole's flick on ladder step `step`: the snack gulp with a boing (issue #166, ND-2). */
+function catchSnackVersion(step: number): SoundVersion {
+  return {
+    levelDb: 5.5,
+    seconds: 0.4,
+    notes: [
+      { voice: 'bubble', at: 0, velocity: 0.09, steps: [], hz: [260] },
+      { voice: 'marimba', at: 0.03, velocity: 0.2, steps: [step] },
+      { voice: 'boing', at: 0.05, velocity: 0.05, steps: [], hz: [400, 900, 600] },
+    ],
+  };
+}
+
+/** A ladder sound's versions, one per ladder step, named by the step. */
+function ladderVersions(versionOfStep: (step: number) => SoundVersion): Record<string, SoundVersion> {
   const versions: Record<string, SoundVersion> = {};
-  for (let step = 0; step < SNACK_LADDER_STEPS; step++) versions[String(step)] = snackVersion(step);
+  for (let step = 0; step < SNACK_LADDER_STEPS; step++) versions[String(step)] = versionOfStep(step);
   return versions;
 }
+
+/**
+ * The Dash pot's five wood-block knocks: seconds each lands late, in 0 to 0.01, and its pitch as a
+ * factor of 880 Hz, in 0.6 to 1.1. The sketch picks them at random; here they are chosen once (issue #166, ND-12).
+ */
+const DASH_POT_KNOCKS: readonly { lateS: number; pitch: number }[] = Object.freeze([
+  Object.freeze({ lateS: 0.004, pitch: 0.85 }),
+  Object.freeze({ lateS: 0.008, pitch: 0.65 }),
+  Object.freeze({ lateS: 0.001, pitch: 1.05 }),
+  Object.freeze({ lateS: 0.006, pitch: 0.75 }),
+  Object.freeze({ lateS: 0.003, pitch: 0.95 }),
+]);
 
 /**
  * Every sound's recipe by id (docs/sound-guide.md, section 5), ported from the approved sketches
@@ -358,7 +404,7 @@ export const SOUNDS: Readonly<Record<SoundId, Readonly<SoundRecipe>>> = Object.f
     ]),
   }),
   /** A snack on the snack ladder, by its step '0' to '9' (S3). */
-  snack: Object.freeze({ id: 'snack', touch: false, versions: versionsOf(snackVersions()) }),
+  snack: Object.freeze({ id: 'snack', touch: false, versions: versionsOf(ladderVersions(snackVersion)) }),
   /** One of the last 3 snacks: the gulp on a high note with two firefly twinkles (S3). */
   lastThree: Object.freeze({
     id: 'lastThree',
@@ -511,6 +557,178 @@ export const SOUNDS: Readonly<Record<SoundId, Readonly<SoundRecipe>>> = Object.f
       '3': areaBeatenVersion(2, 3),
     }),
   }),
+  /** A predator's warning, the ripple: a falling swoosh and two low marimba notes (S9). */
+  ripple: Object.freeze({
+    id: 'ripple',
+    touch: false,
+    versions: only(14, 0.6, [
+      { voice: 'swoosh', at: 0, velocity: 0.05, steps: [], seconds: 0.45, hz: [1400, 600], q: 1 },
+      { voice: 'marimba', at: 0.05, velocity: 0.08, steps: [-3] },
+      { voice: 'marimba', at: 0.25, velocity: 0.07, steps: [-3] },
+    ]),
+  }),
+  /** The shell blocking a hit: a glass note, a wood tick and a bubble. */
+  shellBlock: Object.freeze({
+    id: 'shellBlock',
+    touch: false,
+    versions: only(9, 0.6, [
+      { voice: 'glass', at: 0, velocity: 0.1, steps: [7], seconds: 0.6 },
+      { voice: 'woodBlock', at: 0, velocity: 0.04, steps: [], hz: [880 * 1.5] },
+      { voice: 'bubble', at: 0.08, velocity: 0.05, steps: [], hz: [600] },
+    ]),
+  }),
+  /**
+   * Being carried home, the lullaby: a soft pad on the home chord under five music box notes falling
+   * to the home note, with rising bubbles (S10).
+   */
+  lullaby: Object.freeze({
+    id: 'lullaby',
+    touch: false,
+    versions: only(1.5, 2.6, [
+      { voice: 'pad', at: 0, velocity: 0.04, steps: HOME_CHORD_STEPS, seconds: 2.2 },
+      ...[7, 4, 3, 2, 0].map((step, i): SoundNote => ({ voice: 'musicBox', at: i * 0.36, velocity: 0.16, steps: [step] })),
+      ...Array.from({ length: 6 }, (_, k): SoundNote => ({
+        voice: 'bubble',
+        at: 0.2 + k * 0.28,
+        velocity: 0.04,
+        steps: [],
+        hz: [350 + k * 70],
+      })),
+    ]),
+  }),
+  /** Spitting out something not good to eat: a short swoosh, a falling glide and a bubble (S11). */
+  bleh: Object.freeze({
+    id: 'bleh',
+    touch: false,
+    versions: only(18, 0.45, [
+      { voice: 'swoosh', at: 0, velocity: 0.07, steps: [], seconds: 0.1, hz: [1800, 1200], q: 1 },
+      { voice: 'glide', at: 0.05, velocity: 0.09, steps: [], seconds: 0.22, hz: [520, 230], wave: 'triangle' },
+      { voice: 'bubble', at: 0.25, velocity: 0.05, steps: [], hz: [500] },
+    ]),
+  }),
+  /** Snagged in a ghost net: a low wobbling glide and a low guitar note (S11). */
+  snag: Object.freeze({
+    id: 'snag',
+    touch: false,
+    versions: only(7.5, 0.6, [
+      { voice: 'glide', at: 0, velocity: 0.09, steps: [], seconds: 0.45, hz: [200, 150], wave: 'triangle', wobble: 9 },
+      { voice: 'pluck', at: 0, velocity: 0.12, steps: [-10], pluck: 'guitar' },
+    ]),
+  }),
+  /** Wriggling free of a snag: three plucked strings up and a bubble. */
+  wriggleFree: Object.freeze({
+    id: 'wriggleFree',
+    touch: false,
+    versions: only(10, 0.5, [
+      ...[0, 2, 4].map((step, i): SoundNote => ({ voice: 'pluck', at: i * 0.06, velocity: 0.16, steps: [step], pluck: 'strings' })),
+      { voice: 'bubble', at: 0.2, velocity: 0.08, steps: [], hz: [700] },
+    ]),
+  }),
+  /** The exit still closed: two low marimba notes and a bubble. */
+  exitClosed: Object.freeze({
+    id: 'exitClosed',
+    touch: false,
+    versions: only(7.5, 0.4, [
+      { voice: 'marimba', at: 0, velocity: 0.14, steps: [-2] },
+      { voice: 'marimba', at: 0.16, velocity: 0.12, steps: [-2] },
+      { voice: 'bubble', at: 0.08, velocity: 0.04, steps: [], hz: [300] },
+    ]),
+  }),
+  /** The floating mats opening: a long soft swoosh and a low boing. */
+  matsOpen: Object.freeze({
+    id: 'matsOpen',
+    touch: false,
+    versions: only(23.5, 0.7, [
+      { voice: 'swoosh', at: 0, velocity: 0.025, steps: [], seconds: 0.6, hz: [2500, 4500], q: 0.8 },
+      { voice: 'boing', at: 0.3, velocity: 0.035, steps: [], hz: [220, 420, 300] },
+    ]),
+  }),
+  /** A snack caught from a tadpole's flick, by its snack ladder step '0' to '9' (S3; issue #166, ND-2). */
+  catchSnack: Object.freeze({ id: 'catchSnack', touch: false, versions: versionsOf(ladderVersions(catchSnackVersion)) }),
+  /** A shrimp flicking away: a quick swoosh and a high wood tick. */
+  shrimpFlick: Object.freeze({
+    id: 'shrimpFlick',
+    touch: true,
+    versions: only(25.5, 0.15, [
+      { voice: 'swoosh', at: 0, velocity: 0.04, steps: [], seconds: 0.12, hz: [2500, 5000], q: 2 },
+      { voice: 'woodBlock', at: 0, velocity: 0.025, steps: [], hz: [880 * 1.8] },
+    ]),
+  }),
+  /** A painted shell: six glass notes up the scale over a swoosh. */
+  paintShell: Object.freeze({
+    id: 'paintShell',
+    touch: false,
+    versions: only(3, 1.0, [
+      ...Array.from({ length: 6 }, (_, i): SoundNote => ({
+        voice: 'glass',
+        at: i * 0.045,
+        velocity: 0.08,
+        steps: [i + 5],
+        seconds: 0.9,
+      })),
+      { voice: 'swoosh', at: 0, velocity: 0.03, steps: [], seconds: 0.4, hz: [3000, 7000], q: 2 },
+    ]),
+  }),
+  /** Tail Dash ready again: a bubble and a kalimba note (S6). */
+  dashReady: Object.freeze({
+    id: 'dashReady',
+    touch: false,
+    versions: only(7.5, 0.4, [
+      { voice: 'bubble', at: 0, velocity: 0.05, steps: [], hz: [600] },
+      { voice: 'kalimba', at: 0.02, velocity: 0.1, steps: [5] },
+    ]),
+  }),
+  /** A Dash pot wobbling when bumped: two clay knocks. */
+  potWobble: Object.freeze({
+    id: 'potWobble',
+    touch: false,
+    versions: only(17, 0.3, [
+      { voice: 'clay', at: 0, velocity: 0.1, steps: [] },
+      { voice: 'clay', at: 0.12, velocity: 0.06, steps: [] },
+    ]),
+  }),
+  /** A Dash pot broken: a clay knock, five wood-block knocks and four bubbles (issue #166, ND-12). */
+  dashPot: Object.freeze({
+    id: 'dashPot',
+    touch: false,
+    versions: only(12.5, 0.6, [
+      { voice: 'clay', at: 0, velocity: 0.2, steps: [] },
+      ...DASH_POT_KNOCKS.map(({ lateS, pitch }, k): SoundNote => ({
+        voice: 'woodBlock',
+        at: 0.05 + k * 0.028 + lateS,
+        velocity: 0.025,
+        steps: [],
+        hz: [880 * pitch],
+      })),
+      ...Array.from({ length: 4 }, (_, k): SoundNote => ({
+        voice: 'bubble',
+        at: 0.18 + k * 0.07,
+        velocity: 0.05,
+        steps: [],
+        hz: [380 + k * 90],
+      })),
+    ]),
+  }),
+  /** Meeting an axolotl to rescue: two whistles up. */
+  rescueMeet: Object.freeze({
+    id: 'rescueMeet',
+    touch: false,
+    versions: only(9, 0.6, [
+      { voice: 'whistle', at: 0, velocity: 0.05, steps: [2], seconds: 0.12 },
+      { voice: 'whistle', at: 0.16, velocity: 0.055, steps: [5], seconds: 0.25 },
+    ]),
+  }),
+  /** A rescued axolotl safe: four kalimba notes up, a whistle and the home chord strum, and a boing. */
+  rescueSafe: Object.freeze({
+    id: 'rescueSafe',
+    touch: false,
+    versions: only(-1.5, 1.2, [
+      ...[0, 2, 4, 5].map((d, i): SoundNote => ({ voice: 'kalimba', at: i * 0.09, velocity: 0.18, steps: [d + 2] })),
+      { voice: 'whistle', at: 0.36, velocity: 0.045, steps: [7], seconds: 0.35 },
+      { voice: 'boing', at: 0.5, velocity: 0.05, steps: [] },
+      { voice: 'strumPluck', at: 0.36, velocity: 0.1, steps: STRUM_CHORD_STEPS, pluck: 'ukulele', gap: 0.02 },
+    ]),
+  }),
 });
 
 /** Loudness targets, K-weighted over a sound's loudest 0.2 seconds (S13; docs/sound-guide.md, section 4). */
@@ -560,9 +778,6 @@ export function scaleMidi(key: SoundKey, step: number): number {
   const degree = step - octave * PENTATONIC.length;
   return noteMidi(`${key}5`) + octave * 12 + PENTATONIC[degree];
 }
-
-/** The home chord: the home note, its third and its fifth, an octave down (steps −5, −3, −2). */
-export const HOME_CHORD_STEPS: readonly number[] = Object.freeze([-5, -3, -2]);
 
 /** Whether MIDI number `midi` is a note of `key`'s major pentatonic, in any octave. */
 export function inSoundKey(key: SoundKey, midi: number): boolean {
