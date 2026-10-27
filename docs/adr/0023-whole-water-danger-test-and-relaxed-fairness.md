@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-24
 - Amends: [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (replaces only its danger bar part (ND-12), where the main path measure gives way to the whole-water test with the depth, floor and carp rules, and its fairness harness's safe start (ND-17), which no longer counts sight and is searched over the whole area; every other ADR 0021 rule stays in force)
+- Updated: 2026-10-26. Issue #136 removed `meetsFullDangerBar` and `meetsRampDangerBar`. `longestQuietStretch` stays, because the whole-water tests compare with it.
 
 This ADR records the owner's decisions of 2026-10-24 on issue #130 (danger pass phase 3, the shared parts), made after the owner's play test of phase 2. The provisional parts are [PRD](../prds/axolotl-mvp.md) open questions 343 to 353, one per named default, ND-k being open question 342 + k.
 
@@ -47,7 +48,7 @@ This issue builds the test, the rules and the relaxed fairness harness only, and
 
 **ND-7 The carp rule (decisions 3 and 7; open question 349).** The carp target is screens / 3, rounded to the nearest whole number, halves up: 2, 2, 4, 5, 5, 5, 5, 6 and 10 for Areas 2 to 10. An area passes with at least that many carp routes. The spring cave's crayfish come on top.
 
-**ND-8 Names, and the old measure (open question 350).** New exports in `src/logic/dangerBar.ts`: `QUIET_GRID_STEP`, `longestQuietSwim`, `depthBands`, `meetsDepthRule`, `hasSurfaceDanger`, `floorQuietStretch`, `meetsFloorRule`, `carpTarget`, `carpCount`, `meetsWholeWaterDangerBar(layout)` and `meetsWholeWaterRampBar(areaNumber, layout)`, which throws a RangeError for any area but 2 and 3. `longestQuietStretch`, `meetsFullDangerBar` and `meetsRampDangerBar` stay unchanged until #136, so every area test on main still passes. Each area issue moves its own layout test to the new bar, and #136 removes the old bar functions once all four have merged.
+**ND-8 Names, and the old measure (open question 350).** New exports in `src/logic/dangerBar.ts`: `QUIET_GRID_STEP`, `longestQuietSwim`, `depthBands`, `meetsDepthRule`, `hasSurfaceDanger`, `floorQuietStretch`, `meetsFloorRule`, `carpTarget`, `carpCount`, `meetsWholeWaterDangerBar(layout)` and `meetsWholeWaterRampBar(areaNumber, layout)`, which throws a RangeError for any area but 2 and 3. Each area issue moves its own layout test to the new bar.
 
 **ND-9 Tests (open question 351).** In `src/logic/dangerBar.test.ts`, on made-up layouts and the dev area only; they assert nothing about Areas 1 to 5.
 
@@ -96,12 +97,10 @@ Its old main path measure is unchanged: a longest quiet stretch of 899.16 px. It
 
 - An area meets a bar only when every way through its water, surface, floor and between, meets it. The main path no longer decides the bar.
 - Areas 2 to 5 do not meet the new bars until their own issues (#132 to #135) retune them; until then each area's layout test keeps the old main path measure, and the area plays exactly as before.
-- `longestQuietStretch`, `meetsFullDangerBar` and `meetsRampDangerBar` stay until #136 removes them.
 - Safe starts sit closer to predator loops than before (sight not counted), and the search covers the whole area. Two fairness files' clearance pins moved; no fairness check was dropped, and every golden stays byte-identical.
 - [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) status points here for the amended parts.
 
 Follow-ups:
 
 - #132, #133, #134 and #135 each move their own area's layout test to `meetsWholeWaterDangerBar` or `meetsWholeWaterRampBar`. If a spot then has no fair start, that issue stops and asks the owner.
-- #136 removes the old bar functions once all four have merged.
 - The owner confirms the provisional parts (PRD open questions 343 to 353) on the PR.
