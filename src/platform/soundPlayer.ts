@@ -8,7 +8,9 @@
  * S13; issue #165). Snacks start 80 ms apart, and a find waits for the last find to end. A repeat of
  * the same sound within 60 ms waits for its turn instead of being dropped; a sound other than a snack
  * or a find keeps at most one turn waiting, and a later ask for it while one waits plays nothing. A
- * sound's notes are built only when its turn starts. Waiting sounds are dropped when sounds turn off
+ * waiting turn holds no start: the queue sets it only when it starts the turn, from when the sounds
+ * ahead really started and ended, and the sound plays at exactly that start. A sound's notes are built
+ * only when its turn starts. Waiting sounds are dropped when sounds turn off
  * or the page hides, and an owner's waiting sounds when the owner drops them (SoundOwner.dropWaiting).
  * A sound that has started rings out, even when its scene ends, so a scene change never cuts it short.
  * The queue waits while the audio is paused and its clock stands still, and goes on when it runs again.
@@ -26,7 +28,7 @@ import {
   takeTurn,
   type SoundAsk,
   type SoundQueue,
-  type SoundTurn,
+  type StartedTurn,
 } from '../logic/soundQueue';
 import { ONLY_VERSION, SOUND_LEVELS, soundGain, soundKeyFor, soundNotes, soundVersion, type SoundId } from '../logic/sounds';
 import { audioGraph, joinAudio, rampBus, refreshAudio, type AudioGraph } from './audioEngine';
@@ -131,18 +133,18 @@ function startDueSounds(graph: AudioGraph): void {
 
 /**
  * Builds `turn`'s sound through its own level stage on the sounds bus, in the key of the cue playing
- * now, starting at its turn or now if that has passed. The only place sound notes are built.
+ * now, starting at exactly the start the queue gave it. The only place sound notes are built.
  */
-function startSound(graph: AudioGraph, turn: Readonly<SoundTurn>): void {
+function startSound(graph: AudioGraph, turn: Readonly<StartedTurn>): void {
   const { ctx } = graph;
-  const now = ctx.currentTime;
-  const start = Math.max(turn.startAt, now);
   const sound = soundVersion(turn.id, turn.version);
   const stage = ctx.createGain();
   stage.gain.value = soundGain(sound.levelDb);
   stage.connect(graph.sounds);
-  for (const note of soundNotes(turn.id, turn.version, soundKeyFor(musicCueNow()))) playSoundNote(graph, stage, note, start + note.at);
-  releaseStageOnClock(ctx, stage, start, start + sound.seconds + TAIL_S);
+  // INVARIANT: the queue never gives a start before the audio clock's now; a start the clock has
+  // already reached plays at once (Web Audio rule).
+  for (const note of soundNotes(turn.id, turn.version, soundKeyFor(musicCueNow()))) playSoundNote(graph, stage, note, turn.startAt + note.at);
+  releaseStageOnClock(ctx, stage, turn.startAt, turn.endsAt + TAIL_S);
 }
 
 /**
@@ -165,8 +167,10 @@ function releaseStageOnClock(ctx: AudioContext, stage: GainNode, startAt: number
 /**
  * Arms the pump for when the next waiting turn falls due, or clears it when no turn waits or the audio
  * clock is not running; clockResumed arms it again when the clock runs. The pump is the one wall-clock
- * timer here, and it only wakes the queue: it is armed only while the audio clock runs, every turn's
- * start is read from the audio clock when it fires, and a pause re-pumps on statechange (issue #165).
+ * timer here, and it only wakes the queue: it is armed only while the audio clock runs, the queue sets
+ * each turn's start from the audio clock and the real starts and ends of the sounds ahead when it
+ * fires, and a pause re-pumps on statechange. So a late timer starts a sound late, but never bunches
+ * snacks, overlaps finds, shortens the 60 ms gap or lets the exit overlap the last snack (issue #165).
  */
 function armPump(graph: AudioGraph): void {
   clearPump();
