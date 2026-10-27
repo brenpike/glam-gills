@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-10-27
+
+### Added
+
+- Your trip now has sounds. Eating a snack plays a soft gulp and a note, and snacks eaten close together climb the scale, one note each, up to 10 notes. Each of the last 3 snacks plays a high note with a twinkle (#165).
+- Finding a treasure plays a sound for its rarity, Common, Rare, Epic or Legendary, one find at a time (#165).
+- A Tail Dash plays a whoosh when it starts. Pressing the Dash button while the Dash recharges plays nothing, and the Dash button no longer taps (#165).
+- Losing a leg plays a kind "uh-oh", and each leg growing back plays a regrowth sound (#165).
+- Eating every snack plays a "ta-da" once the exit opens, banking your finds plays one bubble and note for each find, up to 5, then a ukulele strum, and the tank arrival card plays a win for the stars you earned when you beat an area (#165).
+
+### Changed
+
+- Sounds asked for at the same moment now take turns. Snacks eaten at the same moment play one after another, so the scale still climbs and you hear every last-snack twinkle, and two treasures of the same rarity found together both play their sound. The same sound played again very quickly now plays a moment later instead of being skipped, and fast button taps never pile up (#165).
+
 ## [0.48.1] - 2026-10-27
 
 ### Changed

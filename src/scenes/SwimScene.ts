@@ -129,6 +129,7 @@ import { readSession, returnToHomeTank, writeSession } from './sceneFlow';
 import { faceSprite } from './spriteFacing';
 import { StrandedView } from './StrandedView';
 import { TreasureView } from './TreasureView';
+import { TripSoundRouter } from './TripSoundRouter';
 
 const TAU = Math.PI * 2;
 const SIM_SEED = 0xb0bb1e;
@@ -325,6 +326,8 @@ export class SwimScene extends Phaser.Scene {
   /** Trip overrides from the explorer's outfit only (PRD F12), fixed for the trip. */
   private perks!: PerkTuning;
   private exitView!: ExitView;
+  /** This trip's sounds: hears the snack and Dash game events and every dispatched trip event. */
+  private tripSounds!: TripSoundRouter;
   private reeds: Phaser.GameObjects.Image[] = [];
   private reedNudge: number[] = [];
   private pads: Phaser.GameObjects.Image[] = [];
@@ -458,6 +461,7 @@ export class SwimScene extends Phaser.Scene {
     this.setupCamera();
     this.setupInput();
 
+    this.tripSounds = new TripSoundRouter(this, () => this.clock);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.game.events.on(GAME_EVENTS.REQUEST_DASH, this.handleRequestDash, this);
     this.game.events.on(GAME_EVENTS.STEER, this.handleSteer, this);
@@ -1205,6 +1209,7 @@ export class SwimScene extends Phaser.Scene {
     this.homeSpotView.handleEvents(events);
     this.treasureView.handleEvents(events);
     this.plasticWormView.handleEvents(events);
+    this.tripSounds.handleEvents(events);
   }
 
   /** Puts the axolotl where the trip holds it while banked, carried or ended, with no velocity. */
@@ -1334,6 +1339,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.events.off(Phaser.Scenes.Events.RESUME, this.handleResume, this);
+    this.tripSounds.destroy();
     this.strandedView.destroy();
     this.heronView?.destroy();
     this.garterSnakeView?.destroy();
