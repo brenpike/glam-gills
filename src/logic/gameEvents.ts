@@ -1,4 +1,5 @@
 import type { DashPhase } from './tailDash';
+import type { CollectibleKind } from './zone';
 
 /** Event names shared between the game scene and the UI scene. */
 export const GAME_EVENTS = Object.freeze({
@@ -24,6 +25,8 @@ export interface CollectedPayload {
   id: string;
   collected: number;
   total: number;
+  /** The snack's kind, so a tadpole or shrimp caught plays the catch (issue #166, ND-2). */
+  kind: CollectibleKind;
 }
 
 export interface AllCollectedPayload {

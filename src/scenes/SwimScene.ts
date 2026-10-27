@@ -558,6 +558,7 @@ export class SwimScene extends Phaser.Scene {
       this.stepPlay(dt);
     }
     this.advanceTrip(dt);
+    this.tripSounds.handleFrame(this.trip, this.cameras.main.worldView);
     // INVARIANT: the trip step runs before the eat, so the eat reads the transform drawn this frame.
     this.captureDrawnFrame();
     // INVARIANT: a trip that left swimming in its step eats nothing.
@@ -1001,6 +1002,7 @@ export class SwimScene extends Phaser.Scene {
       dt,
     );
     if (!step) return;
+    this.tripSounds.handleShrimpFlicks(step.flickStarts);
     this.shrimpFlicks = step.state;
     this.setItems(step.items);
   }
@@ -1050,7 +1052,7 @@ export class SwimScene extends Phaser.Scene {
     this.registry.set(REGISTRY_KEYS.collected, this.snackTally.collected);
     result.newly.forEach((item, i) => {
       this.popSnack(item.id);
-      const payload: CollectedPayload = { id: item.id, collected: before + i + 1, total };
+      const payload: CollectedPayload = { id: item.id, collected: before + i + 1, total, kind: item.kind };
       this.game.events.emit(GAME_EVENTS.COLLECTED, payload);
     });
     if (!this.allDone && this.snackTally.left === 0) {
