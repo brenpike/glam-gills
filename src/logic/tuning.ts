@@ -390,8 +390,8 @@ export const STICK: Readonly<StickTuning> = Object.freeze({
 /** Provisional leg values; regrow, protected time and speed shares from the PRD Tuning values. */
 export const LEGS: Readonly<LegTuning> = Object.freeze({
   count: 4,
-  regrowTime: 20,
-  snackSpeedUp: 0.2,
+  regrowTime: 40,
+  snackSpeedUp: 0.1,
   protectedTime: 2,
   speedByLegs: Object.freeze([0.6, 0.75, 0.9, 1]),
   wobbleAmp: 0.06,

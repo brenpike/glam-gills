@@ -184,7 +184,7 @@ Everything stays calm, never scary, readable without colour, and usable with red
 4. **A4** A hit is a lunge that connects. It removes exactly one leg. Touching a tilapia, or any other predator, that is not lunging only bumps the axolotl gently away and costs no leg (see open question 1). Touching a moving hazard while it is in the water (jabbing, holding, or lifting) costs one leg: it is a hit by the same rules (A5, A11, A22) and is never a bump (N3; open question 255).
 5. **A5** After a hit, the axolotl has protected time. No second hit can land during it. The cue is steady and non-flashing (for example, a soft shimmer) and is static under reduced motion.
 6. **A6** Leg loss shows a sparkle "poof". It never shows blood, wounds, or a detached limb. The lost leg shows as a faint outline.
-7. **A7** Each lost leg regrows after about 20 seconds, one leg at a time. Regrowth is shown with sparkles and the outline filling in.
+7. **A7** Each lost leg regrows after about 40 seconds, one leg at a time. Regrowth is shown with sparkles and the outline filling in.
 8. **A8** The legs display shows four leg icons. Each icon is present, regrowing (with progress), or lost. The states are told apart by shape or fill, not by colour alone.
 9. **A9** Fewer legs means a lower top speed and a wobblier swim. Wobble is suppressed under reduced motion; the slowdown stays. With 1 to 4 legs, the axolotl can always swim against every current and reach the Home Spot from anywhere. Area 3's stream is the strongest current so far, 74 pixels per second, so a one-leg axolotl still makes 16 pixels per second of headway against it (see Tuning values). One exception: while queasy from a plastic worm (N3), its top speed is 60% for up to 3 seconds, so its headway is lower for that time. Plastic worms start far enough from every current (see Tuning values) that a queasy one-leg axolotl never loses headway in one (open question 149). Another exception: while snagged on a ghost net (N3), its top speed is 50% for up to 2 seconds, so a snagged one-leg axolotl swims 45 pixels per second, under Area 4's 72 pixel per second current. Ghost nets sit far enough from every current (at least 190.5 pixels, see Tuning values) that a snag always ends before the axolotl reaches one (open question 195). A drifting ghost net (N3) keeps its whole drift path at least 190.5 pixels from every current, so this holds wherever it has drifted to (open question 258). Area 4's current leaves a one-leg axolotl 18 pixels per second of headway.
 10. **A10** Tail Dash works with any number of legs. Being queasy or snagged (N3) never slows Tail Dash: only the top speed drops, and the acceleration and every Tail Dash value stay the same (open questions 149 and 193).
@@ -1524,7 +1524,7 @@ The same decision sets at least 3 tilapia in the canal (A1).
 
 | Value | Starting point |
 |---|---|
-| Regrowth time | About 20 seconds per leg |
+| Regrowth time | About 40 seconds per leg (was 20 until 0.47.2: legs grew back too fast) |
 | Protected time | About 2 seconds |
 | Telegraph wind-up | At least 0.8 seconds |
 | Lunge cooldown | About 2.5 seconds (2.2 for Area 4's tilapia, and 2 for Area 5's tilapia and the garter snake) |
@@ -1560,7 +1560,7 @@ The same decision sets at least 3 tilapia in the canal (A1).
 | Risk weight | 1 to 2, linear in route distance within each treasure's pool, 2 at the rarity's risky side (nearer for Rare, Epic, and Legendary; farther for Common). Multiplied by the hiding spot weighting (B10). |
 | Per-area tuning | Every area uses these treasure slot counts and chances unless it sets its own, keyed by area id |
 | Stranded axolotl chance | 40% of trips, about 4 in 10, the default for every area that sets no chance of its own, unless one is already waiting (C2, C5; issue #111) |
-| Snack regrowth speed-up | Each snack adds 20% of one leg's regrowth to the leg that is regrowing (about 4 seconds at the base time). Never past a full leg. |
+| Snack regrowth speed-up | Each snack adds 10% of one leg's regrowth to the leg that is regrowing (about 4 seconds at the base time; it was 20% of a 20 second leg until 0.47.2). Never past a full leg. |
 | Snack eat reach | A circle of 36 pixels radius, centred 25 pixels ahead of the axolotl's middle along its body, turning with its tilt. While the body squashes in a turn, the centre moves in with it. The same at every size. It covers the whole head of the largest size; smaller sizes reach a little in front of the snout. |
 | Treasure hint range (Common / Rare / Epic / Legendary) | 150 / 115 / 85 / 60 pixels. Rarer is shorter. |
 | Dash pot touch distance | 30 pixels |
