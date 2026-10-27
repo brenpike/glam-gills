@@ -61,7 +61,7 @@ function takeTurnsAt(asks: readonly SoundAsk[], now: number): SoundQueue {
 /** What the player does for one ask: takes its turn at `now`, then starts the turns due at `now`. */
 function playAsk(queue: SoundQueue, ask: SoundAsk, now: number): { queue: SoundQueue; turn: WaitingTurn | null; due: readonly StartedTurn[] } {
   const taken = takeTurn(queue, ask, now);
-  const started = startDueTurns(taken.queue, now);
+  const started = startDueTurns(taken.queue, now, true);
   return { queue: started.queue, turn: taken.turn, due: started.due };
 }
 
@@ -74,7 +74,7 @@ function pumpAll(queue: SoundQueue, now: number, lateS: (wake: number) => number
   let clock = now;
   const starts: PumpedStart[] = [];
   for (let wake = 0; wake < MAX_WAKES; wake++) {
-    const started = startDueTurns(pumped, clock);
+    const started = startDueTurns(pumped, clock, true);
     pumped = started.queue;
     for (const turn of started.due) starts.push({ turn, now: clock });
     const next = nextWaitingStart(pumped, clock);
@@ -244,7 +244,7 @@ describe('the repeat limit on own-line sounds (S13; issue #165)', () => {
   it('gives a new tap a turn once the waiting tap has started', () => {
     const first = playAsk(EMPTY_SOUND_QUEUE, soundAsk('tap'), 1);
     const second = playAsk(first.queue, soundAsk('tap'), 1);
-    const started = startDueTurns(second.queue, 1.07);
+    const started = startDueTurns(second.queue, 1.07, true);
     expect(started.due).toHaveLength(1);
     expect(started.due[0].startAt).toBeCloseTo(1 + START_DELAY_S + REPEAT_S, CLOSE_DIGITS);
     const third = takeTurn(started.queue, soundAsk('tap'), 1.07);
@@ -254,7 +254,7 @@ describe('the repeat limit on own-line sounds (S13; issue #165)', () => {
 
   it('starts different own-line sounds asked for at the same moment together', () => {
     const queue = takeTurnsAt([soundAsk('arrive'), soundAsk('areaBeaten', '3'), soundAsk('areaBeaten', '1')], 4);
-    const { due } = startDueTurns(queue, 4);
+    const { due } = startDueTurns(queue, 4, true);
     expect(due).toHaveLength(3);
     for (const turn of due) expect(turn.startAt).toBe(4 + START_DELAY_S);
   });
@@ -296,14 +296,14 @@ describe('startDueTurns (issue #165)', () => {
   ];
 
   it('starts every waiting turn whose start is at most the start delay away, in start order, ties in ask order', () => {
-    const { due } = startDueTurns(queue, 1.5);
+    const { due } = startDueTurns(queue, 1.5, true);
     expect(due.map((turn) => turn.id)).toEqual(['snack', 'arrive', 'tap']);
     expect(due.map((turn) => turn.startAt)).toEqual([1.5, 1.5, 1.49 + START_DELAY_S]);
     for (const turn of due) expect(turn.started).toBe(true);
   });
 
   it('marks the due turns started in the queue and leaves the rest as they were', () => {
-    const started = startDueTurns(queue, 1.5).queue;
+    const started = startDueTurns(queue, 1.5, true).queue;
     expect(started.map((turn) => turn.started)).toEqual([true, true, true, true, false, false]);
     expect(started[2]).toBe(queue[2]);
     expect(started[4]).toBe(queue[4]);
@@ -311,16 +311,66 @@ describe('startDueTurns (issue #165)', () => {
   });
 
   it('starts nothing when no turn is due', () => {
-    const { queue: after, due } = startDueTurns(queue, 1);
+    const { queue: after, due } = startDueTurns(queue, 1, true);
     expect(due).toEqual([]);
     expect(after).toEqual(queue);
   });
 
   it('never starts a turn before now, and starts an overdue turn at now', () => {
-    const { due } = startDueTurns([waitingTurn('arrive', 1), waitingTurn('snack', 1, null, '2')], 5);
+    const { due } = startDueTurns([waitingTurn('arrive', 1), waitingTurn('snack', 1, null, '2')], 5, true);
     expect(due.map((turn) => turn.startAt)).toEqual([5, 5]);
     for (const turn of due) expect(turn.endsAt).toBe(5 + soundVersion(turn.id, turn.version).seconds);
   });
+
+  it('starts nothing while the clock is not running, and gives back the same queue', () => {
+    const paused = startDueTurns(queue, 1.5, false);
+    expect(paused.due).toEqual([]);
+    expect(paused.queue).toBe(queue);
+  });
+});
+
+/** What the player does for one ask while the clock is paused: takes its turn at `now`, and starts none. */
+function askWhilePaused(queue: SoundQueue, ask: SoundAsk, now: number): SoundQueue {
+  const taken = takeTurn(queue, ask, now);
+  const started = startDueTurns(taken.queue, now, false);
+  expect(started.due).toEqual([]);
+  return started.queue;
+}
+
+describe('a turn asked for while the clock is paused (issue #165)', () => {
+  it('never starts once its owner drops it', () => {
+    let queue = askWhilePaused(EMPTY_SOUND_QUEUE, soundAsk('arrive', ONLY_VERSION, 7), 1);
+    queue = askWhilePaused(queue, soundAsk('snack', '0', 7), 1);
+    queue = askWhilePaused(queue, soundAsk('find', 'common', 8), 1);
+    const dropped = dropWaitingTurns(queue, 7);
+    const resumed = startDueTurns(dropped, 1, true);
+    const { starts } = pumpAll(resumed.queue, 1, onTime);
+    const owners = [...resumed.due, ...starts.map(({ turn }) => turn)].map((turn) => turn.owner);
+    expect(owners).toEqual([8]);
+  });
+
+  for (const resumeNow of [1.01, 1.5]) {
+    it(`starts when the clock runs again at ${resumeNow}, keeping the snack, find and repeat spacing`, () => {
+      const tap = playAsk(EMPTY_SOUND_QUEUE, soundAsk('tap'), 1);
+      let queue = askWhilePaused(tap.queue, soundAsk('tap'), 1.01);
+      queue = askWhilePaused(queue, soundAsk('snack', '0', 1), 1.01);
+      queue = askWhilePaused(queue, soundAsk('snack', '1', 2), 1.01);
+      queue = askWhilePaused(queue, soundAsk('find', 'common', 3), 1.01);
+      queue = askWhilePaused(queue, soundAsk('find', 'common', 4), 1.01);
+      const resumed = startDueTurns(queue, resumeNow, true);
+      const pumped = pumpAll(resumed.queue, resumeNow, onTime);
+      const starts = [...resumed.due.map((turn) => ({ turn, now: resumeNow })), ...pumped.starts];
+      expect(starts).toHaveLength(5);
+      for (const { turn, now } of starts) expect(turn.startAt).toBeGreaterThanOrEqual(now);
+      expect(startOf(starts, 'tap', null).startAt).toBeCloseTo(Math.max(tap.due[0].startAt + REPEAT_S, resumeNow), CLOSE_DIGITS);
+      const firstSnack = startOf(starts, 'snack', 1, '0');
+      expect(firstSnack.startAt).toBeCloseTo(Math.max(1.01 + START_DELAY_S, resumeNow), CLOSE_DIGITS);
+      expect(startOf(starts, 'snack', 2, '1').startAt).toBeCloseTo(firstSnack.startAt + SNACK_GAP_S, CLOSE_DIGITS);
+      const firstFind = startOf(starts, 'find', 3, 'common');
+      expect(firstFind.startAt).toBeCloseTo(Math.max(1.01 + START_DELAY_S, resumeNow), CLOSE_DIGITS);
+      expect(startOf(starts, 'find', 4, 'common').startAt).toBeGreaterThanOrEqual(firstFind.endsAt - SLACK_S);
+    });
+  }
 });
 
 describe('nextWaitingStart (issue #165)', () => {
@@ -339,7 +389,7 @@ describe('nextWaitingStart (issue #165)', () => {
     const second = playAsk(first.queue, soundAsk('snack', '1'), 1);
     expect(nextWaitingStart(second.queue, 1)).toBeCloseTo(1 + START_DELAY_S + SNACK_GAP_S, CLOSE_DIGITS);
     const third = playAsk(second.queue, soundAsk('snack', '2'), 1);
-    const late = startDueTurns(third.queue, 1.5);
+    const late = startDueTurns(third.queue, 1.5, true);
     expect(late.due.map((turn) => turn.startAt)).toEqual([1.5]);
     expect(nextWaitingStart(late.queue, 1.5)).toBeCloseTo(1.5 + SNACK_GAP_S, CLOSE_DIGITS);
   });
@@ -407,7 +457,7 @@ describe('a late pump (issue #165)', () => {
       firstDue.push(...step.due);
     }
     expect(firstDue.map((turn) => [turn.version, turn.startAt])).toEqual([['0', 1 + START_DELAY_S]]);
-    const late = startDueTurns(queue, 1.5);
+    const late = startDueTurns(queue, 1.5, true);
     expect(late.due.map((turn) => [turn.version, turn.startAt])).toEqual([['1', 1.5]]);
     expect(nextWaitingStart(late.queue, 1.5)).toBeCloseTo(1.5 + SNACK_GAP_S, CLOSE_DIGITS);
     const { starts } = pumpAll(late.queue, 1.5, onTime);
@@ -426,7 +476,7 @@ describe('a late pump (issue #165)', () => {
   it('keeps 60 ms between a tap that started late and the next tap', () => {
     const first = playAsk(EMPTY_SOUND_QUEUE, soundAsk('tap'), 1);
     const second = playAsk(first.queue, soundAsk('tap'), 1);
-    const late = startDueTurns(second.queue, 1.5);
+    const late = startDueTurns(second.queue, 1.5, true);
     expect(late.due.map((turn) => turn.startAt)).toEqual([1.5]);
     const third = playAsk(late.queue, soundAsk('tap'), 1.5);
     expect(third.due).toEqual([]);
@@ -564,10 +614,10 @@ interface TripState {
 
 /** Starts the trip's turns due now, as the player does, and checks none is left due. */
 function startTripDue(trip: TripState): void {
-  const started = startDueTurns(trip.queue, trip.now);
+  const started = startDueTurns(trip.queue, trip.now, true);
   trip.queue = started.queue;
   for (const turn of started.due) trip.starts.push({ turn, now: trip.now });
-  expect(startDueTurns(trip.queue, trip.now).due).toEqual([]);
+  expect(startDueTurns(trip.queue, trip.now, true).due).toEqual([]);
 }
 
 /** Asks for version `version` of sound `id` now, owned by a new owner, then starts the turns due, as the player does. */

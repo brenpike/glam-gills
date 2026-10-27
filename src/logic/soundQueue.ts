@@ -207,9 +207,12 @@ export function takeTurn(queue: SoundQueue, ask: Readonly<SoundAsk>, now: number
  * it really started and ended, is no more than SOUND_LEVELS.startDelayS away. Each starts at its
  * earliest start, or at `now` if that has passed, so no start is ever before `now`. Gives the queue
  * with them started, in ask order, the turns still waiting untouched; and them in start order, ties in
- * ask order.
+ * ask order. Starts nothing while the clock is not running (`clockRunning` false), and gives `queue`
+ * itself back: a turn asked for while the clock stands still keeps waiting, so it can still be dropped,
+ * and starts once the clock runs again, as pumpWaitMs waits for (issue #165).
  */
-export function startDueTurns(queue: SoundQueue, now: number): DueTurns {
+export function startDueTurns(queue: SoundQueue, now: number, clockRunning: boolean): DueTurns {
+  if (!clockRunning) return { queue, due: [] };
   const { queue: walked, due } = walkQueue(queue, now);
   return { queue: walked, due };
 }

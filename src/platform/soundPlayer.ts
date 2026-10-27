@@ -14,6 +14,7 @@
  * or the page hides, and an owner's waiting sounds when the owner drops them (SoundOwner.dropWaiting).
  * A sound that has started rings out, even when its scene ends, so a scene change never cuts it short.
  * The queue waits while the audio is paused and its clock stands still, and goes on when it runs again.
+ * A sound asked for while the audio is paused waits for it to run, so it can still be dropped.
  * A started sound's life runs on the audio clock too, so when the audio pauses (the page hides, both
  * switches turn off, or the device interrupts it) the sound finishes when the audio resumes (issue #165).
  *
@@ -124,9 +125,9 @@ function askSound(ask: SoundAsk): void {
   armPump(graph);
 }
 
-/** Starts every waiting turn that is due now. */
+/** Starts every waiting turn that is due now; none while the audio clock is not running. */
 function startDueSounds(graph: AudioGraph): void {
-  const { queue, due } = startDueTurns(state.queue, graph.ctx.currentTime);
+  const { queue, due } = startDueTurns(state.queue, graph.ctx.currentTime, clockRuns(graph));
   state.queue = queue;
   for (const turn of due) startSound(graph, turn);
 }
@@ -175,7 +176,7 @@ function releaseStageOnClock(ctx: AudioContext, stage: GainNode, startAt: number
 function armPump(graph: AudioGraph): void {
   clearPump();
   const { ctx } = graph;
-  const waitMs = pumpWaitMs(state.queue, ctx.state === 'running', ctx.currentTime);
+  const waitMs = pumpWaitMs(state.queue, clockRuns(graph), ctx.currentTime);
   if (waitMs === null) return;
   state.pump = window.setTimeout(runPump, waitMs);
 }
@@ -195,8 +196,13 @@ function runPump(): void {
 
 /** Starts the turns now due and re-arms the pump when the audio clock runs again after a pause. */
 function clockResumed(graph: AudioGraph): void {
-  if (graph.ctx.state !== 'running') return;
+  if (!clockRuns(graph)) return;
   pumpQueue();
+}
+
+/** Whether `graph`'s audio clock is running, so the queue may start turns on it. */
+function clockRuns(graph: AudioGraph): boolean {
+  return graph.ctx.state === 'running';
 }
 
 /** Starts the turns now due and re-arms, or drops every waiting turn if sounds are off or the page is hidden. */
