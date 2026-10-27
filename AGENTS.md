@@ -73,7 +73,7 @@ No-bump paths:
 
 ## Deploy
 
-GitHub Pages deploys on push to `main` via [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint, tests and build on every PR and every push to `main`. GitHub Pages deploys from [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) after CI passes on `main`.
 Live URL: <https://brenpike.github.io/glam-gills/>. Vite builds with base path `/glam-gills/`.
 
 ## Decisions
