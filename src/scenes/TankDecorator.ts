@@ -61,6 +61,7 @@ import {
   type TankKey,
 } from '../logic/tankUi';
 import type { Point } from '../logic/zone';
+import { playSound } from '../platform/soundPlayer';
 import { createButton, cssColor, drawPanel, uiTextStyle, type SceneView, type UiButton } from './BootScene';
 import { addRarityGlow } from './FindPopup';
 
@@ -821,13 +822,14 @@ export class TankDecorator {
     this.options.onLayoutChange(this.tankLayout);
   }
 
-  /** Places a tray Decoration at the spot suggested for its kind, then selects and focuses it. */
+  /** Places a tray Decoration at the spot suggested for its kind with the place sound, then selects and focuses it. */
   private placeFromTray(id: string): void {
     if (!this.active) return;
     const { catalogue } = this.options;
     const spot = suggestSpot(this.tankLayout, id, catalogue);
     const change = placeDecoration(this.tankLayout, this.ownedIds, id, spot, catalogue);
     if (!this.applyChange(change, 'placed')) return;
+    playSound('place');
     this.selection = id;
     this.focus = { kind: 'placed', id };
     this.finishChange();
@@ -926,7 +928,8 @@ export class TankDecorator {
 
   /**
    * Moves the ghost with the drag pointer once it passes the drag threshold, snapped for the
-   * Decoration's kind (Floating and Hanging stay in the top band).
+   * Decoration's kind (Floating and Hanging stay in the top band). Passing the threshold plays the
+   * pick up sound once per drag.
    */
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
     const drag = this.drag;
@@ -934,13 +937,14 @@ export class TankDecorator {
     if (drag === null || frame === null || pointer.id !== drag.pointerId) return;
     const point = this.pointerCss(pointer);
     if (!drag.moving && Math.hypot(point.x - drag.start.x, point.y - drag.start.y) < DRAG_THRESHOLD_PX) return;
+    if (!drag.moving) playSound('pickUp');
     drag.moving = true;
     const base = cssToTank(frame, { x: point.x - drag.grab.x, y: point.y - drag.grab.y });
     drag.target = snapPlacement(this.decorationOf(drag.id), base);
     this.showGhost(drag.id, drag.target);
   }
 
-  /** Ends the drag: moves the Decoration only when the ghost is at a valid base point for its kind. */
+  /** Ends the drag: moves the Decoration, with the place sound, only when the ghost is at a valid base point for its kind. */
   private handlePointerUp(pointer: Phaser.Input.Pointer): void {
     const drag = this.drag;
     if (drag === null || pointer.id !== drag.pointerId) return;
@@ -948,6 +952,7 @@ export class TankDecorator {
     if (!drag.moving || !isValidPlacementFor(this.decorationOf(drag.id), drag.target)) return;
     const change = moveDecoration(this.tankLayout, drag.id, drag.target, this.options.catalogue);
     if (!this.applyChange(change, 'moved')) return;
+    playSound('place');
     this.finishChange();
   }
 

@@ -35,13 +35,14 @@ import { BUTTON_PRESS_OFFSET, BUTTON_SQUARE, BUTTON_WIDE, ICON_SIZE, type IconKi
 import { AREAS, habitatById, type AreaData } from '../logic/areas';
 import type { Decoration } from '../logic/catalogue';
 import { createGhostNets } from '../logic/ghostNets';
+import { buttonPressSound } from '../logic/homeSounds';
 import { createPlasticWorms } from '../logic/plasticWorms';
 import { mulberry32 } from '../logic/rng';
 import { TANK } from '../logic/tank';
 import { VIEW } from '../logic/tuning';
 import { fitView, type ViewFit } from '../logic/viewport';
 import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, WORLD_H, buildZone, type ReedSpec, type ZoneLayout } from '../logic/zone';
-import { playTap } from '../platform/soundPlayer';
+import { playSound } from '../platform/soundPlayer';
 import { forgetTapButton, setTapFocus } from './buttonTaps';
 
 /** Scene keys, in render order (later scenes draw on top). */
@@ -286,6 +287,11 @@ export interface ButtonOptions {
    * button whose press makes its own sound, or none, such as the sounds switch.
    */
   taps?: boolean;
+  /**
+   * Play the lower close or back tap in place of the tap, by touch or click and by Enter or Space
+   * (PRD S15; issue #167, ND-2). `taps: false` wins: the button then plays no sound.
+   */
+  backTap?: boolean;
   onPress: () => void;
 }
 
@@ -395,9 +401,9 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
     pressed = false;
     refresh();
   };
-  const taps = opts.taps !== false;
+  const sound = buttonPressSound(opts);
   const press = (): void => {
-    if (taps) playTap();
+    if (sound !== null) playSound(sound);
     opts.onPress();
   };
   const handleDown = (): void => {
@@ -427,7 +433,7 @@ export function createButton(scene: Phaser.Scene, baked: BakedTextures, opts: Bu
     height,
     setFocused(next: boolean): void {
       focused = next;
-      if (taps) setTapFocus(container, next);
+      if (sound !== null) setTapFocus(container, next, sound);
       refresh();
     },
     setResolution(dpr: number): void {

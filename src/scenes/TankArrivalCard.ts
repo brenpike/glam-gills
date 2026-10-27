@@ -7,6 +7,7 @@ import type { AreaData } from '../logic/areas';
 import { CARD, cardIconRowWidth, cardTextWidth, fitCard, homeTitleWrapWidth, iconRowsSize } from '../logic/cardFit';
 import { treasureById } from '../logic/catalogue';
 import type { DueFirstFind, FirstFindKind } from '../logic/firstFind';
+import { arrivalSound } from '../logic/homeSounds';
 import type { MotionProfile } from '../logic/motion';
 import { morphById, rescueMorphsIn } from '../logic/morphs';
 import type { WaitingStranded } from '../logic/rescue';
@@ -16,6 +17,7 @@ import type { TankKey } from '../logic/tankUi';
 import { foundInfos } from '../logic/trip';
 import type { TripEnding } from '../logic/tripEvents';
 import { ARRIVAL_OK_LABEL, arrivalText, type ArrivalStars, type WaitingAxolotl } from '../logic/tripText';
+import { playSound } from '../platform/soundPlayer';
 import { addAreaStar, showAreaStar, starFlags, type AreaStarTextures } from './AreaStarsBadge';
 import {
   createButton,
@@ -231,6 +233,8 @@ export class TankArrivalCard {
       stars,
     });
     this.showStars(stars);
+    const arrivalSoundId = arrivalSound(ending.reason);
+    if (arrivalSoundId !== null) playSound(arrivalSoundId);
     this.title.setText(text.title);
     this.bodyOptions = [`${text.body}\n${text.bankedLine}`, `${text.shortBody}\n${text.bankedLine}`];
     this.buildTreasureRow(foundInfos(namedTreasureIds(ending)).map((info) => info.id));

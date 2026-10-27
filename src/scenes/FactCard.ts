@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { INK, UI_PANEL } from '../art/palette';
 import { CARD, cardTightTextWidth, factCardBodyWrapWidths, fitCard } from '../logic/cardFit';
 import { FACT_CARD_OK_LABEL, type FactCard as FactCardData } from '../logic/factCards';
+import { playSound } from '../platform/soundPlayer';
 import {
   createButton,
   cssColor,
@@ -68,13 +69,14 @@ export class FactCard {
     return this.container.visible;
   }
 
-  /** Shows `card` at once: its title and body, laid out from that text. */
+  /** Shows `card` at once: its title and body, laid out from that text, and plays the fact card sound. */
   show(card: Readonly<FactCardData>): void {
     this.title.setText(card.title);
     this.body.setText(card.body);
     this.shownAt = this.scene.time.now;
     this.layout(this.view);
     this.container.setVisible(true);
+    playSound('factCard');
   }
 
   hide(): void {
