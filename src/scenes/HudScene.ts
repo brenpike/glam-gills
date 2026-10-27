@@ -563,6 +563,7 @@ export class HudScene extends Phaser.Scene {
       icon: 'dash',
       dpr,
       pressOnDown: true,
+      taps: false,
       onPress: () => this.requestDash(),
     });
     this.dashButton.container.setDepth(DEPTH.ui);

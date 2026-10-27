@@ -16,6 +16,7 @@ import { STAR_ROW, starRowSize } from '../logic/starsUi';
 import type { TankKey } from '../logic/tankUi';
 import { foundInfos } from '../logic/trip';
 import type { TripEnding } from '../logic/tripEvents';
+import { areaBeatenSound } from '../logic/tripSounds';
 import { ARRIVAL_OK_LABEL, arrivalText, type ArrivalStars, type WaitingAxolotl } from '../logic/tripText';
 import { playSound } from '../platform/soundPlayer';
 import { addAreaStar, showAreaStar, starFlags, type AreaStarTextures } from './AreaStarsBadge';
@@ -235,6 +236,7 @@ export class TankArrivalCard {
     this.showStars(stars);
     const arrivalSoundId = arrivalSound(ending.reason);
     if (arrivalSoundId !== null) playSound(arrivalSoundId);
+    if (ending.reason === 'areaBeaten' && stars !== undefined) playSound('areaBeaten', areaBeatenSound(stars.earned).version);
     this.title.setText(text.title);
     this.bodyOptions = [`${text.body}\n${text.bankedLine}`, `${text.shortBody}\n${text.bankedLine}`];
     this.buildTreasureRow(foundInfos(namedTreasureIds(ending)).map((info) => info.id));
