@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-18
 - Updated: 2026-10-18. The repository was renamed from `game-test` to `glam-gills` (issue #28), so the URL and base path below changed. The decision is unchanged.
+- Updated: 2026-10-26. The checks and the deploy are now two workflows; see [ADR 0027](0027-ci-workflow-and-deploy-after-ci.md).
 
 ## Context
 
@@ -12,9 +13,9 @@ The dev environment is WSL2, where exposing the Vite dev server to a phone needs
 ## Decision
 
 - Host on **GitHub Pages** at <https://brenpike.github.io/glam-gills/>. Pages is set to build type "workflow" (GitHub Actions).
-- The workflow [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml):
-  - on pull requests: runs lint, tests, and build;
-  - on push to `main`: runs the same checks, then deploys `dist/` to Pages.
+- Two workflows:
+  - [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs lint, tests, and build on every pull request and every push to `main`;
+  - [`.github/workflows/deploy-pages.yml`](../../.github/workflows/deploy-pages.yml) deploys `dist/` to Pages after CI passes on `main`, or on a manual run.
 - The repository is **public** (required for free Pages).
 - Vite builds with base path `/glam-gills/` to match the Pages URL.
 

@@ -138,7 +138,7 @@ The game respects your device's reduced-motion setting.
 
 ## Testing on a phone
 
-The easiest way is the live build on GitHub Pages: <https://brenpike.github.io/glam-gills/>. It updates on every push to `main`.
+The easiest way is the live build on GitHub Pages: <https://brenpike.github.io/glam-gills/>. It updates after CI passes on `main`.
 
 The dev server listens on all network interfaces (`vite --host` behavior), so a phone on the same Wi-Fi can open it.
 On WSL2 this needs Windows port forwarding to the WSL VM, so the Pages build is the more reliable path.
