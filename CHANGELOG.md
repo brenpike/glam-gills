@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Lost legs now take about 40 seconds to grow back instead of about 20, so a hit matters for longer. Each snack you eat while a leg is missing still adds a fifth of a leg, which now saves about 8 seconds, so heading for snacks after a hit helps more. The Regrowth perk still cuts the time by its percent.
+- Lost legs now take about 40 seconds to grow back instead of about 20, so a hit matters for longer. Each snack you eat while a leg is missing still saves about 4 seconds, now a tenth of a leg instead of a fifth. The Regrowth perk still cuts the time by its percent.
 
 ## [0.47.1] - 2026-10-27
 

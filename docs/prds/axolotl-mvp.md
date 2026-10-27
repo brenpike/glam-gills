@@ -1560,7 +1560,7 @@ The same decision sets at least 3 tilapia in the canal (A1).
 | Risk weight | 1 to 2, linear in route distance within each treasure's pool, 2 at the rarity's risky side (nearer for Rare, Epic, and Legendary; farther for Common). Multiplied by the hiding spot weighting (B10). |
 | Per-area tuning | Every area uses these treasure slot counts and chances unless it sets its own, keyed by area id |
 | Stranded axolotl chance | 40% of trips, about 4 in 10, the default for every area that sets no chance of its own, unless one is already waiting (C2, C5; issue #111) |
-| Snack regrowth speed-up | Each snack adds 20% of one leg's regrowth to the leg that is regrowing (about 8 seconds at the base time). Never past a full leg. |
+| Snack regrowth speed-up | Each snack adds 10% of one leg's regrowth to the leg that is regrowing (about 4 seconds at the base time; it was 20% of a 20 second leg until 0.47.2). Never past a full leg. |
 | Snack eat reach | A circle of 36 pixels radius, centred 25 pixels ahead of the axolotl's middle along its body, turning with its tilt. While the body squashes in a turn, the centre moves in with it. The same at every size. It covers the whole head of the largest size; smaller sizes reach a little in front of the snout. |
 | Treasure hint range (Common / Rare / Epic / Legendary) | 150 / 115 / 85 / 60 pixels. Rarer is shorter. |
 | Dash pot touch distance | 30 pixels |

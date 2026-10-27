@@ -227,19 +227,19 @@ describe('speedUpRegrowth (A19)', () => {
   it('adds a fixed snackSpeedUp to the regrowing leg only', () => {
     const legs = updateLegs(hitOnce(loseLegs(1)), 1);
     const result = speedUpRegrowth(legs, 1);
-    expect(LEGS.snackSpeedUp).toBe(0.2);
+    expect(LEGS.snackSpeedUp).toBe(0.1);
     expect(result.boosted).toEqual([0]);
-    expect(result.state.slots[0]).toEqual({ status: 'regrowing', progress: legs.slots[0].progress + 0.2 });
+    expect(result.state.slots[0]).toEqual({ status: 'regrowing', progress: legs.slots[0].progress + 0.1 });
     expect(result.state.slots.slice(1)).toEqual(legs.slots.slice(1));
     expect(result.state.regrowQueue).toEqual(legs.regrowQueue);
     expect(result.state.protectedLeft).toBe(legs.protectedLeft);
     expect(result.state.protectedLeft).toBeGreaterThan(0);
   });
 
-  it('saves about 8 seconds of regrowth per snack at the base time', () => {
+  it('saves about 4 seconds of regrowth per snack at the base time', () => {
     const boosted = speedUpRegrowth(hitOnce(createLegs()), 1).state;
     const left = (1 - LEGS.snackSpeedUp) * LEGS.regrowTime;
-    expect(left).toBeCloseTo(32, 9);
+    expect(left).toBeCloseTo(36, 9);
     expect(presentCount(runFrames(boosted, left - 0.5))).toBe(3);
     expect(presentCount(runFrames(boosted, left + 0.5))).toBe(4);
   });
@@ -247,7 +247,7 @@ describe('speedUpRegrowth (A19)', () => {
   it('never goes past a full leg and never moves regrowth backwards', () => {
     for (const start of [0, 0.1, 0.35, 0.5, 0.79, 0.81, 0.95, 0.999]) {
       let legs = withHead(loseLegs(3), start);
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 40; i++) {
         const next = speedUpRegrowth(legs, 1).state;
         for (let slot = 0; slot < next.slots.length; slot++) {
           expect(next.slots[slot].progress, `start ${start} snack ${i}`).toBeLessThanOrEqual(1);
@@ -286,17 +286,17 @@ describe('speedUpRegrowth (A19)', () => {
 
   it('gives the same result for several snacks at once as one at a time', () => {
     const legs = withHead(loseLegs(3), 0.5);
-    const atOnce = speedUpRegrowth(legs, 9);
-    const oneByOne = eatOneByOne(legs, 9);
+    const atOnce = speedUpRegrowth(legs, 17);
+    const oneByOne = eatOneByOne(legs, 17);
     expect(atOnce.state).toEqual(oneByOne.state);
     expect(atOnce.boosted).toEqual(oneByOne.boosted);
-    expect(atOnce.boosted).toEqual([0, 0, 0, 1, 1, 1, 1, 1, 2]);
+    expect(atOnce.boosted).toEqual([...Array(5).fill(0), ...Array(10).fill(1), 2, 2]);
   });
 
   it('does not boost with snacks left over after the last leg regrows', () => {
     const legs = withHead(loseLegs(1), 0.5);
     const result = speedUpRegrowth(legs, 10);
-    expect(result.boosted).toEqual([0, 0, 0]);
+    expect(result.boosted).toEqual([0, 0, 0, 0, 0]);
     expect(result.state.slots).toEqual(createLegs().slots);
     expect(result.state.regrowQueue).toEqual([]);
   });
@@ -312,12 +312,12 @@ describe('speedUpRegrowth (A19)', () => {
     }
   });
 
-  it('still adds 0.2 of a leg with a shorter regrowTime', () => {
+  it('still adds 0.1 of a leg with a shorter regrowTime', () => {
     const lost = hitOnce(createLegs());
     const boosted = speedUpRegrowth(lost, 1, SHORT).state;
-    expect(boosted.slots[0].progress).toBeCloseTo(0.2, 9);
+    expect(boosted.slots[0].progress).toBeCloseTo(0.1, 9);
     const left = (1 - SHORT.snackSpeedUp) * SHORT.regrowTime;
-    expect(left).toBeCloseTo(0.8 * 13, 9);
+    expect(left).toBeCloseTo(0.9 * 13, 9);
     expect(presentCount(updateLegs(boosted, left - 0.1, SHORT))).toBe(3);
     expect(presentCount(updateLegs(boosted, left, SHORT))).toBe(4);
   });
