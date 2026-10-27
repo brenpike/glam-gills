@@ -595,14 +595,6 @@ export function repeatKey(id: SoundId, version: string): string {
   return `${id}:${version}`;
 }
 
-/**
- * The repeat limit (S13): whether a sound last started at `lastAt` seconds (undefined if never) may
- * start again at `now`.
- */
-export function passesRepeatLimit(lastAt: number | undefined, now: number): boolean {
-  return lastAt === undefined || now - lastAt >= SOUND_LEVELS.repeatS;
-}
-
 /** Device storage key of the sounds switch, outside the save so "Start over" keeps it (S14; ADR 0026). */
 export const SOUNDS_STORAGE_KEY = 'glam-gills:sounds';
 

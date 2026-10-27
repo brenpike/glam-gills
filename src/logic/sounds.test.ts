@@ -15,7 +15,6 @@ import {
   SOUND_TARGETS,
   inSoundKey,
   parseSoundsSetting,
-  passesRepeatLimit,
   repeatKey,
   scaleMidi,
   soundGain,
@@ -217,16 +216,8 @@ describe('sound levels (S13)', () => {
 });
 
 describe('the repeat limit (S13)', () => {
-  it('lets a sound play the first time', () => {
-    expect(passesRepeatLimit(undefined, 0)).toBe(true);
-  });
-
-  it('plays the same sound at most once every 60 ms', () => {
+  it('starts the same sound at most once every 60 ms', () => {
     expect(SOUND_LEVELS.repeatS).toBe(0.06);
-    expect(passesRepeatLimit(1, 1)).toBe(false);
-    expect(passesRepeatLimit(1, 1.059)).toBe(false);
-    expect(passesRepeatLimit(1, 1.06)).toBe(true);
-    expect(passesRepeatLimit(1, 2)).toBe(true);
   });
 
   it('starts snacks eaten at the same moment 80 ms apart, no closer than the repeat limit (issue #165)', () => {

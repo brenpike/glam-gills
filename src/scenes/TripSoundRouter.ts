@@ -1,7 +1,8 @@
 /**
  * The per-trip sound router (PRD S3 to S8, S11; issue #165, ND-5 and ND-7). SwimScene makes one each
  * trip and feeds it every trip and encounter event it dispatches; the router also hears the snack and
- * Dash game events. It asks src/logic/tripSounds.ts what each moment plays and plays it; it never
+ * Dash game events. It asks src/logic/tripSounds.ts what each moment plays and plays it as the trip's
+ * own sounds (ownSounds), so the trip's sounds still waiting their turn drop when it ends; it never
  * builds notes. Trip moments without a sound in this slice play nothing.
  */
 import type * as Phaser from 'phaser';
@@ -17,11 +18,13 @@ import {
   type TripSoundState,
   type TripSoundStep,
 } from '../logic/tripSounds';
-import { dropWaitingFinds, playSound } from '../platform/soundPlayer';
+import { ownSounds, type SoundOwner } from '../platform/soundPlayer';
 
 /** Plays one trip's sounds. Call destroy when the trip's scene shuts down. */
 export class TripSoundRouter {
   private state: TripSoundState = NEW_TRIP_SOUNDS;
+  /** The trip's sounds, so the ones still waiting their turn can be dropped when the trip ends. */
+  private readonly sounds: SoundOwner = ownSounds();
   /** A delayed sound waiting on the scene's clock: the exit sound until the last snack's sound rings out. */
   private pendingSound: Phaser.Time.TimerEvent | null = null;
 
@@ -46,14 +49,17 @@ export class TripSoundRouter {
     }
   }
 
-  /** Stops listening, drops a waiting delayed sound, and drops the trip's finds still waiting to play (S4). */
+  /**
+   * Stops listening, drops a waiting delayed sound, and drops the trip's sounds still waiting their
+   * turn (S3, S4; issue #165). Its sounds that have started ring out.
+   */
   destroy(): void {
     this.scene.game.events.off(GAME_EVENTS.COLLECTED, this.handleCollected, this);
     this.scene.game.events.off(GAME_EVENTS.ALL_COLLECTED, this.handleAllCollected, this);
     this.scene.game.events.off(GAME_EVENTS.DASH_STATE, this.handleDashState, this);
     this.pendingSound?.remove();
     this.pendingSound = null;
-    dropWaitingFinds();
+    this.sounds.dropWaiting();
   }
 
   private handleCollected(payload: CollectedPayload): void {
@@ -76,7 +82,7 @@ export class TripSoundRouter {
   /** Plays `request` now, or after its delay on the scene's clock, which stops while paused or hidden. */
   private playRequest(request: SoundRequest): void {
     if (request.delayS <= 0) {
-      playSound(request.id, request.version);
+      this.sounds.play(request.id, request.version);
       return;
     }
     this.pendingSound?.remove();
@@ -85,6 +91,6 @@ export class TripSoundRouter {
 
   private playDelayed(request: SoundRequest): void {
     this.pendingSound = null;
-    playSound(request.id, request.version);
+    this.sounds.play(request.id, request.version);
   }
 }
