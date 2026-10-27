@@ -236,10 +236,10 @@ describe('speedUpRegrowth (A19)', () => {
     expect(result.state.protectedLeft).toBeGreaterThan(0);
   });
 
-  it('saves about 4 seconds of regrowth per snack at the base time', () => {
+  it('saves about 8 seconds of regrowth per snack at the base time', () => {
     const boosted = speedUpRegrowth(hitOnce(createLegs()), 1).state;
     const left = (1 - LEGS.snackSpeedUp) * LEGS.regrowTime;
-    expect(left).toBeCloseTo(16, 9);
+    expect(left).toBeCloseTo(32, 9);
     expect(presentCount(runFrames(boosted, left - 0.5))).toBe(3);
     expect(presentCount(runFrames(boosted, left + 0.5))).toBe(4);
   });
