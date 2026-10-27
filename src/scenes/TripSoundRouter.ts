@@ -17,7 +17,7 @@ import {
   type TripSoundState,
   type TripSoundStep,
 } from '../logic/tripSounds';
-import { playSound } from '../platform/soundPlayer';
+import { dropWaitingFinds, playSound } from '../platform/soundPlayer';
 
 /** Plays one trip's sounds. Call destroy when the trip's scene shuts down. */
 export class TripSoundRouter {
@@ -46,13 +46,14 @@ export class TripSoundRouter {
     }
   }
 
-  /** Stops listening and drops a waiting delayed sound. */
+  /** Stops listening, drops a waiting delayed sound, and drops the trip's finds still waiting to play (S4). */
   destroy(): void {
     this.scene.game.events.off(GAME_EVENTS.COLLECTED, this.handleCollected, this);
     this.scene.game.events.off(GAME_EVENTS.ALL_COLLECTED, this.handleAllCollected, this);
     this.scene.game.events.off(GAME_EVENTS.DASH_STATE, this.handleDashState, this);
     this.pendingSound?.remove();
     this.pendingSound = null;
+    dropWaitingFinds();
   }
 
   private handleCollected(payload: CollectedPayload): void {

@@ -63,7 +63,7 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | | One of the last 3 snacks | The gulp on step 5, with two firefly twinkles, in place of the ladder note. The ladder does not climb for them. Only the 3 snacks that sparkle play it, not the 4th-from-last snack that starts the sparkle. | 1 |
 | | Catch a tadpole or shrimp | The gulp with a tiny upward boing. | 2 |
 | | Shrimp flicks away | A tiny high flick and tick (touch level). | 2 |
-| | Find a treasure | Grows with rarity: Common two kalimba dings; Rare a marimba run and bubbles; Epic a music box run, a glass chime and a shaker; Legendary a run up the scale, a held glassy chord over a soft pad, a whistle and fireflies. Only one find sound plays at a time: a second waits until the first ends, and a waiting find is dropped if sounds turn off or the page hides. | 1 |
+| | Find a treasure | Grows with rarity: Common two kalimba dings; Rare a marimba run and bubbles; Epic a music box run, a glass chime and a shaker; Legendary a run up the scale, a held glassy chord over a soft pad, a whistle and fireflies. Only one find sound plays at a time: a second waits until the first ends, and a waiting find is dropped if sounds turn off, the page hides or the trip ends before it starts. | 1 |
 | | Paint shell, extra shimmer | A glassy sparkle that slides up, after the find sound. | 2 |
 | Tail Dash and Dash pots | Tail Dash | A watery whoosh that rises, and a trail of three bubbles, once per Dash as it starts. | 1 |
 | | Dash ready again | One soft bloop and a high kalimba note. | 2 |

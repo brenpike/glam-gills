@@ -5,7 +5,8 @@
  * Nothing sounds before the first input, or while the page is hidden (S1). The same sound plays at
  * most once every 60 ms (S13). Only one find sound plays at a time: a second waits, on the audio
  * clock, for the first to end (S4; src/logic/findWait.ts), and a waiting find is dropped, freeing its
- * slot, if sounds turn off or the page hides before it starts.
+ * slot, if sounds turn off, the page hides, or its trip ends (dropWaitingFinds) before it starts. A
+ * sound that has started rings out, even when its scene ends, so a scene change never cuts it short.
  *
  * Scenes and the sound router say which sound to play (playSound); the sounds switch reads and sets
  * soundsAreOn and setSoundsOn.
@@ -120,8 +121,11 @@ function lastFindEnd(): number | undefined {
   return Math.max(...state.finds.map((find) => find.endsAt));
 }
 
-/** Drops every find that has not started yet, silencing it and freeing its slot (S4). */
-function dropWaitingFinds(): void {
+/**
+ * Drops every find that has not started yet, silencing it and freeing its slot (S4). The sound router
+ * calls it when its trip ends, so a find waiting from that trip never plays in the next scene.
+ */
+export function dropWaitingFinds(): void {
   const graph = audioGraph();
   if (graph === null) return;
   const now = graph.ctx.currentTime;
