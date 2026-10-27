@@ -10,8 +10,6 @@ import {
   longestQuietSwim,
   meetsDepthRule,
   meetsFloorRule,
-  meetsFullDangerBar,
-  meetsRampDangerBar,
   meetsWholeWaterDangerBar,
   meetsWholeWaterRampBar,
   movingHazardTypeCount,
@@ -23,7 +21,6 @@ import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
 import {
   CARP_SPECIES,
   GARTER_SNAKE_SPECIES,
-  HERON_SPECIES,
   TILAPIA_SPECIES,
   tunedSpecies,
   type PredatorRoute,
@@ -79,25 +76,6 @@ function pole(id: string, x: number) {
 
 function layout(parts: Partial<TestLayout> = {}): TestLayout {
   return { width: 4 * SCREEN_W, height: WORLD_H, mainPath: line(0, 1000), tilapiaRoutes: [], predatorRoutes: [], ...parts };
-}
-
-/**
- * Four moving threats over four screens, two species, one moving hazard type, every predator
- * chasing, and a 47 px longest quiet stretch (between the pole's reach and the carp's).
- */
-function fullBarLayout(parts: Partial<TestLayout> = {}): TestLayout {
-  return layout({
-    tilapia: CHASING_TILAPIA,
-    tilapiaRoutes: [route('t-1', 0, 100), route('t-2', 300, 500)],
-    predatorRoutes: [predatorRoute('carp-1', CHASING_CARP, 800, 900)],
-    movingHazards: [pole('test/punting-pole-1', 650)],
-    ...parts,
-  });
-}
-
-/** Two chasing tilapia routes and a 320 px longest quiet stretch, at the path end. */
-function rampLayout(parts: Partial<TestLayout> = {}): TestLayout {
-  return layout({ tilapia: CHASING_TILAPIA, tilapiaRoutes: [route('t-1', 0, 100), route('t-2', 500, 600)], ...parts });
 }
 
 describe('movingThreatCount', () => {
@@ -199,82 +177,11 @@ describe('longestQuietStretch', () => {
   });
 });
 
-describe('meetsFullDangerBar', () => {
-  it('passes an area that meets every condition', () => {
-    expect(meetsFullDangerBar(fullBarLayout())).toBe(true);
-  });
-
-  it('passes with a warn-on-route species that has a chase as the second species', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ predatorRoutes: [predatorRoute('snake-1', CHASING_SNAKE, 800, 900)] }))).toBe(true);
-  });
-
-  it('asks for at least 0.75 moving threats per screen, rounded up, screens being width and height over one screen', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ width: 5 * SCREEN_W }))).toBe(true);
-    expect(meetsFullDangerBar(fullBarLayout({ width: 6 * SCREEN_W }))).toBe(false);
-    expect(meetsFullDangerBar(fullBarLayout({ height: 2 * WORLD_H }))).toBe(false);
-  });
-
-  it('fails with one predator species', () => {
-    const tilapiaOnly = tunedSpecies(TILAPIA_SPECIES, CHASING_TILAPIA);
-    expect(meetsFullDangerBar(fullBarLayout({ predatorRoutes: [predatorRoute('t-9', tilapiaOnly, 800, 900)] }))).toBe(false);
-  });
-
-  it('fails with no moving hazard type', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ movingHazards: [] }))).toBe(false);
-  });
-
-  it('fails when the area tilapia tuning has no chase, or the area has none', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ tilapia: STILL_TILAPIA }))).toBe(false);
-    expect(meetsFullDangerBar({ ...fullBarLayout(), tilapia: undefined })).toBe(false);
-  });
-
-  it('fails when another predator has no chase, the heron included', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ predatorRoutes: [predatorRoute('carp-1', STILL_CARP, 800, 900)] }))).toBe(false);
-    const withHeron = [predatorRoute('carp-1', CHASING_CARP, 800, 900), predatorRoute('heron-1', HERON_SPECIES, 900, 1000)];
-    expect(meetsFullDangerBar(fullBarLayout({ predatorRoutes: withHeron }))).toBe(false);
-  });
-
-  it('allows a longest quiet stretch of exactly one screen, and fails a longer one', () => {
-    expect(meetsFullDangerBar(fullBarLayout({ mainPath: line(0, 980 + SCREEN_W) }))).toBe(true);
-    expect(meetsFullDangerBar(fullBarLayout({ mainPath: line(0, 981 + SCREEN_W) }))).toBe(false);
-  });
-});
-
-describe('meetsRampDangerBar', () => {
-  it('passes Areas 2 and 3 with the tilapia chase, a short quiet stretch and no moving hazard', () => {
-    expect(meetsRampDangerBar(2, rampLayout())).toBe(true);
-    expect(meetsRampDangerBar(3, rampLayout())).toBe(true);
-  });
-
-  it('fails without the tilapia chase, or with no tilapia route', () => {
-    expect(meetsRampDangerBar(2, rampLayout({ tilapia: STILL_TILAPIA }))).toBe(false);
-    const carpOnly = rampLayout({ tilapiaRoutes: [], predatorRoutes: [predatorRoute('carp-1', CHASING_CARP, 0, 100), predatorRoute('carp-2', CHASING_CARP, 500, 600)] });
-    expect(meetsRampDangerBar(3, carpOnly)).toBe(false);
-  });
-
-  it('fails a quiet stretch longer than one screen', () => {
-    expect(meetsRampDangerBar(2, rampLayout({ mainPath: line(0, 680 + SCREEN_W) }))).toBe(true);
-    expect(meetsRampDangerBar(2, rampLayout({ mainPath: line(0, 681 + SCREEN_W) }))).toBe(false);
-  });
-
-  it('allows no moving hazard type in Area 2 and at most one in Area 3', () => {
-    const onePole = rampLayout({ movingHazards: [pole('p-1', 300), pole('p-2', 800)] });
-    expect(meetsRampDangerBar(2, onePole)).toBe(false);
-    expect(meetsRampDangerBar(3, onePole)).toBe(true);
-    const twoTypes = rampLayout({ movingHazards: [pole('p-1', 300), movingHazardSpawn('j-1', OTHER_TYPE, 800, 0)] });
-    expect(meetsRampDangerBar(3, twoTypes)).toBe(false);
-  });
-
-  it('throws a RangeError for an area without a ramp bar', () => {
-    expect(() => meetsRampDangerBar(1, rampLayout())).toThrow(RangeError);
-    expect(() => meetsRampDangerBar(4, rampLayout())).toThrow(RangeError);
-  });
-});
-
 /**
- * The dev danger area (PRD open question 262, ND-15) shows every danger part but does not meet the
- * full bar: 6 moving threats over 12 screens, where the bar asks for 9, and a 899 px quiet stretch
- * from the second pole's reach, down the dive and along the bottom row to the last tilapia's reach.
+ * The dev danger area (PRD open question 262, ND-15) shows every danger part: 6 moving threats, 3
+ * predator species and 1 moving hazard type, and a 899 px quiet stretch along its main path from
+ * the second pole's reach, down the dive and along the bottom row to the last tilapia's reach.
+ * 'the dev danger area, whole water' below checks it against the bar.
  */
 describe('the dev danger area', () => {
   const zone = buildZone(DEV_DANGER_AREA.layout, DEFAULT_ZONE_SEED);
@@ -290,12 +197,6 @@ describe('the dev danger area', () => {
 
   it('has a longest quiet stretch of about 899 px', () => {
     expect(longestQuietStretch(zone)).toBeCloseTo(899.16, 2);
-  });
-
-  it('does not meet the full danger bar: 9 moving threats are asked for over 12 screens, and the quiet stretch is over one screen', () => {
-    expect(meetsFullDangerBar(zone)).toBe(false);
-    expect(meetsFullDangerBar({ ...zone, width: 2 * SCREEN_W, height: WORLD_H })).toBe(false);
-    expect(meetsFullDangerBar({ ...zone, width: 2 * SCREEN_W, height: WORLD_H, mainPath: zone.mainPath.slice(0, 3) })).toBe(true);
   });
 });
 
