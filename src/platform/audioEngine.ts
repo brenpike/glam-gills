@@ -21,8 +21,12 @@ const MUSIC_REVERB_SEND = 0.32;
 const WARM_HZ = 7500;
 /** The output limiter (M11), after both buses. */
 const LIMITER = Object.freeze({ threshold: -14, knee: 6, ratio: 8, attack: 0.003, release: 0.25 });
-/** Inputs that count as the first input, which lets the page make sound (M7). */
-const UNLOCK_EVENTS: readonly string[] = ['pointerdown', 'keydown', 'touchend'];
+/**
+ * Inputs that may let the page make sound (M7). A phone only allows it on a finger lifting
+ * (pointerup, touchend, click), not on a finger landing (pointerdown), so the engine keeps listening
+ * until the context really runs.
+ */
+const UNLOCK_EVENTS: readonly string[] = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'click', 'keydown'];
 
 /** The audio graph, built on the first input. */
 export interface AudioGraph extends VoiceKit {
@@ -47,6 +51,8 @@ const state = {
   installed: false,
   graph: null as AudioGraph | null,
   clients: [] as AudioClient[],
+  /** The resume in flight, so the players hear once when the context runs again. */
+  resuming: null as Promise<void> | null,
 };
 
 /**
@@ -57,9 +63,24 @@ export function joinAudio(client: AudioClient): void {
   state.clients.push(client);
   if (state.installed) return;
   state.installed = true;
-  const unlock = (): void => {
-    if (!startAudio()) return;
+  const stopListening = (): void => {
     for (const type of UNLOCK_EVENTS) window.removeEventListener(type, unlock, true);
+  };
+  // The first input builds the graph; until the context runs, every input asks it to resume again,
+  // because a phone ignores a resume asked for when a finger lands (pointerdown).
+  const unlock = (): void => {
+    const built = state.graph !== null;
+    if (!startAudio()) return;
+    const graph = state.graph;
+    // With music and sounds both off, a switch turning on resumes the context from its own tap.
+    if (graph === null || graph.ctx.state === 'running' || !shouldRun()) {
+      stopListening();
+      return;
+    }
+    const resumed = built ? refreshAudio() : (state.resuming ?? Promise.resolve());
+    void resumed.then(() => {
+      if (graph.ctx.state === 'running') stopListening();
+    });
   };
   for (const type of UNLOCK_EVENTS) window.addEventListener(type, unlock, true);
   document.addEventListener('visibilitychange', () => void refreshAudio());
@@ -156,9 +177,20 @@ export function refreshAudio(): Promise<void> {
   if (graph === null) return Promise.resolve();
   const { ctx } = graph;
   if (shouldRun()) {
-    return ctx.resume().then(() => {
-      for (const client of state.clients) client.resumed(graph);
-    });
+    // Ask again even when a resume is in flight: a phone allows it only during a tap, and when the
+    // context runs, the resume in flight completes too. The players hear once.
+    const resume = ctx.resume();
+    if (state.resuming !== null) return state.resuming;
+    const resuming = resume
+      .then(() => {
+        for (const client of state.clients) client.resumed(graph);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (state.resuming === resuming) state.resuming = null;
+      });
+    state.resuming = resuming;
+    return resuming;
   }
   if (!pageShowing()) {
     void ctx.suspend();

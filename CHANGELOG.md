@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-10-27
+
+### Fixed
+
+- On phones, the music and sounds now start on your first tap. Before, a phone ignored the game's request to start sound when your finger first touched the screen, so the music stayed silent, even in the character creator and the Home Tank, until you turned the music switch off and on again. The game now keeps asking until the sound is really playing (#170).
+
 ## [0.47.0] - 2026-10-26
 
 ### Added
