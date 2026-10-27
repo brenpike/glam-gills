@@ -40,6 +40,11 @@ So the tests already gate the deploy, but a pull request's check shows up as "De
 - **ND-6 No concurrency group in CI.** The deploy keeps its `pages` group.
 - **ND-7 Docs.** AGENTS.md, README, the tech-stack "Hosting / CI" row and [ADR 0005](0005-hosting-github-pages.md) say CI checks every pull request and push to `main`, and Pages deploys after CI passes on `main`. This ADR records the split.
 
+**Owner decision: action version tags.** In review of this change, the owner chose to keep every action in `ci.yml` and `deploy-pages.yml` on its GitHub-published major version tag (such as `actions/checkout@v7`), as ND-1 sets, and not to pin actions to full commit SHAs.
+Every action used comes from GitHub's own `actions` organization.
+The trade-off: a moved or compromised tag could change the files that reach Pages, or run in the deploy job with its `pages: write` and `id-token: write` permissions.
+Pinning every action to a commit SHA, with a bot that updates the pins, is out of scope for this change and may be tracked in a separate issue.
+
 ## Alternatives considered
 
 | Option | Why not |
