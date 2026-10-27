@@ -3,12 +3,13 @@
  * tank frame of the hub, and the menu (the hub actions, the name panel, the best-stars badge and the
  * focus caption room) on that frame. The Menu button and its folded Refuge nudge never overlap the
  * tank box. Only on canvases where no Menu button spot is off the tank box at the contain-fit scale
- * does the hub's tank shrink, just enough to free one. Pure: sizes come in measured, in CSS px.
+ * does the hub's tank shrink, just enough to free one. Then the menu's fold and open rules (PRD C16,
+ * ND-6), which save nothing. Pure: sizes come in measured, in CSS px.
  */
 import type { HudView, Rect, Size } from './hudLayout';
 import { hubStarsBadgeRect, hubStarsBadgeShape, type HubBadgeShape } from './starsUi';
 import { TANK, tankBoxCss, tankFrame, tankFrameAt, topKeepClearCss, type TankFrame } from './tank';
-import { UI, hubCaptionRect, hubLayout, type HubAction, type HubLayout } from './tankUi';
+import { UI, hubCaptionRect, hubLayout, type HubAction, type HubActionId, type HubLayout } from './tankUi';
 
 /** Float noise allowed when rects touch, in CSS px. */
 const TOUCH_EPS = 1e-9;
@@ -150,4 +151,52 @@ function menuOnFrame(view: HudView, placement: MenuPlacement, sizes: HubFitSizes
   const box = tankBoxCss(frame);
   const openByDefault = menuRects({ hub, badge, caption }).every((rect) => !rectsOverlap(rect, box));
   return { frame, spot, menu, menuFootprint: footprint, hub, badge, caption, openByDefault };
+}
+
+/** Whether the hub menu is open, and the canvas default it was last set from (PRD C16, issue #148, ND-6). Never saved. */
+export interface HubMenuState {
+  open: boolean;
+  openByDefault: boolean;
+}
+
+/**
+ * What the hub menu reacts to: a resize with the canvas's new default, a press on the Menu button,
+ * coming back from a screen a menu action opened (the explorer card for Go exploring), or coming back
+ * from a screen an axolotl opened (its choices card, and restyle from that card).
+ */
+export type HubMenuEvent =
+  | { kind: 'resize'; openByDefault: boolean }
+  | { kind: 'toggle' }
+  | { kind: 'returnFromAction'; id: HubActionId }
+  | { kind: 'returnFromAxolotl' };
+
+/** The hub menu after an event, and the hub action the focus goes to (null: the focus stays where it is). */
+export interface HubMenuStep {
+  state: HubMenuState;
+  focus: HubActionId | null;
+}
+
+/** The hub menu when the Home Tank starts: open when the canvas opens it by default (HubFit.openByDefault). */
+export function startHubMenu(openByDefault: boolean): HubMenuState {
+  return { open: openByDefault, openByDefault };
+}
+
+/**
+ * The hub menu after `event` (PRD C16, ND-6). Coming back from a menu action's screen opens the menu
+ * with the focus on that action. Coming back from an axolotl's screen keeps the state. A resize that
+ * changes the default takes the new default; one that keeps it changes nothing. A Menu button press
+ * folds an open menu and opens a folded one.
+ */
+export function stepHubMenu(state: HubMenuState, event: HubMenuEvent): HubMenuStep {
+  switch (event.kind) {
+    case 'resize':
+      if (event.openByDefault === state.openByDefault) return { state, focus: null };
+      return { state: startHubMenu(event.openByDefault), focus: null };
+    case 'toggle':
+      return { state: { ...state, open: !state.open }, focus: null };
+    case 'returnFromAction':
+      return { state: { ...state, open: true }, focus: event.id };
+    case 'returnFromAxolotl':
+      return { state, focus: null };
+  }
 }

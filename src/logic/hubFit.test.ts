@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { areaLabel } from './areaText';
 import { isSupportedCanvas } from './cardFit';
-import { hubFit, type HubFit, type HubFitSizes } from './hubFit';
+import { hubFit, startHubMenu, stepHubMenu, type HubFit, type HubFitSizes, type HubMenuState } from './hubFit';
 import type { HudView, Rect, Size } from './hudLayout';
 import { HUB_STARS_BADGE } from './starsUi';
 import { TANK, tankBoxCss, tankFrame, tankFrameAt, topKeepClearCss, type TankFrame } from './tank';
 import { COLLECTION_BOOK_LABEL } from './tankText';
-import { HUB_BUTTONS, TILE_BUTTON, UI, hubButtonCompactLook, hubButtonLook, tileButtonWidth, type HubAction } from './tankUi';
+import { HUB_BUTTONS, MENU_BUTTON_LOOK, UI, hubButtonCompactLook, hubButtonLook, type HubAction } from './tankUi';
 
 /** Text size estimate that errs wide, the cardCopyFit.test constants. */
 const BOLD_EM = 0.6;
@@ -22,8 +22,8 @@ const EPS = 1e-9;
 /** The folded Refuge nudge's overhang past the Menu button's top-right corner: REFUGE_NUDGE_SIZE / 2 - REFUGE_NUDGE_INSET in src/art/drawRefuge.ts. */
 const NUDGE_OVERHANG = 3;
 
-/** The Menu button until its own look lands: a size-1 tile labelled Menu. */
-const MENU_BUTTON: Size = { w: tileButtonWidth('Menu'), h: TILE_BUTTON.h };
+/** The Menu button's body as the scene builds it: MENU_BUTTON_LOOK. */
+const MENU_BUTTON: Size = { w: MENU_BUTTON_LOOK.w, h: MENU_BUTTON_LOOK.h };
 
 /** The ND-4 named sizes (issue #148), each tried upright and turned sideways. */
 const NAMED_SIZES: readonly [number, number][] = [
@@ -322,5 +322,70 @@ describe('hubFit', () => {
       expect(fit.frame.scale).toBeGreaterThan(0);
       expect(Number.isFinite(fit.frame.scale)).toBe(true);
     }
+  });
+});
+
+describe('hub menu fold and open rules (PRD C16, ND-6)', () => {
+  const OPEN: HubMenuState = { open: true, openByDefault: true };
+  const FOLDED: HubMenuState = { open: false, openByDefault: false };
+  const OPENED_BY_HAND: HubMenuState = { open: true, openByDefault: false };
+  const FOLDED_BY_HAND: HubMenuState = { open: false, openByDefault: true };
+  const STATES: readonly HubMenuState[] = [OPEN, FOLDED, OPENED_BY_HAND, FOLDED_BY_HAND];
+
+  it('starts with the canvas default', () => {
+    expect(startHubMenu(true)).toEqual(OPEN);
+    expect(startHubMenu(false)).toEqual(FOLDED);
+  });
+
+  it('starts open where the fit opens the menu by default and folded where it does not', () => {
+    for (const [cssW, cssH, open] of [[390, 844, true], [1280, 720, false]] as const) {
+      const view = { cssW, cssH };
+      expect(startHubMenu(hubFit(view, sizesOn(view)).openByDefault).open).toBe(open);
+    }
+  });
+
+  it('opens the menu with the focus on the action, coming back from any menu action screen', () => {
+    for (const state of STATES) {
+      for (const { id } of HUB_BUTTONS) {
+        expect(stepHubMenu(state, { kind: 'returnFromAction', id })).toEqual({
+          state: { open: true, openByDefault: state.openByDefault },
+          focus: id,
+        });
+      }
+    }
+  });
+
+  it('keeps the state, coming back from a screen an axolotl opened', () => {
+    for (const state of STATES) {
+      expect(stepHubMenu(state, { kind: 'returnFromAxolotl' })).toEqual({ state, focus: null });
+    }
+  });
+
+  it('takes the new default on a resize that changes it', () => {
+    expect(stepHubMenu(OPEN, { kind: 'resize', openByDefault: false })).toEqual({ state: FOLDED, focus: null });
+    expect(stepHubMenu(FOLDED, { kind: 'resize', openByDefault: true })).toEqual({ state: OPEN, focus: null });
+    expect(stepHubMenu(OPENED_BY_HAND, { kind: 'resize', openByDefault: true })).toEqual({ state: OPEN, focus: null });
+    expect(stepHubMenu(FOLDED_BY_HAND, { kind: 'resize', openByDefault: false })).toEqual({ state: FOLDED, focus: null });
+  });
+
+  it('changes nothing on a resize that keeps the default', () => {
+    for (const state of STATES) {
+      expect(stepHubMenu(state, { kind: 'resize', openByDefault: state.openByDefault })).toEqual({ state, focus: null });
+    }
+  });
+
+  it('folds an open menu and opens a folded one on a Menu button press, keeping the default', () => {
+    expect(stepHubMenu(OPEN, { kind: 'toggle' })).toEqual({ state: FOLDED_BY_HAND, focus: null });
+    expect(stepHubMenu(FOLDED, { kind: 'toggle' })).toEqual({ state: OPENED_BY_HAND, focus: null });
+    expect(stepHubMenu(OPENED_BY_HAND, { kind: 'toggle' })).toEqual({ state: FOLDED, focus: null });
+    expect(stepHubMenu(FOLDED_BY_HAND, { kind: 'toggle' })).toEqual({ state: OPEN, focus: null });
+  });
+
+  it('never changes the state it is given', () => {
+    const state: HubMenuState = Object.freeze({ open: false, openByDefault: false });
+    stepHubMenu(state, { kind: 'toggle' });
+    stepHubMenu(state, { kind: 'returnFromAction', id: 'refuge' });
+    stepHubMenu(state, { kind: 'resize', openByDefault: true });
+    expect(state).toEqual(FOLDED);
   });
 });

@@ -12,6 +12,8 @@ import {
   DECORATE_LABEL,
   DONE_LABEL,
   GO_EXPLORING_LABEL,
+  HIDE_MENU_LABEL,
+  MENU_LABEL,
   NEXT_PAGE_LABEL,
   PREVIOUS_PAGE_LABEL,
   REFUGE_LABEL,
@@ -145,6 +147,27 @@ export function hubButtonCompactLook(spec: Pick<HubButtonSpec, 'label' | 'primar
   if (spec.primary) return { shape: 'wide', w: wideButtonWidth(spec.label), h: WIDE_BUTTON.h };
   return { shape: 'icon', w: ICON_TILE.w, h: ICON_TILE.h };
 }
+
+/** The Menu button that folds and opens the hub menu (PRD C16, issue #148, ND-5): its label while folded and while open. */
+export interface MenuButtonSpec {
+  id: 'menu';
+  label: string;
+  openLabel: string;
+}
+
+/** The Menu button: "Menu" while the hub menu is folded, "Hide" while it is open; one menu icon serves both (ND-7). */
+export const MENU_BUTTON: MenuButtonSpec = Object.freeze({ id: 'menu', label: MENU_LABEL, openLabel: HIDE_MENU_LABEL });
+
+/**
+ * The look of the Menu button (issue #148, ND-5): a square labelled tile round the menu icon, its
+ * size-1 body widened to hold the wider of its two labels, so it keeps one size folded or open. The
+ * compact hub keeps this look too, so the Menu button is never icon-only.
+ */
+export const MENU_BUTTON_LOOK: HubButtonLook = Object.freeze({
+  shape: 'square',
+  w: Math.max(tileButtonWidth(MENU_BUTTON.label), tileButtonWidth(MENU_BUTTON.openLabel)),
+  h: TILE_BUTTON.h,
+});
 
 /** Size of every Treasure Chest button: square tiles wide enough for the widest of Back, Close and Next. */
 export const CHEST_BUTTON: Size = Object.freeze({

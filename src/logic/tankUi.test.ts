@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { isSupportedCanvas } from './cardFit';
 import type { HudView, Rect, Size } from './hudLayout';
 import { SHIPPED_DECORATIONS, decorationBandTop, lidTopCss, tankFrame, topKeepClearCss } from './tank';
-import { CLOSE_LABEL, COLLECTION_BOOK_LABEL, DONE_LABEL, NEXT_PAGE_LABEL, PREVIOUS_PAGE_LABEL, REFUGE_LABEL } from './tankText';
+import {
+  CLOSE_LABEL,
+  COLLECTION_BOOK_LABEL,
+  DONE_LABEL,
+  HIDE_MENU_LABEL,
+  MENU_LABEL,
+  NEXT_PAGE_LABEL,
+  PREVIOUS_PAGE_LABEL,
+  REFUGE_LABEL,
+} from './tankText';
 import {
   BUTTON_LABEL_PAD,
   CHEST_BUTTON,
@@ -11,6 +20,8 @@ import {
   HUB_BUTTONS,
   ICON_TILE,
   LABEL_BOLD_EM,
+  MENU_BUTTON,
+  MENU_BUTTON_LOOK,
   TILE_BUTTON,
   TRAY_PAGE_ROWS,
   TRAY_PX,
@@ -517,6 +528,34 @@ describe('hubButtonLook', () => {
       'sound',
     ]);
     expect(HUB_BUTTONS.filter((spec) => spec.primary).map((spec) => spec.id)).toEqual(['goExploring']);
+  });
+});
+
+describe('Menu button', () => {
+  it('reads "Menu" while the menu is folded and "Hide" while it is open', () => {
+    expect(MENU_BUTTON).toEqual({ id: 'menu', label: MENU_LABEL, openLabel: HIDE_MENU_LABEL });
+    expect(Object.isFrozen(MENU_BUTTON)).toBe(true);
+  });
+
+  it('is a 65 x 64 square labelled tile, sized for the wider of its two labels', () => {
+    expect(MENU_BUTTON_LOOK).toEqual({ shape: 'square', w: 65, h: TILE_BUTTON.h });
+    expect(MENU_BUTTON_LOOK.w).toBe(Math.max(tileButtonWidth(MENU_LABEL), tileButtonWidth(HIDE_MENU_LABEL)));
+    for (const label of [MENU_LABEL, HIDE_MENU_LABEL]) {
+      expect(MENU_BUTTON_LOOK.w).toBeGreaterThanOrEqual(tileLabelW(label) + 2 * BUTTON_LABEL_PAD);
+    }
+    expect(Object.isFrozen(MENU_BUTTON_LOOK)).toBe(true);
+  });
+
+  it('keeps its labelled look when the hub is compact, never icon-only and at least PRD X5', () => {
+    expect(MENU_BUTTON_LOOK.shape).not.toBe('icon');
+    expect(MENU_BUTTON_LOOK.w).toBeGreaterThan(ICON_TILE.w);
+    expect(MENU_BUTTON_LOOK.h).toBeGreaterThan(ICON_TILE.h);
+    expect(Math.min(MENU_BUTTON_LOOK.w, MENU_BUTTON_LOOK.h)).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+  });
+
+  it('is not one of the six hub actions', () => {
+    expect(HUB_BUTTONS.map((spec) => spec.id)).not.toContain(MENU_BUTTON.id);
+    expect(HUB_BUTTONS).toHaveLength(6);
   });
 });
 

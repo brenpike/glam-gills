@@ -77,7 +77,8 @@ export type IconKind =
   | 'musicOn'
   | 'musicOff'
   | 'soundsOn'
-  | 'soundsOff';
+  | 'soundsOff'
+  | 'menu';
 
 /**
  * House icon (guide 7d), shared by the Home Spot flag and every "go home" UI.
@@ -618,6 +619,18 @@ export function paintIcon(ctx: CanvasRenderingContext2D, kind: IconKind, size: n
       slash.moveTo(5, 5);
       slash.lineTo(27, 27);
       ctx.stroke(slash);
+      break;
+    }
+    case 'menu': {
+      // Home Tank Menu button (PRD C16, issue #148, ND-7): three rounded bars, ink only, 3.5 with round
+      // caps, no fill. Each bar runs from x 8 to 24, at y 9, 16 and 23. One icon for Menu and Hide.
+      ctx.lineWidth = 3.5;
+      const bars = new Path2D();
+      for (const y of [9, 16, 23]) {
+        bars.moveTo(8, y);
+        bars.lineTo(24, y);
+      }
+      ctx.stroke(bars);
       break;
     }
   }

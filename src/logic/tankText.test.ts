@@ -4,7 +4,9 @@ import {
   ALL_DECORATIONS_PLACED,
   DECORATE_HINT,
   GO_EXPLORING_LABEL,
+  HIDE_MENU_LABEL,
   HOME_TANK_NAME,
+  MENU_LABEL,
   NO_DECORATIONS_TO_PLACE,
   REFUGE_LABEL,
 } from './tankText';
@@ -43,7 +45,9 @@ describe('tank text', () => {
       'DECORATE_LABEL',
       'DONE_LABEL',
       'GO_EXPLORING_LABEL',
+      'HIDE_MENU_LABEL',
       'HOME_TANK_NAME',
+      'MENU_LABEL',
       'NEXT_PAGE_LABEL',
       'NO_DECORATIONS_TO_PLACE',
       'PREVIOUS_PAGE_LABEL',
@@ -72,6 +76,11 @@ describe('tank text', () => {
 
   it('names the refuge button "Refuge"', () => {
     expect(REFUGE_LABEL).toBe('Refuge');
+  });
+
+  it('names the Menu button "Menu" while the menu is folded and "Hide" while it is open', () => {
+    expect(MENU_LABEL).toBe('Menu');
+    expect(HIDE_MENU_LABEL).toBe('Hide');
   });
 
   it('teaches decorating by touch and by keyboard', () => {
