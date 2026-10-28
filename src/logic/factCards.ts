@@ -210,24 +210,33 @@ export const STALACTITE_FACT: Readonly<FactCard> = Object.freeze({
 
 /**
  * The geyser fact card, shown the first time the axolotl meets a geyser vent (PRD C13; issue #77,
- * ND-3). Provisional copy.
+ * ND-3). Provisional copy, about cold-water geysers, since the spring cave is cold, clear water.
  * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
- * U.S. Geological Survey, "Volcanoes: Geysers, Fumaroles, and Hot Springs",
- * https://pubs.usgs.gov/gip/volc/geysers.html (water that seeps down "is heated, becomes less dense,
- * and rises back to the surface along fissures and cracks"; erupting geysers are "displays of
- * underground energy suddenly unleashed"; "This cycle can be repeated with remarkable regularity",
- * Old Faithful erupting "on an average of about once every 65 minutes");
- * U.S. Geological Survey, "Geysers", https://www.usgs.gov/publications/geysers (a geyser is a hot
- * spring that erupts from time to time, pausing between eruptions).
- * Owner to verify: "hot rock" reads the sources' heat of the magma below; the sources describe
- * geysers on land bursting into the air, while the game's vent bursts up under water; the second
- * source's summary was read through a search result, not the full paper.
+ * Geysir Andernach, "How does an eruption of the Geysir Andernach work?",
+ * https://www.geysir-andernach.de/en/geysir/funktionsweise/ (the carbon dioxide "comes from the
+ * magma deep beneath the Eifel"; the water is "20 to 25° Celsius"; "The entire geyser eruption lasts
+ * about 15 minutes", and "110 to 120 minutes later" "the well is full and the next geyser eruption
+ * begins"; "all cold-water geysers require an artificial connection from the earth's surface to the
+ * depths");
+ * Guinness World Records, "Tallest cold-water geyser",
+ * https://www.guinnessworldrecords.com/world-records/highest-cold-water-geyser (the Geysir Andernach
+ * in Germany; carbon dioxide from deep underground dissolves in cold groundwater and pushes it out of
+ * a drilled well, like a soda bottle);
+ * F. J. Gouveia and S. J. Friedmann, Lawrence Livermore National Laboratory, "Timing and prediction
+ * of CO2 eruptions from Crystal Geyser, UT", UCRL-TR-221731, 2006,
+ * https://digital.library.unt.edu/ark:/67531/metadc890957/ (Crystal Geyser in Utah erupts carbon
+ * dioxide and water again and again, 140 eruptions in a 76-day record).
+ * Owner to verify: "cold" reads the sources' "cold-water" geysers, whose water is 20 to 25° C at
+ * Andernach, cool beside a hot spring's, not icy; "fizzy gas" and "like in soda" read the sources'
+ * carbon dioxide; the Guinness and Crystal Geyser details were read through page summaries, not the
+ * full text; the sources' cold-water geysers burst from wells people drilled, and up into the air,
+ * while the game's vent is in a cave and bursts up under water.
  */
 export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
   id: 'geyser-vent',
   name: 'Geyser',
   title: 'Geysers',
-  body: 'Geysers are hot springs that burst up again and again. Hot rock deep underground heats the water until it shoots out, then the geyser rests and fills up.',
+  body: 'Some geysers are cold. Fizzy gas from deep underground builds up in the water, like in soda, and pushes it out. Then the geyser rests and fills up.',
 });
 
 /**

@@ -411,7 +411,7 @@ describe('stalactite and geyser fact card copy (issue #77, ND-3, option B)', () 
       id: 'geyser-vent',
       name: 'Geyser',
       title: 'Geysers',
-      body: 'Geysers are hot springs that burst up again and again. Hot rock deep underground heats the water until it shoots out, then the geyser rests and fills up.',
+      body: 'Some geysers are cold. Fizzy gas from deep underground builds up in the water, like in soda, and pushes it out. Then the geyser rests and fills up.',
     });
     expect(GEYSER_FACT.unfoundHint).toBeUndefined();
     expect(Object.isFrozen(GEYSER_FACT)).toBe(true);

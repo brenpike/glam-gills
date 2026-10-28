@@ -1783,7 +1783,7 @@ exports[`spring-cave-1 golden > keeps the default zone projection 1`] = `
         "dangerPart": true,
         "depth": 140,
         "fact": {
-          "body": "Geysers are hot springs that burst up again and again. Hot rock deep underground heats the water until it shoots out, then the geyser rests and fills up.",
+          "body": "Some geysers are cold. Fizzy gas from deep underground builds up in the water, like in soda, and pushes it out. Then the geyser rests and fills up.",
           "id": "geyser-vent",
           "name": "Geyser",
           "title": "Geysers",
@@ -2547,36 +2547,36 @@ exports[`spring-cave-1 golden > keeps the placements of every extra zone seed 1`
 exports[`spring-cave-1 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 1369273480,
-    "length": 24236,
+    "fnv1a": 253406217,
+    "length": 24230,
   },
   "1234": {
-    "fnv1a": 1450868935,
-    "length": 24237,
+    "fnv1a": 285560622,
+    "length": 24231,
   },
   "2": {
-    "fnv1a": 316159861,
-    "length": 24237,
+    "fnv1a": 1590726460,
+    "length": 24231,
   },
   "3": {
-    "fnv1a": 583592398,
-    "length": 24238,
+    "fnv1a": 1826809887,
+    "length": 24232,
   },
   "305419896": {
-    "fnv1a": 1427973685,
-    "length": 24238,
+    "fnv1a": 314177020,
+    "length": 24232,
   },
   "3735928559": {
-    "fnv1a": 2489156967,
-    "length": 24238,
+    "fnv1a": 2533326862,
+    "length": 24232,
   },
   "42": {
-    "fnv1a": 4008963853,
-    "length": 24238,
+    "fnv1a": 310625924,
+    "length": 24232,
   },
   "987654321": {
-    "fnv1a": 2942788020,
-    "length": 24235,
+    "fnv1a": 1913213349,
+    "length": 24229,
   },
 }
 `;
