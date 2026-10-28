@@ -597,18 +597,20 @@ function hasMobileSnacks(area: Readonly<AreaData>): boolean {
 
 /**
  * The spring cave props, baked once for every area: when some area's look has the grotto cave or
- * says it needs the spring cave props, or some area has dark water (its glow-plants and soft light).
- * Null when no area needs them.
+ * says it needs the spring cave props, some area has dark water (its glow-plants and soft light), or
+ * some area has rock walls, each wall size baked once (issue #105, ND-8). Null when no area needs them.
  */
 function bakeSpringCaveProps(
   scene: Phaser.Scene,
   areas: readonly Readonly<AreaData>[],
   bakeScale: number,
 ): SpringCaveTextures | null {
+  const rockWallSizes = areas.flatMap((area) => (area.layout.rockWalls ?? []).map((wall) => [wall.x1 - wall.x0, wall.y1 - wall.y0] as const));
   const needed =
     areas.map(areaLook).some((look) => look.cave.kind === 'grotto' || look.springCaveProps) ||
-    areas.some((area) => area.layout.darkWater !== undefined);
-  return needed ? bakeSpringCaveTextures(scene, bakeScale) : null;
+    areas.some((area) => area.layout.darkWater !== undefined) ||
+    rockWallSizes.length > 0;
+  return needed ? bakeSpringCaveTextures(scene, bakeScale, rockWallSizes) : null;
 }
 
 /** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */

@@ -122,7 +122,7 @@ const WAYPOINT_REACH = 8;
 /** Directions a shrimp's flick target is tried in. */
 const FLICK_DIRECTIONS = 8;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends (ND-4). */
-const LONGEST_QUIET_SWIM = { length: 471.2, from: { x: 2920, y: 142 }, to: { x: 3368, y: 102 } };
+const LONGEST_QUIET_SWIM = { length: 471.29, from: { x: 3448, y: 646 }, to: { x: 3800, y: 374 } };
 /** Longest quiet stretch of the floor lane in px, as measured (ND-4). */
 const FLOOR_QUIET_STRETCH = 99;
 /** One-leg seconds along the main path to the exit, timing every vent, as measured (ND-5). */
@@ -678,7 +678,7 @@ describe('Area 7 stalactites and geyser vents (ND-3)', () => {
       [STALACTITE_IDS[2], 2350, 170, 2],
       [STALACTITE_IDS[3], 2900, 170, 0],
       [STALACTITE_IDS[4], 3380, 170, 0],
-      [STALACTITE_IDS[5], 3560, 236, 2],
+      [STALACTITE_IDS[5], 3560, 216, 2],
     ]);
     expect(geysers.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
       [GEYSER_IDS[0], 1560, 140, 0],
@@ -810,10 +810,10 @@ describe('Area 7 pebble and rock (ND-8, ND-9)', () => {
 
   it('walls a side room in the bottom right with solid rock: a lid over it and a wall down to the doorway', () => {
     expect(walls).toEqual([
-      { x0: 3440, x1: 3840, y0: 360, y1: 400 },
-      { x0: 3440, x1: 3480, y0: 400, y1: 560 },
+      { x0: 3440, x1: 3840, y0: 340, y1: 380 },
+      { x0: 3440, x1: 3480, y0: 380, y1: 560 },
     ]);
-    expect(room).toEqual({ x0: 3480, x1: 3840, y0: 400, y1: 720 });
+    expect(room).toEqual({ x0: 3480, x1: 3840, y0: 380, y1: 720 });
   });
 
   it('sets the pebble in the doorway on the bed, rolling 120 px east along its groove into the room', () => {

@@ -38,7 +38,7 @@ import {
   paintVentMouth,
   rockWallTex,
 } from './drawPebbleRoom';
-import { bake, makeInfo, type TexInfo } from './textures';
+import { bake, type TexInfo } from './textures';
 
 /** Fixed texture keys of the spring cave props. */
 export const SPRING_CAVE_TEX = {
@@ -57,8 +57,13 @@ export const SPRING_CAVE_TEX = {
   surgeStreak: 'spring-cave-surge-streak',
 } as const;
 
-/** The texture key prefix of a baked rock wall; each wall's key ends with its index (issue #105, ND-8). */
+/** The texture key prefix of a baked rock wall; each key ends with the wall's size (issue #105, ND-8). */
 export const ROCK_WALL_KEY_PREFIX = 'spring-cave-rock-wall-';
+
+/** The key a rock wall `w` x `h` logical px is baked under, and found by, in SpringCaveTextures.rockWalls. */
+export function rockWallSizeKey(w: number, h: number): string {
+  return `${w}x${h}`;
+}
 
 /** The soft light bakes at this many texture pixels per logical unit, or at `bakeScale` when that is lower: a soft gradient needs no more. */
 export const SOFT_LIGHT_BAKE_SCALE = 1;
@@ -111,10 +116,27 @@ export interface SpringCaveTextures {
   readonly ventBubble: TexInfo;
   /** One surge streak (SURGE_STREAK_TEX), along +x; anchor is its middle. */
   readonly surgeStreak: TexInfo;
+  /**
+   * The solid rock walls (issue #105, ND-8), one bake per wall size in any area, keyed by
+   * rockWallSizeKey: anchor is the wall's top-left corner, drawn at its rect's own size.
+   */
+  readonly rockWalls: ReadonlyMap<string, TexInfo>;
 }
 
-/** Bake the spring cave props at `bakeScale` texture pixels per logical unit. */
-export function bakeSpringCaveTextures(scene: Phaser.Scene, bakeScale: number): SpringCaveTextures {
+/**
+ * Bake the spring cave props at `bakeScale` texture pixels per logical unit, with one rock wall bake
+ * for each of `rockWallSizes`, [w, h] in logical px.
+ */
+export function bakeSpringCaveTextures(
+  scene: Phaser.Scene,
+  bakeScale: number,
+  rockWallSizes: readonly (readonly [number, number])[] = [],
+): SpringCaveTextures {
+  const rockWalls = new Map<string, TexInfo>();
+  for (const [w, h] of rockWallSizes) {
+    const key = rockWallSizeKey(w, h);
+    if (!rockWalls.has(key)) rockWalls.set(key, bake(scene, `${ROCK_WALL_KEY_PREFIX}${key}`, rockWallTex(w, h), bakeScale, (ctx) => paintRockWall(ctx, w, h)));
+  }
   return {
     grotto: {
       back: bake(scene, SPRING_CAVE_TEX.grottoBack, GROTTO_TEX, bakeScale, paintGrottoBack),
@@ -133,19 +155,6 @@ export function bakeSpringCaveTextures(scene: Phaser.Scene, bakeScale: number): 
     ventMouth: bake(scene, SPRING_CAVE_TEX.ventMouth, VENT_MOUTH_TEX, bakeScale, paintVentMouth),
     ventBubble: bake(scene, SPRING_CAVE_TEX.ventBubble, VENT_BUBBLE_TEX, bakeScale, paintVentBubble),
     surgeStreak: bake(scene, SPRING_CAVE_TEX.surgeStreak, SURGE_STREAK_TEX, bakeScale, paintSurgeStreak),
+    rockWalls,
   };
-}
-
-/**
- * Bake rock wall `index`, `w` x `h` logical px, at `bakeScale` (issue #105, ND-8), once per wall
- * size, under the key ROCK_WALL_KEY_PREFIX + index. Anchor is the wall's top-left corner. A key that
- * is already baked is reused, so a second trip bakes nothing.
- */
-export function bakeRockWall(scene: Phaser.Scene, index: number, w: number, h: number, bakeScale: number): TexInfo {
-  const key = `${ROCK_WALL_KEY_PREFIX}${index}-${w}x${h}`;
-  const size = rockWallTex(w, h);
-  if (scene.textures.exists(key)) {
-    return makeInfo(key, bakeScale, size);
-  }
-  return bake(scene, key, size, bakeScale, (ctx) => paintRockWall(ctx, w, h));
 }

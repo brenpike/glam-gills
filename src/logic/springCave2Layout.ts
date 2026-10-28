@@ -2,7 +2,7 @@
  * The spring cave's Area 7 (issue #105), as area data: 8 screens across, 2 down, the first climb
  * (ND-2). The Home Spot is bottom left, and the safe area is its column in the bottom row only. The
  * main path only goes across or up, never back down: right along the bottom row, through the first
- * pulsing vent, up the climb at x 1300 through the second, then right along the top row under the
+ * pulsing vent, up the climb at x 800 through the second, then right along the top row under the
  * rock ledges, through the third vent and the dark stretch, to the exit at the top right.
  */
 import { SPRING_CAVE_2_TREASURES } from './catalogue';
@@ -136,16 +136,16 @@ const EXIT_LEDGE = rockLedge(3500, 3620, 110, 170);
 const LAST_LEDGE = rockLedge(3300, 3400, 110, 170);
 
 /** The pebble room's roof, a solid rock lid over the room in the bottom right (ND-8). */
-const ROOM_LID = rockWall(3440, 3840, 360, 400);
+const ROOM_LID = rockWall(3440, 3840, 340, 380);
 
 /** The pebble room's west wall, down from the lid to the top of the doorway (ND-8). */
-const ROOM_WALL = rockWall(3440, 3480, 400, 560);
+const ROOM_WALL = rockWall(3440, 3480, 380, 560);
 
 /** The water inside the pebble room: under the lid, east of the west wall, down to the bed (ND-8). */
-const ROOM = rockWall(3480, 3840, 400, WORLD_H * 2);
+const ROOM = rockWall(3480, 3840, 380, WORLD_H * 2);
 
 /** The water under the room's lid, the bank cover of its Rare spots (B5; ND-9). */
-const ROOM_ROOF = rockLedge(3480, 3800, 400, 580);
+const ROOM_ROOF = rockLedge(3480, 3800, 380, 580);
 
 /** One crayfish's route, id `crayfish-<n>`: a straight floor stretch from `x0` to `x1` on the floor lane. */
 function crayfishStretch(index: number, x0: number, x1: number): Readonly<PredatorRoute> {
@@ -244,7 +244,7 @@ export const SPRING_CAVE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     stalactiteUnder(MIDDLE_LEDGE, 3, 2350, 2, 170),
     stalactiteUnder(EAST_LEDGE, 4, 2900, 0, 170),
     stalactiteUnder(LAST_LEDGE, 5, 3380, 0, 170),
-    stalactiteUnder(EXIT_LEDGE, 6, 3560, 2, 236),
+    stalactiteUnder(EXIT_LEDGE, 6, 3560, 2, 216),
     geyserAt(1, 1560, 0, 140),
     geyserAt(2, 2909, 1, 140),
   ]),
