@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { AREAS, CANAL_AREA } from './areas';
 import type { AxolotlSex } from './axolotlLook';
 import { REAL_MORPHS, STARTER_MORPH, axolotlFindId, isAxolotlFindId, type RealMorphId } from './morphs';
 import { placeTreasures } from './placement';
 import {
   RESCUE,
   STRANDING_CHANCE,
+  areaStrandingChance,
   createRescue,
   pickStranding,
   reachesRescue,
@@ -342,6 +344,38 @@ describe('tripStranding and strandingRoll', () => {
     tripStranding(owned, null, STRANDING_PLACES, 1);
     strandingRoll(1);
     expect(random).not.toHaveBeenCalled();
+  });
+});
+
+describe('areaStrandingChance', () => {
+  const defaultChanceAreas = AREAS.filter((area) => area.strandingChance === undefined);
+
+  it.each(defaultChanceAreas.map((area) => [area.id, area] as const))('gives %s the 40% stranding chance', (_id, area) => {
+    expect(areaStrandingChance(area)).toBe(STRANDING_CHANCE);
+    expect(areaStrandingChance(area)).toBe(0.4);
+  });
+
+  it('gives every area but Area 6 the 40% default, and Area 6 its own 30% (issue #77)', () => {
+    expect(defaultChanceAreas.map((area) => area.number)).toEqual([1, 2, 3, 4, 5]);
+    const springCave = AREAS.find((area) => area.number === 6);
+    expect(springCave && areaStrandingChance(springCave)).toBe(0.3);
+  });
+
+  it('gives STRANDING_CHANCE when the area has no strandingChance', () => {
+    expect(areaStrandingChance({})).toBe(STRANDING_CHANCE);
+    expect(areaStrandingChance({ strandingChance: undefined })).toBe(STRANDING_CHANCE);
+  });
+
+  it.each([0, 0.25, 1])('gives the area its own strandingChance %f', (chance) => {
+    expect(areaStrandingChance({ ...CANAL_AREA, strandingChance: chance })).toBe(chance);
+  });
+
+  it('feeds tripStranding the same result as the default chance for an area without its own', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      expect(tripStranding([STARTER_MORPH], null, STRANDING_PLACES, seed, areaStrandingChance(CANAL_AREA))).toEqual(
+        tripStranding([STARTER_MORPH], null, STRANDING_PLACES, seed),
+      );
+    }
   });
 });
 

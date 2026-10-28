@@ -36,6 +36,7 @@ Pitched sounds use the five notes of the major pentatonic scale of the cue that 
 | Sunny Tank, Canal Paddle (day and dusk) | G | G A B D E |
 | Lily Pad Hop (day and dusk) | F | F G A C D |
 | Garden Boats (day and dusk) | D | D E F# A B |
+| Cenote Glow (day and dusk; E dorian uses D major's notes) | D | D E F# A B |
 | No music (music off) | The cue that would play | The same notes |
 
 A recipe names its notes as steps of that scale: step 0 is the home note in the octave above middle C (G5, F5 or D5), step 5 is the home note an octave up, and step −5 an octave down. The "home chord" is steps −5, −3 and −2 (the major triad on the home note, an octave down: the home note, its third and its fifth).
@@ -69,7 +70,7 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | | Dash ready again | One soft bloop and a high kalimba note, when Tail Dash goes from recharging to ready, once per recharge. The start of a trip plays nothing. | 2 |
 | | Bump a sealed pot | One soft, hollow clay knock, and a quieter echo, once each time the axolotl touches a sealed pot without dashing. | 2 |
 | | Dash pot breaks | A hollow clay "tok", a little crumble, bubbles rising. The crumble's knocks land at fixed times and pitches, where the sketch picks them at random. | 2 |
-| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. A punting pole on screen plays it too, once when its warning starts; a pole off screen plays nothing. At most one ripple plays a frame (section 4). | 2 |
+| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. Every moving hazard plays it too, a punting pole, a stalactite drip or a geyser vent, once when its warning starts with its sweep on screen where it really is, down from the surface or a roof or up from the floor; one off screen plays nothing. At most one ripple plays a frame (section 4). | 2 |
 | | Lose a leg | Uh-oh: a soft puff with two low marimba notes falling a minor third (steps −2 then −3), left unresolved. Only a hit that costs a leg plays it. | 1 |
 | | Shell perk blocks a hit | A bright shell tink and a bubble. | 2 |
 | | Leg grows back | Three rising marimba notes ending on the home note an octave up (steps 2, 3, 5), and a bubble. | 1 |
@@ -110,6 +111,9 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | Bumping a predator that is not lunging | Nothing is lost. |
 | Protected time, and a leg regrowing | Only the moment a leg is back gets a sound. |
 | The hidden-treasure hint sparkle | Finding it by looking is the fun. |
+| Lighting a glow-plant | The light spreading through the dark is the reward. A soft glass chime is an open question (PRD), to sketch and measure first (section 7). |
+| The glow-plant hint | A gentle nudge to look, not an alarm: a sound each time it shows would repeat (section 2). |
+| Swimming into or out of the dark | The darkness and the axolotl's glow show it; a sound for the dark would feel like danger music. |
 | Entering the Home Spot ring | The Go home button shows; banking has its own sound. |
 | Find toasts and the first-trip hint | The find sound already played. |
 | Pause and resume | The tap plays; the music goes soft (PRD M9). |

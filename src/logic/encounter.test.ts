@@ -18,7 +18,7 @@ import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, HazardType } from './hazards';
 import { inSightCover } from './hiding';
 import { createLegs, isProtected, legSwimTuning, presentCount } from './legs';
-import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
+import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardSpawn } from './movingHazards';
 import {
   HERON_SPECIES,
   TILAPIA_SPECIES,
@@ -1054,6 +1054,15 @@ describe('moving hazards in the encounter (ND-8)', () => {
     const next = run(touch.state, underPole, 0.5, noRegrowCtx, 'hit');
     expect(typesOf(next.events, ['hit'])).toEqual(['hit']);
     expect(presentCount(next.state.legs)).toBe(LEGS.count - 2);
+  });
+
+  it('hits from the real tip of a roof or floor hazard: below the roof for a stalactite drip, above the floor for a geyser vent (issue #77, ND-3)', () => {
+    const drip = movingHazardSpawn('drip-1', STALACTITE_DRIP, POLE_X, -3.2, 120, 300);
+    const dripHit = stepEncounter(poleEncounter(drip), { x: POLE_X, y: 360 }, DT, noRegrowCtx);
+    expect(dripHit.events[0]).toEqual({ type: 'hit', sourceId: 'drip-1', leg: 0, from: { x: POLE_X, y: 420 } });
+    const vent = movingHazardSpawn('vent-1', GEYSER_VENT, POLE_X, -4.0, undefined, 1000);
+    const ventHit = stepEncounter(poleEncounter(vent), { x: POLE_X, y: 950 }, DT, noRegrowCtx);
+    expect(ventHit.events[0]).toEqual({ type: 'hit', sourceId: 'vent-1', leg: 0, from: { x: POLE_X, y: 1000 - GEYSER_VENT.depth } });
   });
 
   it('lets the Shell block the first pole hit', () => {

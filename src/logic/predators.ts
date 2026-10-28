@@ -1,6 +1,8 @@
 import {
   CARP_FACT,
   CARP_MEET_RANGE,
+  CRAYFISH_FACT,
+  CRAYFISH_MEET_RANGE,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
   HERON_FACT,
@@ -9,7 +11,7 @@ import {
   TILAPIA_MEET_RANGE,
   type FactCard,
 } from './factCards';
-import { CARP, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
+import { CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
 
@@ -43,12 +45,17 @@ export interface PredatorRuleHook {
  * strike carried it away, it does not warn and cancels a warning at its end; it swims its route
  * through the cooldown and patrol, and may warn again once back on it. A one-waypoint route counts
  * as on route only at that point.
+ * `levelStrike` (issue #77, ND-5): the aim locked at the end of the warning is level, straight left
+ * or right toward the target (the strike spot with `fixedStrikeSpot`), along the facing when the
+ * target is straight above or below. The strike never moves the predator up or down, so it reaches
+ * only a target within hitRadius of the predator's height.
  */
 export interface PredatorRules {
   sightCover?: boolean;
   fixedStrikeSpot?: boolean;
   stillCooldown?: boolean;
   warnOnRoute?: boolean;
+  levelStrike?: boolean;
 }
 
 /** How far in px a predator with the `warnOnRoute` rule may be from its route and still warn (inclusive). */
@@ -197,10 +204,28 @@ export const CARP_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   dangerPart: true,
 });
 
+/**
+ * The crayfish (issue #77, ND-5): it walks its floor stretch and plays the shared rules with its own
+ * tuning. It warns by distance, opening its claws, when the axolotl is within reach of it, pinches
+ * forward along the floor, swims its route through the cooldown and bumps gently. With the
+ * `warnOnRoute` rule it warns only while on its stretch, so a chase stays along the stretch, and
+ * with the `levelStrike` rule its pinch stays level along the floor: its reach is the bottom only,
+ * and swimming up out of it avoids every pinch.
+ */
+export const CRAYFISH_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
+  id: 'crayfish',
+  name: 'Crayfish',
+  tuning: CRAYFISH,
+  meetRange: CRAYFISH_MEET_RANGE,
+  fact: CRAYFISH_FACT,
+  rules: Object.freeze({ warnOnRoute: true, levelStrike: true }),
+});
+
 /** Every predator species. */
 export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.freeze([
   TILAPIA_SPECIES,
   HERON_SPECIES,
+  CRAYFISH_SPECIES,
   GARTER_SNAKE_SPECIES,
   CARP_SPECIES,
 ]);
@@ -376,6 +401,7 @@ export function phaseProgress(state: PredatorState): number {
  * the strike drops the spot. With `stillCooldown`, the cooldown holds position and faces the target.
  * With `warnOnRoute`, the predator must also be within `ROUTE_WARN_TOLERANCE` of its route
  * (`routeLoopDistance`) to start a warning and at the end-of-warning re-check; movement is unchanged.
+ * With `levelStrike`, the aim locked at the end of the warning is level, toward the target's side.
  *
  * Chase (PRD open question 249, ND-2): only with `ctx.tuning.chase`, and only on patrol when no
  * warning starts. See `chaseStep`. Without a chase, patrol is unchanged.
@@ -524,7 +550,8 @@ function stepTelegraph(
     const cancelled = enterCooldown({ ...state, facing }, ctx);
     return { state: cancelled, used, event: { type: 'telegraphCancel' } };
   }
-  const aim = lockAim(state.pos, state.strikeSpot ?? target, facing);
+  const aimAt = state.strikeSpot ?? target;
+  const aim = ctx.rules?.levelStrike ? lockLevelAim(state.pos, aimAt, facing) : lockAim(state.pos, aimAt, facing);
   const lunge: PredatorState = {
     ...state,
     phase: 'lunge',
@@ -610,6 +637,11 @@ function onRouteToWarn(state: PredatorState, ctx: PredatorContext): boolean {
 function targetExposed(target: Point, ctx: PredatorContext): boolean {
   const hidden = ctx.rules?.sightCover === true && ctx.targetInCover === true;
   return !hidden && !inSafeArea(target, ctx.safeArea);
+}
+
+/** A level aim: straight toward the target's side, along `facing` when the target is straight above or below. */
+function lockLevelAim(from: Point, target: Point, facing: -1 | 1): Point {
+  return { x: faceToward(facing, target.x - from.x), y: 0 };
 }
 
 function lockAim(from: Point, target: Point, facing: -1 | 1): Point {

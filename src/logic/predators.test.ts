@@ -10,6 +10,7 @@ import {
 import { routeDistance } from './hiding';
 import {
   CARP_SPECIES,
+  CRAYFISH_SPECIES,
   GARTER_SNAKE_SPECIES,
   HERON_SPECIES,
   PREDATOR_SPECIES,
@@ -97,7 +98,7 @@ describe('predator species', () => {
     expect(TILAPIA_SPECIES.fact).toBe(TILAPIA_FACT);
     expect(TILAPIA_SPECIES.hook).toBeUndefined();
     expect(TILAPIA_SPECIES.neverTouches).toBeUndefined();
-    expect(PREDATOR_SPECIES).toEqual([TILAPIA_SPECIES, HERON_SPECIES, GARTER_SNAKE_SPECIES, CARP_SPECIES]);
+    expect(PREDATOR_SPECIES).toEqual([TILAPIA_SPECIES, HERON_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, CARP_SPECIES]);
     expect(Object.isFrozen(TILAPIA_SPECIES)).toBe(true);
     expect(Object.isFrozen(PREDATOR_SPECIES)).toBe(true);
   });
@@ -906,5 +907,56 @@ describe('shared rule: warn on route', () => {
     const noRule = runStalker(struck, { x: 1000, y: 260 }, seconds, NO_RULE_CTX, 'telegraphStart');
     expect(eventTypes(noRule.events)).toEqual(['lungeEnd', 'cooldownEnd', 'telegraphStart']);
     expect(routeLoopDistance(noRule.state.pos, LINER_ROUTE.waypoints)).toBeGreaterThan(ROUTE_WARN_TOLERANCE);
+  });
+});
+
+/** Test-only species with only the level strike rule (issue #77, ND-5). */
+const LEVELLER_RULES: Readonly<PredatorRules> = Object.freeze({ levelStrike: true });
+const LEVELLER_CTX: PredatorContext = { ...LINER_CTX, rules: LEVELLER_RULES };
+const STRIKE_REACH = TEST_TUNING.lungeSpeed * TEST_TUNING.lungeDuration;
+
+describe('shared rule: level strike', () => {
+  const start: Point = { x: 1100, y: LINE_Y };
+
+  it('locks a level aim toward the side of the target at the end of the warning', () => {
+    const right = stepPredator(linerWarningAt(start), { x: 1160, y: 260 }, STALKER_DT, LEVELLER_CTX);
+    expect(right.events).toEqual([{ type: 'lungeStart', aim: { x: 1, y: 0 } }]);
+    const left = stepPredator(linerWarningAt(start), { x: 1050, y: 130 }, STALKER_DT, LEVELLER_CTX);
+    expect(left.events).toEqual([{ type: 'lungeStart', aim: { x: -1, y: 0 } }]);
+    expect(left.state.facing).toBe(-1);
+  });
+
+  it('aims along its facing at a target straight above or below', () => {
+    const facingLeft: PredatorState = { ...linerWarningAt(start), facing: -1 };
+    expect(stepPredator(facingLeft, { x: start.x, y: 260 }, STALKER_DT, LEVELLER_CTX).events).toEqual([
+      { type: 'lungeStart', aim: { x: -1, y: 0 } },
+    ]);
+    expect(stepPredator(linerWarningAt(start), { x: start.x, y: 140 }, STALKER_DT, LEVELLER_CTX).events).toEqual([
+      { type: 'lungeStart', aim: { x: 1, y: 0 } },
+    ]);
+  });
+
+  it('strikes at its own height and connects only with a target within hitRadius of it', () => {
+    const struck = runStalker(linerWarningAt(start), { x: 1160, y: 260 }, 1, LEVELLER_CTX, 'lungeEnd');
+    expect(eventTypes(struck.events)).toEqual(['lungeStart', 'lungeEnd']);
+    for (const pos of struck.positions) expect(pos.y).toBe(LINE_Y);
+    expect(struck.state.pos.x).toBeCloseTo(start.x + STRIKE_REACH, 6);
+    const within = runStalker(linerWarningAt(start), { x: 1150, y: LINE_Y + TEST_TUNING.hitRadius }, 1, LEVELLER_CTX, 'lungeEnd');
+    expect(within.events.at(-1)).toEqual({ type: 'lungeEnd', connected: true });
+    const beyond = runStalker(linerWarningAt(start), { x: 1150, y: LINE_Y + TEST_TUNING.hitRadius + 0.5 }, 1, LEVELLER_CTX, 'lungeEnd');
+    expect(beyond.events.at(-1)).toEqual({ type: 'lungeEnd', connected: false });
+  });
+
+  it('aims level toward the side of the strike spot with the fixed strike spot rule', () => {
+    const ctx: PredatorContext = { ...LEVELLER_CTX, rules: { fixedStrikeSpot: true, levelStrike: true } };
+    const spotted: PredatorState = { ...linerWarningAt(start), strikeSpot: { x: 1040, y: 250 } };
+    expect(stepPredator(spotted, { x: 1160, y: 250 }, STALKER_DT, ctx).events).toEqual([{ type: 'lungeStart', aim: { x: -1, y: 0 } }]);
+  });
+
+  it('leaves a species without the rule aiming straight at the target', () => {
+    const aimed = stepPredator(linerWarningAt(start), { x: 1160, y: 280 }, STALKER_DT, NO_RULE_CTX);
+    expect(aimed.events).toEqual([{ type: 'lungeStart', aim: { x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) } }]);
+    const ruleOff = stepPredator(linerWarningAt(start), { x: 1160, y: 280 }, STALKER_DT, { ...LEVELLER_CTX, rules: { levelStrike: false } });
+    expect(ruleOff.events).toEqual(aimed.events);
   });
 });

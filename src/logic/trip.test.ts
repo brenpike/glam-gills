@@ -3,6 +3,7 @@ import type { DrawnBody } from './collectibles';
 import { createEncounter, createEncounterContext, predatorSpecies } from './encounter';
 import { HERON_MEET_RANGE, meetsTilapia, type FactCard } from './factCards';
 import { GHOST_NET, createGhostNets, isSnagged, netDrift } from './ghostNets';
+import { GLOW_PLANTS, glowPlantSpawn, type DarkWater } from './glowPlants';
 import type { ElementSpawn, ElementType, HazardSpawn, HazardType } from './hazards';
 import { inSightCover, zoneThreats } from './hiding';
 import {
@@ -48,6 +49,7 @@ import { axolotlFindId, type RealMorphId } from './morphs';
 import { DEFAULT_TRIP_SEED, nextTripSeed, placeTreasures, type PlacedFind, type PlacementOptions } from './placement';
 import { PLASTIC_WORM, isQueasy, spitLanding, type SpitAvoid } from './plasticWorms';
 import { RESCUE, pickStranding, type Stranding } from './rescue';
+import { tripEndRecord } from './session';
 import { TRIP_EVENTS, TRIP_REGISTRY_KEYS, type TripSnapshot } from './tripEvents';
 import { withStars } from './stars';
 import { CARRY, FINDS, GHOST_NETS, LEGS, PLASTIC_WORMS, SNACK_REACH, SWIM, TILAPIA, tripTreasureTuning } from './tuning';
@@ -1144,6 +1146,8 @@ describe('snapshots', () => {
       ending: null,
       rescue: null,
       factCardDue: null,
+      litGlowPlants: [],
+      glowPlantHint: null,
     });
     const done = tripSnapshot(goHome(state).state);
     expect(done.ending).toEqual({ reason: 'wentHome', returned: [], bankedThisTrip: [PLANT, HAT] });
@@ -1184,6 +1188,8 @@ describe('snapshots', () => {
       { ...base, ending: { ...ending, reason: 'carriedHome' } },
       { ...base, ending: { ...ending, returned: [] } },
       { ...base, ending: { ...ending, bankedThisTrip: ['x'] } },
+      { ...base, litGlowPlants: ['x'] },
+      { ...base, glowPlantHint: 'x' },
     ];
     for (const changed of changes) {
       expect(sameTripSnapshot(base, changed)).toBe(false);
@@ -2653,5 +2659,164 @@ describe('meetSnacks (ND-29)', () => {
     const met = meetSnacks(seen, ['tadpole']);
     expect(met.met).toEqual(['tadpole']);
     expect(tripSnapshot(met).factCardDue).toBeNull();
+  });
+});
+
+describe('glow-plants in the trip (issue #77, ND-8)', () => {
+  const STEP = SWIM.dtMax;
+  const HINT_STEPS = Math.round(GLOW_PLANTS.hintAfter / STEP);
+  const darkWater: DarkWater = { x0: 960, x1: 1920, y0: 0, y1: 400 };
+  const plantA = glowPlantSpawn('plant-a', { x: 1200, y: 200, radius: 20 });
+  const plantB = glowPlantSpawn('plant-b', { x: 1600, y: 200, radius: 20 });
+  const glowZone: TripSource = {
+    ...zone,
+    finds: [],
+    spots: [],
+    tilapiaRoutes: [],
+    hazards: [],
+    predatorRoutes: [],
+    elements: [plantA, plantB],
+    darkWater,
+  };
+  const deep: Point = { x: 1350, y: 120 };
+  const atA: Point = { x: 1200, y: 200 - 20 - GLOW_PLANTS.bodyReach };
+  const pastA: Point = { x: 1200, y: 200 - 20 - GLOW_PLANTS.bodyReach - 0.5 };
+  const lit: Point = { x: 700, y: 200 };
+
+  /** Swims `steps` steps of `STEP` seconds at `pos`. */
+  function swimSteps(state: TripState, pos: Point, steps: number): TripState {
+    let current = state;
+    for (let i = 0; i < steps; i++) {
+      current = stepTrip(current, { axolotlPos: pos, reduced: false, dashing: false }, STEP, ctx).state;
+    }
+    return current;
+  }
+
+  it('starts with every plant unlit, the hint clock at 0, no hint and a copy of the dark water', () => {
+    const trip = createTrip(glowZone);
+    expect(trip.litGlowPlants).toEqual([]);
+    expect(trip.darkHintTime).toBe(0);
+    expect(trip.darkHint).toBeNull();
+    expect(trip.darkWater).toEqual(darkWater);
+    expect(trip.darkWater).not.toBe(darkWater);
+    expect(trip.elements[0].glowPlant).toEqual(plantA.glowPlant);
+    expect(trip.elements[0].glowPlant).not.toBe(plantA.glowPlant);
+    expect(createTrip(zone).darkWater).toBeNull();
+  });
+
+  it('lights a plant at exactly its touch reach, not past it, silently', () => {
+    expect(stepAt(createTrip(glowZone), pastA).state.litGlowPlants).toEqual([]);
+    const result = stepAt(createTrip(glowZone), atA);
+    expect(result.state.litGlowPlants).toEqual(['plant-a']);
+    expect(result.events).toEqual([]);
+    expect(tripSnapshot(result.state).litGlowPlants).toEqual(['plant-a']);
+  });
+
+  it('keeps a lit plant lit, never twice, and keeps the same array when nothing new is lit', () => {
+    const once = stepAt(createTrip(glowZone), atA).state;
+    const away = walk(once, [deep, atA, deep]).state;
+    expect(away.litGlowPlants).toBe(once.litGlowPlants);
+    const both = stepAt(away, { x: 1600, y: 200 }).state;
+    expect(both.litGlowPlants).toEqual(['plant-a', 'plant-b']);
+  });
+
+  it('never lights a plant while banked, carrying or ended', () => {
+    const swimming = stepAt(createTrip(glowZone), deep).state;
+    const bankedTrip: TripState = { ...swimming, phase: 'banked', heldAt: { ...atA } };
+    expect(stepAt(bankedTrip, atA).state).toBe(bankedTrip);
+    const carry: TripState = { ...swimming, phase: 'carrying', carry: { from: atA, to: home, pos: atA, elapsed: 0, duration: 5, still: false } };
+    expect(stepAt(carry, atA).state.litGlowPlants).toEqual([]);
+  });
+
+  it('is trip state only: newTrip unlights every plant and the end record holds no lit plant', () => {
+    const swum = swimSteps(stepAt(createTrip(glowZone), atA).state, deep, 10);
+    const done = goHome({ ...swum, inHomeSpot: true }).state;
+    expect(done.litGlowPlants).toEqual(['plant-a']);
+    const next = newTrip(done);
+    expect(next.litGlowPlants).toEqual([]);
+    expect(next.darkHintTime).toBe(0);
+    expect(next.darkHint).toBeNull();
+    expect(next.darkWater).toEqual(darkWater);
+    expect(next.elements).toEqual(glowZone.elements);
+    expect(JSON.stringify(tripEndRecord(done, []))).not.toContain('plant-a');
+  });
+
+  it('shows the hint at the nearest unlit plant after 20 s in the dark with no new light', () => {
+    const before = swimSteps(createTrip(glowZone), deep, HINT_STEPS - 1);
+    expect(before.darkHintTime).toBeCloseTo(GLOW_PLANTS.hintAfter - STEP, 9);
+    expect(before.darkHint).toBeNull();
+    expect(tripSnapshot(before).glowPlantHint).toBeNull();
+    const after = swimSteps(before, deep, 2);
+    expect(after.darkHint).toBe('plant-a');
+    expect(tripSnapshot(after).glowPlantHint).toBe('plant-a');
+  });
+
+  it('points the hint past a lit plant to the next unlit one, and shows none when all are lit', () => {
+    const litA = stepAt(createTrip(glowZone), atA).state;
+    expect(swimSteps(litA, deep, HINT_STEPS + 1).darkHint).toBe('plant-b');
+    const allLit = stepAt(litA, { x: 1600, y: 200 }).state;
+    const waited = swimSteps(allLit, deep, HINT_STEPS + 1);
+    expect(waited.darkHintTime).toBeGreaterThan(GLOW_PLANTS.hintAfter);
+    expect(waited.darkHint).toBeNull();
+  });
+
+  it('resets the hint clock on a new light', () => {
+    const waited = swimSteps(createTrip(glowZone), deep, HINT_STEPS + 1);
+    expect(waited.darkHint).toBe('plant-a');
+    const litNow = stepAt(waited, atA).state;
+    expect(litNow.darkHintTime).toBe(0);
+    expect(litNow.darkHint).toBeNull();
+    expect(tripSnapshot(litNow).glowPlantHint).toBeNull();
+  });
+
+  it('resets the hint clock on leaving the dark, and never runs it in a lit area', () => {
+    const waited = swimSteps(createTrip(glowZone), deep, HINT_STEPS + 1);
+    const out = stepAt(waited, lit).state;
+    expect(out.darkHintTime).toBe(0);
+    expect(out.darkHint).toBeNull();
+    const edge = stepAt(createTrip(glowZone), { x: darkWater.x0, y: 200 }).state;
+    expect(edge.darkHintTime).toBe(DT);
+    const noDark: TripSource = { ...glowZone, darkWater: undefined };
+    const unlitArea = swimSteps(createTrip(noDark), deep, HINT_STEPS + 1);
+    expect(unlitArea.darkHintTime).toBe(0);
+    expect(unlitArea.darkHint).toBeNull();
+  });
+
+  it('runs the hint clock by the capped step', () => {
+    const long = stepTrip(createTrip(glowZone), { axolotlPos: deep, reduced: false, dashing: false }, 1, ctx);
+    expect(long.state.darkHintTime).toBe(SWIM.dtMax);
+  });
+
+  it('pauses the hint clock with the game', () => {
+    const swimming = swimSteps(createTrip(glowZone), deep, 10);
+    for (const dt of PAUSE_DTS) {
+      expect(stepTrip(swimming, { axolotlPos: deep, reduced: false, dashing: false }, dt, ctx).state).toBe(swimming);
+    }
+  });
+
+  it('pauses the hint clock and hides the hint while the banking card shows', () => {
+    const waited = swimSteps(createTrip(glowZone), deep, HINT_STEPS + 1);
+    const bankedTrip: TripState = { ...waited, phase: 'banked', heldAt: { ...deep } };
+    expect(stepAt(bankedTrip, deep).state).toBe(bankedTrip);
+    expect(tripSnapshot(bankedTrip).glowPlantHint).toBeNull();
+    const resumed = keepExploring(bankedTrip);
+    expect(resumed.darkHintTime).toBe(waited.darkHintTime);
+    expect(tripSnapshot(resumed).glowPlantHint).toBe('plant-a');
+    expect(stepAt(resumed, deep).state.darkHintTime).toBeCloseTo(waited.darkHintTime + DT, 9);
+  });
+
+  it('pauses the hint clock and hides the hint through the carry home', () => {
+    const darkCanal: TripSource = { ...zone, darkWater: { x0: 0, x1: 1920, y0: 0, y1: 400 } };
+    const carry = carrying(darkCanal, inRange, false);
+    expect(carry.state.phase).toBe('carrying');
+    const atStart = carry.state.darkHintTime;
+    expect(atStart).toBeCloseTo(carry.seconds - DT, 6);
+    expect(tripSnapshot(carry.state).glowPlantHint).toBeNull();
+    const moved = stepAt(carry.state, inRange).state;
+    expect(moved.darkHintTime).toBe(atStart);
+    const done = drive(moved, { axolotlPos: inRange, reduced: false, dashing: false }, 'arrivedHome').state;
+    expect(done.phase).toBe('ended');
+    expect(done.darkHintTime).toBe(atStart);
+    expect(tripSnapshot(done).glowPlantHint).toBeNull();
   });
 });

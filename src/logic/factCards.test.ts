@@ -5,10 +5,13 @@ import {
   CANAL_CLEAN_UPS_FACT,
   CARP_FACT,
   CARP_MEET_RANGE,
+  CRAYFISH_FACT,
+  CRAYFISH_MEET_RANGE,
   FACT_CARD_OK_LABEL,
   FACT_CARD_UNFOUND_HINT,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
+  GEYSER_FACT,
   GHOST_NET_FACT,
   HERON_FACT,
   HERON_MEET_RANGE,
@@ -17,6 +20,7 @@ import {
   REFUGE_FACT_CARDS,
   SHRIMP_FACT,
   SHRIMP_MEET_RANGE,
+  STALACTITE_FACT,
   TADPOLE_FACT,
   TADPOLE_MEET_RANGE,
   TILAPIA_FACT,
@@ -28,7 +32,7 @@ import {
   unfoundFactCardHint,
   type ThreatSighting,
 } from './factCards';
-import { CARP, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
+import { CARP, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
 import type { SafeArea } from './zone';
 
 const BANNED = [
@@ -359,6 +363,69 @@ describe('shrimp fact card copy', () => {
 
   it('uses a meet range of 120 px', () => {
     expect(SHRIMP_MEET_RANGE).toBe(120);
+  });
+});
+
+describe('crayfish fact card copy (issue #77, ND-14)', () => {
+  it("has the crayfish id, name and title, the owner's body, and no hint of its own", () => {
+    expect(CRAYFISH_FACT).toEqual({
+      id: 'crayfish',
+      name: 'Crayfish',
+      title: 'Meet the crayfish',
+      body: 'Crayfish are small cousins of lobsters that walk along the bottom. They open their claws wide to warn other animals. Axolotls stay safe by swimming up and away.',
+    });
+    expect(CRAYFISH_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(CRAYFISH_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    expect([...EARLIER_CARD_IDS, CARP_FACT.id, PUNTING_POLE_FACT.id, TADPOLE_FACT.id, SHRIMP_FACT.id]).not.toContain(
+      CRAYFISH_FACT.id,
+    );
+  });
+
+  it.each([CRAYFISH_FACT.name, CRAYFISH_FACT.title, CRAYFISH_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('uses a meet range of 180 px, larger than the lunge range', () => {
+    expect(CRAYFISH_MEET_RANGE).toBe(180);
+    expect(CRAYFISH_MEET_RANGE).toBeGreaterThan(CRAYFISH.lungeRange);
+  });
+});
+
+describe('stalactite and geyser fact card copy (issue #77, ND-3, option B)', () => {
+  it('has the stalactite id, name, title and body, and no hint of its own', () => {
+    expect(STALACTITE_FACT).toEqual({
+      id: 'stalactite-drip',
+      name: 'Stalactite',
+      title: 'Stalactites',
+      body: 'Stalactites hang from cave roofs like rock icicles. Each drip of water leaves a tiny bit of rock behind, so they grow very slowly.',
+    });
+    expect(STALACTITE_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(STALACTITE_FACT)).toBe(true);
+  });
+
+  it('has the geyser id, name, title and body, and no hint of its own', () => {
+    expect(GEYSER_FACT).toEqual({
+      id: 'geyser-vent',
+      name: 'Geyser',
+      title: 'Geysers',
+      body: 'Some geysers are cold. Fizzy gas from deep underground builds up in the water, like in soda, and pushes it out. Then the geyser rests and fills up.',
+    });
+    expect(GEYSER_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(GEYSER_FACT)).toBe(true);
+  });
+
+  it('has ids apart from the other cards and from each other', () => {
+    const others = [...EARLIER_CARD_IDS, CARP_FACT.id, PUNTING_POLE_FACT.id, TADPOLE_FACT.id, SHRIMP_FACT.id, CRAYFISH_FACT.id];
+    expect(others).not.toContain(STALACTITE_FACT.id);
+    expect(others).not.toContain(GEYSER_FACT.id);
+    expect(STALACTITE_FACT.id).not.toBe(GEYSER_FACT.id);
+  });
+
+  it.each([STALACTITE_FACT, GEYSER_FACT].flatMap((card) => [card.name, card.title, card.body]))('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
   });
 });
 

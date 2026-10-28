@@ -43,6 +43,7 @@ import {
   WILLOW_TRUNK,
 } from './palette';
 import { paintChinampaBank, paintChinampaBankRoots } from './drawChinampa';
+import { paintSpringRowDetails } from './drawSpringCave';
 import { habitatLook, type AreaLookId, type EdgeReedLook, type HabitatLook } from './habitatLook';
 
 /** Background chunk size in logical units (the 480 x 360 reference viewport). */
@@ -92,6 +93,9 @@ export interface ChunkOptions {
    * after the canal's draws of the same step, and the dusk pond draws exactly what
    * the pond draws. 'chinampa' paints its banks as garden plots (its own crop draws,
    * after the clouds' draws of the same step) and its ahuejote roots in the water.
+   * 'spring-cave' paints a rock roof with no sun and no clouds (so no cloud draws), and its row
+   * details (paintSpringRowDetails) last: the sky opening and the lit pool on the top row, rock
+   * walls at the row's ends and the rock bed on the bottom row.
    */
   readonly look?: AreaLookId;
   /**
@@ -112,9 +116,9 @@ export interface ChunkOptions {
    * is clipped. Only counts on 'single' and 'top' chunks. Default false.
    */
   readonly streamSpill?: boolean;
-  /** This chunk is the first of its row. Looks with edge reeds paint them on the left. Default false. */
+  /** This chunk is the first of its row. Looks with edge reeds or rock walls paint them on the left. Default false. */
   readonly edgeLeft?: boolean;
-  /** This chunk is the last of its row. Looks with edge reeds paint them on the right. Default false. */
+  /** This chunk is the last of its row. Looks with edge reeds or rock walls paint them on the right. Default false. */
   readonly edgeRight?: boolean;
   /** Injected randomness in [0, 1). */
   readonly rand: () => number;
@@ -385,8 +389,8 @@ function paintRays(ctx: CanvasRenderingContext2D, rand: () => number, alphaScale
   }
 }
 
-/** Canal bed top edge as a function of world x, so neighbouring chunks join. */
-function bedEdgeY(worldX: number): number {
+/** Canal bed top edge as a function of world x, so neighbouring chunks join. Every look's bed uses it. */
+export function bedEdgeY(worldX: number): number {
   return 322 + 2.6 * Math.sin(worldX * 0.021 + 0.7) + 1.4 * Math.sin(worldX * 0.057 + 2.1);
 }
 
@@ -631,6 +635,23 @@ function paintEdgeReeds(
 }
 
 /**
+ * Paint the spring cave row details over a chunk (drawSpringCave.ts), its rock stones on this
+ * chunk's own bed edge. A 'single' chunk is a top row and a bottom row in one: the opening and the
+ * pool, then the rock bed and the walls.
+ */
+function paintSpringCaveRow(ctx: CanvasRenderingContext2D, row: ChunkRow, opts: ChunkOptions): void {
+  const wx0 = opts.index * VIEW_W;
+  const edges = { edgeLeft: opts.edgeLeft === true, edgeRight: opts.edgeRight === true };
+  const bedEdge = (x: number): number => bedEdgeY(wx0 + x);
+  if (row === 'single') {
+    paintSpringRowDetails(ctx, { row: 'top', edgeLeft: false, edgeRight: false });
+    paintSpringRowDetails(ctx, { row: 'bottom', ...edges, bedEdge });
+    return;
+  }
+  paintSpringRowDetails(ctx, { row, ...edges, bedEdge });
+}
+
+/**
  * Paint one 480 x 360 background chunk. A 'single' chunk (the default) is
  * sky, sun (optional), clouds, bank and willows (optional), water from
  * SURF + 3 down, static light rays, canal bed with lip, mud and pebbles. A
@@ -644,7 +665,8 @@ function paintEdgeReeds(
  * edge reeds paints them at the row's first and last chunk, after the bed;
  * `stream` adds the stream after the rays (`streamClosed` tapers it out before
  * the mouth), and `streamSpill` adds the left neighbour's overflowing mouth
- * stones at the same step.
+ * stones at the same step. A look with spring cave row details (`rowDetails`) paints no sun and
+ * no clouds on its rock roof, and its row details last (paintSpringCaveRow).
  */
 export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkOptions): void {
   const { rand } = opts;
@@ -652,10 +674,13 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
   const row = opts.row ?? 'single';
   const hasSky = row === 'single' || row === 'top';
   const hasBed = row === 'single' || row === 'bottom';
+  const rockRoof = look.rowDetails === 'springCave';
   if (hasSky) {
     paintSky(ctx, look);
-    if (opts.hasSun) paintSun(ctx);
-    paintClouds(ctx, rand, opts.hasSun ? 16 : 120);
+    if (!rockRoof) {
+      if (opts.hasSun) paintSun(ctx);
+      paintClouds(ctx, rand, opts.hasSun ? 16 : 120);
+    }
     if (opts.hasBank) {
       if (look.bank === 'plots') paintChinampaBank(ctx, plotBankOf(opts));
       else paintBank(ctx, opts);
@@ -677,6 +702,7 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
       if (opts.edgeRight === true) paintEdgeReeds(ctx, opts.index, rand, look.edgeReeds, 'right');
     }
   }
+  if (rockRoof) paintSpringCaveRow(ctx, row, opts);
 }
 
 // ---------------------------------------------------------------------------

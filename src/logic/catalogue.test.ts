@@ -9,6 +9,7 @@ import {
   FIREFLY_GOLD,
   GALAXY,
   LILY_GREEN,
+  MOONSTONE,
   PERK_VALUES,
   PLUM,
   POND_2_TREASURES,
@@ -16,6 +17,7 @@ import {
   POPPY_RED,
   RAINBOW,
   RARITIES,
+  SPRING_CAVE_TREASURES,
   TIE_DYE_GALAXY,
   TREASURE_CATEGORIES,
   WEARABLE_SLOTS,
@@ -602,24 +604,126 @@ describe('CHINAMPA_2_TREASURES', () => {
   });
 });
 
+describe('SPRING_CAVE_TREASURES', () => {
+  it('holds exactly the spring cave Area 6 treasures, in rarity order (issue #77)', () => {
+    expect(SPRING_CAVE_TREASURES).toEqual([
+      { id: 'spring-cave/pebble-stack', name: 'Pebble stack', rarity: 'common', category: 'decoration' },
+      {
+        id: 'spring-cave/glow-moss-ball',
+        name: 'Glow moss ball',
+        rarity: 'common',
+        category: 'decoration',
+        placement: 'floating',
+      },
+      {
+        id: 'spring-cave/miners-headlamp',
+        name: "Miner's headlamp",
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'treasureSense', value: 15 },
+      },
+      {
+        id: 'spring-cave/crystal-pendant',
+        name: 'Crystal pendant',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'neck',
+        perk: { type: 'regrowth', value: 10 },
+      },
+      { id: 'spring-cave/fossil-ammonite', name: 'Fossil ammonite', rarity: 'rare', category: 'decoration' },
+      {
+        id: 'spring-cave/crystal-wind-chime',
+        name: 'Crystal wind chime',
+        rarity: 'rare',
+        category: 'decoration',
+        placement: 'hanging',
+      },
+      {
+        id: 'spring-cave/explorer-vest',
+        name: 'Explorer vest',
+        rarity: 'rare',
+        category: 'wearable',
+        slot: 'shirt',
+        perk: { type: 'dash', value: 15 },
+      },
+      {
+        id: 'spring-cave/paint-shell-moonstone',
+        name: 'Moonstone Paint shell',
+        rarity: 'rare',
+        category: 'paintShell',
+        dreamColour: 'moonstone',
+      },
+      { id: 'spring-cave/geode-lamp', name: 'Geode lamp', rarity: 'epic', category: 'decoration' },
+      {
+        id: 'spring-cave/crystal-tail-cuff',
+        name: 'Crystal tail cuff',
+        rarity: 'epic',
+        category: 'wearable',
+        slot: 'tail',
+        perk: { type: 'snackMagnet', value: 50 },
+      },
+      { id: 'spring-cave/crystal-arch', name: 'Crystal arch', rarity: 'legendary', category: 'decoration' },
+      {
+        id: 'spring-cave/crystal-crown',
+        name: 'Crystal crown',
+        rarity: 'legendary',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'speed', value: 10 },
+      },
+    ]);
+    expect(Object.isFrozen(SPRING_CAVE_TREASURES)).toBe(true);
+  });
+
+  it('gives every spring cave Wearable its PERK_VALUES value, no set, and perks that are not all the same', () => {
+    const wearables = SPRING_CAVE_TREASURES.filter(isWearable);
+    for (const wearable of wearables) {
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+      expect(wearable.setId, wearable.id).toBeUndefined();
+    }
+    expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBeGreaterThan(1);
+  });
+
+  it('has 6 Decorations, 5 Wearables and the Moonstone Paint shell, in rarity order', () => {
+    expect(SPRING_CAVE_TREASURES).toHaveLength(12);
+    expect(SPRING_CAVE_TREASURES.filter(isDecoration)).toHaveLength(6);
+    expect(SPRING_CAVE_TREASURES.filter(isWearable)).toHaveLength(5);
+    expect(SPRING_CAVE_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['spring-cave/paint-shell-moonstone']);
+    const rarityIndexes = SPRING_CAVE_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
+    expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+  });
+
+  it('keeps the canal, pond, pond Area 3, chinampa Area 4 and chinampa Area 5 lists unchanged ahead of it', () => {
+    expect(CANAL_TREASURES).toHaveLength(20);
+    expect(POND_TREASURES).toHaveLength(13);
+    expect(POND_2_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_2_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_2_TREASURES.at(-1)?.id).toBe('canal/paint-shell-tie-dye-galaxy');
+  });
+});
+
 describe('ALL_TREASURES', () => {
-  it('is the canal, pond, pond Area 3, chinampa Area 4 and chinampa Area 5 treasures, in that order', () => {
+  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5 and spring cave Area 6 treasures, in that order', () => {
     expect(ALL_TREASURES).toEqual([
       ...CANAL_TREASURES,
       ...POND_TREASURES,
       ...POND_2_TREASURES,
       ...CHINAMPA_TREASURES,
       ...CHINAMPA_2_TREASURES,
+      ...SPRING_CAVE_TREASURES,
     ]);
     expect(Object.isFrozen(ALL_TREASURES)).toBe(true);
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 72 treasures: 25 Decorations, 31 Wearables and 16 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(72);
-    expect(ALL_DECORATIONS).toHaveLength(25);
-    expect(ALL_WEARABLES).toHaveLength(31);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(16);
+  it('has 84 treasures: 31 Decorations, 36 Wearables and 17 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(84);
+    expect(ALL_DECORATIONS).toHaveLength(31);
+    expect(ALL_WEARABLES).toHaveLength(36);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(17);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -646,7 +750,7 @@ describe('ALL_TREASURES', () => {
     const ids = ALL_TREASURES.map((treasure) => treasure.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
-      expect(id).toMatch(/^(canal|pond|chinampa)\/[a-z0-9-]+$/);
+      expect(id).toMatch(/^(canal|pond|chinampa|spring-cave)\/[a-z0-9-]+$/);
     }
     const names = ALL_TREASURES.map((treasure) => treasure.name);
     expect(new Set(names).size).toBe(names.length);
@@ -683,7 +787,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -694,8 +798,9 @@ describe('Dream colours', () => {
       RAINBOW,
       PLUM,
       TIE_DYE_GALAXY,
+      MOONSTONE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(16);
+    expect(DREAM_COLOURS).toHaveLength(17);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -718,6 +823,7 @@ describe('Dream colours', () => {
       'firefly-gold',
       'poppy-red',
       'plum',
+      'moonstone',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -736,6 +842,15 @@ describe('Dream colours', () => {
     expect(PLUM).toEqual({ id: 'plum', name: 'Plum', rarity: 'rare', kind: 'solid' });
     expect(Object.isFrozen(PLUM)).toBe(true);
     expect(dreamColourById('plum')).toBe(PLUM);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Moonstone a rare solid, the seventeenth and last Dream colour, with a name no other Dream colour has (issue #77)', () => {
+    expect(MOONSTONE).toEqual({ id: 'moonstone', name: 'Moonstone', rarity: 'rare', kind: 'solid' });
+    expect(Object.isFrozen(MOONSTONE)).toBe(true);
+    expect(dreamColourById('moonstone')).toBe(MOONSTONE);
+    expect(DREAM_COLOURS.at(-1)).toBe(MOONSTONE);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -812,6 +927,16 @@ describe('lookups', () => {
       dreamColour: 'plum',
       rarity: 'rare',
     });
+  });
+
+  it('treasureById finds spring cave Area 6 ids', () => {
+    expect(treasureById('spring-cave/fossil-ammonite')).toMatchObject({ name: 'Fossil ammonite', category: 'decoration', rarity: 'rare' });
+    expect(treasureById('spring-cave/paint-shell-moonstone')).toMatchObject({
+      name: 'Moonstone Paint shell',
+      dreamColour: 'moonstone',
+      rarity: 'rare',
+    });
+    expect(treasureSlug('spring-cave/miners-headlamp')).toBe('miners-headlamp');
   });
 
   it('treasureSlug returns the text after the first slash', () => {
@@ -893,6 +1018,22 @@ describe('Decoration placement kinds', () => {
     ]);
   });
 
+  it('places the spring cave Area 6 Decorations, every one with the standard width (issue #77)', () => {
+    const kinds = SPRING_CAVE_TREASURES.filter(isDecoration).map((decoration) => [
+      decoration.id,
+      placementKind(decoration),
+      decoration.width,
+    ]);
+    expect(kinds).toEqual([
+      ['spring-cave/pebble-stack', 'floor', undefined],
+      ['spring-cave/glow-moss-ball', 'floating', undefined],
+      ['spring-cave/fossil-ammonite', 'floor', undefined],
+      ['spring-cave/crystal-wind-chime', 'hanging', undefined],
+      ['spring-cave/geode-lamp', 'floor', undefined],
+      ['spring-cave/crystal-arch', 'floor', undefined],
+    ]);
+  });
+
   it('makes every canal Decoration a Floor item with the standard width (issue #95)', () => {
     expect(DECORATIONS.map((decoration) => decoration.name)).toEqual([
       'Pond plant',
@@ -960,5 +1101,10 @@ describe('ownedDreamColours', () => {
   it('owns Plum from the chinampa Area 5 Paint shell, after Poppy red', () => {
     const banked = ['chinampa/paint-shell-plum', 'chinampa/pinata', 'chinampa/paint-shell-poppy-red'];
     expect(ownedDreamColours(banked)).toEqual(['poppy-red', 'plum']);
+  });
+
+  it('owns Moonstone from the spring cave Area 6 Paint shell, after Plum', () => {
+    const banked = ['spring-cave/paint-shell-moonstone', 'spring-cave/crystal-crown', 'chinampa/paint-shell-plum'];
+    expect(ownedDreamColours(banked)).toEqual(['plum', 'moonstone']);
   });
 });

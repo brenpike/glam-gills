@@ -8,9 +8,14 @@ import type { EncounterState } from './encounter';
 import { isSnagged } from './ghostNets';
 import type { ElementSpawn, MatPair } from './hazards';
 import { matPhase, WATER_HYACINTH } from './hyacinthMats';
-import { movingHazardDepth, movingHazardPhase, type MovingHazardSpawn } from './movingHazards';
+import {
+  movingHazardBaseY,
+  movingHazardDepth,
+  movingHazardDirection,
+  movingHazardPhase,
+  type MovingHazardSpawn,
+} from './movingHazards';
 import type { TripState } from './trip';
-import { SURF } from './zone';
 
 /** The parts of a trip the hazard sound edges read. A TripState is one. */
 export type HazardSoundTrip = Readonly<Pick<TripState, 'phase' | 'ghostNets' | 'elements' | 'elementTime'>> & {
@@ -37,9 +42,9 @@ export interface ViewRect {
 }
 
 /**
- * The hazard edges of one frame: the snag ended (wriggle free, ND-5), an on-screen punting pole
- * started its warning (the ripple, ND-4), and an on-screen mat pair started opening (ND-6). Each is
- * at most one a frame.
+ * The hazard edges of one frame: the snag ended (wriggle free, ND-5), an on-screen moving hazard of
+ * any type started its warning (the ripple, ND-4; issue #77, ND-3), and an on-screen mat pair
+ * started opening (ND-6). Each is at most one a frame. `poleWarned` keeps its first type's name.
  */
 export interface HazardEdges {
   readonly snagEnded: boolean;
@@ -60,10 +65,15 @@ function overlapsView(view: ViewRect, x0: number, x1: number, y0: number, y1: nu
   return x0 < view.x + view.width && x1 > view.x && y0 < view.y + view.height && y1 > view.y;
 }
 
-/** Whether the pole's shaft, x ± halfWidth from the surface down to its depth, overlaps `view`. */
-function poleOnScreen(spawn: Readonly<MovingHazardSpawn>, view: ViewRect): boolean {
+/**
+ * Whether the moving hazard's sweep, x ± halfWidth from its base to its depth where it really is
+ * (down from the surface or a roof, up from the floor), overlaps `view` (issue #77, ND-3).
+ */
+function movingHazardOnScreen(spawn: Readonly<MovingHazardSpawn>, view: ViewRect): boolean {
   const { halfWidth } = spawn.type;
-  return overlapsView(view, spawn.x - halfWidth, spawn.x + halfWidth, SURF, SURF + movingHazardDepth(spawn));
+  const base = movingHazardBaseY(spawn);
+  const end = base + movingHazardDirection(spawn) * movingHazardDepth(spawn);
+  return overlapsView(view, spawn.x - halfWidth, spawn.x + halfWidth, Math.min(base, end), Math.max(base, end));
 }
 
 /** Whether the mat pair's box, `x0..x1` by `rowTop..rowBottom`, overlaps `view`. */
@@ -71,15 +81,15 @@ function matsOnScreen(pair: Readonly<MatPair>, view: ViewRect): boolean {
   return overlapsView(view, pair.x0, pair.x1, pair.rowTop, pair.rowBottom);
 }
 
-/** Whether some on-screen pole goes from 'rest' at `before` to 'warn' at `now` (ND-4). */
-function anyPoleWarned(
+/** Whether some on-screen moving hazard goes from 'rest' at `before` to 'warn' at `now` (ND-4). */
+function anyMovingHazardWarned(
   spawns: readonly Readonly<MovingHazardSpawn>[],
   before: number,
   now: number,
   view: ViewRect,
 ): boolean {
   for (const spawn of spawns) {
-    if (!poleOnScreen(spawn, view)) continue;
+    if (!movingHazardOnScreen(spawn, view)) continue;
     if (movingHazardPhase(spawn, before).phase === 'rest' && movingHazardPhase(spawn, now).phase === 'warn') return true;
   }
   return false;
@@ -98,9 +108,9 @@ function anyMatsOpened(elements: readonly Readonly<ElementSpawn>[], before: numb
  * The hazard edges from `prev`, the trip's snapshot on the last frame (undefined on its first
  * frame), to `trip` now, with the camera's world view `view` (issue #166, ND-4 to ND-7). None on the
  * first frame and none unless the trip is swimming now, so the carry start's endSnag plays no
- * wriggle. The snag ends when the explorer was snagged and is not now (ND-5). A pole warns when it
- * goes from 'rest' to 'warn' with its shaft on screen; several poles in one frame are one edge
- * (ND-4). Mats open when a water hyacinth pair goes into 'opening' with its box on screen; at most
+ * wriggle. The snag ends when the explorer was snagged and is not now (ND-5). A moving hazard of any
+ * type warns when it goes from 'rest' to 'warn' with its sweep on screen where it really is;
+ * several in one frame are one edge (ND-4; issue #77, ND-3). Mats open when a water hyacinth pair goes into 'opening' with its box on screen; at most
  * one a frame (ND-6). The jab, hold, lift, open, closing and closed phases and off-screen starts give
  * none. Returns NO_HAZARD_EDGES when there are none.
  */
@@ -112,7 +122,7 @@ export function hazardSoundEdges(prev: HazardSnapshot | undefined, trip: HazardS
     movingHazards !== undefined &&
     hazardTime !== undefined &&
     prev.hazardTime !== undefined &&
-    anyPoleWarned(movingHazards, prev.hazardTime, hazardTime, view);
+    anyMovingHazardWarned(movingHazards, prev.hazardTime, hazardTime, view);
   const matsOpened = anyMatsOpened(trip.elements, prev.elementTime, trip.elementTime, view);
   if (!snagEnded && !poleWarned && !matsOpened) return NO_HAZARD_EDGES;
   return { snagEnded, poleWarned, matsOpened };

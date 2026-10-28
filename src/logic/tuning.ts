@@ -491,6 +491,31 @@ export const CARP: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
+ * Provisional crayfish values (issue #77, ND-5); tune in play. The crayfish walks its floor stretch
+ * at patrolSpeed, stops and opens its claws wide for 0.8 s (the PRD's 0.8 s floor) when the
+ * axolotl is within lungeRange of it, then pinches lungeSpeed x lungeDuration = 120 px forward and
+ * rests for the 1.8 s cooldown. Its reach is the bottom only: it warns only while on its stretch
+ * and its pinch stays level along the floor (the `warnOnRoute` and `levelStrike` rules on
+ * CRAYFISH_SPECIES in src/logic/predators.ts), so mid-water above the reach is safe. Hit, touch
+ * and body reach, and the gentle bump, are the tilapia's, so they match a Medium axolotl at every
+ * size (PRD F4).
+ */
+export const CRAYFISH: Readonly<TilapiaTuning> = Object.freeze({
+  minWindup: 0.8,
+  windup: 0.8,
+  cooldown: 1.8,
+  lungeRange: 90,
+  lungeSpeed: 400,
+  lungeDuration: 0.3,
+  hitRadius: TILAPIA.hitRadius,
+  contactRadius: TILAPIA.contactRadius,
+  bodyRadius: TILAPIA.bodyRadius,
+  patrolSpeed: 60,
+  bumpSpeed: TILAPIA.bumpSpeed,
+  bumpCooldown: TILAPIA.bumpCooldown,
+});
+
+/**
  * Provisional chase defaults for each predator type (PRD open question 251, ND-4); tune in play.
  * None is wired into a real area. Each speed is strictly between the 2-leg (112.5 px/s) and 4-leg
  * (150 px/s) top speeds, and each sight is greater than its predator's lungeRange (ND-3). This one
@@ -526,6 +551,16 @@ export const CARP_CHASE: Readonly<ChaseTuning> = Object.freeze({
   speed: 115,
 });
 
+/**
+ * Provisional chase default for a crayfish (issue #77, ND-5). It chases along its floor stretch
+ * only, so its leash is 0.
+ */
+export const CRAYFISH_CHASE: Readonly<ChaseTuning> = Object.freeze({
+  sight: 200,
+  leash: 0,
+  speed: 120,
+});
+
 /** Provisional carried-home values; a gentle float of 1.5 to 5 s, or a 1.5 s still bubble. */
 export const CARRY: Readonly<CarryTuning> = Object.freeze({
   speed: 300,
@@ -556,7 +591,7 @@ export const TRIP_TREASURES: Readonly<TripTreasureTuning> = Object.freeze({
  * Per-area changes to TRIP_TREASURES, keyed by area id. An area with no entry uses the default (PRD B4).
  * The keys are the literal area ids because this file cannot import zone.ts or pondLayout.ts.
  * The pond, Area 2, has 7 slots, the pond at dusk, Area 3, has 8, the chinampa gardens, Area 4,
- * have 9, and the chinampa gardens' Area 5 has 10.
+ * have 9, the chinampa gardens' Area 5 has 10, and the spring cave, Area 6, has 11 (issue #77).
  */
 export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasureOverride>>> = Object.freeze({
   canal: Object.freeze({ slots: 6 }),
@@ -564,6 +599,7 @@ export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasu
   'pond-2': Object.freeze({ slots: 8 }),
   'chinampa-1': Object.freeze({ slots: 9 }),
   'chinampa-2': Object.freeze({ slots: 10 }),
+  'spring-cave-1': Object.freeze({ slots: 11 }),
 });
 
 /**

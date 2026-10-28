@@ -93,6 +93,18 @@ Something in an area that runs on a clock, and may carry a **Fun-fact card** of 
 A floating mat of water hyacinth in the Chinampa gardens, Area 5's **Timing element** (`'water-hyacinth'` in code). The mats come in pairs, one above and one below a narrow channel; each pair spans its row, and Area 5 has two, one in each row, out of step. On an 8 s cycle the mats drift apart over the first 1 s of a 3 s open window, drift together over 1 s (the warning), and stay closed for 4 s. A closed channel blocks the **Explorer**, who waits or goes round through the other row; a mat that closes on the **Explorer** pushes it out along the channel, never into a **Ghost net**, a **Current** or out of the swim bounds. A mat never costs a leg, is never a **Hit** and never traps. Only the **Explorer** is blocked: a following rescued axolotl, the **Predators** and the **Snacks** are not.
 _Avoid_: wall, terrain
 
+**Puzzle element**:
+Something in an area that the player works out how to use, always active and never on a clock (the `'puzzle'` element kind in code). It is not a **Hazard** and not a **Timing element**: it never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part. It counts as an area's one new timing or puzzle element. A stuck player gets a gentle hint, and the **Exit** is never locked behind a puzzle the player cannot see how to solve (N3). The first is the **Glow-plant**.
+_Avoid_: lock, key, switch
+
+**Dark water**:
+The dark part of an area (`darkWater` in area data): a fixed rectangle drawn as one dark layer, never placed by chance; an area without one is lit everywhere. The darkness hides only scenery, **Snacks**, treasure spots, their **Hint sparkles** and finds. It never hides the axolotl, the **Exit**, the **Home Spot**, any **Predator** or **Moving hazard** or its **Telegraph**, a **Stranded axolotl**, a **Glow-plant**, or the controls. Light shows through it as soft circles: the axolotl's own glow, about 120 px round its body and always on, so a **Snack** shows in it before it is in reach; the exit's faint glow; and about 200 px round each lit **Glow-plant**. Lit and dark water differ in brightness, so they read in greyscale. No stranding place is in the dark water. Swimming into or out of it is silent.
+_Avoid_: fog, shadow, night (night is a look's time of day)
+
+**Glow-plant**:
+A plant in the **Dark water**, the first **Puzzle element** (`'glow-plant'` in code). Unlit, it shows as a dim teal outline, so it can be seen in the dark. When the axolotl's body touches it, it lights, silently, and stays lit for the rest of the **Trip**, lighting about 200 px round it. Lit plants are trip state only, never saved, so every plant is unlit at the start of each trip. After 20 seconds of game time in the dark water without lighting a new plant, the nearest unlit plant pulses gently until a plant is lit or the axolotl leaves the dark; under reduced motion its outline brightens instead, and a new light appears at once. The hint clock holds while the game is paused, a banking card shows or the axolotl is being **Carried home**. A glow-plant never blocks the **Explorer**, has no **Fun-fact card** and is never met. Its hint is not a **Hint sparkle**.
+_Avoid_: lamp, torch, light switch
+
 **Tail Dash**:
 The axolotl's first power, a short burst of speed that works with any number of legs and is the only way to break a Dash pot.
 
@@ -116,7 +128,7 @@ _Avoid_: hint star
 Something in an area, defined as data with its own rules, that may cost the axolotl a leg or only slow it, such as a predator. A slow-only hazard, such as the **Plastic worm**, never costs a leg, never starts **Protected time**, and is not a threat for hiding spots (B10). A hazard may stay still or move: a **Moving hazard** moves on its own cycle and costs a leg on touch, and a **Drifting ghost net** moves and only slows.
 
 **Predator**:
-A kind of **Hazard**: an animal that hunts, with a visible warning before every strike; every predator follows the same shared rules, and each species is data. A species' warning starts by distance, when the axolotl comes near (the **Tilapia**, the **Garter snake** and the **Common carp**), or on sight, when the axolotl is within the predator's reach and not in cover (the **Heron**). A species may warn only while it is on its route (the **Garter snake**), so after a strike it swims back to its route before it can warn again. A predator whose area gives it a chase follows the **Chase rule** on patrol, within its **Leash**, before it warns; the **Heron** never chases. Any species may be tuned per area in its area's own data, and stays the same species.
+A kind of **Hazard**: an animal that hunts, with a visible warning before every strike; every predator follows the same shared rules, and each species is data. A species' warning starts by distance, when the axolotl comes near (the **Tilapia**, the **Garter snake**, the **Common carp** and the **Crayfish**), or on sight, when the axolotl is within the predator's reach and not in cover (the **Heron**). A species may warn only while it is on its route (the **Garter snake** and the **Crayfish**), so after a strike it swims back to its route before it can warn again. A species may strike level (`levelStrike` in code; the **Crayfish**): its strike never moves it up or down, so it reaches only along its own height. A predator whose area gives it a chase follows the **Chase rule** on patrol, within its **Leash**, before it warns; the **Heron** never chases. Any species may be tuned per area in its area's own data, and stays the same species.
 _Avoid_: monster
 
 **Chase rule**:
@@ -152,6 +164,10 @@ _Avoid_: monster
 A big, round, bronze-gold invasive fish with two short barbels (`'carp'` in code), a **Predator** on the shared rules with no special rules, and a **Danger part**. It swims at every depth and digs in the mud on the bed. Before its strike it tips its nose down and puffs a small mud cloud, then makes a slow, wide tail sweep along the aim fixed at the end of its warning. A touch is a gentle bump that costs no leg. Its mouth is closed and it has no teeth; it never bites or holds the axolotl. Its fact card is "Meet the carp". Which areas have a carp is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: monster, koi
 
+**Crayfish**:
+A small freshwater cousin of the lobster that walks along the bed (`'crayfish'` in code), a **Predator** on the shared rules. Each crayfish walks its own short straight floor stretch. With its first tuning, when the axolotl comes within 90 px of it while it is on its stretch, it stops and opens its claws wide for 0.8 seconds (under reduced motion they snap open), then pinches forward, level along the floor and never up, so swimming up out of its reach dodges every pinch, and the water above its reach is safe. A pinch that connects costs a leg; a touch outside a pinch is a gentle bump that costs no leg. It warns only while on its stretch, and its **Leash** is 0, so it chases along its stretch only. Cover does not hide the axolotl from it. Its mouth is always closed, and it is never shown holding, pinching down on or hurting the axolotl. Its fact card is "Meet the crayfish".
+_Avoid_: crawfish, crawdad, lobster, monster
+
 **Plastic worm**:
 A bit of plastic in the Lily pad pond that looks like a worm, the first slow-only **Hazard**. Touching it with the head eats it, which makes the **Explorer** **Queasy**, and the axolotl spits it out a little way ahead. It is never a **Snack**, never counts toward opening the **Exit**, and the worms start over each **Trip**.
 _Avoid_: worm alone (a worm is a **Snack**)
@@ -173,18 +189,26 @@ How the **Explorer** is for 2 seconds after swimming into a **Ghost net**: it wr
 _Avoid_: trapped, caught, stuck, damage
 
 **Moving hazard**:
-A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, with a warning (its **Telegraph**) of at least 0.8 seconds before each move into the water; its looks are data. It is not a **Predator**, so it does not wait its turn: it may move while a predator warns or lunges. It is not a **Timing element**, because a timing element never costs a leg. Every moving hazard type is a **Danger part**. The first is the **Punting pole**.
+A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, with a warning (its **Telegraph**) of at least 0.8 seconds before each move into the water; its looks are data. Its shaft comes from its base: down from the surface, down from a rock roof, or up from the floor; the whole shaft touches, and a hit comes from its tip where it really is. It is not a **Predator**, so it does not wait its turn: it may move while a predator warns or lunges. It is not a **Timing element**, because a timing element never costs a leg. Every moving hazard type is a **Danger part**. The first is the **Punting pole**; the **Stalactite drip** comes from a roof and the **Geyser vent** from the floor.
 _Avoid_: trap, obstacle
 
 **Punting pole**:
 The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: oar, stick
 
+**Stalactite drip**:
+A **Moving hazard** from a rock ledge (`'stalactite-drip'` in code): a rock stalactite hangs from the underside of a rock ledge, never from the surface, and a thin stream of drips falls from under its tip down to its depth on a 4 s cycle. Before each stream a drop swells at the tip and ripple rings spread just under the drop; then the drip stream falls from the tip to its depth. The whole stream costs a leg on touch; the water below its end is safe. Its fact card is "Stalactites". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
+_Avoid_: icicle, waterfall
+
+**Geyser vent**:
+A **Moving hazard** from the floor (`'geyser-vent'` in code): a rock vent on the bed that bursts a column of water and bubbles up to its height on a 5.2 s cycle. Before each burst bubbles rise from its mouth with a shimmer ring. The whole column costs a leg on touch; the water above its top is safe. It is never shown as fire. Its fact card is "Geysers". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
+_Avoid_: volcano, jet
+
 **Telegraph**:
-A predator's or **Moving hazard**'s visible warning before a lunge or a jab; the tilapia's is a glint and a wind-up pose, the heron's is freezing and pulling its neck into an S, the garter snake's is stopping in a held S with ripple rings spreading from its head, the common carp's is tipping its nose down with a mud puff, and the punting pole's is the boat's shadow darkening while the pole's tip dips with a ripple ring.
+A predator's or **Moving hazard**'s visible warning before a lunge or a jab; the tilapia's is a glint and a wind-up pose, the heron's is freezing and pulling its neck into an S, the garter snake's is stopping in a held S with ripple rings spreading from its head, the common carp's is tipping its nose down with a mud puff, the crayfish's is stopping with its claws raised and opened wide, the punting pole's is the boat's shadow darkening while the pole's tip dips with a ripple ring, the stalactite drip's is a drop swelling at the tip with ripple rings just under the drop, and the geyser vent's is bubbles rising from its mouth with a shimmer ring.
 
 **Lunge**:
-A predator's strike; the tilapia's is a quick dash at the axolotl, the heron's is a stab with its beak at the spot where the axolotl was when its S-neck began, the garter snake's is a straight dart along the aim fixed at the end of its warning, and the common carp's is a slow, wide tail sweep along the aim fixed at the end of its warning.
+A predator's strike; the tilapia's is a quick dash at the axolotl, the heron's is a stab with its beak at the spot where the axolotl was when its S-neck began, the garter snake's is a straight dart along the aim fixed at the end of its warning, the common carp's is a slow, wide tail sweep along the aim fixed at the end of its warning, and the crayfish's is a pinch straight forward along the floor, toward the axolotl's side.
 
 **Hit**:
 A predator's strike, or a **Hazard** that costs a leg, that connects.
@@ -302,7 +326,7 @@ _Avoid_: slot (a Slot is where a Wearable goes)
 The in-game book of morphs and fact cards, nicknamed the Axolotl-dex in game.
 
 **Fun-fact card**:
-A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 13 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
+A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 16 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Meet the crayfish" (the **Crayfish**), "Stalactites" (the **Stalactite drip**), "Geysers" (the **Geyser vent**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
 
 **Save**:
 Progress kept in device storage by itself: banked treasures, the axolotls, the tank, the Collection Book, stars, the last chosen area, and the fact cards found (`metHazards`: the hazards, predators and timing elements met, then the refuge fact cards found); never anything from a trip in progress, and never the refuge's pending clean-ups and milestones.
@@ -370,7 +394,7 @@ The sound for a lost leg: two soft, low notes falling a small step, answered by 
 _Avoid_: hit sound, hurt sound
 
 **Ripple**:
-The warning sound: a soft water swish with two low notes, played once when a **Predator**'s **Telegraph** starts, or a **Moving hazard**'s on screen, never repeating or building (S9). Not the ripple rings drawn in some telegraphs.
+The warning sound: a soft water swish with two low notes, played once when a **Predator**'s **Telegraph** starts, or a **Moving hazard**'s with its sweep on screen where it really is, from the surface, a roof or the floor, never repeating or building (S9). Not the ripple rings drawn in some telegraphs.
 _Avoid_: alarm, warning beep
 
 **Lullaby**:
@@ -393,13 +417,17 @@ _Avoid_: carry sound, defeat sound
 - Each **Trip** fills its **Area**'s **Treasure slots** with unbanked **Treasures**, each slot's **Rarity** picked by chance, plus any lost **Treasures** and the unbanked **Special treasure** on top, and one **Hiding spot** per **Treasure** picked for that **Trip**, from that **Treasure**'s pool; no two **Treasures** share a spot in one **Trip**
 - A Legendary **Treasure** always hides in a **Dash pot**, which only **Tail Dash** can break
 - A **Hint sparkle** marks a hidden **Treasure** when the axolotl is near, and each of the last 3 **Snacks**
-- A **Predator** is a **Hazard**, and a **Tilapia**, a **Heron**, a **Garter snake** and a **Common carp** are **Predators**; a **Predator**'s **Telegraph** always comes before its **Lunge**, whether its warning starts by distance or on sight, and only one **Predator** in an **Area** warns or lunges at a time, a **Heron**, a **Garter snake**, a **Common carp** and a **Tilapia** included
+- A **Predator** is a **Hazard**, and a **Tilapia**, a **Heron**, a **Garter snake**, a **Common carp** and a **Crayfish** are **Predators**; a **Predator**'s **Telegraph** always comes before its **Lunge**, whether its warning starts by distance or on sight, and only one **Predator** in an **Area** warns or lunges at a time, a **Heron**, a **Garter snake**, a **Common carp**, a **Crayfish** and a **Tilapia** included
+- A **Crayfish** warns only while it is on its floor stretch, and its pinch stays level along the floor, so the water above its reach is out of its reach
 - A **Garter snake** warns only while its head is on its stretch, so the water below y 260, the whole bottom row included, is out of its reach
 - A **Predator** with the **Chase rule** chases only on patrol and within its **Leash**; chasing is not warning or lunging, so any number of **Predators** may chase at once, and a **Garter snake** chases along its stretch only
 - A **Moving hazard** is a **Hazard** that costs a leg, but not a **Predator** and not a **Timing element**; its **Telegraph** always comes before its jab, and it keeps its own cycle whatever the **Predators** do
 - A **Drifting ghost net** is a **Ghost net**: it only slows, it is never a **Hit**, and it is never a threat for **Hiding spots** (B10)
 - A **Mobile snack** is a **Snack** with a **Home area**; a **Tadpole** swims its **Wander loop** forever, a **Freshwater shrimp** hops round its hop spots and flicks away again after each rest, and in an **Area** with **Freshwater shrimp** no **Snack** darts once
 - A **Water hyacinth mat** is a **Timing element**, not a **Hazard**: it blocks only the **Explorer**, never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part
+- A **Glow-plant** is a **Puzzle element**, not a **Hazard** and not a **Timing element**: it never blocks, never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part
+- An **Area** has at most one **Dark water**; each **Glow-plant** sits in it, and a lit **Glow-plant** stays lit until the **Trip** ends, then every plant starts the next **Trip** unlit
+- **Dark water** may hide a **Snack**, a treasure spot, its **Hint sparkle** and a find outside every light, but never anything that warns or costs a leg; a **Snack** in it shows in the axolotl's own glow before it is in reach, the **Exit** keeps its faint glow, and every **Glow-plant** shows, so the **Area** can always be finished with no plant lit
 - A **Hit** is a **Lunge** that connects, or a touch on a **Hazard** that costs a leg; it starts **Protected time** and causes exactly one **Leg loss**, except a hit blocked by a Shell **Perk** (at most one per trip), which costs no leg; a **Hazard** that only slows never hits
 - Eating a **Plastic worm** makes the **Explorer** **Queasy**; it is not a **Hit**, so the Shell **Perk** plays no part, and it costs no leg
 - Swimming into a **Ghost net** makes the **Explorer** **Snagged**, never a following **Stranded axolotl**; it is not a **Hit**, so the Shell **Perk** plays no part, it starts no **Protected time**, and it costs no leg
@@ -423,7 +451,7 @@ _Avoid_: carry sound, defeat sound
 - The **Refuge** has one **Refuge section** per **Habitat** that holds an **Area**, and each **Refuge section** has one **Trash batch** per **Area** in it; beating an **Area** (its exit **Star**) clears its **Trash batch**
 - A **Trip** in a real **Area** that newly beats it adds a pending clean-up, and one that newly makes a **Refuge section** clean adds a **Habitat milestone**; both live in memory only, a dev area **Trip** or a replay adds neither, and the **Refuge nudge** shows while a clean-up is pending
 - The **Refuge** holds two **Fun-fact cards**, "Axolotl refuges" (first visit) and "Canal clean-ups" (the first time cleared trash shows); the **Collection Book** lists them after the **Hazard** cards and before "Boy or girl?"
-- The **Collection Book** lists the **Hazard**, **Predator** and **Timing element** **Fun-fact cards** in area-table order, each area's element cards after its threat cards: the tilapia, the **Plastic worm**, the **Heron**, the **Ghost net**, the **Garter snake**, then the **Water hyacinth mat**
+- The **Collection Book** lists the **Hazard**, **Predator** and **Timing element** **Fun-fact cards** in area-table order, each area's element cards after its threat cards: the tilapia, the **Plastic worm**, the **Heron**, the **Ghost net**, the **Garter snake**, the **Water hyacinth mat**, then the **Crayfish**; a **Puzzle element** without a card adds none
 
 ## Example dialogue
 
@@ -446,6 +474,7 @@ _Avoid_: carry sound, defeat sound
 - "habitat" was another name for one **Area** before the area framework (#73): resolved: a **Habitat** is a group of **Areas** that share a look.
 - `tilapiaRoutes` and `predatorRoutes` both hold predator patrol routes in area data: resolved: the **Tilapia** keeps its own `tilapiaRoutes` column, matching the PRD area table's tilapia column, and every other species goes in `predatorRoutes`.
 - `metHazards` (the hub's met list) holds **Predator** ids too, such as `'tilapia'`, and, since the **Refuge** (#74), the refuge fact card ids `'axolotl-refuges'` and `'canal-clean-ups'`: resolved: it is the list of **Fun-fact cards** found, hazards, predators and timing elements (such as `'water-hyacinth'`) met first, then the refuge cards. The name stays, because renaming a saved field needs a save version bump ([ADR 0017](docs/adr/0017-xochimilco-refuge-and-habitat-milestones.md)).
+- "dark" names both the **Dark water** (`darkWater` in area data) and a dusk or night look, whose time of day picks the **Dusk version** of a **Cue**: resolved: **Dark water** is one part of an area's layout that hides things outside its lights, and it never changes the music; a night look is a whole area's colours.
 - "worm" names both a **Snack** (`CollectibleKind` `'worm'`) and the **Plastic worm** (`'plastic-worm'`): resolved: a worm alone is a **Snack**; always say **Plastic worm** in full for the hazard.
 - The **Ghost net**'s fact card is titled "Lost fishing nets", and its name in the **Collection Book** is "Ghost net": resolved: **Ghost net** is the domain term; "Lost fishing nets" is only the card's title.
 - "bank" names the top-row bank art (`bankChunks` in area data, drawn as willows in the canal and the pond and as garden plots in the Chinampa gardens) and the bank cover of **Hiding spots** (`'bank'`, from `bankOverhangs`): resolved: the bank cover comes only from `bankOverhangs`, never from `bankChunks`, so the canal's and the pond's **Hiding spots** are unchanged.

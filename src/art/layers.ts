@@ -39,9 +39,16 @@
  * tilapia and below `heronStab`: a cue object above the haze and every snack, behind the halo and the
  * axolotl, so the pole is never drawn over the hero. The surface and the pads draw over the bow's
  * hull at the water line. Its ripple ring uses `fx`.
+ * `darkWater` (the one dark layer over an area's dark part, issue #77, ND-7) sits above
+ * collectibles and below the tilapia: scenery, treasure spots and snacks under it are hidden
+ * outside its light holes, and every predator, moving hazard, the halo, a stranded axolotl and the
+ * axolotl draw over it. The exit (`homeSpot`) is under it, so the exit's faint glow cuts a light
+ * hole over it. Hint sparkles (`hint`) are above it and are hidden by the game rules, not by depth.
+ * `glowPlant` (the glow-plants and their hint, issue #77, ND-8) sits just over `darkWater`, so the
+ * darkness never hides a plant, and below the tilapia.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
  * < haze < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure
- * < collectibles < tilapia < movingHazard < heronStab < halo < friend < axolotl < queasyTint
+ * < collectibles < darkWater < glowPlant < tilapia < movingHazard < heronStab < halo < friend < axolotl < queasyTint
  * < bubbles < surface < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
@@ -69,6 +76,10 @@ export const DEPTH = {
   /** Provisional. Dash pots and treasures revealed by a crumble: cue objects above the haze. */
   treasure: 28,
   collectibles: 30,
+  /** Provisional. The dark layer over an area's dark part: above collectibles, below the glow-plants and the tilapia. */
+  darkWater: 32,
+  /** Provisional. Glow-plants and their hint: just above the dark layer, below the tilapia. */
+  glowPlant: 33,
   /** Provisional. Predator: behind the axolotl, in front of collectibles. */
   tilapia: 35,
   /** Provisional. Moving hazard shadow, shaft and bow: in front of the tilapia, behind the heron stab, the halo and the axolotl. */

@@ -343,7 +343,7 @@ describe('chinampa look (guide 3c, 7a)', () => {
 
   it('is a habitat look, listed after the pond and before the area variants', () => {
     expect(isHabitatLookId('chinampa')).toBe(true);
-    expect([...HABITAT_LOOK_IDS]).toEqual(['canal', 'pond', 'chinampa']);
+    expect([...HABITAT_LOOK_IDS]).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
     expect(AREA_LOOK_IDS.indexOf('chinampa')).toBe(2);
     expect(look.id).toBe('chinampa');
   });

@@ -49,6 +49,13 @@ import {
   type SteerPayload,
 } from '../logic/gameEvents';
 import { isSnagged, snagSwimTuning } from '../logic/ghostNets';
+import {
+  glowMotion,
+  glowPlants,
+  shownInDark,
+  type DarkLight,
+  type GlowMotion,
+} from '../logic/glowPlants';
 import { elementSweep, type HazardRect } from '../logic/hazards';
 import { hintSparkleRadius } from '../logic/hints';
 import { blockExplorer, type MatAvoid } from '../logic/hyacinthMats';
@@ -65,9 +72,9 @@ import {
 import { motionProfile, type MotionProfile } from '../logic/motion';
 import { outfitPerks, perkTripContext, perkTuning, type PerkTuning } from '../logic/perks';
 import { isQueasy, queasySwimTuning, type SpitAvoid } from '../logic/plasticWorms';
-import { CARP_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
+import { CARP_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
 import { mulberry32 } from '../logic/rng';
-import { tripStranding } from '../logic/rescue';
+import { areaStrandingChance, tripStranding } from '../logic/rescue';
 import { explorerAxolotl, markDashPotTipSeen, restoreSnacks, tripStart } from '../logic/session';
 import { createShrimpFlicks, stepShrimpFlicks, type ShrimpFlickState } from '../logic/shrimpFlick';
 import { stepSnackDarts, type SnackDartAvoid, type SnackDartState } from '../logic/snackDart';
@@ -112,10 +119,13 @@ import {
   type SwimStart,
 } from './BootScene';
 import { CarpView } from './CarpView';
+import { CrayfishView } from './CrayfishView';
+import { DarkCaveView } from './DarkCaveView';
 import { ExitView } from './ExitView';
 import { FireflyView } from './FireflyView';
 import { GarterSnakeView } from './GarterSnakeView';
 import { GhostNetView } from './GhostNetView';
+import { GlowPlantView } from './GlowPlantView';
 import { HeronView } from './HeronView';
 import { HomeSpotView } from './HomeSpotView';
 import { HUD_EVENTS, type DashPotTipHeldPayload, type FactCardSeenPayload } from './HudScene';
@@ -128,7 +138,7 @@ import { PredatorView } from './PredatorView';
 import { readSession, returnToHomeTank, writeSession } from './sceneFlow';
 import { faceSprite } from './spriteFacing';
 import { StrandedView } from './StrandedView';
-import { TreasureView } from './TreasureView';
+import { TreasureView, type DarkShows } from './TreasureView';
 import { TripSoundRouter } from './TripSoundRouter';
 
 const TAU = Math.PI * 2;
@@ -222,7 +232,8 @@ function placeBaked(image: Phaser.GameObjects.Image, info: TexInfo): Phaser.Game
 /**
  * One area of any size, the canal or another: swimming, snacks, currents, reeds, bubbles, Tail
  * Dash, the tilapia, the Home Spot, the hidden treasures (hint stars, Dash pots, the cave and the
- * past-the-current marker) and the stranded axolotl. The camera follows the axolotl across the
+ * past-the-current marker), the stranded axolotl, and in the spring cave the crayfish, the dark
+ * water and its glow-plants. The camera follows the axolotl across the
  * area; a one-screen-tall area such as the canal never scrolls vertically.
  * One scene start is one trip: it starts from the session and, once the trip ends, hands the trip
  * back to the session and opens the Home Tank.
@@ -312,6 +323,19 @@ export class SwimScene extends Phaser.Scene {
   private carpView: CarpView | null = null;
   /** The moving hazards, or null in an area with no moving hazards. */
   private movingHazardView: MovingHazardView | null = null;
+  /** The crayfish, or null in an area with no crayfish. */
+  private crayfishView: CrayfishView | null = null;
+  /** The dark layer over the area's dark water, or null in an area with no dark water. */
+  private darkCaveView: DarkCaveView | null = null;
+  /** The glow-plants and their hint, or null in an area with no glow-plants. */
+  private glowPlantView: GlowPlantView | null = null;
+  /** The glow-plant motion for the reduced-motion preference, worked out again only when it changes. */
+  private glowPlantMotion: GlowMotion = glowMotion(false);
+  /**
+   * This frame's lights through the dark water (DarkCaveView.lights: darkLights, with a new plant
+   * light still growing in); empty in an area with no dark water.
+   */
+  private darkLightsNow: DarkLight[] = [];
   /** The tadpole and shrimp poses, or null in an area with no mobile snacks. */
   private mobileSnackView: MobileSnackView | null = null;
   /** What every mobile snack pose shares this frame, reused each frame. */
@@ -402,6 +426,10 @@ export class SwimScene extends Phaser.Scene {
     this.ghostNetView = null;
     this.carpView = null;
     this.movingHazardView = null;
+    this.crayfishView = null;
+    this.darkCaveView = null;
+    this.glowPlantView = null;
+    this.darkLightsNow = [];
     this.mobileSnackView = null;
     this.swimPhase = (TAU * T_STATIC) / 1.2;
     this.gillPhase = (TAU * T_STATIC) / 0.8;
@@ -418,6 +446,7 @@ export class SwimScene extends Phaser.Scene {
     this.scenery = sceneryFor(this.assets, areaId);
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
+    this.glowPlantMotion = glowMotion(!this.motion.ambient);
     this.bounds = swimBounds(zone);
     this.spitAvoid = { bounds: this.bounds, currents: zone.currents, safeArea: zone.safeArea };
     this.rand = mulberry32(SIM_SEED);
@@ -443,7 +472,13 @@ export class SwimScene extends Phaser.Scene {
     this.allDone = this.snackTally.left === 0;
     this.snackDarts = oneTimeDarts(area, zone);
     this.setUpMobileSnacks();
-    const stranding = tripStranding(start.ownedMorphs, start.waitingStranded, zone.strandingPlaces, start.tripSeed);
+    const stranding = tripStranding(
+      start.ownedMorphs,
+      start.waitingStranded,
+      zone.strandingPlaces,
+      start.tripSeed,
+      areaStrandingChance(area),
+    );
     this.trip = createTrip(zone, LEGS, start.banked, start.tripSeed, {
       stranding,
       factCardsSeen: start.factCardsSeen,
@@ -541,6 +576,15 @@ export class SwimScene extends Phaser.Scene {
    * only the head point (headPoint) per frame. CarpView reuses its sprites and allocates only its
    * render argument object; MovingHazardView allocates its render argument object and
    * movingHazardPhase's result per spawn. GhostNetView takes the element time and allocates nothing.
+   * Spring cave (#77): Areas 1 to 5 build and call nothing new, and their stranding chance is
+   * unchanged (areaStrandingChance gives STRANDING_CHANCE). CrayfishView, DarkCaveView and
+   * GlowPlantView are made once per trip, and only in an area with a crayfish, dark water or
+   * glow-plants. CrayfishView reuses its sprites and allocates only its render argument object;
+   * GlowPlantView allocates only its render argument object. In an area with dark water, each frame
+   * DarkCaveView builds darkLights' result and its light argument object once, the dark layer and the
+   * treasure and snack star dark rule share that one list, and the layer is redrawn only when a light
+   * moved, grew or appeared while the camera view meets the dark water. The glow-plant motion object is worked out
+   * again only when reduced motion changes.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -714,6 +758,7 @@ export class SwimScene extends Phaser.Scene {
       this.look,
       this.trip.placed,
       this.perks.hintMultiplier,
+      this.darkShows(),
     );
     this.plasticWormView = new PlasticWormView(this, this.assets, this.trip.plasticWorms.worms);
     const nets = this.trip.ghostNets.nets;
@@ -753,11 +798,18 @@ export class SwimScene extends Phaser.Scene {
     this.carpView = predators.some((predator) => predator.species === CARP_SPECIES.id)
       ? new CarpView(this, this.assets, predators)
       : null;
+    this.crayfishView = predators.some((predator) => predator.species === CRAYFISH_SPECIES.id)
+      ? new CrayfishView(this, this.assets, predators)
+      : null;
     const movingHazards = this.trip.encounter.movingHazards ?? [];
     this.movingHazardView = movingHazards.length > 0 ? new MovingHazardView(this, this.assets, movingHazards) : null;
     this.mobileSnackView = hasMobileSnacks(zone) ? new MobileSnackView(this.mobileSnackTextures()) : null;
     this.hyacinthMatView = this.matSweeps !== null ? new HyacinthMatView(this, this.assets, this.trip.elements) : null;
     this.fireflyView = this.look.firefliesPerScreen > 0 ? new FireflyView(this, this.assets, this.look, zone) : null;
+    const dark = this.trip.darkWater;
+    this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, dark, this.trip.elements) : null;
+    this.glowPlantView =
+      glowPlants(this.trip.elements).length > 0 ? new GlowPlantView(this, this.assets, this.trip.elements) : null;
 
     this.bubbleImages = Array.from({ length: BUBBLE_MAX_ALIVE }, () =>
       this.add.image(0, 0, baked.bubbles[0].key).setVisible(false).setDepth(DEPTH.bubbles),
@@ -775,6 +827,17 @@ export class SwimScene extends Phaser.Scene {
         .setDepth(DEPTH.fx),
       age: SPARKLE_LIFE_S,
     }));
+  }
+
+  /**
+   * Whether a part shows through the trip's dark water this frame (shownInDark with this frame's
+   * lights, `darkLightsNow`), for the treasures; undefined in an area with no dark water, where
+   * everything shows.
+   */
+  private darkShows(): DarkShows | undefined {
+    const dark = this.trip.darkWater;
+    if (dark === null) return undefined;
+    return (part, at) => shownInDark(part, at, dark, this.darkLightsNow);
   }
 
   /**
@@ -1311,6 +1374,7 @@ export class SwimScene extends Phaser.Scene {
 
   private handleReducedMotion(payload: ReducedMotionPayload): void {
     this.motion = motionProfile(payload.reduced);
+    this.glowPlantMotion = glowMotion(payload.reduced);
     this.cameras.main.setLerp(this.motion.cameraLerp, this.motion.cameraLerp);
     if (!this.motion.turnTween) {
       this.tweens.killTweensOf(this.turn);
@@ -1347,6 +1411,9 @@ export class SwimScene extends Phaser.Scene {
     this.garterSnakeView?.destroy();
     this.carpView?.destroy();
     this.movingHazardView?.destroy();
+    this.crayfishView?.destroy();
+    this.darkCaveView?.destroy();
+    this.glowPlantView?.destroy();
     this.hyacinthMatView?.destroy();
     this.axolotlView.destroy();
   }
@@ -1355,6 +1422,8 @@ export class SwimScene extends Phaser.Scene {
 
   private renderFrame(dt: number): void {
     const t = this.motion.ambient ? this.clock : T_STATIC;
+    // INVARIANT: the dark lights are worked out before any view that reads them (treasures, snack stars).
+    this.updateDarkLights();
     this.renderAxolotl(dt);
     this.strandedView.render({ trip: this.trip, motion: this.motion, dt, time: this.clock });
     this.homeSpotView.render({ motion: this.motion, dt, time: this.clock });
@@ -1378,6 +1447,8 @@ export class SwimScene extends Phaser.Scene {
     this.garterSnakeView?.render({ encounter: this.trip.encounter, axolotl: this.swim, motion: this.motion, dt });
     this.carpView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
     this.movingHazardView?.render({ encounter: this.trip.encounter, motion: this.motion });
+    this.crayfishView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
+    this.renderDarkCave();
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.fireflyView?.render(this.motion, this.clock);
     this.renderReeds(dt, t);
@@ -1389,6 +1460,49 @@ export class SwimScene extends Phaser.Scene {
     this.renderSparkles(dt);
     this.renderSurface(t);
     this.renderPads(t);
+  }
+
+  /**
+   * This frame's lights through the dark water (issue #77, ND-7): the axolotl's own glow round its
+   * body centre, the exit's faint glow and one light per glow-plant lit this trip. Only in an area
+   * with dark water; every other area calls nothing here.
+   */
+  private updateDarkLights(): void {
+    if (this.darkCaveView === null) return;
+    // One list for the dark layer and the dark rule, so a hint star shows only where the drawn light reaches.
+    this.darkLightsNow = this.darkCaveView.lights({
+      axolotl: this.swim,
+      exit: this.area.exit,
+      lit: this.trip.litGlowPlants,
+      motion: this.glowPlantMotion,
+      time: this.clock,
+    });
+  }
+
+  /**
+   * The dark layer and the glow-plants (issue #77, ND-7, ND-8 and ND-18): the plants lit this trip,
+   * the hinted plant only while swimming (the trip snapshot's hint) and the camera view the dark
+   * layer is redrawn for. Only in an area with dark water or glow-plants.
+   */
+  private renderDarkCave(): void {
+    const lit = this.trip.litGlowPlants;
+    this.darkCaveView?.render(this.darkLightsNow, this.cameras.main.worldView);
+    this.glowPlantView?.render({
+      lit,
+      hint: this.snapshot.glowPlantHint,
+      motion: this.glowPlantMotion,
+      time: this.clock,
+    });
+  }
+
+  /**
+   * Whether a hint star at `at` shows through the dark water this frame: hint stars draw above the
+   * dark layer, so the dark rule hides them. Always true in an area with no dark water.
+   */
+  private hintShowsInDark(at: Readonly<Vec2>): boolean {
+    const dark = this.trip.darkWater;
+    if (dark === null) return true;
+    return shownInDark('hint-sparkle', at, dark, this.darkLightsNow);
   }
 
   private renderAxolotl(dt: number): void {
@@ -1543,7 +1657,8 @@ export class SwimScene extends Phaser.Scene {
   /**
    * The hint star over each of the last snacks (PRD H3), always on while 1 to 3 are left, following
    * its snack. Full motion: it grows in, bobs and spins like a treasure hint star. Reduced motion:
-   * still at full size. It hides at once when its snack is eaten.
+   * still at full size. It hides at once when its snack is eaten, and while its snack is in the dark
+   * water out of every light (hintShowsInDark).
    */
   private renderSnackStars(dt: number, t: number): void {
     // Runs every frame. At most SPARKLE_SNACKS_LEFT ids, so plain array lookups and index loops
@@ -1578,7 +1693,7 @@ export class SwimScene extends Phaser.Scene {
     const growScale = ambient ? SNACK_STAR_GROW_FROM + (1 - SNACK_STAR_GROW_FROM) * grow : 1;
     const wave = (TAU * t) / SNACK_STAR_PERIOD + index;
     star
-      .setVisible(true)
+      .setVisible(this.hintShowsInDark(sprite))
       .setPosition(sprite.x, sprite.y + SNACK_STAR_OFFSET_Y + (ambient ? SNACK_STAR_BOB_PX * Math.sin(wave) : 0))
       .setRotation(ambient ? SNACK_STAR_SPIN_RAD * Math.cos(wave) : 0)
       .setScale(growScale * this.snackStarBaseScale);

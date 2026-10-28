@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LOOK, type AxolotlLook } from './axolotlLook';
 import { suggestedNamesFor } from './axolotlNames';
-import { CHINAMPA_2_AREA, CHINAMPA_AREA, POND_2_AREA, POND_AREA } from './areas';
+import { CHINAMPA_2_AREA, CHINAMPA_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_AREA } from './areas';
 import {
   ALL_TREASURES,
   CANAL_TREASURES,
@@ -82,6 +82,9 @@ const PAPEL_PICADO = 'chinampa/papel-picado-banner';
 const POPPY_SHELL = 'chinampa/paint-shell-poppy-red';
 const OVERALLS = 'chinampa/garden-overalls';
 const CHINAMPA_2_ID = CHINAMPA_2_AREA.id;
+const SPRING_CAVE_ID = SPRING_CAVE_AREA.id;
+const FOSSIL_AMMONITE = 'spring-cave/fossil-ammonite';
+const MOONSTONE_SHELL = 'spring-cave/paint-shell-moonstone';
 
 /** A look with every field off the default, a girl. */
 const STYLED: AxolotlLook = {
@@ -1237,6 +1240,38 @@ describe('Area 5 progress in the save (#103, D2)', () => {
     const hub = loadedHub({ ...json, hub: { ...json.hub, stars, metHazards: ['garter-snake', 'tilapia', 'water-hyacinth'] } });
     expect(hub.stars[CHINAMPA_2_ID]).toEqual({ exit: true, special: true, legsOrRescue: false });
     expect(hub.metHazards).toEqual(['tilapia', 'garter-snake', 'water-hyacinth']);
+  });
+});
+
+describe('Area 6 progress in the save (#77, D2)', () => {
+  it('keeps the crayfish met after the water hyacinth, before the refuge cards', () => {
+    const met = recordTripEnd(chinampaSession(), {
+      areaId: SPRING_CAVE_ID,
+      banked: [],
+      rescued: [],
+      eatenSnacks: [],
+      tripSeed: 77,
+      waitingStranded: null,
+      met: ['crayfish', 'water-hyacinth', 'garter-snake'],
+      returnedFinds: [],
+    });
+    const hub = loadedHub(JSON.parse(encodeSave(met.hub)));
+    expect(hub.metHazards).toEqual(['tilapia', 'plastic-worm', 'heron', 'ghost-net', 'garter-snake', 'water-hyacinth', 'crayfish']);
+    const reordered = hubWithFields({ metHazards: ['canal-clean-ups', 'crayfish', 'crawfish', 'water-hyacinth', 'crayfish'] });
+    expect(reordered.metHazards).toEqual(['tilapia', 'water-hyacinth', 'crayfish', 'canal-clean-ups']);
+  });
+
+  it('loads Area 6 stars, its treasures, Moonstone and the crayfish into a version 1 save additively, with no version bump', () => {
+    expect(SAVE_VERSION).toBe(1);
+    const json = savedJson();
+    expect(json.version).toBe(1);
+    const stars = { ...(json.hub.stars as Record<string, unknown>), [SPRING_CAVE_ID]: { exit: true, special: true, legsOrRescue: false } };
+    const banked = [...(json.hub.banked as string[]), FOSSIL_AMMONITE, MOONSTONE_SHELL];
+    const hub = loadedHub({ ...json, hub: { ...json.hub, stars, banked, metHazards: ['crayfish', 'tilapia'] } });
+    expect(hub.stars[SPRING_CAVE_ID]).toEqual({ exit: true, special: true, legsOrRescue: false });
+    expect(hub.banked.slice(-2)).toEqual([FOSSIL_AMMONITE, MOONSTONE_SHELL]);
+    expect(ownedDreamColours(hub.banked)).toContain('moonstone');
+    expect(hub.metHazards).toEqual(['tilapia', 'crayfish']);
   });
 });
 

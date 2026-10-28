@@ -1,6 +1,6 @@
 /**
- * Phaser glue for the predators and leg loss (issues #7, #98 and #103): bakes the
- * tilapia, heron, garter snake, carp, effect and leg icon painters into CanvasTextures.
+ * Phaser glue for the predators and leg loss (issues #7, #98, #103 and #77): bakes the
+ * tilapia, heron, garter snake, carp, crayfish, effect and leg icon painters into CanvasTextures.
  * Visual only. No game state, no input, no physics.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale`, so a
@@ -17,6 +17,12 @@ import {
   paintCarpPuffStill,
   type CarpFrame,
 } from './drawCarp';
+import {
+  CRAYFISH_FRAMES,
+  CRAYFISH_TEX,
+  paintCrayfish,
+  type CrayfishFrame,
+} from './drawCrayfish';
 import {
   CARRY_BUBBLE_TEX,
   HALO_TEX,
@@ -96,7 +102,21 @@ export const PREDATOR_TEX = {
   carpSweep: 'carp-sweep',
   carpPuff: 'carp-puff',
   carpPuffStill: 'carp-puff-still',
+  crayfishStand: 'crayfish-stand',
+  crayfishWalkA: 'crayfish-walk-a',
+  crayfishWalkB: 'crayfish-walk-b',
+  crayfishWarn: 'crayfish-warn',
+  crayfishPinch: 'crayfish-pinch',
 } as const;
+
+/** Fixed key of each crayfish frame. */
+const CRAYFISH_KEYS: Readonly<Record<CrayfishFrame, string>> = {
+  stand: PREDATOR_TEX.crayfishStand,
+  walkA: PREDATOR_TEX.crayfishWalkA,
+  walkB: PREDATOR_TEX.crayfishWalkB,
+  warn: PREDATOR_TEX.crayfishWarn,
+  pinch: PREDATOR_TEX.crayfishPinch,
+};
 
 /** Fixed key of each carp frame. */
 const CARP_KEYS: Readonly<Record<CarpFrame, string>> = {
@@ -195,9 +215,17 @@ export interface PredatorTextures {
   readonly carpPuff: TexInfo;
   /** The still mud puff (CARP_PUFF_TEX, no specks), for reduced motion. Anchor is the main lobe's centre. */
   readonly carpPuffStill: TexInfo;
+  /**
+   * Crayfish, one still frame each (CRAYFISH_TEX), facing right: `stand` (claws closed, the one
+   * held pose for reduced motion), `walkA` and `walkB` (the scene steps walkA, stand, walkB, stand),
+   * `warn` (both claws raised and opened wide) and `pinch` (both claws closed and pushed level along
+   * the floor). Anchor is the shell centre, the crayfish's logic point; the feet reach
+   * CRAYFISH_FOOT_Y below it and the tail trails toward -x.
+   */
+  readonly crayfish: Readonly<Record<CrayfishFrame, TexInfo>>;
 }
 
-/** Bake the tilapia, heron, garter snake, carp, effect and leg icon textures into the scene's texture manager. */
+/** Bake the tilapia, heron, garter snake, carp, crayfish, effect and leg icon textures into the scene's texture manager. */
 export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): PredatorTextures {
   const info: Record<string, TexInfo> = {};
   const add = (t: TexInfo): TexInfo => {
@@ -256,6 +284,10 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
   }
   const carpPuff = add(bake(scene, PREDATOR_TEX.carpPuff, CARP_PUFF_TEX, bakeScale, paintCarpPuff));
   const carpPuffStill = add(bake(scene, PREDATOR_TEX.carpPuffStill, CARP_PUFF_TEX, bakeScale, paintCarpPuffStill));
+  const crayfish = {} as Record<CrayfishFrame, TexInfo>;
+  for (const frame of CRAYFISH_FRAMES) {
+    crayfish[frame] = add(bake(scene, CRAYFISH_KEYS[frame], CRAYFISH_TEX, bakeScale, (ctx) => paintCrayfish(ctx, frame)));
+  }
 
   return {
     info,
@@ -276,5 +308,6 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
     carp,
     carpPuff,
     carpPuffStill,
+    crayfish,
   };
 }

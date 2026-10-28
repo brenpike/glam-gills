@@ -55,6 +55,8 @@ export const areaMapMarkerKey = (locked: boolean): string => `area-map-marker-${
 export const areaMapPondMarkerKey = (locked: boolean): string => `area-map-marker-pond-${locked ? 'locked' : 'unlocked'}`;
 /** Key of a chinampa-look marker texture. */
 export const areaMapChinampaMarkerKey = (locked: boolean): string => `area-map-marker-chinampa-${locked ? 'locked' : 'unlocked'}`;
+/** Key of a spring-cave-look marker texture. */
+export const areaMapSpringCaveMarkerKey = (locked: boolean): string => `area-map-marker-spring-cave-${locked ? 'locked' : 'unlocked'}`;
 export const AREA_MAP_FOCUS_KEY = 'area-map-focus-ring';
 export const AREA_MAP_BADGE_KEY = 'area-map-padlock-badge';
 export const AREA_MAP_PILL_KEY = 'area-map-new-pill';
@@ -86,8 +88,9 @@ export interface AreaMapTextures {
   /**
    * Markers by habitat look. `canal` is the same textures as `markerUnlocked` and
    * `markerLocked`; `pond` is the notched lily pad (green unlocked, white locked);
-   * `chinampa` is the garden plot with hanging roots (orange unlocked, white locked).
-   * All six share one frame and anchor (the marker centre), so they swap freely.
+   * `chinampa` is the garden plot with hanging roots (orange unlocked, white locked);
+   * `spring-cave` is the grey-blue stone with a crystal cluster (teal crystals unlocked, white locked).
+   * All eight share one frame and anchor (the marker centre), so they swap freely.
    */
   readonly markersByLook: Readonly<Record<HabitatLookId, AreaMapMarkerPair>>;
   /** Double focus ring (white r 35.25, ink r 38.25). Anchor is the ring centre: put it on the marker centre. */
@@ -124,6 +127,12 @@ export function bakeAreaMapTextures(scene: Phaser.Scene, bakeScale: number): Are
   const chinampaLocked = bake(scene, areaMapChinampaMarkerKey(true), MAP_MARKER_TEX, bakeScale, (ctx) =>
     paintMapMarker(ctx, true, 'chinampa'),
   );
+  const springCaveUnlocked = bake(scene, areaMapSpringCaveMarkerKey(false), MAP_MARKER_TEX, bakeScale, (ctx) =>
+    paintMapMarker(ctx, false, 'spring-cave'),
+  );
+  const springCaveLocked = bake(scene, areaMapSpringCaveMarkerKey(true), MAP_MARKER_TEX, bakeScale, (ctx) =>
+    paintMapMarker(ctx, true, 'spring-cave'),
+  );
   return {
     markerUnlocked,
     markerLocked,
@@ -131,6 +140,7 @@ export function bakeAreaMapTextures(scene: Phaser.Scene, bakeScale: number): Are
       canal: { unlocked: markerUnlocked, locked: markerLocked },
       pond: { unlocked: pondUnlocked, locked: pondLocked },
       chinampa: { unlocked: chinampaUnlocked, locked: chinampaLocked },
+      'spring-cave': { unlocked: springCaveUnlocked, locked: springCaveLocked },
     },
     focusRing: bake(scene, AREA_MAP_FOCUS_KEY, MAP_FOCUS_TEX, bakeScale, paintMapFocusRing),
     padlockBadge: bake(scene, AREA_MAP_BADGE_KEY, MAP_BADGE_TEX, bakeScale, paintMapPadlockBadge),

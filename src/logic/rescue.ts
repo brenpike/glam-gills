@@ -3,6 +3,7 @@
  * morph waits where, whether it is waiting, following or safe, how it follows the player and
  * where it rests once banked.
  */
+import type { AreaData } from './areas';
 import type { AxolotlSex } from './axolotlLook';
 import { axolotlFindId, rescuableMorphs, type RealMorphId } from './morphs';
 import { mulberry32 } from './rng';
@@ -78,6 +79,11 @@ export type RescueStatus = 'waiting' | 'following' | 'safe';
 
 /** Chance from 0 to 1 that a trip with nobody waiting has a stranded axolotl: 40% (PRD C2, issue #111). */
 export const STRANDING_CHANCE = 0.4;
+
+/** The area's stranding chance from 0 to 1: its own strandingChance, else STRANDING_CHANCE. */
+export function areaStrandingChance(area: Pick<AreaData, 'strandingChance'>): number {
+  return area.strandingChance ?? STRANDING_CHANCE;
+}
 
 const STRANDING_SEED_SALT = 0x5743a11d;
 const STRANDING_CHANCE_SALT = 0xc2b2ae35;

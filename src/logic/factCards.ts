@@ -166,6 +166,80 @@ export const CARP_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The crayfish fact card, shown the first time the axolotl meets a crayfish (PRD C13; issue #77,
+ * ND-14). The body is the owner's (issue #77, owner interrogation, 2026-10-22).
+ * Sources, checked 2026-10-27 (web research only; the game fetches nothing):
+ * Helfrich and DiStefano, Virginia Cooperative Extension, "Sustaining America's Aquatic Biodiversity -
+ * Crayfish Biodiversity and Conservation", publication 420-524, https://pubs.ext.vt.edu/420/420-524/420-524.html
+ * ("Like its saltwater cousin, the lobster"; "Many spend most of their lives walking on stream and
+ * lake bottoms (largely at night)"; "When threatened, the crayfish assumes a defensive position
+ * with the body lifted and the claws elevated and spread");
+ * The Australian Museum, "Crayfish", https://australian.museum/learn/animals/crustaceans/crayfish/
+ * ("They forage on the stream bed").
+ * Owner to verify: "small" is not checked against a size source; "to warn other animals" reads the
+ * source's defensive position as a warning; "Axolotls stay safe by swimming up and away" is the
+ * game's rule (the crayfish reaches only along the floor), not checked against a source.
+ */
+export const CRAYFISH_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'crayfish',
+  name: 'Crayfish',
+  title: 'Meet the crayfish',
+  body: 'Crayfish are small cousins of lobsters that walk along the bottom. They open their claws wide to warn other animals. Axolotls stay safe by swimming up and away.',
+});
+
+/**
+ * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
+ * issue #77, ND-3). Provisional copy.
+ * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
+ * National Park Service, Mammoth Cave National Park, "Stalactites, Stalagmites, and Cave Formations",
+ * https://www.nps.gov/maca/learn/nature/stalactites-stalagmites-and-cave-formations.htm
+ * ("icicle-shaped deposits that form when water dissolves overlying limestone"; "Stalactites form
+ * along ceilings and hang downward"; "When stalactites are actively forming, they drip water";
+ * "Both the calcite and gypsum formations in Mammoth Cave took thousands of years to form");
+ * National Park Service, "Growing Speleothems", https://www.nps.gov/subjects/caves/growing-speleothems.htm
+ * (calcite comes out of the dripping water onto cave ceilings, walls and floors).
+ * Owner to verify: "a tiny bit of rock" reads the sources' calcite left by the water; "very slowly"
+ * reads "thousands of years" for the whole cave's formations, not a growth rate for one stalactite.
+ */
+export const STALACTITE_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'stalactite-drip',
+  name: 'Stalactite',
+  title: 'Stalactites',
+  body: 'Stalactites hang from cave roofs like rock icicles. Each drip of water leaves a tiny bit of rock behind, so they grow very slowly.',
+});
+
+/**
+ * The geyser fact card, shown the first time the axolotl meets a geyser vent (PRD C13; issue #77,
+ * ND-3). Provisional copy, about cold-water geysers, since the spring cave is cold, clear water.
+ * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
+ * Geysir Andernach, "How does an eruption of the Geysir Andernach work?",
+ * https://www.geysir-andernach.de/en/geysir/funktionsweise/ (the carbon dioxide "comes from the
+ * magma deep beneath the Eifel"; the water is "20 to 25° Celsius"; "The entire geyser eruption lasts
+ * about 15 minutes", and "110 to 120 minutes later" "the well is full and the next geyser eruption
+ * begins"; "all cold-water geysers require an artificial connection from the earth's surface to the
+ * depths");
+ * Guinness World Records, "Tallest cold-water geyser",
+ * https://www.guinnessworldrecords.com/world-records/highest-cold-water-geyser (the Geysir Andernach
+ * in Germany; carbon dioxide from deep underground dissolves in cold groundwater and pushes it out of
+ * a drilled well, like a soda bottle);
+ * F. J. Gouveia and S. J. Friedmann, Lawrence Livermore National Laboratory, "Timing and prediction
+ * of CO2 eruptions from Crystal Geyser, UT", UCRL-TR-221731, 2006,
+ * https://digital.library.unt.edu/ark:/67531/metadc890957/ (Crystal Geyser in Utah erupts carbon
+ * dioxide and water again and again, 140 eruptions in a 76-day record).
+ * Owner to verify: "cold" reads the sources' "cold-water" geysers, whose water is 20 to 25° C at
+ * Andernach, cool beside a hot spring's, not icy; "fizzy gas" and "like in soda" read the sources'
+ * carbon dioxide; the Guinness and Crystal Geyser details were read through page summaries, not the
+ * full text; the sources' cold-water geysers burst from wells people drilled, and up into the air,
+ * while the game's vent is in a cave and bursts up under water.
+ */
+export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'geyser-vent',
+  name: 'Geyser',
+  title: 'Geysers',
+  body: 'Some geysers are cold. Fizzy gas from deep underground builds up in the water, like in soda, and pushes it out. Then the geyser rests and fills up.',
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",
@@ -322,6 +396,13 @@ export const GARTER_SNAKE_MEET_RANGE = 180;
  * range so the card can show before the first sweep.
  */
 export const CARP_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a crayfish (issue #77, ND-14). Provisional;
+ * tune in play. The same as the tilapia's, and larger than the crayfish's 90 px lunge range so the
+ * card can show before the first pinch.
+ */
+export const CRAYFISH_MEET_RANGE = 180;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl

@@ -888,7 +888,7 @@ describe('Dream colour step', () => {
     expect(reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state.dreamPage).toBe(0);
   });
 
-  it('pages 17 options as 8, 8 then 1 with More colours, wrapping, Real colour first on page 1', () => {
+  it('pages 18 options as 8, 8 then 2 with More colours, wrapping, Real colour first on page 1', () => {
     let state = dreamOn(ALL_DREAMS);
     expect(dreamPageCount(state)).toBe(3);
     expect(optionIds(state)).toHaveLength(8);
@@ -898,7 +898,7 @@ describe('Dream colour step', () => {
     expect(optionIds(state)).toEqual(ALL_DREAMS.slice(7, 15));
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
-    expect(optionIds(state)).toEqual(['tie-dye-galaxy']);
+    expect(optionIds(state)).toEqual(['tie-dye-galaxy', 'moonstone']);
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
     expect(state.dreamPage).toBe(0);
@@ -1130,6 +1130,7 @@ describe('Outfit step', () => {
       { id: 'chinampa/straw-sun-hat', label: 'Straw sun hat' },
       { id: 'chinampa/monarch-hair-clip', label: 'Monarch hair clip' },
       { id: 'chinampa/bee-headband', label: 'Bee headband' },
+      { id: 'spring-cave/miners-headlamp', label: "Miner's headlamp" },
     ]);
     expect(chosenIndex(head)).toBe(0);
     expect(head.focus).toEqual({ kind: 'option', index: 0 });
@@ -1303,9 +1304,11 @@ describe('Outfit step', () => {
     expect(focusOrder(slots)).toEqual(['tab', 'option', 'cancel', 'done']);
     expect(focusOrder(withOutfitPerPage(slots, 3))).toEqual(['tab', 'option', 'moreOutfit', 'cancel', 'done']);
     expect(focusOrder(withTabsHidden(slots, true))).toEqual(focusOrder(slots));
+    const feet = openSlot('feet');
+    expect(focusOrder(feet)).toEqual(['tab', 'option', 'backToSlots', 'cancel', 'done']);
+    expect(visibleButtons(feet)).toEqual(['backToSlots', 'cancel', 'done']);
     const head = openSlot('head');
-    expect(focusOrder(head)).toEqual(['tab', 'option', 'backToSlots', 'cancel', 'done']);
-    expect(visibleButtons(head)).toEqual(['backToSlots', 'cancel', 'done']);
+    expect(focusOrder(head)).toEqual(['tab', 'option', 'moreOutfit', 'backToSlots', 'cancel', 'done']);
     const paged = withOutfitPerPage(head, 1);
     expect(focusOrder(paged)).toEqual(['tab', 'option', 'moreOutfit', 'backToSlots', 'cancel', 'done']);
     const hidden = withTabsHidden(paged, true);

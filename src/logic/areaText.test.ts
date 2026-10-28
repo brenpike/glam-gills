@@ -275,6 +275,7 @@ describe('habitat area labels (issue #113, ND-6)', () => {
     expect(habitatAreasLabel('Canal', [1])).toBe('Canal: Area 1');
     expect(habitatAreasLabel('Lily pad pond', [2, 3])).toBe('Lily pad pond: Areas 2 and 3');
     expect(habitatAreasLabel('Chinampa gardens', [4, 5])).toBe('Chinampa gardens: Areas 4 and 5');
+    expect(habitatAreasLabel('Spring cave', [6])).toBe('Spring cave: Area 6');
     expect(habitatAreasLabel('Spring cave', [5, 6, 7])).toBe('Spring cave: Areas 5 to 7');
   });
 
@@ -285,7 +286,12 @@ describe('habitat area labels (issue #113, ND-6)', () => {
         AREAS.filter((area) => area.habitatId === habitat.id).map((area) => area.number),
       ),
     );
-    expect(labels).toEqual(['Canal: Area 1', 'Lily pad pond: Areas 2 and 3', 'Chinampa gardens: Areas 4 and 5']);
+    expect(labels).toEqual([
+      'Canal: Area 1',
+      'Lily pad pond: Areas 2 and 3',
+      'Chinampa gardens: Areas 4 and 5',
+      'Spring cave: Area 6',
+    ]);
   });
 
   it('throws for an empty list', () => {

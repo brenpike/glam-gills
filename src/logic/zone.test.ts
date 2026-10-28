@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CANAL_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
 import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
+import { depthBands } from './dangerBar';
 import { netDrift } from './ghostNets';
+import { glowPlantSpawn, type DarkWater } from './glowPlants';
 import {
   elementSweep,
   hazardSweep,
@@ -24,6 +26,7 @@ import {
   BED_TOP,
   CANAL_AREA_ID,
   CANAL_LAYOUT,
+  DEFAULT_ZONE_SEED,
   SNACK_HAZARD_CLEARANCE,
   SPOT_MIN_SPACING,
   STRANDING_PLACES,
@@ -31,6 +34,8 @@ import {
   WORLD_H,
   ZONE_SCREENS,
   ZONE_W,
+  areaRowKind,
+  areaSize,
   buildCanalZone,
   buildZone,
   inHomeSpot,
@@ -887,6 +892,82 @@ describe('bank cover', () => {
   });
 });
 
+/** A synthetic 5 x 3 area: the canal's data, 5 screens across and 3 down. */
+const FIVE_BY_THREE = canalWith({ screensWide: 5, screensTall: 3 });
+
+describe('an area three rows tall', () => {
+  it('is 2400 x 1080 world px with the bed top at 1038', () => {
+    expect(areaSize(5, 3)).toEqual({ width: 2400, height: 1080, bedTop: 1038 });
+    const zone = buildZone(FIVE_BY_THREE, DEFAULT_ZONE_SEED);
+    expect([zone.width, zone.height, zone.bedTop, zone.chunks, zone.rows]).toEqual([2400, 1080, 1038, 5, 3]);
+  });
+
+  it('swims from the surface down to the bed of the bottom row', () => {
+    expect(swimBounds(areaSize(5, 3))).toEqual({ minX: 40, maxX: 2360, minY: SURF + 14, maxY: 1016 });
+  });
+
+  it('splits the whole swim height into three equal depth bands, top down', () => {
+    const bands = depthBands(areaSize(5, 3));
+    expect(bands).toHaveLength(3);
+    expect(bands[0].top).toBe(SURF + 14);
+    expect(bands[2].bottom).toBe(1016);
+    for (const [index, band] of bands.entries()) {
+      expect(band.bottom - band.top).toBeCloseTo((1016 - (SURF + 14)) / 3, 6);
+      if (index > 0) expect(band.top).toBe(bands[index - 1].bottom);
+    }
+  });
+
+  it('has a top, a middle and a bottom row', () => {
+    expect([0, 1, 2].map((row) => areaRowKind(row, 3))).toEqual(['top', 'middle', 'bottom']);
+  });
+
+  it.each(ALL_SEEDS)('stands the reeds on the bottom row bed with the canal shapes for seed %i', (seed) => {
+    const zone = buildZone(FIVE_BY_THREE, seed);
+    const canal = buildCanalZone(seed);
+    expect(zone.reeds).toHaveLength(canal.reeds.length);
+    for (const [index, reed] of zone.reeds.entries()) {
+      expect(reed).toEqual({ ...canal.reeds[index], by: reed.by });
+      expect(reed.by - zone.bedTop).toBeCloseTo(canal.reeds[index].by - canal.bedTop, 9);
+    }
+    for (const patch of zone.reedPatches) expect([patch.y0, patch.y1]).toEqual([SURF, 1038]);
+  });
+
+  it.each(ALL_SEEDS)('starts every snack inside the swim bounds of all three rows for seed %i', (seed) => {
+    const bounds = swimBounds(areaSize(5, 3));
+    const snacks = buildZone(FIVE_BY_THREE, seed).collectibles;
+    expect(snacks).toHaveLength(16);
+    for (const snack of snacks) {
+      expect(snack.x).toBeGreaterThanOrEqual(bounds.minX);
+      expect(snack.x).toBeLessThanOrEqual(bounds.maxX);
+      expect(snack.y).toBeGreaterThanOrEqual(bounds.minY);
+      expect(snack.y).toBeLessThanOrEqual(bounds.maxY);
+    }
+  });
+});
+
+describe('areaRowKind', () => {
+  it('names the one row of a one-row area single', () => {
+    expect(areaRowKind(0, 1)).toBe('single');
+  });
+
+  it('names the two rows of a two-row area top and bottom', () => {
+    expect([areaRowKind(0, 2), areaRowKind(1, 2)]).toEqual(['top', 'bottom']);
+  });
+
+  it('names every row between the top and bottom middle', () => {
+    expect([0, 1, 2, 3, 4].map((row) => areaRowKind(row, 5))).toEqual(['top', 'middle', 'middle', 'middle', 'bottom']);
+  });
+
+  it.each([
+    [-1, 3],
+    [3, 3],
+    [0, 0],
+    [0.5, 3],
+  ])('throws a RangeError for row %d of %d rows', (row, rows) => {
+    expect(() => areaRowKind(row, rows)).toThrow(RangeError);
+  });
+});
+
 describe('per-area tilapia tuning', () => {
   it.each(ALL_SEEDS)('copies the tuning onto the layout with no rand() draws for seed %i', (seed) => {
     const canal = buildCanalZone(seed);
@@ -1104,5 +1185,51 @@ describe('mobile snacks in the layout (ND-22, ND-23; issue #131, ND-13)', () => 
   it('keeps the canal free of moving hazards and mobile snacks', () => {
     expect(CANAL_LAYOUT.movingHazards).toBeUndefined();
     expect(CANAL_LAYOUT.mobileSnacks).toBeUndefined();
+  });
+});
+
+const DARK_WATER: DarkWater = { x0: 1200, x1: 1920, y0: SURF, y1: BED_TOP };
+const GLOW_PLANTS_DATA: readonly ElementSpawn[] = [
+  glowPlantSpawn('canal/glow-plant-1', { x: 1300, y: 290, radius: 14 }),
+  glowPlantSpawn('canal/glow-plant-2', { x: 1700, y: 290, radius: 14 }),
+];
+
+describe('dark water and glow-plants in the layout (issue #77, ND-7 and ND-8)', () => {
+  it.each(ALL_SEEDS)('copies the dark water with no rand() draw for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ darkWater: DARK_WATER }), seed);
+    const { darkWater, ...rest } = zone;
+    expect(darkWater).toEqual(DARK_WATER);
+    expect(darkWater).not.toBe(DARK_WATER);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no dark water key to a layout that has none', () => {
+    expect(buildZone(CANAL_LAYOUT, DEFAULT_ZONE_SEED)).not.toHaveProperty('darkWater');
+  });
+
+  it.each(ALL_SEEDS)('copies each glow-plant and its geometry with no rand() draw for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ elements: GLOW_PLANTS_DATA }), seed);
+    const { elements, ...rest } = zone;
+    expect(elements).toEqual(GLOW_PLANTS_DATA);
+    elements.forEach((element, index) => {
+      expect(element).not.toBe(GLOW_PLANTS_DATA[index]);
+      expect(element.glowPlant).not.toBe(GLOW_PLANTS_DATA[index].glowPlant);
+      expect(element).not.toHaveProperty('matPair');
+    });
+    const { elements: canalElements, ...canalRest } = buildCanalZone(seed);
+    expect(canalElements).toEqual([]);
+    expect(rest).toStrictEqual(canalRest);
+  });
+
+  it.each([
+    ['canal', CANAL_LAYOUT],
+    ['pond-1', POND_LAYOUT],
+    ['pond-2', POND_2_LAYOUT],
+    ['chinampa-1', CHINAMPA_LAYOUT],
+    ['chinampa-2', CHINAMPA_2_LAYOUT],
+  ] as const)('keeps %s fully lit, with no glow-plant', (_, layout) => {
+    expect(layout.darkWater).toBeUndefined();
+    expect(layout.elements.some((element) => element.glowPlant !== undefined)).toBe(false);
+    expect(buildZone(layout, DEFAULT_ZONE_SEED)).not.toHaveProperty('darkWater');
   });
 });

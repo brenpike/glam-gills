@@ -11,6 +11,8 @@ import {
   POND_2_AREA,
   POND_AREA,
   POND_HABITAT,
+  SPRING_CAVE_AREA,
+  SPRING_CAVE_HABITAT,
   areaById,
   areaFactCards,
   atExit,
@@ -31,7 +33,16 @@ import {
   type AreaData,
   type NewThings,
 } from './areas';
-import { ALL_TREASURES, CANAL_TREASURES, CHINAMPA_2_TREASURES, CHINAMPA_TREASURES, POND_2_TREASURES, POND_TREASURES, treasureById } from './catalogue';
+import {
+  ALL_TREASURES,
+  CANAL_TREASURES,
+  CHINAMPA_2_TREASURES,
+  CHINAMPA_TREASURES,
+  POND_2_TREASURES,
+  POND_TREASURES,
+  SPRING_CAVE_TREASURES,
+  treasureById,
+} from './catalogue';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
@@ -40,12 +51,15 @@ import {
   AXOLOTL_REFUGES_FACT,
   CANAL_CLEAN_UPS_FACT,
   CARP_FACT,
+  CRAYFISH_FACT,
+  GEYSER_FACT,
   GARTER_SNAKE_FACT,
   GHOST_NET_FACT,
   HERON_FACT,
   PLASTIC_WORM_FACT,
   PUNTING_POLE_FACT,
   SHRIMP_FACT,
+  STALACTITE_FACT,
   TADPOLE_FACT,
   TILAPIA_FACT,
   WATER_HYACINTH_FACT,
@@ -58,7 +72,9 @@ import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { CARP_SPECIES, TILAPIA_SPECIES, type PredatorSpecies } from './predators';
 import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
+import { STRANDING_CHANCE, areaStrandingChance } from './rescue';
 import { SNACK_DART } from './snackDart';
+import { SPRING_CAVE_AREA_ID, SPRING_CAVE_LAYOUT } from './springCaveLayout';
 import { NO_STARS, type AreaStars, type AreaStarsRecord } from './stars';
 import { inSafeArea } from './tilapia';
 import { FINDS, LEGS, SWIM } from './tuning';
@@ -334,12 +350,45 @@ describe('CHINAMPA_2_AREA', () => {
   });
 });
 
+describe('SPRING_CAVE_AREA', () => {
+  it('is Area 6, the spring cave, in the spring cave habitat, with no look of its own (issue #77)', () => {
+    expect(SPRING_CAVE_AREA.id).toBe('spring-cave-1');
+    expect(SPRING_CAVE_AREA.id).toBe(SPRING_CAVE_AREA_ID);
+    expect(SPRING_CAVE_AREA.number).toBe(6);
+    expect(SPRING_CAVE_AREA.habitatId).toBe(SPRING_CAVE_HABITAT.id);
+    expect(SPRING_CAVE_AREA.layout).toBe(SPRING_CAVE_LAYOUT);
+    expect(SPRING_CAVE_AREA.look).toBeUndefined();
+  });
+
+  it('names the Fossil ammonite, a Rare treasure from the Area 6 catalogue, as its special treasure', () => {
+    expect(SPRING_CAVE_AREA.specialTreasureId).toBe('spring-cave/fossil-ammonite');
+    expect(SPRING_CAVE_TREASURES.map((treasure) => treasure.id)).toContain(SPRING_CAVE_AREA.specialTreasureId);
+    expect(treasureById(SPRING_CAVE_AREA.specialTreasureId)?.rarity).toBe('rare');
+  });
+
+  it.each(ALL_SEEDS)('names a special treasure the zone hides for seed %i', (seed) => {
+    const special = buildZone(SPRING_CAVE_LAYOUT, seed).finds.find((find) => find.id === SPRING_CAVE_AREA.specialTreasureId);
+    expect(special).toBeDefined();
+    expect(special?.pool.length).toBeGreaterThan(0);
+  });
+
+  it('has no dart rule: its shrimp replace the one-time darters (issue #77, ND-10)', () => {
+    expect(SPRING_CAVE_AREA.snackDart).toBeUndefined();
+  });
+
+  it('is frozen area data', () => {
+    expect(Object.isFrozen(SPRING_CAVE_AREA)).toBe(true);
+    expect(Object.isFrozen(SPRING_CAVE_AREA.exit)).toBe(true);
+    expect(Object.isFrozen(SPRING_CAVE_AREA.snackDrift)).toBe(true);
+  });
+});
+
 describe('habitats', () => {
   it('has the canal habitat, holding Area 1, the pond habitat, holding Areas 2 and 3, and the chinampa habitat, holding Areas 4 and 5', () => {
     expect(CANAL_HABITAT).toEqual({ id: 'canal', name: 'Canal', look: 'canal' });
     expect(POND_HABITAT).toEqual({ id: 'pond', name: 'Lily pad pond', look: 'pond' });
     expect(CHINAMPA_HABITAT).toEqual({ id: 'chinampa', name: 'Chinampa gardens', look: 'chinampa' });
-    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT]);
+    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT]);
     expect(Object.isFrozen(CANAL_HABITAT)).toBe(true);
     expect(Object.isFrozen(POND_HABITAT)).toBe(true);
     expect(Object.isFrozen(CHINAMPA_HABITAT)).toBe(true);
@@ -351,16 +400,50 @@ describe('habitats', () => {
     expect(CHINAMPA_2_AREA.habitatId).toBe(CHINAMPA_HABITAT.id);
   });
 
+  it('has the spring cave habitat, with its own look, after the chinampa gardens', () => {
+    expect(SPRING_CAVE_HABITAT).toEqual({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
+    expect(Object.isFrozen(SPRING_CAVE_HABITAT)).toBe(true);
+    expect(HABITATS.at(-1)).toBe(SPRING_CAVE_HABITAT);
+    expect(SPRING_CAVE_AREA.habitatId).toBe(SPRING_CAVE_HABITAT.id);
+    expect(new Set(HABITATS.map((habitat) => habitat.id)).size).toBe(HABITATS.length);
+    expect(new Set(HABITATS.map((habitat) => habitat.look)).size).toBe(HABITATS.length);
+  });
+
   it('finds a habitat by id', () => {
     expect(habitatById('canal')).toBe(CANAL_HABITAT);
     expect(habitatById('pond')).toBe(POND_HABITAT);
     expect(habitatById('chinampa')).toBe(CHINAMPA_HABITAT);
+    expect(habitatById('spring-cave')).toBe(SPRING_CAVE_HABITAT);
     expect(habitatById(UNKNOWN_ID)).toBeUndefined();
   });
 
   it('puts every area in a known habitat', () => {
     for (const area of AREAS) {
       expect(habitatById(area.habitatId), area.id).toBeDefined();
+    }
+  });
+});
+
+describe('strandingChance', () => {
+  it.each([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA].map((area) => [area.id, area] as const))(
+    'leaves %s without its own strandingChance, so it keeps the 40% default',
+    (_id, area) => {
+      expect(area.strandingChance).toBeUndefined();
+      expect('strandingChance' in area).toBe(false);
+    },
+  );
+
+  it('gives the spring cave, Area 6, a stranded axolotl on 30% of trips (issue #77, ND-13)', () => {
+    expect(SPRING_CAVE_AREA.strandingChance).toBe(0.3);
+    expect(areaStrandingChance(SPRING_CAVE_AREA)).toBe(0.3);
+    expect(areaStrandingChance(CHINAMPA_2_AREA)).toBe(STRANDING_CHANCE);
+  });
+
+  it('keeps any area strandingChance a number from 0 to 1', () => {
+    for (const area of AREAS) {
+      if (area.strandingChance === undefined) continue;
+      expect(area.strandingChance, area.id).toBeGreaterThanOrEqual(0);
+      expect(area.strandingChance, area.id).toBeLessThanOrEqual(1);
     }
   });
 });
@@ -415,7 +498,7 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake and water hyacinth cards, for the shipped areas', () => {
+  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite and geyser cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       CARP_FACT,
@@ -427,6 +510,9 @@ describe('threats', () => {
       PUNTING_POLE_FACT,
       GARTER_SNAKE_FACT,
       WATER_HYACINTH_FACT,
+      CRAYFISH_FACT,
+      STALACTITE_FACT,
+      GEYSER_FACT,
     ]);
   });
 
@@ -584,6 +670,9 @@ describe('bookFactCards', () => {
       PUNTING_POLE_FACT,
       GARTER_SNAKE_FACT,
       WATER_HYACINTH_FACT,
+      CRAYFISH_FACT,
+      STALACTITE_FACT,
+      GEYSER_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
     ]);
@@ -602,13 +691,14 @@ describe('newThingsByArea', () => {
     expect(areasOverNewLimit(AREAS)).toEqual([]);
   });
 
-  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, and the garter snake and the water hyacinth mats in Area 5', () => {
+  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, and the crayfish and the glow-plant in Area 6', () => {
     expect(newThingsByArea()).toEqual([
       { areaId: 'canal', threats: ['tilapia'], elements: [] },
       { areaId: 'pond-1', threats: ['plastic-worm'], elements: [] },
       { areaId: 'pond-2', threats: ['heron'], elements: [] },
       { areaId: 'chinampa-1', threats: ['ghost-net'], elements: [] },
       { areaId: 'chinampa-2', threats: ['garter-snake'], elements: ['water-hyacinth'] },
+      { areaId: 'spring-cave-1', threats: ['crayfish'], elements: ['glow-plant'] },
     ]);
   });
 
@@ -764,10 +854,27 @@ describe('unlocking', () => {
     expect(newestUnlockedAreaId(area4Beaten)).toBe(CHINAMPA_2_AREA_ID);
     expect(isNewArea(area4Beaten, CHINAMPA_2_AREA_ID)).toBe(true);
     expect(isNewArea({ ...area4Beaten, [CHINAMPA_2_AREA_ID]: EXIT_ONLY }, CHINAMPA_2_AREA_ID)).toBe(false);
-    expect(unlockedAreaIds({ ...area4Beaten, [CHINAMPA_2_AREA_ID]: ALL_STARS })).toEqual([...firstFour, CHINAMPA_2_AREA_ID]);
+    expect(unlockedAreaIds({ ...area4Beaten, [CHINAMPA_2_AREA_ID]: ALL_STARS })).toEqual([...firstFour, CHINAMPA_2_AREA_ID, SPRING_CAVE_AREA_ID]);
     expect(unlockedAreaIds({ ...area3Beaten, [CHINAMPA_2_AREA_ID]: ALL_STARS })).toEqual(firstFour);
     expect(resolveAreaId(CHINAMPA_2_AREA_ID, area3Beaten)).toBe(CHINAMPA_AREA_ID);
     expect(resolveAreaId(CHINAMPA_2_AREA_ID, area4Beaten)).toBe(CHINAMPA_2_AREA_ID);
+  });
+
+  it('unlocks Area 6 once Area 5 is beaten, with no new rule and no star gates, in the shipped areas (issue #77)', () => {
+    const area4Beaten: AreaStarsRecord = { canal: EXIT_ONLY, [POND_AREA_ID]: EXIT_ONLY, [POND_2_AREA_ID]: EXIT_ONLY, [CHINAMPA_AREA_ID]: EXIT_ONLY };
+    const area5Beaten: AreaStarsRecord = { ...area4Beaten, [CHINAMPA_2_AREA_ID]: EXIT_ONLY };
+    const firstFive = ['canal', POND_AREA_ID, POND_2_AREA_ID, CHINAMPA_AREA_ID, CHINAMPA_2_AREA_ID];
+    expect(isAreaUnlocked(area4Beaten, SPRING_CAVE_AREA_ID)).toBe(false);
+    expect(isAreaUnlocked({ ...area4Beaten, [CHINAMPA_2_AREA_ID]: SPECIAL_ONLY }, SPRING_CAVE_AREA_ID)).toBe(false);
+    expect(unlockedAreaIds(area5Beaten)).toEqual([...firstFive, SPRING_CAVE_AREA_ID]);
+    expect(isAreaUnlocked(area5Beaten, SPRING_CAVE_AREA_ID)).toBe(true);
+    expect(newestUnlockedAreaId(area5Beaten)).toBe(SPRING_CAVE_AREA_ID);
+    expect(isNewArea(area5Beaten, SPRING_CAVE_AREA_ID)).toBe(true);
+    expect(isNewArea({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: EXIT_ONLY }, SPRING_CAVE_AREA_ID)).toBe(false);
+    expect(unlockedAreaIds({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: ALL_STARS })).toEqual([...firstFive, SPRING_CAVE_AREA_ID]);
+    expect(unlockedAreaIds({ ...area4Beaten, [SPRING_CAVE_AREA_ID]: ALL_STARS })).toEqual(firstFive);
+    expect(resolveAreaId(SPRING_CAVE_AREA_ID, area4Beaten)).toBe(CHINAMPA_2_AREA_ID);
+    expect(resolveAreaId(SPRING_CAVE_AREA_ID, area5Beaten)).toBe(SPRING_CAVE_AREA_ID);
   });
 
   it('names the newest unlocked area', () => {
@@ -845,12 +952,13 @@ describe('resolveAreaId', () => {
 });
 
 describe('areaById', () => {
-  it('finds the canal, the pond, Area 3, Area 4 and Area 5 by id', () => {
+  it('finds the canal, the pond, Area 3, Area 4, Area 5 and Area 6 by id', () => {
     expect(areaById('canal')).toBe(CANAL_AREA);
     expect(areaById(POND_AREA_ID)).toBe(POND_AREA);
     expect(areaById(POND_2_AREA_ID)).toBe(POND_2_AREA);
     expect(areaById(CHINAMPA_AREA_ID)).toBe(CHINAMPA_AREA);
     expect(areaById(CHINAMPA_2_AREA_ID)).toBe(CHINAMPA_2_AREA);
+    expect(areaById(SPRING_CAVE_AREA_ID)).toBe(SPRING_CAVE_AREA);
   });
 
   it('returns undefined for an unknown id', () => {
@@ -860,8 +968,8 @@ describe('areaById', () => {
   });
 
   it('lists every area in number order', () => {
-    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5]);
-    expect(AREAS).toEqual([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA]);
+    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(AREAS).toEqual([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA, SPRING_CAVE_AREA]);
   });
 });
 
@@ -934,17 +1042,18 @@ describe.each(AREA_CASES)('%s exit geometry', (_id, area) => {
 describe('snack drift', () => {
   const surfacePeak = SURF + 1.6 + 0.8;
 
-  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s and the Area 5 drift at about 15.8 px/s', () => {
+  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s and the Area 6 drift at about 16.0 px/s', () => {
     expect(snackDriftMaxSpeed(CANAL_AREA.snackDrift)).toBeCloseTo(11.9, 1);
     expect(snackDriftMaxSpeed(POND_AREA.snackDrift)).toBeCloseTo(14.8, 1);
     expect(snackDriftMaxSpeed(POND_2_AREA.snackDrift)).toBeCloseTo(15.2, 1);
     expect(snackDriftMaxSpeed(CHINAMPA_AREA.snackDrift)).toBeCloseTo(15.6, 1);
     expect(snackDriftMaxSpeed(CHINAMPA_2_AREA.snackDrift)).toBeCloseTo(15.8, 1);
+    expect(snackDriftMaxSpeed(SPRING_CAVE_AREA.snackDrift)).toBeCloseTo(16.0, 1);
   });
 
-  it('pins the one-leg headway against the strongest current: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Area 5', () => {
+  it('pins the one-leg headway against the strongest current: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 and 6', () => {
     const headways = AREAS.map((area) => SWIM.maxSpeed * LEGS.speedByLegs[0] - strongestCurrentIn(area));
-    expect(headways).toEqual([20, 20, 16, 18, 17]);
+    expect(headways).toEqual([20, 20, 16, 18, 17, 17]);
   });
 
   it.each(AREA_CASES)('drifts slower than a one-leg axolotl swims against the strongest current, and at most 20 px/s, in %s', (_id, area) => {
@@ -986,7 +1095,7 @@ describe('Legendary treasures by area (issue #146)', () => {
   const legendaryIds = (area: Readonly<AreaData>): string[] =>
     area.layout.treasures.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
 
-  it('keeps exactly 1 Legendary in the canal, the Sun pyramid, and 3 in each later area', () => {
+  it('keeps exactly 1 Legendary in the canal, the Sun pyramid, 3 in each of Areas 2 to 5, and the owner\'s 2 in Area 6', () => {
     expect(legendaryIds(CANAL_AREA)).toEqual(['canal/sun-pyramid']);
     expect(legendaryIds(POND_AREA)).toEqual(['pond/rainbow-dragonfly-wings', 'pond/froggy-boots', 'canal/golden-bow']);
     expect(legendaryIds(POND_2_AREA)).toEqual(['pond/golden-lotus-throne', 'pond/firefly-cape', 'canal/paint-shell-galaxy']);
@@ -996,6 +1105,7 @@ describe('Legendary treasures by area (issue #146)', () => {
       'chinampa/rainbow-serape-cape',
       'canal/paint-shell-tie-dye-galaxy',
     ]);
+    expect(legendaryIds(SPRING_CAVE_AREA)).toEqual(['spring-cave/crystal-arch', 'spring-cave/crystal-crown']);
   });
 
   it('puts each catalogue treasure in exactly one area', () => {

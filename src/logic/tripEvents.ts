@@ -79,6 +79,9 @@ export interface RescueSnapshot {
  * `ending` is set only once the trip has ended. `found` never lists rescued axolotls.
  * `rescue` is this trip's stranded axolotl, or null when there is none. `factCardDue` is the id of
  * the first hazard or predator met this trip whose fact card is not seen yet, or null when none is.
+ * `litGlowPlants` is the glow-plant ids lit this trip, in lighting order; every plant is unlit at a
+ * new trip (issue #77, ND-8). `glowPlantHint` is the unlit glow-plant the hint points at, set only
+ * while swimming after the hint clock reaches its time, else null.
  */
 export interface TripSnapshot {
   phase: TripPhase;
@@ -91,6 +94,8 @@ export interface TripSnapshot {
   ending: TripEnding | null;
   rescue: RescueSnapshot | null;
   factCardDue: string | null;
+  litGlowPlants: string[];
+  glowPlantHint: string | null;
 }
 
 /** Payload type for each event; `undefined` marks payload-less events. */

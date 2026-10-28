@@ -1,7 +1,8 @@
 /**
  * Area map marker art (issue #75, #76; guide 8 "Area map", 10). The Lily pad pond marker
  * is a notched lily pad in the disc's frame, and the Chinampa gardens marker is a garden
- * plot with hanging roots. Each habitat's panel and folder tab take its look's tint (issue #113,
+ * plot with hanging roots, and the Spring cave marker (issue #77) is a grey-blue stone with a
+ * crystal cluster. Each habitat's panel and folder tab take its look's tint (issue #113,
  * ND-1, ND-4). Headless: the painters run against a
  * recording context and a stub Path2D, and the Phaser bake runs against a fake scene.
  */
@@ -18,6 +19,9 @@ import {
   MAP_MARKER_TEX,
   MAP_POND_PAD_FILL,
   MAP_POND_PAD_NOTCH,
+  MAP_SPRING_CAVE_CRYSTAL_FILL,
+  MAP_SPRING_CAVE_STONE,
+  MAP_SPRING_CAVE_STONE_FILL,
   MAP_TAB_TEXT,
   mapHabitatTint,
   mapPanelSize,
@@ -30,6 +34,7 @@ import {
   areaMapChinampaMarkerKey,
   areaMapMarkerKey,
   areaMapPondMarkerKey,
+  areaMapSpringCaveMarkerKey,
   areaMapTabKey,
   bakeAreaMapTab,
   bakeAreaMapTextures,
@@ -264,6 +269,7 @@ describe('pond marker frame', () => {
     vi.stubGlobal('Path2D', LogPath);
     const art = bakeAreaMapTextures(scene as never, 2);
     const { canal, pond, chinampa } = art.markersByLook;
+    const springCave = art.markersByLook['spring-cave'];
     expect(canal.unlocked).toBe(art.markerUnlocked);
     expect(canal.locked).toBe(art.markerLocked);
     expect(canal.unlocked.key).toBe(areaMapMarkerKey(false));
@@ -272,9 +278,11 @@ describe('pond marker frame', () => {
     expect(pond.locked.key).toBe(areaMapPondMarkerKey(true));
     expect(chinampa.unlocked.key).toBe(areaMapChinampaMarkerKey(false));
     expect(chinampa.locked.key).toBe(areaMapChinampaMarkerKey(true));
+    expect(springCave.unlocked.key).toBe(areaMapSpringCaveMarkerKey(false));
+    expect(springCave.locked.key).toBe(areaMapSpringCaveMarkerKey(true));
     expect(Object.keys(art.markersByLook).sort()).toEqual([...HABITAT_LOOK_IDS].sort());
     expect(new Set(baked.map((b) => b.key)).size).toBe(baked.length);
-    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked]) {
+    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked, springCave.unlocked, springCave.locked]) {
       expect(info.w).toBe(canal.unlocked.w);
       expect(info.h).toBe(canal.unlocked.h);
       expect(info.pxW).toBe(canal.unlocked.pxW);
@@ -504,6 +512,162 @@ describe('chinampa marker frame and silhouette (greyscale shape cue)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Spring cave marker (issue #77)
+// ---------------------------------------------------------------------------
+
+describe('spring cave marker look', () => {
+  const stoneAndCrystals = (locked: boolean): { stone: Painted; crystals: Painted[]; all: Painted[] } => {
+    const all = paintMarker(locked, 'spring-cave');
+    const fillList = all.filter((p) => p.op === 'fill');
+    return { stone: fillList[0], crystals: fillList.slice(1), all };
+  };
+
+  it('paints a grey-blue stone with two teal crystals unlocked, and the same stone with white crystals locked', () => {
+    const unlocked = stoneAndCrystals(false);
+    const locked = stoneAndCrystals(true);
+    expect(unlocked.stone.style).toBe(MAP_SPRING_CAVE_STONE_FILL);
+    expect(locked.stone.style).toBe(MAP_SPRING_CAVE_STONE_FILL);
+    expect(unlocked.crystals.map((c) => c.style)).toEqual([MAP_SPRING_CAVE_CRYSTAL_FILL, MAP_SPRING_CAVE_CRYSTAL_FILL]);
+    expect(locked.crystals.map((c) => c.style)).toEqual([WHITE, WHITE]);
+    expect(MAP_SPRING_CAVE_STONE.crystals).toHaveLength(2);
+  });
+
+  it('inks the stone at 3.5 and each crystal at the badge ring width, every outline equal to its fill', () => {
+    for (const locked of [false, true]) {
+      const { all } = stoneAndCrystals(locked);
+      const strokeList = all.filter((p) => p.op === 'stroke');
+      expect(strokeList).toHaveLength(3);
+      expect(strokeList.every((p) => p.style === INK)).toBe(true);
+      expect(strokeList[0].lineWidth).toBe(LW);
+      expect(strokeList.slice(1).every((p) => p.lineWidth === 2.6)).toBe(true);
+      const fillList = all.filter((p) => p.op === 'fill');
+      strokeList.forEach((stroke, i) => expect(stroke.cmds).toEqual(fillList[i].cmds));
+    }
+  });
+
+  it('turns only the crystals white when locked: the stone and its outline are the same', () => {
+    const unlocked = paintMarker(false, 'spring-cave');
+    const locked = paintMarker(true, 'spring-cave');
+    expect(locked[0]).toEqual(unlocked[0]);
+    expect(JSON.stringify(locked.map((p) => p.cmds))).toBe(JSON.stringify(unlocked.map((p) => p.cmds)));
+    expect(locked.map((p) => p.style)).not.toEqual(unlocked.map((p) => p.style));
+  });
+
+  it('is a stone of its own: not the disc, the pad or the plot, and the other looks keep their painting', () => {
+    const stone = fillOf(paintMarker(false, 'spring-cave')).cmds;
+    expect(stone.some((c) => c[0] === 'ellipse')).toBe(false);
+    expect(stone.filter((c) => c[0] === 'arc').every((c) => c[3] === MAP_SPRING_CAVE_STONE.corner)).toBe(true);
+    expect(stone.filter((c) => c[0] === 'arc')).toHaveLength(4);
+    expect(stone.some((c) => c[0] === 'bezierCurveTo')).toBe(false);
+    expect(fillOf(paintMarker(false, 'canal')).style).toBe(UI_PRIMARY);
+    expect(fillOf(paintMarker(false, 'pond')).style).toBe(MAP_POND_PAD_FILL);
+    expect(fillOf(paintMarker(false, 'chinampa')).style).toBe(MAP_CHINAMPA_PLOT_FILL);
+  });
+
+  it('keeps the stone grey-blue and the crystal teal, not the disc yellow, the pad green or the plot orange', () => {
+    for (const fill of [MAP_SPRING_CAVE_STONE_FILL, MAP_SPRING_CAVE_CRYSTAL_FILL]) {
+      for (const other of [UI_PRIMARY, MAP_POND_PAD_FILL, MAP_CHINAMPA_PLOT_FILL]) expect(fill).not.toBe(other);
+    }
+    expect(hueOf(MAP_SPRING_CAVE_STONE_FILL)).toBeGreaterThan(200);
+    expect(hueOf(MAP_SPRING_CAVE_STONE_FILL)).toBeLessThan(225);
+    expect(hueOf(MAP_SPRING_CAVE_CRYSTAL_FILL)).toBeGreaterThan(165);
+    expect(hueOf(MAP_SPRING_CAVE_CRYSTAL_FILL)).toBeLessThan(185);
+  });
+});
+
+describe('spring cave marker contrast (guide 10)', () => {
+  it('keeps the bold ink number at 4.5:1 or more on the stone, locked or not', () => {
+    expect(contrast(INK, MAP_SPRING_CAVE_STONE_FILL)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(INK, MAP_SPRING_CAVE_STONE_FILL).toFixed(2)).toBe('7.48');
+  });
+
+  it('passes 3:1 against the backdrop by every fill that meets it, crystals included', () => {
+    expect(contrast(MAP_SPRING_CAVE_STONE_FILL, BACKDROP)).toBeGreaterThanOrEqual(3);
+    expect(contrast(MAP_SPRING_CAVE_STONE_FILL, BACKDROP).toFixed(2)).toBe('3.16');
+    expect(contrast(MAP_SPRING_CAVE_CRYSTAL_FILL, BACKDROP)).toBeGreaterThanOrEqual(3);
+    expect(contrast(MAP_SPRING_CAVE_CRYSTAL_FILL, BACKDROP).toFixed(2)).toBe('3.18');
+    expect(contrast(WHITE, BACKDROP)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('tells the crystal from the stone by its ink outline and its shape, not by colour alone', () => {
+    // The two fills are within a hair of each other in luminance (greyscale), so the ink carries it.
+    expect(Math.abs(luminance(MAP_SPRING_CAVE_STONE_FILL) - luminance(MAP_SPRING_CAVE_CRYSTAL_FILL))).toBeLessThan(0.05);
+    expect(contrast(INK, MAP_SPRING_CAVE_CRYSTAL_FILL)).toBeGreaterThanOrEqual(3);
+    expect(contrast(INK, WHITE)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('spring cave marker frame and silhouette (greyscale shape cue)', () => {
+  const painted = paintMarker(false, 'spring-cave');
+  const fillList = painted.filter((p) => p.op === 'fill');
+  const stonePoly = polygonOf(fillList[0].cmds);
+  const { halfW, halfH, centreY, crystals } = MAP_SPRING_CAVE_STONE;
+  const CRYSTAL_INK = 2.6;
+
+  it('fits the 64 px frame: the stone is 56 wide and sits 25 below the centre, the crystals reach about 31 above', () => {
+    expect(halfW + LW / 2).toBe(28);
+    expect(centreY + halfH + LW / 2).toBe(25);
+    const xs = stonePoly.map(([x]) => x);
+    const ys = stonePoly.map(([, y]) => y);
+    expect(Math.max(...xs) + LW / 2).toBeCloseTo(28, 6);
+    expect(Math.min(...xs) - LW / 2).toBeCloseTo(-28, 6);
+    expect(Math.max(...ys) + LW / 2).toBeCloseTo(25, 6);
+    const tips = crystals.map((c) => c.tipY - CRYSTAL_INK / 2);
+    expect(Math.min(...tips)).toBeGreaterThan(-MAP_MARKER_D / 2);
+    expect(Math.min(...tips)).toBeLessThan(-30);
+    expect(MAP_MARKER_TEX.originX).toBeGreaterThanOrEqual(MAP_MARKER_D / 2);
+    expect(MAP_MARKER_TEX.originY).toBeGreaterThanOrEqual(MAP_MARKER_D / 2);
+  });
+
+  it('stays clear of the focus ring: every outline point and its ink is inside the ring white line', () => {
+    const ringInner = MAP_FOCUS_WHITE_R - MAP_FOCUS_LW / 2;
+    expect(Math.max(...stonePoly.map(([x, y]) => Math.hypot(x, y))) + LW / 2).toBeLessThanOrEqual(ringInner);
+    for (const fill of fillList.slice(1)) {
+      const crystalPoly = polygonOf(fill.cmds);
+      expect(Math.max(...crystalPoly.map(([x, y]) => Math.hypot(x, y))) + CRYSTAL_INK / 2).toBeLessThanOrEqual(ringInner);
+    }
+  });
+
+  it('leaves the number box (a two-digit number, 34 x 28, centred) wholly on the stone, inked edge included', () => {
+    for (const [x, y] of [
+      [-17, -14],
+      [17, -14],
+      [-17, 14],
+      [17, 14],
+      [0, 0],
+    ] as const) {
+      expect(inside(stonePoly, x, y)).toBe(true);
+    }
+    expect(centreY - halfH + LW / 2).toBeLessThan(-14);
+    expect(halfW - LW / 2).toBeGreaterThan(17);
+    // The crystals stand on the top edge and never dip into the box.
+    for (const crystal of crystals) {
+      expect(crystal.shoulderY).toBeLessThan(centreY - halfH);
+      expect(crystal.tipY).toBeLessThan(crystal.shoulderY);
+    }
+  });
+
+  it('keeps the crystals off the padlock badge (upper right) and on the stone top edge', () => {
+    for (const crystal of crystals) {
+      expect(crystal.x0).toBeLessThan(crystal.tipX);
+      expect(crystal.tipX).toBeLessThan(crystal.x1);
+      const d = Math.hypot(crystal.x1 - MAP_BADGE_OFFSET.x, crystal.shoulderY - MAP_BADGE_OFFSET.y);
+      expect(d).toBeGreaterThan(MAP_BADGE_R + 4);
+    }
+  });
+
+  it('is a clearly different silhouette from the disc: flat sides and crystals, in area and extent', () => {
+    const discArea = Math.PI * RIM_R * RIM_R;
+    expect(areaOf(stonePoly)).toBeLessThan(0.9 * discArea);
+    expect(areaOf(stonePoly)).toBeGreaterThan(0.6 * discArea);
+    // Two crystal shards, each a five-point outline with a flat base.
+    const shards = fillList.slice(1).map((f) => f.cmds);
+    expect(shards).toHaveLength(2);
+    for (const cmds of shards) expect(cmds.filter((c) => c[0] === 'lineTo')).toHaveLength(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Habitat panels and tabs (issue #113)
 // ---------------------------------------------------------------------------
 
@@ -517,6 +681,17 @@ describe('habitat tints (issue #113, ND-4; guide 10)', () => {
       expect(mapHabitatTint(look)).toBe(MAP_HABITAT_TINTS[look]);
     }
     expect(new Set(Object.values(MAP_HABITAT_TINTS)).size).toBe(HABITAT_LOOK_IDS.length);
+  });
+
+  it('tints the spring cave a pale grey-blue, 30% of its stone over white (issue #77)', () => {
+    expect(mapHabitatTint('spring-cave')).toBe('#e5ebf2');
+    expect(contrast(INK, '#e5ebf2').toFixed(2)).toBe('11.99');
+    expect(contrast('#e5ebf2', BACKDROP).toFixed(2)).toBe('5.06');
+    for (const other of ['canal', 'pond', 'chinampa'] as const) expect(mapHabitatTint('spring-cave')).not.toBe(mapHabitatTint(other));
+  });
+
+  it('keeps the canal, pond and chinampa tints unchanged', () => {
+    expect([mapHabitatTint('canal'), mapHabitatTint('pond'), mapHabitatTint('chinampa')]).toEqual(['#fff6c9', '#caf2d0', '#ffe7c6']);
   });
 
   it('throws for an unknown look, so none falls back to the canal tint', () => {

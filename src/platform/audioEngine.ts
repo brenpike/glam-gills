@@ -2,7 +2,8 @@
  * Browser glue: the one audio engine the music and the sound effects share (PRD M6, M7, M9, M11, S1;
  * ADR 0025, ADR 0026). One Web Audio context, built on the first tap, click or key press (M7), with
  * one room reverb, one gentle low-pass and one limiter (M11), and two buses: the music bus and the
- * sounds bus, each with its own level. The context stops while the page is hidden (M9, S1), and while
+ * sounds bus, each with its own level. A cue with an echo sends some of itself to the music's one echo,
+ * whose echoes join the music bus. The context stops while the page is hidden (M9, S1), and while
  * neither music nor sounds is on.
  *
  * The music player (src/platform/musicPlayer.ts) and the sound player (src/platform/soundPlayer.ts)
@@ -17,6 +18,8 @@ import { noiseBuffer, type VoiceKit } from './audioVoices';
 const REVERB = Object.freeze({ seconds: 2.4, decay: 3.2 });
 /** The music's send to the room reverb (the sounds' is SOUND_LEVELS.reverbSend). */
 const MUSIC_REVERB_SEND = 0.32;
+/** The music's echo: seconds between echoes, how much of each comes back, and the top of its low-pass in Hz. */
+const ECHO = Object.freeze({ delayS: 0.42, feedback: 0.38, lowPassHz: 2400 });
 /** Top of the gentle low-pass that softens the whole mix, in Hz. */
 const WARM_HZ = 7500;
 /** The output limiter (M11), after both buses. */
@@ -33,6 +36,8 @@ export interface AudioGraph extends VoiceKit {
   ctx: AudioContext;
   /** The music bus: the music player fades it for its switch, the page and pausing. Starts silent. */
   music: GainNode;
+  /** The music's echo send: what reaches it echoes into the music bus. Only a cue with an echo sends to it. */
+  echo: AudioNode;
   /** The sounds bus: at SOUND_LEVELS.bus while sounds are on, silent while off. Starts silent. */
   sounds: GainNode;
 }
@@ -141,7 +146,25 @@ function buildGraph(): AudioGraph | null {
   convolver.connect(mix);
   const music = busInto(ctx, mix, convolver, MUSIC_REVERB_SEND);
   const sounds = busInto(ctx, mix, convolver, SOUND_LEVELS.reverbSend);
-  return { ctx, music, sounds, noise: noiseBuffer(ctx), plucks: new Map() };
+  return { ctx, music, echo: echoInto(ctx, music), sounds, noise: noiseBuffer(ctx), plucks: new Map() };
+}
+
+/** An echo into `bus`: a delay that feeds back through a low-pass, so each echo is softer and darker. */
+function echoInto(ctx: AudioContext, bus: AudioNode): AudioNode {
+  const send = ctx.createGain();
+  const delay = ctx.createDelay(1);
+  delay.delayTime.value = ECHO.delayS;
+  const lowPass = ctx.createBiquadFilter();
+  lowPass.type = 'lowpass';
+  lowPass.frequency.value = ECHO.lowPassHz;
+  const feedback = ctx.createGain();
+  feedback.gain.value = ECHO.feedback;
+  send.connect(delay);
+  delay.connect(lowPass);
+  lowPass.connect(feedback);
+  feedback.connect(delay);
+  lowPass.connect(bus);
+  return send;
 }
 
 /** A silent bus into `mix`, sending `send` of it to the room reverb. */

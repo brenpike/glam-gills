@@ -4,7 +4,8 @@
  * little ahead of time, on the music bus of the shared audio engine (src/platform/audioEngine.ts).
  * There are no audio files and no network (M6). Nothing sounds before the first tap, click or key
  * press (M7). A change of cue cross-fades, and the same cue carries on across screens (M1, M9). The
- * music stops while the page is hidden and plays softer while a trip is paused (M9).
+ * music stops while the page is hidden and plays softer while a trip is paused (M9). A cue with an
+ * echo sends that much of itself to the engine's music echo; every other cue plays without one.
  *
  * Scenes say where the player is (setMusicScreen) and whether a trip is paused (setMusicPaused); the
  * music switch reads and sets musicIsOn and setMusicOn.
@@ -165,8 +166,17 @@ function startRun(graph: AudioGraph, cue: Readonly<MusicCue>, fadeInS: number): 
   bus.gain.setValueAtTime(fadeInS > 0 ? SILENT : 1, now);
   if (fadeInS > 0) bus.gain.linearRampToValueAtTime(1, now + fadeInS);
   bus.connect(graph.music);
+  if (cue.echo !== undefined) sendToEcho(graph, bus, cue.echo);
   const seed = Math.floor(Math.random() * 0x7fffffff);
   state.runs.push({ cue, bus, seed, step: 0, nextTime: now + START_DELAY_S, fading: false });
+}
+
+/** Sends `level` of `bus` to the music's echo; letting the bus go lets the send go with it. */
+function sendToEcho(graph: AudioGraph, bus: GainNode, level: number): void {
+  const send = graph.ctx.createGain();
+  send.gain.value = level;
+  bus.connect(send);
+  send.connect(graph.echo);
 }
 
 /** Fades `run` out over the cross-fade, stops scheduling it, and lets its bus go once its notes ring out. */
