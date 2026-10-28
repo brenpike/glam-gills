@@ -433,6 +433,10 @@ export interface AreaSceneryOptions {
    * same pond in the dusk palette. 'chinampa' bakes the green-teal water and silt bed, and on
    * the top row garden plot banks with ahuejote roots in place of the willow banks; its
    * darker bottom row is the flat deep water the top row already ends on, so no seam shows.
+   * 'spring-cave' bakes the cold blue water and rock bed with the spring cave row details: a rock
+   * roof with its sky opening and lit pool on the top row, rock walls on the first and last column
+   * of the top and bottom rows, and the rock bed on the bottom row. Its middle rows are the shared
+   * flat deep chunk like any look's, so they have no walls.
    */
   readonly look?: AreaLookId;
   /** Bake the stream flowing in at `streamColumn`'s right edge, top row. Default false. Pass the look's `stream`. */
@@ -461,7 +465,8 @@ export const areaPadKey = (prefix: string, i: number): string => `${prefix}pad-$
  * bank and sun are on the top row only. The flat middle chunks all share one
  * texture (key from {@link areaDeepBgKey}), so a tall area bakes fewer chunks
  * than it shows. Random draws go row by row, then column by column. `look` and
- * `stream` pick the habitat (the pond, issue #75); the default is the canal, unchanged.
+ * `stream` pick the habitat (the pond, issue #75; the spring cave rows, issue #77); the default
+ * is the canal, unchanged.
  * `streamColumn` places the stream's mouth (issue #98); the default, the last column,
  * is unchanged.
  */

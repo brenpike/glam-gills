@@ -30,6 +30,14 @@
  * better on all of it. The dark cave of Area 6 is a separate layer; this look is the lit water
  * under it. Its water is a clear, cold blue and its rock a grey-blue.
  *
+ * Spring cave rows and props (issue #77): a look also says what it paints over its chunks
+ * (`rowDetails`: nothing, or the spring cave's rock roof with its sky opening and lit pool, rock
+ * walls at the ends of a row and the rock bed, drawSpringCave.ts) and whether the spring cave props
+ * are baked for it (`springCaveProps`: the side grotto, the rock ledges, the outflow marks, the
+ * glow-plants and the soft light, springCaveTextures.ts). A look with the spring cave props draws
+ * the zone's bank overhangs as rock ledges. The canal, pond, dusk pond and chinampa say 'none' and
+ * false, so their bakes are unchanged.
+ *
  * Area looks (issue #98): an area may use a variant of its habitat's look, such as
  * the pond at dusk ('pond-dusk', Area 3). A variant is a whole palette baked into the
  * background, haze and surface, never an overlay over gameplay depths. The dusk pond
@@ -70,9 +78,9 @@ export interface SkyLook {
 
 /**
  * The hiding place an area's cave is drawn as (guide 7e): the canal's rocks, the pond's hollow log,
- * the dusk pond's root arch, or the chinampa's tangle of ahuejote roots.
+ * the dusk pond's root arch, the chinampa's tangle of ahuejote roots, or the spring cave's side grotto.
  */
-export type CaveKind = 'rocks' | 'log' | 'rootArch' | 'rootTangle';
+export type CaveKind = 'rocks' | 'log' | 'rootArch' | 'rootTangle' | 'grotto';
 /** Where a cave hangs: base centre on the bed, or top centre under the bank at the waterline. */
 export type CaveAnchor = 'bed' | 'bank';
 
@@ -81,6 +89,13 @@ export type CaveAnchor = 'bed' | 'bank';
  * willows, or the chinampa's garden plots (crops above the surface, ahuejote roots in the water).
  */
 export type BankStyle = 'willows' | 'plots';
+
+/**
+ * What a look paints over its chunks after the water, the rays and the bed: nothing, or the spring
+ * cave's rows (drawSpringCave.ts paintSpringRowDetails). A 'springCave' top row is a rock roof with
+ * no sun and no clouds: the sky shows only through its opening.
+ */
+export type RowDetails = 'none' | 'springCave';
 
 export interface CaveLook {
   readonly kind: CaveKind;
@@ -155,6 +170,13 @@ export interface HabitatLook {
   readonly currentGap: boolean;
   /** The area needs the chinampa props (bank overhangs, gap edges, ghost nets, snag cue; chinampaTextures.ts). */
   readonly chinampaProps: boolean;
+  /** What is painted over the chunks after the water, the rays and the bed. */
+  readonly rowDetails: RowDetails;
+  /**
+   * The area needs the spring cave props (side grotto, rock ledges, outflow marks, glow-plants, soft
+   * light; springCaveTextures.ts). Its bank overhangs are drawn as rock ledges.
+   */
+  readonly springCaveProps: boolean;
 }
 
 /** Sky of the daytime looks: the prototype sky (guide 7a). */
@@ -195,6 +217,8 @@ const CANAL_LOOK: HabitatLook = Object.freeze({
   bank: 'willows',
   currentGap: false,
   chinampaProps: false,
+  rowDetails: 'none',
+  springCaveProps: false,
 });
 
 /**
@@ -269,6 +293,8 @@ const POND_LOOK: HabitatLook = Object.freeze({
   bank: 'willows',
   currentGap: false,
   chinampaProps: false,
+  rowDetails: 'none',
+  springCaveProps: false,
 });
 
 /**
@@ -360,6 +386,8 @@ const POND_DUSK_LOOK: HabitatLook = Object.freeze({
   bank: 'willows',
   currentGap: false,
   chinampaProps: false,
+  rowDetails: 'none',
+  springCaveProps: false,
 });
 
 /**
@@ -426,6 +454,8 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   bank: 'plots',
   currentGap: true,
   chinampaProps: true,
+  rowDetails: 'none',
+  springCaveProps: false,
 });
 
 /**
@@ -459,8 +489,8 @@ export const SPRING_CAVE_MUD = 'rgba(70,88,122,0.35)';
 
 /**
  * Spring cave look (issue #77): clear cold blue water over a grey-blue rock bed, under a rock
- * ceiling. No stream, no reeds, no bank in the water chunks, no pond props. The hiding place is a
- * heap of rocks on the bed, like the canal's.
+ * ceiling. No stream, no reeds, no bank in the water chunks, no pond props. The hiding place is the
+ * side grotto on the bed; the rows get the spring cave details and the props are the spring cave's.
  */
 export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   id: 'spring-cave',
@@ -491,12 +521,14 @@ export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   }),
   edgeReeds: null,
   stream: false,
-  cave: Object.freeze({ kind: 'rocks', anchor: 'bed' }),
+  cave: Object.freeze({ kind: 'grotto', anchor: 'bed' }),
   pondProps: false,
   firefliesPerScreen: 0,
   bank: 'willows',
   currentGap: false,
   chinampaProps: false,
+  rowDetails: 'springCave',
+  springCaveProps: true,
 });
 
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {

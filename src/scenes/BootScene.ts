@@ -14,6 +14,7 @@ import { INK, LW, UI_FONT } from '../art/palette';
 import { bakePondTextures, type PondTextures } from '../art/pondTextures';
 import { bakePredatorTextures, type PredatorTextures } from '../art/predatorTextures';
 import { bakeRefugeTextures, type RefugeTextures } from '../art/refugeTextures';
+import { bakeSpringCaveTextures, type SpringCaveTextures } from '../art/springCaveTextures';
 import { bakeTankTextures, type ExtraDecorationTextures, type TankTextures } from '../art/tankTextures';
 import { bakeTreasureTextures, type TreasureTextures } from '../art/treasureTextures';
 import {
@@ -98,8 +99,12 @@ export interface BakedDecorationPack {
  * look needs them or some area has ghost nets, else null. `refuge` holds the Xochimilco refuge art.
  * `movingHazards` holds the moving hazard textures by look id, only for the looks some area's moving
  * hazards use, or null when no area has a moving hazard. `mobileSnacks` holds the tadpole and shrimp
- * textures, baked only when some area has mobile snacks, else null. "Some area" counts the dev area
- * when one was loaded. The carp frames are part of `predator`.
+ * textures, baked only when some area has mobile snacks, else null. `springCave` holds the spring
+ * cave props (the side grotto, the rock ledges, the outflow marks, the glow-plants and the soft
+ * light), baked only when some area's look has the grotto cave or says it needs them, or some area
+ * has dark water, else null. "Some area" counts the dev area when one was loaded. A dev area that
+ * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
+ * of `predator`.
  */
 export interface GameAssets {
   areas: readonly Readonly<AreaData>[];
@@ -120,6 +125,7 @@ export interface GameAssets {
   refuge: RefugeTextures;
   movingHazards: MovingHazardTextures | null;
   mobileSnacks: MobileSnackTextures | null;
+  springCave: SpringCaveTextures | null;
 }
 
 /** What the swim scene and its HUD start from: the game assets and the id of the area to swim in. */
@@ -589,6 +595,28 @@ function hasMobileSnacks(area: Readonly<AreaData>): boolean {
   return mix !== undefined && mix.wanders.length + mix.homes.length > 0;
 }
 
+/**
+ * The spring cave props, baked once for every area: when some area's look has the grotto cave or
+ * says it needs the spring cave props, or some area has dark water (its glow-plants and soft light).
+ * Null when no area needs them.
+ */
+function bakeSpringCaveProps(
+  scene: Phaser.Scene,
+  areas: readonly Readonly<AreaData>[],
+  bakeScale: number,
+): SpringCaveTextures | null {
+  const needed =
+    areas.map(areaLook).some((look) => look.cave.kind === 'grotto' || look.springCaveProps) ||
+    areas.some((area) => area.layout.darkWater !== undefined);
+  return needed ? bakeSpringCaveTextures(scene, bakeScale) : null;
+}
+
+/** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */
+function areasWithDev(devArea: Readonly<AreaData> | undefined): Readonly<AreaData>[] {
+  if (devArea === undefined || AREAS.some((area) => area.id === devArea.id)) return [...AREAS];
+  return [...AREAS, devArea];
+}
+
 /** Builds every area's zone, bakes every texture at the fitted scale, then starts the title. */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -600,7 +628,7 @@ export class BootScene extends Phaser.Scene {
     const bakeScale = Math.min(VIEW.bakeScaleMax, Math.max(fit.bakeScale, fit.dpr));
     const devArea = this.registry.get(DEV_AREA_REGISTRY_KEY) as Readonly<AreaData> | undefined;
     const devDecorPack = this.registry.get(DEV_DECOR_REGISTRY_KEY) as DecorationPack | undefined;
-    const areas = devArea === undefined ? [...AREAS] : [...AREAS, devArea];
+    const areas = areasWithDev(devArea);
     const zones: Record<string, ZoneLayout> = {};
     for (const area of areas) zones[area.id] = buildZone(area.layout, DEFAULT_ZONE_SEED);
     const zone = zones[CANAL_AREA_ID];
@@ -635,6 +663,7 @@ export class BootScene extends Phaser.Scene {
     const chinampa = bakeChinampaProps(this, areas, bakeScale);
     const movingHazards = bakeMovingHazards(this, areas, bakeScale);
     const mobileSnacks = areas.some(hasMobileSnacks) ? bakeMobileSnackTextures(this, bakeScale) : null;
+    const springCave = bakeSpringCaveProps(this, areas, bakeScale);
     const assets: GameAssets = {
       areas,
       zones,
@@ -654,6 +683,7 @@ export class BootScene extends Phaser.Scene {
       refuge,
       movingHazards,
       mobileSnacks,
+      springCave,
     };
     this.scene.start(SCENE_KEYS.title, assets);
   }

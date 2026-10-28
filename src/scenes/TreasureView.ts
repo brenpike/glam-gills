@@ -2,11 +2,14 @@ import * as Phaser from 'phaser';
 import type { ChinampaTextures } from '../art/chinampaTextures';
 import { GAP_EDGE_FLARE, GAP_EDGE_W, OVERHANG_H, OVERHANG_W } from '../art/drawChinampa';
 import { ROOT_ARCH_ANCHOR_Y } from '../art/drawPond';
+import { ROCK_LEDGE_H, ROCK_LEDGE_W } from '../art/drawSpringCave';
 import type { CaveKind, HabitatLook } from '../art/habitatLook';
 import { DEPTH } from '../art/layers';
 import type { PondTextures } from '../art/pondTextures';
+import type { SpringCaveTextures } from '../art/springCaveTextures';
 import type { TexInfo } from '../art/textures';
 import { treasureById, treasureSlug, type Rarity } from '../logic/catalogue';
+import type { DarkWaterPart } from '../logic/glowPlants';
 import { pastCurrentBand } from '../logic/hiding';
 import { badgeShape, hintSparkleRadius, hintVisible } from '../logic/hints';
 import type { MotionProfile } from '../logic/motion';
@@ -58,6 +61,15 @@ const TWINKLE_COUNT = 3;
 const TWINKLE_SPREAD_PX = 6;
 /** Crumble twinkles at about 12 px: the sparkle art is about 26 px across. */
 const TWINKLE_SCALE = 0.46;
+
+/**
+ * Whether `part` at `at` shows through the area's dark water this frame (glowPlants shownInDark
+ * with the frame's lights). Read every frame, so it may close over the trip's live lights.
+ */
+export type DarkShows = (part: DarkWaterPart, at: Readonly<Point>) => boolean;
+
+/** An area with no dark water: everything shows. */
+const ALWAYS_SHOWN: DarkShows = () => true;
 
 /** One frame of treasure rendering input. `time` is the scene clock in seconds (frozen while paused). */
 export interface TreasureFrame {
@@ -147,9 +159,18 @@ function pondTexturesFor(assets: GameAssets, kind: CaveKind): PondTextures {
   return assets.pond;
 }
 
+/** The baked spring cave props. Throws when they were not baked. */
+function springCaveTexturesFor(assets: GameAssets, what: string): SpringCaveTextures {
+  if (assets.springCave === null) {
+    throw new Error(`TreasureView: ${what} needs the baked spring cave textures`);
+  }
+  return assets.springCave;
+}
+
 /**
  * The back and front of the cave for `look`'s cave kind: the canal's small cave of rocks, the
- * pond's hollow log, the dusk pond's root arch, or the chinampa's root tangle.
+ * pond's hollow log, the dusk pond's root arch, the chinampa's root tangle, or the spring cave's
+ * side grotto.
  */
 function caveTextures(assets: GameAssets, look: HabitatLook): { back: TexInfo; front: TexInfo } {
   const kind = look.cave.kind;
@@ -173,6 +194,8 @@ function caveTextures(assets: GameAssets, look: HabitatLook): { back: TexInfo; f
       }
       return assets.chinampa.rootTangle;
     }
+    case 'grotto':
+      return springCaveTexturesFor(assets, 'a "grotto" cave').grotto;
   }
 }
 
@@ -193,20 +216,32 @@ function chinampaTexturesFor(assets: GameAssets, what: string): ChinampaTextures
 }
 
 /**
- * One overhang sprite at each of the zone's bank overhang rects, stretched to the rect and drawn at
- * the cave front's depth: above the hidden treasure icons (DEPTH.hiddenTreasure) and under the haze,
- * so what is under the bank reads as hidden and tinted, like what is under the reeds. Placed from zone
- * data only; a zone with no overhangs places none.
+ * The overhang texture for `look` and its nominal size: the spring cave's rock ledge for a look with
+ * the spring cave props, else the chinampa's bank overhang.
  */
-function placeBankOverhangs(scene: Phaser.Scene, assets: GameAssets, zone: ZoneLayout): void {
+function overhangArt(assets: GameAssets, look: HabitatLook): { info: TexInfo; w: number; h: number } {
+  if (look.springCaveProps) {
+    return { info: springCaveTexturesFor(assets, 'a rock ledge').rockLedge, w: ROCK_LEDGE_W, h: ROCK_LEDGE_H };
+  }
+  return { info: chinampaTexturesFor(assets, 'a bank overhang').overhang, w: OVERHANG_W, h: OVERHANG_H };
+}
+
+/**
+ * One overhang sprite at each of the zone's bank overhang rects (a rock ledge for a look with the
+ * spring cave props), stretched to the rect and drawn at the cave front's depth: above the hidden
+ * treasure icons (DEPTH.hiddenTreasure) and under the haze, so what is under the bank reads as hidden
+ * and tinted, like what is under the reeds. Placed from zone data only; a zone with no overhangs
+ * places none.
+ */
+function placeBankOverhangs(scene: Phaser.Scene, assets: GameAssets, zone: ZoneLayout, look: HabitatLook): void {
   const overhangs = zone.bankOverhangs;
   if (overhangs === undefined || overhangs.length === 0) return;
-  const info = chinampaTexturesFor(assets, 'a bank overhang').overhang;
+  const { info, w, h } = overhangArt(assets, look);
   for (const rect of overhangs) {
     scene.add
       .image(rect.x0, rect.y0, info.key)
       .setOrigin(info.originNormX, info.originNormY)
-      .setScale((rect.x1 - rect.x0) / OVERHANG_W / info.scale, (rect.y1 - rect.y0) / OVERHANG_H / info.scale)
+      .setScale((rect.x1 - rect.x0) / w / info.scale, (rect.y1 - rect.y0) / h / info.scale)
       .setDepth(DEPTH.caveFront);
   }
 }
@@ -241,15 +276,18 @@ function rarityOf(id: FindId): Rarity {
 
 /**
  * Draws the hidden treasures and their hiding places: the cave (the canal's small cave of rocks or
- * the pond's hollow log on the bed, the dusk pond's root arch under the bank, or the chinampa's root
- * tangle; interior and front), the overhang under each of the zone's overhanging banks, the chinampa
+ * the pond's hollow log on the bed, the dusk pond's root arch under the bank, the chinampa's root
+ * tangle, or the spring cave's side grotto; interior and front), the overhang under each of the
+ * zone's overhanging banks (a rock ledge in the spring cave), the chinampa
  * edges either side of a current of a look with a gap (`HabitatLook.currentGap`), the
  * past-the-current marker, one treasure icon per catalogue find (hidden under cover, or revealed by
  * a crumble), the Dash pots, the hint stars, the dash-needed bubble and pot wobble, the crumble and
  * the pickup pop. Visual only: every timer here is driven by the frame `dt` and the scene clock, so
  * it freezes with the scene, and nothing here changes game state. Every effect reads the current
  * motion setting each frame, so reduced motion applies mid-effect. Cue-object alpha only ever
- * decreases: stars grow in at full alpha and never fade in.
+ * decreases: stars grow in at full alpha and never fade in. Under the area's dark water (`shows`),
+ * a find's icon and glow and its hint star are hidden until a light reaches the spot: the hint
+ * stars draw above the axolotl, so the dark layer cannot cover them.
  */
 export class TreasureView {
   private readonly assets: GameAssets;
@@ -262,6 +300,8 @@ export class TreasureView {
   private placedById: ReadonlyMap<FindId, PlacedFind> = new Map();
   /** Hint range multiplier from the explorer's Treasure sense perk (PRD B7), 1 with none; fixed for the trip. */
   private readonly hintMultiplier: number;
+  /** Whether a part shows through the dark water this frame; everything shows in an area with none. */
+  private readonly shows: DarkShows;
 
   constructor(
     scene: Phaser.Scene,
@@ -270,9 +310,11 @@ export class TreasureView {
     look: HabitatLook,
     placed: readonly PlacedFind[],
     hintMultiplier: number,
+    shows: DarkShows = ALWAYS_SHOWN,
   ) {
     this.assets = assets;
     this.hintMultiplier = hintMultiplier;
+    this.shows = shows;
     const hiding = assets.baked.hiding;
     const baseY = zone.bedTop + BED_SINK_PX;
     const caveX = (zone.cave.x0 + zone.cave.x1) / 2;
@@ -280,7 +322,7 @@ export class TreasureView {
     const cave = caveTextures(assets, look);
     bakedImage(scene, cave.back, caveX, caveY, DEPTH.caveBack);
     bakedImage(scene, cave.front, caveX, caveY, DEPTH.caveFront);
-    placeBankOverhangs(scene, assets, zone);
+    placeBankOverhangs(scene, assets, zone, look);
     if (look.currentGap) for (const gap of zone.currents) placeGapEdges(scene, assets, gap);
     const current = zone.currents[0];
     if (!current) {
@@ -449,7 +491,11 @@ export class TreasureView {
     this.renderPot(sprites, find, frame);
     this.renderBubble(sprites, find, frame);
     this.renderIcon(sprites, find, held, frame);
-    this.renderHint(sprites, find, !held && !revealed, frame);
+    if (!this.shows('find', find)) {
+      sprites.icon.setVisible(false);
+      sprites.glow.setVisible(false);
+    }
+    this.renderHint(sprites, find, !held && !revealed && this.shows('hint-sparkle', find), frame);
   }
 
   /** A sealed pot sits at the spot; a dash-needed bump wobbles it (full motion only). */

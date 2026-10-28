@@ -1,8 +1,9 @@
 /**
  * Spring cave art (issue #77, ND-15 and ND-18; guide 3c, 7 and 10), headless: the row details, the
  * rock ledge, the side grotto, the spring outflow marks, the glow-plant in three states and the
- * soft light. The painters run against a recording context and a stub Path2D, and the Phaser bake
- * runs against a fake scene whose canvases record. No Phaser is loaded.
+ * soft light, and the spring cave rows in the background chunks and their bake. The painters run
+ * against a recording context and a stub Path2D, and the Phaser bake runs against a fake scene whose
+ * canvases record. No Phaser is loaded.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -72,11 +73,15 @@ import {
   type SpringRow,
 } from './drawSpringCave';
 import { SOFT_LIGHT_BAKE_SCALE, SPRING_CAVE_TEX, bakeSpringCaveTextures } from './springCaveTextures';
+import { bedEdgeY, paintBackgroundChunk, type ChunkOptions, type ChunkRow } from './drawScenery';
+import { AREA_LOOK_IDS, habitatLook, type AreaLookId } from './habitatLook';
+import { areaBgKey, areaDeepBgKey, bakeAreaScenery } from './textures';
+import { mulberry32 } from '../logic/rng';
 import { CAVE_TEX } from './drawFinds';
 import type { TexSize } from './canvasKit';
 import { GLOW_PLANTS } from '../logic/glowPlants';
 import { GLOW_PLANT_RADIUS } from '../logic/springCaveLayout';
-import { INK, LW, SKY_HORIZON, SKY_TOP, SURF, VIEW_H, VIEW_W, WHITE } from './palette';
+import { INK, LW, SKY_HORIZON, SKY_TOP, SUN, SURF, VIEW_H, VIEW_W, WHITE } from './palette';
 
 vi.mock('phaser', () => ({}));
 
@@ -490,6 +495,161 @@ describe('row details (guide 7a)', () => {
     expect(signature(details('bottom', true, true))).toBe(signature(details('bottom', true, true)));
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The spring cave rows in the background chunks and their bake
+// ---------------------------------------------------------------------------
+
+/** A spring cave chunk of `row`, recorded, with the number of random draws it made. */
+function springChunk(row: ChunkRow, extra: Partial<ChunkOptions> = {}, look: AreaLookId = 'spring-cave') {
+  let draws = 0;
+  const rand = mulberry32(77);
+  const counted = (): number => {
+    draws++;
+    return rand();
+  };
+  const painted = record((ctx) =>
+    paintBackgroundChunk(ctx, { row, index: 1, hasSun: false, hasBank: false, look, rand: counted, ...extra }),
+  );
+  return { painted, draws };
+}
+
+/** The row details of a chunk at a flat bed edge, recorded. */
+const rowDetailsOf = (row: SpringRow, edgeLeft: boolean, edgeRight: boolean): Painted[] =>
+  record((ctx) => paintSpringRowDetails(ctx, { row, edgeLeft, edgeRight }));
+
+/** The last `tail.length` paints of `painted`, as a signature. */
+const endsWith = (painted: Painted[], tail: Painted[]): string => signature(painted.slice(painted.length - tail.length));
+
+/** The styles only the spring cave rows paint: the rock, the slabs and the sky opening's crack colour. */
+const SPRING_ROW_STYLES: readonly string[] = [SPRING_ROCK, SPRING_ROCK_LIGHT, SPRING_ROCK_DARK, SPRING_BED_SLAB, SPRING_ROCK_CRACK];
+
+describe('spring cave look: its rows and props (issue #77)', () => {
+  it('has the side grotto on the bed, the spring cave rows and the spring cave props', () => {
+    const look = habitatLook('spring-cave');
+    expect(look.cave).toEqual({ kind: 'grotto', anchor: 'bed' });
+    expect(look.rowDetails).toBe('springCave');
+    expect(look.springCaveProps).toBe(true);
+  });
+
+  it('leaves every other look with no row details, no spring cave props and no grotto', () => {
+    for (const id of AREA_LOOK_IDS.filter((other) => other !== 'spring-cave')) {
+      const look = habitatLook(id);
+      expect(look.rowDetails, id).toBe('none');
+      expect(look.springCaveProps, id).toBe(false);
+      expect(look.cave.kind, id).not.toBe('grotto');
+    }
+  });
+});
+
+describe('spring cave rows in the background chunks (guide 7a)', () => {
+  it('paints a rock roof on the top row: no sun and no clouds, so only the rays draw', () => {
+    const spring = springChunk('top', { hasSun: true });
+    expect(spring.draws).toBe(3);
+    expect(spring.painted.some((p) => p.style === SUN)).toBe(false);
+    expect(fills(spring.painted).some((p) => p.style === WHITE)).toBe(false);
+    // The canal's top row keeps its sun, its clouds (two draws each) and its rays.
+    const canal = springChunk('top', { hasSun: true }, 'canal');
+    expect(canal.draws).toBe(9);
+    expect(canal.painted.some((p) => p.style === SUN)).toBe(true);
+  });
+
+  it('paints the top row details last: the sky opening and the lit pool, and a wall at a row end', () => {
+    const plain = springChunk('top').painted;
+    expect(endsWith(plain, rowDetailsOf('top', false, false))).toBe(signature(rowDetailsOf('top', false, false)));
+    const left = springChunk('top', { edgeLeft: true }).painted;
+    expect(endsWith(left, rowDetailsOf('top', true, false))).toBe(signature(rowDetailsOf('top', true, false)));
+    const right = springChunk('top', { edgeRight: true }).painted;
+    expect(endsWith(right, rowDetailsOf('top', false, true))).toBe(signature(rowDetailsOf('top', false, true)));
+  });
+
+  it('paints the rock bed on the bottom row last, its stones on the chunk\'s own bed edge', () => {
+    const index = 3;
+    const bedEdge = (x: number): number => bedEdgeY(index * VIEW_W + x);
+    const tail = record((ctx) => paintSpringRowDetails(ctx, { row: 'bottom', edgeLeft: false, edgeRight: true, bedEdge }));
+    const bottom = springChunk('bottom', { index, edgeRight: true }).painted;
+    expect(endsWith(bottom, tail)).toBe(signature(tail));
+    // Not the flat default edge: the stones follow the drawn bed.
+    const flat = record((ctx) => paintSpringRowDetails(ctx, { row: 'bottom', edgeLeft: false, edgeRight: true }));
+    expect(signature(tail)).not.toBe(signature(flat));
+  });
+
+  it('paints a middle chunk as flat deep water only, with no wall when it has no row end', () => {
+    const middle = springChunk('middle').painted;
+    expect(middle).toHaveLength(1);
+    expect(middle[0].style).toBe(habitatLook('spring-cave').water.deep);
+    expect(middle[0].cmds).toEqual([['fillRect', 0, 0, VIEW_W, VIEW_H]]);
+  });
+
+  it('paints a one-row chunk as both: the opening and the pool, then the rock bed and the walls', () => {
+    const bedEdge = (x: number): number => bedEdgeY(VIEW_W + x);
+    const tail = [
+      ...rowDetailsOf('top', false, false),
+      ...record((ctx) => paintSpringRowDetails(ctx, { row: 'bottom', edgeLeft: true, edgeRight: true, bedEdge })),
+    ];
+    const single = springChunk('single', { edgeLeft: true, edgeRight: true }).painted;
+    expect(endsWith(single, tail)).toBe(signature(tail));
+  });
+
+  it.each(['canal', 'pond', 'pond-dusk', 'chinampa'] as const)('paints none of the spring cave rows in the %s look', (look) => {
+    for (const row of ['single', 'top', 'middle', 'bottom'] as const) {
+      const painted = springChunk(row, { edgeLeft: true, edgeRight: true }, look).painted;
+      for (const style of SPRING_ROW_STYLES) expect(styleSet(painted).has(style), `${look} ${row} ${style}`).toBe(false);
+    }
+  });
+
+  it('uses no randomness for the row details: the draws are the look\'s own', () => {
+    expect(springChunk('bottom').draws).toBe(springChunk('bottom', { edgeLeft: true, edgeRight: true }).draws);
+    const bed = habitatLook('spring-cave').bed;
+    // The bed's mud (4 draws each) and pebbles (5 draws each) only: a bottom chunk has no rays.
+    expect(springChunk('bottom').draws).toBe(bed.mudCount * 4 + bed.pebbleCount * 5);
+  });
+});
+
+describe('bakeAreaScenery in the spring cave look (5 x 3)', () => {
+  const bakeDescent = () => {
+    const created: { key: string; w: number; h: number }[] = [];
+    vi.stubGlobal('Path2D', LogPath);
+    const scenery = bakeAreaScenery(fakeScene(created), {
+      keyPrefix: 'spring-cave-1:',
+      bakeScale: 2,
+      bgScale: 2,
+      screensWide: 5,
+      screensTall: 3,
+      bankChunks: [],
+      sunChunk: 0,
+      rand: mulberry32(5),
+      reeds: [],
+      pads: [],
+      look: 'spring-cave',
+    });
+    return { scenery, created };
+  };
+
+  it('bakes 11 chunks: one per column on the top and bottom rows, and one shared middle chunk', () => {
+    const { scenery, created } = bakeDescent();
+    expect(created).toHaveLength(11);
+    expect(scenery.bg).toHaveLength(3);
+    for (const row of scenery.bg) expect(row).toHaveLength(5);
+    for (const c of [0, 1, 2, 3, 4]) {
+      expect(scenery.bg[0][c].key).toBe(areaBgKey('spring-cave-1:', 0, c));
+      expect(scenery.bg[2][c].key).toBe(areaBgKey('spring-cave-1:', 2, c));
+      expect(scenery.bg[1][c]).toBe(scenery.bg[1][0]);
+    }
+    expect(scenery.bg[1][0].key).toBe(areaDeepBgKey('spring-cave-1:'));
+    expect(new Set(created.map((c) => c.key)).size).toBe(11);
+  });
+
+  it('bakes every chunk at the chunk size, anchored top-left', () => {
+    const { scenery } = bakeDescent();
+    for (const info of scenery.bg.flat()) {
+      expect(info.w).toBe(VIEW_W);
+      expect(info.h).toBe(VIEW_H);
+      expect(info.originNormX).toBe(0);
+      expect(info.originNormY).toBe(0);
+    }
   });
 });
 

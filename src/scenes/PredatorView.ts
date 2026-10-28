@@ -122,7 +122,7 @@ function axolotlSizeFactor(axolotl: Phaser.GameObjects.Container, bake: AxolotlR
 
 /**
  * Draws the tilapia, its telegraph, the leg-loss poof (for a hit from any source: a predator, a
- * hazard or a moving hazard spawn), regrow sparkles, the snack speed-up star, the Shell sparkle,
+ * hazard or a moving hazard spawn, a crayfish pinch included), regrow sparkles, the snack speed-up star, the Shell sparkle,
  * the protected halo and the carry-home bubble. Visual only: every timer here is driven by the
  * frame `dt`, so it freezes with the scene, and nothing here changes game state.
  *
@@ -135,7 +135,7 @@ export class PredatorView {
   private readonly assets: GameAssets;
   /**
    * Sprites of each encounter predator, in `predators` order; null for every species but the
-   * tilapia (HeronView, GarterSnakeView and CarpView draw theirs).
+   * tilapia (HeronView, GarterSnakeView, CarpView and CrayfishView draw theirs).
    */
   private readonly predators: (TilapiaSprites | null)[];
   private readonly poofs: LegEffect[];
