@@ -22,8 +22,8 @@ const LIGHT_FIELDS = 3;
 /** The part of the world the camera shows: Phaser's `camera.worldView` fits. */
 export type DarkCaveViewRect = Readonly<Pick<Phaser.Geom.Rectangle, 'x' | 'y' | 'width' | 'height'>>;
 
-/** One frame of dark cave rendering input. */
-export interface DarkCaveFrame {
+/** One frame's input for the lights through the dark water. */
+export interface DarkCaveLightFrame {
   /** The axolotl's body centre. */
   axolotl: Readonly<Point>;
   /** The exit's centre. */
@@ -34,8 +34,6 @@ export interface DarkCaveFrame {
   motion: Readonly<GlowMotion>;
   /** Scene clock in seconds, for a new light growing in. */
   time: number;
-  /** The part of the world the camera shows. */
-  view: DarkCaveViewRect;
 }
 
 function softLightTexture(assets: GameAssets): TexInfo {
@@ -55,10 +53,12 @@ function viewMeetsDark(view: DarkCaveViewRect, dark: Readonly<DarkWater>): boole
  * DEPTH.darkWater, the SPRING_DARK colour over the dark water rect, with a soft hole erased for each
  * light darkLights gives: the axolotl's own glow, the exit's faint glow (so the exit, drawn under the
  * layer, always shows) and each lit glow-plant. A newly lit plant's light grows in over
- * `motion.lightFadeIn` (lightShare), so under reduced motion it appears at once. The layer is redrawn
- * only when the camera view meets the dark water and a light has moved, grown or appeared since the
- * last draw. Per frame it allocates darkLights' result and, on a new light, one lit-time entry.
- * Visual only: nothing here changes game state. Throws when the spring cave textures are missing.
+ * `motion.lightFadeIn` (lightShare), so under reduced motion it appears at once. `lights` gives the
+ * frame's lights with that growth applied, and the scene uses the same list for the dark rule
+ * (shownInDark), so a hint star never shows past the edge of a light still growing in. The layer is
+ * redrawn only when the camera view meets the dark water and a light has moved, grown or appeared
+ * since the last draw. Per frame it allocates darkLights' result and, on a new light, one lit-time
+ * entry. Visual only: nothing here changes game state. Throws when the spring cave textures are missing.
  */
 export class DarkCaveView {
   private readonly layer: Phaser.GameObjects.RenderTexture;
@@ -90,11 +90,18 @@ export class DarkCaveView {
       .setOrigin(this.lightInfo.originNormX, this.lightInfo.originNormY);
   }
 
-  /** Draws one frame: redraws the layer only when the view meets the dark water and the lights changed. */
-  render(frame: DarkCaveFrame): void {
+  /**
+   * This frame's lights (darkLights), each plant light's radius scaled by how far it has grown in.
+   * Call once per frame, before `render` and before any dark rule check that reads them.
+   */
+  lights(frame: DarkCaveLightFrame): DarkLight[] {
     this.noteNewLights(frame.lit, frame.time);
-    if (!viewMeetsDark(frame.view, this.dark)) return;
-    const lights = this.lightsNow(frame);
+    return this.lightsNow(frame);
+  }
+
+  /** Draws one frame from `lights`: redraws the layer only when `view` meets the dark water and the lights changed. */
+  render(lights: readonly DarkLight[], view: DarkCaveViewRect): void {
+    if (!viewMeetsDark(view, this.dark)) return;
     if (this.drawnLights !== null && sameLights(this.drawnLights, lights)) return;
     this.drawLayer(lights);
   }
@@ -113,7 +120,7 @@ export class DarkCaveView {
   }
 
   /** darkLights for this frame, each plant light's radius scaled by how far it has grown in. */
-  private lightsNow(frame: DarkCaveFrame): DarkLight[] {
+  private lightsNow(frame: DarkCaveLightFrame): DarkLight[] {
     const lights = darkLights({ axolotl: frame.axolotl, exit: frame.exit, elements: this.elements, lit: frame.lit });
     // INVARIANT: darkLights gives LEADING_LIGHTS lights, then one per lit glow-plant in element order,
     // which is plantIds order filtered by `lit`.

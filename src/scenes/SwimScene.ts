@@ -50,7 +50,6 @@ import {
 } from '../logic/gameEvents';
 import { isSnagged, snagSwimTuning } from '../logic/ghostNets';
 import {
-  darkLights,
   glowMotion,
   glowPlants,
   shownInDark,
@@ -332,7 +331,10 @@ export class SwimScene extends Phaser.Scene {
   private glowPlantView: GlowPlantView | null = null;
   /** The glow-plant motion for the reduced-motion preference, worked out again only when it changes. */
   private glowPlantMotion: GlowMotion = glowMotion(false);
-  /** This frame's lights through the dark water (darkLights); empty in an area with no dark water. */
+  /**
+   * This frame's lights through the dark water (DarkCaveView.lights: darkLights, with a new plant
+   * light still growing in); empty in an area with no dark water.
+   */
   private darkLightsNow: DarkLight[] = [];
   /** The tadpole and shrimp poses, or null in an area with no mobile snacks. */
   private mobileSnackView: MobileSnackView | null = null;
@@ -579,9 +581,9 @@ export class SwimScene extends Phaser.Scene {
    * GlowPlantView are made once per trip, and only in an area with a crayfish, dark water or
    * glow-plants. CrayfishView reuses its sprites and allocates only its render argument object;
    * GlowPlantView allocates only its render argument object. In an area with dark water, each frame
-   * builds darkLights' result once for the treasure and snack star dark rule, and DarkCaveView builds
-   * its own and its render argument object and redraws its layer only when a light moved, grew or
-   * appeared while the camera view meets the dark water. The glow-plant motion object is worked out
+   * DarkCaveView builds darkLights' result and its light argument object once, the dark layer and the
+   * treasure and snack star dark rule share that one list, and the layer is redrawn only when a light
+   * moved, grew or appeared while the camera view meets the dark water. The glow-plant motion object is worked out
    * again only when reduced motion changes.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
@@ -1466,12 +1468,14 @@ export class SwimScene extends Phaser.Scene {
    * with dark water; every other area calls nothing here.
    */
   private updateDarkLights(): void {
-    if (this.trip.darkWater === null) return;
-    this.darkLightsNow = darkLights({
+    if (this.darkCaveView === null) return;
+    // One list for the dark layer and the dark rule, so a hint star shows only where the drawn light reaches.
+    this.darkLightsNow = this.darkCaveView.lights({
       axolotl: this.swim,
       exit: this.area.exit,
-      elements: this.trip.elements,
       lit: this.trip.litGlowPlants,
+      motion: this.glowPlantMotion,
+      time: this.clock,
     });
   }
 
@@ -1482,14 +1486,7 @@ export class SwimScene extends Phaser.Scene {
    */
   private renderDarkCave(): void {
     const lit = this.trip.litGlowPlants;
-    this.darkCaveView?.render({
-      axolotl: this.swim,
-      exit: this.area.exit,
-      lit,
-      motion: this.glowPlantMotion,
-      time: this.clock,
-      view: this.cameras.main.worldView,
-    });
+    this.darkCaveView?.render(this.darkLightsNow, this.cameras.main.worldView);
     this.glowPlantView?.render({
       lit,
       hint: this.snapshot.glowPlantHint,
