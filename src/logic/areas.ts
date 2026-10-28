@@ -9,6 +9,7 @@ import type { PredatorRoute } from './predators';
 import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
 import { SNACK_DART, type SnackDartRule } from './snackDart';
+import { SPRING_CAVE_AREA_ID, SPRING_CAVE_LAYOUT } from './springCaveLayout';
 import { bestStarsFor, starCount, type AreaStarsRecord } from './stars';
 import { CANAL_AREA_ID, CANAL_LAYOUT, type AreaLayoutData, type Point } from './zone';
 
@@ -199,8 +200,39 @@ export const CHINAMPA_2_AREA: Readonly<AreaData> = Object.freeze({
   snackDart: SNACK_DART,
 });
 
+/** Area 6, the spring cave, the first descent, where the crayfish walk the floor (issue #77). */
+export const SPRING_CAVE_AREA: Readonly<AreaData> = Object.freeze({
+  id: SPRING_CAVE_AREA_ID,
+  number: 6,
+  habitatId: SPRING_CAVE_HABITAT.id,
+  layout: SPRING_CAVE_LAYOUT,
+  /**
+   * Provisional exit at the dark bottom of the descent, in the bottom right, at the end of the main
+   * path (issue #77, ND-2): inside the swim bounds and the dark water, out of every predator's
+   * reach, clear of every pole sweep, the current and the grotto, and clear of every hiding spot by
+   * more than the exit radius plus the find pickup radius.
+   */
+  exit: Object.freeze({ x: 2290, y: 940, radius: 40 }),
+  specialTreasureId: 'spring-cave/fossil-ammonite',
+  /**
+   * Provisional drift, a little faster than Area 5 (PRD H4; issue #77, ND-10): the same amplitudes
+   * with shorter periods, peak speed about 16 px/s. That is below the 17 px/s a one-leg axolotl
+   * makes against the spring outflow and at most half the 40 px/s Snack magnet pull. No snacks dart
+   * once: the shrimp replace the one-time darters.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 7.4, periodY: 5.92 }),
+  strandingChance: 0.3,
+});
+
 /** Every area, in area-number order. */
-export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA]);
+export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
+  CANAL_AREA,
+  POND_AREA,
+  POND_2_AREA,
+  CHINAMPA_AREA,
+  CHINAMPA_2_AREA,
+  SPRING_CAVE_AREA,
+]);
 
 /** The area with this id, or undefined when there is none. */
 export function areaById(id: string): Readonly<AreaData> | undefined {
