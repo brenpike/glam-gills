@@ -1393,17 +1393,7 @@ describe('footprints (guide 6i), ink included, and the frame (guide 11)', { time
     // The outline ink is LW outside the head and torso ellipses; LW / 2 in from its outer edge is LW / 2 outside them.
     const paints = bodyPaints('neck', DEFAULT_ART_LOOK);
     const points = inkPoints(paints);
-    const margins = EVERY_BODY_LOOK.map((look) => {
-      const torso = axolotlBodyGeometry(look).torso;
-      const margin = Math.min(
-        ...points.map(({ p, hw }) =>
-          Math.max(
-            ...[HEAD_ELLIPSE, torso].map((e) => LW / 2 - hw - (inEllipse(e, p.x, p.y) ? -1 : 1) * ellipseGap(e, p.x, p.y)),
-          ),
-        ),
-      );
-      return { id: lookId(look), value: margin };
-    });
+    const margins = outlineMargins(points);
     const least = leastOver(margins);
     expect(least.value, least.id).toBeGreaterThanOrEqual(0);
     expect(least.value).toBeCloseTo(0.1, 2);
@@ -2121,6 +2111,22 @@ function frameExtent(frame: WearFrame, paints: readonly Paint[]): Bounds {
 /** The least of `values` over every look, with the look it was found on. */
 function leastOver(values: readonly { id: string; value: number }[]): { id: string; value: number } {
   return values.reduce((a, b) => (b.value < a.value ? b : a));
+}
+
+/** Each look's least margin of `points` inside LW / 2 of the head or torso outline, the head and each distinct torso worked out once (issue #140). */
+function outlineMargins(points: readonly { p: Pt; hw: number }[]): { id: string; value: number }[] {
+  const marginTo = (e: BodyEllipse, p: Pt, hw: number): number => LW / 2 - hw - (inEllipse(e, p.x, p.y) ? -1 : 1) * ellipseGap(e, p.x, p.y);
+  const headMargins = points.map(({ p, hw }) => marginTo(HEAD_ELLIPSE, p, hw));
+  const torsoMarginsByKey = new Map<string, number[]>();
+  const torsoMarginsOf = (torso: BodyEllipse): number[] => {
+    const key = [torso.cx, torso.cy, torso.rx, torso.ry].join(' ');
+    if (!torsoMarginsByKey.has(key)) torsoMarginsByKey.set(key, points.map(({ p, hw }) => marginTo(torso, p, hw)));
+    return torsoMarginsByKey.get(key)!;
+  };
+  return EVERY_BODY_LOOK.map((look) => {
+    const torsoMargins = torsoMarginsOf(axolotlBodyGeometry(look).torso);
+    return { id: lookId(look), value: Math.min(...headMargins.map((head, i) => Math.max(head, torsoMargins[i]))) };
+  });
 }
 
 /** Bare leg ink (guide 6e): the tube, colour 8 with 3.1 of ink each side, and each toe, colour 4.2 with 2.6 each side. */
@@ -2992,15 +2998,7 @@ describe('pond Wearables (issue #75): zones, footprints and layers', { timeout: 
     // The mouth paints over its front: it runs under the mouth zone.
     expect(paints.some((p) => reachesBox(regionOf(p), MOUTH_ZONE))).toBe(true);
     const points = inkPoints(paints);
-    const margins = EVERY_BODY_LOOK.map((look) => {
-      const torso = axolotlBodyGeometry(look).torso;
-      const margin = Math.min(
-        ...points.map(({ p, hw }) =>
-          Math.max(...[HEAD_ELLIPSE, torso].map((e) => LW / 2 - hw - (inEllipse(e, p.x, p.y) ? -1 : 1) * ellipseGap(e, p.x, p.y))),
-        ),
-      );
-      return { id: lookId(look), value: margin };
-    });
+    const margins = outlineMargins(points);
     const least = leastOver(margins);
     expect(least.value, least.id).toBeGreaterThanOrEqual(0);
   });
@@ -3966,15 +3964,7 @@ describe('chinampa Area 4 Wearables (issue #76): zones, footprints and layers', 
     expect(heartGap).toBeGreaterThanOrEqual(0.3);
     // Only the lower edge can reach the outline's outer half (the upper edge is held by the zones above).
     const points = inkPoints(paints).filter(({ p, hw }) => p.y + hw >= 17);
-    const margins = EVERY_BODY_LOOK.map((look) => {
-      const torso = axolotlBodyGeometry(look).torso;
-      const margin = Math.min(
-        ...points.map(({ p, hw }) =>
-          Math.max(...[HEAD_ELLIPSE, torso].map((e) => LW / 2 - hw - (inEllipse(e, p.x, p.y) ? -1 : 1) * ellipseGap(e, p.x, p.y))),
-        ),
-      );
-      return { id: lookId(look), value: margin };
-    });
+    const margins = outlineMargins(points);
     const least = leastOver(margins);
     expect(least.value, least.id).toBeGreaterThanOrEqual(0);
   });
@@ -4496,15 +4486,7 @@ describe('chinampa Area 5 Wearables (issue #103): zones, footprints and layers',
     expect(heartGap).toBeGreaterThanOrEqual(-TOL);
     // Only the lower edge can reach the outline's outer half (the upper edge is held by the zones above).
     const points = inkPoints(paints).filter(({ p, hw }) => p.y + hw >= 17);
-    const margins = EVERY_BODY_LOOK.map((look) => {
-      const torso = axolotlBodyGeometry(look).torso;
-      const margin = Math.min(
-        ...points.map(({ p, hw }) =>
-          Math.max(...[HEAD_ELLIPSE, torso].map((e) => LW / 2 - hw - (inEllipse(e, p.x, p.y) ? -1 : 1) * ellipseGap(e, p.x, p.y))),
-        ),
-      );
-      return { id: lookId(look), value: margin };
-    });
+    const margins = outlineMargins(points);
     const least = leastOver(margins);
     expect(least.value, least.id).toBeGreaterThanOrEqual(0);
   });
