@@ -113,7 +113,7 @@ function todaysEntry(area: Readonly<AreaData>, unlocked: number): AreaMapEntry {
   return { ...entry(area.number, habitat.id, habitat.name, unlocked), id: area.id };
 }
 
-/** Today's areas from the area table, in their three habitats, Areas 1 to 3 unlocked. */
+/** Today's areas from the area table, in their four habitats, Areas 1 to 3 unlocked. */
 const TODAYS_AREAS: readonly AreaMapEntry[] = AREAS.map((area) => todaysEntry(area, 3));
 
 const ENTRY_SETS: readonly (readonly AreaMapEntry[])[] = [ONE_AREA, TODAYS_AREAS, tenAreas(), PRD_AREAS];
@@ -385,21 +385,23 @@ describe('areaMapLayout', () => {
       },
     };
     areaMapLayout(LARGE, TODAYS_AREAS, recording);
-    expect(calls.slice(0, 3)).toEqual([
+    expect(calls.slice(0, 4)).toEqual([
       ['Canal: Area 1', AREA_CELL_W + 2 * PAD],
       ['Lily pad pond: Areas 2 and 3', AREA_MARKER_PX + 32 + AREA_CELL_W + 2 * PAD],
       ['Chinampa gardens: Areas 4 and 5', AREA_MARKER_PX + 32 + AREA_CELL_W + 2 * PAD],
+      ['Spring cave: Area 6', AREA_CELL_W + 2 * PAD],
     ]);
   });
 
-  it.each(VIEWS)("labels today's three habitat runs once each, in area order, on $cssW x $cssH", (view) => {
+  it.each(VIEWS)("labels today's four habitat runs once each, in area order, on $cssW x $cssH", (view) => {
     const layout = areaMapLayout(view, TODAYS_AREAS, MEASURE);
     expect(layout.fits).toBe(true);
-    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2']);
+    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2', 'spring-cave-1']);
     expect(layout.habitats.map((habitat) => [habitat.id, habitat.name])).toEqual([
       ['canal', 'Canal'],
       ['pond', 'Lily pad pond'],
       ['chinampa', 'Chinampa gardens'],
+      ['spring-cave', 'Spring cave'],
     ]);
   });
 
@@ -532,8 +534,11 @@ describe('areaMapLayout against art guide 8 arithmetic (PRD N2 areas)', () => {
 /** Today's first four areas (to Area 4), Area 1 unlocked. */
 const FOUR_AREAS: readonly AreaMapEntry[] = AREAS.slice(0, 4).map((area) => todaysEntry(area, 1));
 
-/** Today's five areas, Area 1 unlocked. */
-const FIVE_AREAS: readonly AreaMapEntry[] = AREAS.map((area) => todaysEntry(area, 1));
+/** Today's first five areas (to Area 5), Area 1 unlocked. */
+const FIVE_AREAS: readonly AreaMapEntry[] = AREAS.slice(0, 5).map((area) => todaysEntry(area, 1));
+
+/** Today's six areas (to Area 6), Area 1 unlocked. */
+const SIX_AREAS: readonly AreaMapEntry[] = AREAS.slice(0, 6).map((area) => todaysEntry(area, 1));
 
 /** ND-3 viewports with the fit step pinned where the estimate has margin, else null (fits only). */
 const ND3_VIEWS: readonly { view: HudView; fitStep: number | null }[] = [
@@ -548,6 +553,12 @@ const ND3_VIEWS: readonly { view: HudView; fitStep: number | null }[] = [
 const ND3_CASES = ND3_VIEWS.flatMap(({ view, fitStep }) => [
   { view, fitStep, entries: FOUR_AREAS, labels: ['Canal: Area 1', 'Lily pad pond: Areas 2 and 3', 'Chinampa gardens: Area 4'] },
   { view, fitStep, entries: FIVE_AREAS, labels: ['Canal: Area 1', 'Lily pad pond: Areas 2 and 3', 'Chinampa gardens: Areas 4 and 5'] },
+  {
+    view,
+    fitStep,
+    entries: SIX_AREAS,
+    labels: ['Canal: Area 1', 'Lily pad pond: Areas 2 and 3', 'Chinampa gardens: Areas 4 and 5', 'Spring cave: Area 6'],
+  },
 ]);
 
 describe('areaMapLayout habitat labels and panels (issue #113, ND-3)', () => {

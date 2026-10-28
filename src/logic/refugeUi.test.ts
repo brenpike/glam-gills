@@ -63,7 +63,7 @@ const HABITAT_NAMES: Readonly<Record<string, string>> = Object.freeze({
   canal: 'Canal',
   pond: 'Lily pad pond',
   chinampa: 'Chinampa gardens',
-  cave: 'Spring cave',
+  'spring-cave': 'Spring cave',
   deep: 'Deep canal',
 });
 
@@ -72,7 +72,7 @@ const AREA_LINES: Readonly<Record<string, string>> = Object.freeze({
   canal: 'Area 1',
   pond: 'Areas 2 and 3',
   chinampa: 'Areas 4 and 5',
-  cave: 'Areas 6 and 7',
+  'spring-cave': 'Areas 6 and 7',
   deep: 'Areas 8 to 10',
 });
 
@@ -173,6 +173,7 @@ const ENTRY_SETS: readonly (readonly RefugeEntry[])[] = [
   todaysSections(0),
   todaysSections(1),
   todaysSections(3),
+  todaysSections(4),
   fiveSections(0),
   fiveSections(2),
   fiveSections(5),
@@ -537,15 +538,17 @@ describe('refugeLayout at the smallest canvases', () => {
   });
 
   it.each([SMALL_LANDSCAPE, SMALL_PORTRAIT])(
-    "fits today's three sections at $cssW x $cssH, clean or not, and shows the last one whole two pans on",
+    "fits today's four sections at $cssW x $cssH, clean or not, and shows the third whole two pans on and the last three pans on",
     (view) => {
-      for (const clean of [0, 1, 2, 3]) {
+      for (const clean of [0, 1, 2, 3, 4]) {
         const entries = todaysSections(clean);
         const layout = layoutOf(view, entries);
         expect(layout.fits, `clean=${clean}`).toBe(true);
-        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa']);
+        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
         const twoPans = panRefugeScroll(layout, panRefugeScroll(layout, 0, 1), 1);
         expect(sectionShows(layout, 2, twoPans), `clean=${clean}`).toBe(true);
+        const threePans = panRefugeScroll(layout, twoPans, 1);
+        expect(sectionShows(layout, 3, threePans), `clean=${clean}`).toBe(true);
       }
     },
   );

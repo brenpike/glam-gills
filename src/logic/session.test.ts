@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, POND_2_AREA, POND_AREA } from './areas';
+import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_AREA } from './areas';
 import { DEV_TEST_AREA } from './devAreas';
 import { DEFAULT_LOOK, LOOK_FIELDS, rescuedLook, type AxolotlLook, type AxolotlSex } from './axolotlLook';
 import { NAME_MAX, nameFits, nameLength, suggestedNamesFor } from './axolotlNames';
@@ -79,6 +79,7 @@ const POND_ID = POND_AREA.id;
 const POND_2_ID = POND_2_AREA.id;
 const CHINAMPA_ID = CHINAMPA_AREA.id;
 const CHINAMPA_2_ID = CHINAMPA_2_AREA.id;
+const SPRING_CAVE_ID = SPRING_CAVE_AREA.id;
 const LILY_PAD = 'pond/lily-pad';
 
 /** Steps the trip once with the axolotl at `pos`. */
@@ -279,6 +280,7 @@ describe('createSession', () => {
         'pond-2': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'chinampa-1': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'chinampa-2': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
+        'spring-cave-1': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
       },
     });
     expect(STARTER_AXOLOTL_ID).toBe('starter');
@@ -1582,6 +1584,18 @@ describe('per-area memory (#73)', () => {
     expect(tripStart(withNet, 0, CHINAMPA_2_ID).factCardsSeen).toEqual(['tilapia', 'ghost-net', 'garter-snake', 'water-hyacinth']);
   });
 
+  it('keeps the crayfish met in Area 6 after the Area 5 cards, in area-table order', () => {
+    const area6First = recordTripEnd(withStarter(), {
+      ...record([], 1),
+      areaId: SPRING_CAVE_ID,
+      met: ['crayfish', 'tilapia'],
+    });
+    expect(area6First.hub.metHazards).toEqual(['tilapia', 'crayfish']);
+    const withArea5 = recordTripEnd(area6First, { ...record([], 2), areaId: CHINAMPA_2_ID, met: ['water-hyacinth', 'garter-snake'] });
+    expect(withArea5.hub.metHazards).toEqual(['tilapia', 'garter-snake', 'water-hyacinth', 'crayfish']);
+    expect(tripStart(withArea5, 0, SPRING_CAVE_ID).factCardsSeen).toEqual(['tilapia', 'garter-snake', 'water-hyacinth', 'crayfish']);
+  });
+
   it('keeps an Area 4 trip in its own memory, apart from Area 3', () => {
     const pond2Trip = recordTripEnd(withStarter(), { ...record([], 13, ['pond-2/snack-1']), areaId: POND_2_ID });
     const chinampaTrip = recordTripEnd(pond2Trip, { ...record([], 17, ['snack-4']), areaId: CHINAMPA_ID });
@@ -1682,12 +1696,13 @@ describe('Start over (#73)', () => {
     const fresh = createSession();
     expect(fresh.hub.lastAreaId).toBe(CANAL_AREA_ID);
     expect(fresh.hub.metHazards).toEqual([]);
-    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID]);
+    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID, SPRING_CAVE_ID]);
     expect(fresh.areas.canal).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[CHINAMPA_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[CHINAMPA_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
+    expect(fresh.areas[SPRING_CAVE_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
   });
 });
 

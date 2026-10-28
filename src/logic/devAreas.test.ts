@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, CHINAMPA_HABITAT, areaById, threatIds, type AreaData } from './areas';
+import { AREAS, CANAL_AREA, CHINAMPA_HABITAT, SPRING_CAVE_AREA, areaById, threatIds, type AreaData } from './areas';
 import { CANAL_TREASURES, CHINAMPA_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
 import {
   createCollectibles,
@@ -104,6 +104,23 @@ describe('DEV_AREAS_MARK', () => {
   });
 });
 
+describe('devAreaById', () => {
+  it('finds a real area by id after the dev areas, so the area flag can swim Area 6', () => {
+    expect(devAreaById('spring-cave-1')).toBe(SPRING_CAVE_AREA);
+    expect(devAreaById(CANAL_AREA.id)).toBe(CANAL_AREA);
+  });
+
+  it('finds every real area, and leaves DEV_AREAS without them', () => {
+    for (const area of AREAS) expect(devAreaById(area.id)).toBe(area);
+    expect(DEV_AREAS).toEqual([DEV_TEST_AREA, DEV_DANGER_AREA]);
+  });
+
+  it('is undefined for an id that is neither a dev area nor a real area', () => {
+    expect(devAreaById('nowhere')).toBeUndefined();
+    expect(devAreaById('')).toBeUndefined();
+  });
+});
+
 describe('DEV_TEST_AREA', () => {
   it('is area 99 in the canal habitat, 6 x 2 screens', () => {
     expect(DEV_TEST_AREA.id).toBe('dev-test-area');
@@ -122,7 +139,6 @@ describe('DEV_TEST_AREA', () => {
 
   it('is found by devAreaById and listed in DEV_AREAS', () => {
     expect(devAreaById('dev-test-area')).toBe(DEV_TEST_AREA);
-    expect(devAreaById('canal')).toBeUndefined();
     expect(DEV_AREAS).toEqual([DEV_TEST_AREA, DEV_DANGER_AREA]);
   });
 

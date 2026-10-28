@@ -2,7 +2,7 @@
  * Dev and test areas: area data that never joins AREAS. Imported only by tests and by the dev
  * build's area flag, so none of it ships in the production build.
  */
-import { CANAL_AREA, CHINAMPA_HABITAT, type AreaData } from './areas';
+import { CANAL_AREA, CHINAMPA_HABITAT, areaById, type AreaData } from './areas';
 import { CANAL_TREASURES, CHINAMPA_TREASURES } from './catalogue';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, NetDrift } from './hazards';
@@ -375,7 +375,10 @@ export const DEV_DANGER_AREA: Readonly<AreaData> = Object.freeze({
 /** Every dev and test area: the dev test area, then the dev danger area. */
 export const DEV_AREAS: readonly Readonly<AreaData>[] = Object.freeze([DEV_TEST_AREA, DEV_DANGER_AREA]);
 
-/** The dev area with this id, or undefined when there is none. */
+/**
+ * The dev area with this id, else the real area with this id (so the dev build's area flag can swim
+ * a real area such as `spring-cave-1`), or undefined when there is neither. Dev areas come first.
+ */
 export function devAreaById(id: string): Readonly<AreaData> | undefined {
-  return DEV_AREAS.find((area) => area.id === id);
+  return DEV_AREAS.find((area) => area.id === id) ?? areaById(id);
 }
