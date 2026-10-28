@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-10-28
+
 ### Added
 
 - Area 6, the Spring cave, is a new habitat with its own place on the area map and its own music. It is 5 screens wide and 3 screens tall, and you swim down into the cave to find the exit (#77).
