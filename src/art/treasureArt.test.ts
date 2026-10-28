@@ -13,6 +13,7 @@ import {
   CHINAMPA_TREASURES,
   POND_2_TREASURES,
   POND_TREASURES,
+  SPRING_CAVE_2_TREASURES,
   SPRING_CAVE_TREASURES,
   isDecoration,
   placementKind,
@@ -90,6 +91,10 @@ import {
   decorationBaseOffset,
   wideDecorationTextureSize,
   type TreasureIconSlug,
+  GEMSTONE_CAPE_STONES,
+  GOGGLES_LENS,
+  LANTERN_FLAME,
+  STALACTITE_GLOW,
 } from './drawTreasures';
 import {
   bakeDevDecorations,
@@ -188,6 +193,26 @@ import {
   WATER_LILY_SHIRT_FILL,
   WIND_CHIME_BAR,
   WIND_CHIME_HOOK,
+  BUBBLE_FILL,
+  BUBBLE_MACHINE_FILL,
+  BUBBLE_MACHINE_NOZZLE,
+  BUBBLE_STONE_FILL,
+  CLAY_POT_FILL,
+  CLIMBING_HELMET_FILL,
+  GEMSTONE_CAPE_FILL,
+  GOGGLES_FRAME,
+  GOGGLES_STRAP,
+  LANTERN_FRAME,
+  LANTERN_GLASS,
+  MOSSY_ROCK_FILL,
+  MOSSY_ROCK_MOSS,
+  PEBBLE_NECKLACE_CORD,
+  PEBBLE_NECKLACE_STONE,
+  STALACTITE_HOOK,
+  STALACTITE_ROCK,
+  WATERFALL_BASE,
+  WATERFALL_ROCK,
+  WATERFALL_WATER,
   type BadgeShape,
 } from './treasurePalette';
 
@@ -225,7 +250,7 @@ const GREYSCALE_PAIRS: readonly [BadgeShape, BadgeShape, number][] = [
 ];
 /** The '?' tube width at every size. */
 const Q_LW = 2.4;
-/** The icons whose outer silhouette includes coloured tubes (cord, glasses band, wreath, lantern tassel, sunflower glasses, pendant chain). */
+/** The icons whose outer silhouette includes coloured tubes (cord, glasses band, wreath, lantern tassel, sunflower glasses, pendant chain, pebble cord). */
 const TUBE_SLUGS: readonly TreasureIconSlug[] = [
   'shell-necklace',
   'heart-glasses',
@@ -234,6 +259,7 @@ const TUBE_SLUGS: readonly TreasureIconSlug[] = [
   'dragonfly-glasses',
   'sunflower-sunglasses',
   'crystal-pendant',
+  'pebble-necklace',
 ];
 /**
  * The treasures of an area's list whose ids start with its own `prefix`: the ones that area added.
@@ -256,10 +282,15 @@ const CHINAMPA_2_SLUGS: readonly string[] = addedBy(CHINAMPA_2_TREASURES, 'china
 const SPRING_CAVE_SLUGS: readonly string[] = addedBy(SPRING_CAVE_TREASURES, 'spring-cave').map((treasure) =>
   treasureSlug(treasure.id),
 );
+/** The slugs the spring cave Area 7 added (the text after `spring-cave/`), from the catalogue: 11 items and the Chocolate Paint shell. */
+const SPRING_CAVE_2_SLUGS: readonly string[] = addedBy(SPRING_CAVE_2_TREASURES, 'spring-cave').map((treasure) =>
+  treasureSlug(treasure.id),
+);
 /** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. */
 const CANAL_ICON_SLUGS = TREASURE_ICON_SLUGS.filter(
   (slug) =>
     !SPRING_CAVE_SLUGS.includes(slug) &&
+    !SPRING_CAVE_2_SLUGS.includes(slug) &&
     !POND_SLUGS.includes(slug) &&
     !POND_2_SLUGS.includes(slug) &&
     !CHINAMPA_SLUGS.includes(slug) &&
@@ -275,6 +306,8 @@ const CHINAMPA_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => CHINAMPA_SLUGS.
 const CHINAMPA_2_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => CHINAMPA_2_SLUGS.includes(slug));
 /** The icon slugs the spring cave Area 6 added: 11 items, then the Moonstone Paint shell. */
 const SPRING_CAVE_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => SPRING_CAVE_SLUGS.includes(slug));
+/** The icon slugs the spring cave Area 7 added: 11 items, then the Chocolate Paint shell. */
+const SPRING_CAVE_2_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => SPRING_CAVE_2_SLUGS.includes(slug));
 /**
  * Call-log digests of the normal painters, recorded before flat mode existed: per size, the
  * digest of every canal icon digest in TREASURE_ICON_SLUGS order; then every canal Dream
@@ -348,6 +381,19 @@ const SPRING_CAVE_ICON_DIGESTS: Readonly<Record<number, string>> = {
 };
 /** The same digest for the Moonstone swatch (issue #77), pinned when it was authored. Re-pin it, and only it, when Moonstone is retuned on purpose. */
 const MOONSTONE_SWATCH_DIGEST = '0d26c3a93a452bc5:20';
+/**
+ * The same digests for the icons the spring cave Area 7 added (the 11 items, then the Chocolate Paint shell),
+ * pinned when they were authored (issue #105). Re-pin these, and only these, when the Area 7 art is retuned on
+ * purpose.
+ */
+const SPRING_CAVE_2_ICON_DIGESTS: Readonly<Record<number, string>> = {
+  28: 'fc445abafce66226:263',
+  32: '07429402872af866:263',
+  48: '2e0a9f91c9ca2b85:263',
+  80: '84ba207b72412407:263',
+};
+/** The same digest for the Chocolate swatch (issue #105), pinned when it was authored. Re-pin it, and only it, when Chocolate is retuned on purpose. */
+const CHOCOLATE_SWATCH_DIGEST = '00557b15d42fa661:21';
 const EPS = 1e-9;
 
 // ---------------------------------------------------------------------------
@@ -693,11 +739,13 @@ describe('Unfound silhouettes', () => {
       expect(digestOf(CHINAMPA_ICON_SLUGS), `area 4 ${size}`).toBe(CHINAMPA_ICON_DIGESTS[size]);
       expect(digestOf(CHINAMPA_2_ICON_SLUGS), `area 5 ${size}`).toBe(CHINAMPA_2_ICON_DIGESTS[size]);
       expect(digestOf(SPRING_CAVE_ICON_SLUGS), `area 6 ${size}`).toBe(SPRING_CAVE_ICON_DIGESTS[size]);
+      expect(digestOf(SPRING_CAVE_2_ICON_SLUGS), `area 7 ${size}`).toBe(SPRING_CAVE_2_ICON_DIGESTS[size]);
     }
     expect(
       swatchDigests(
         DREAM_SWATCH_IDS.filter(
-          (id) => id !== 'lily-green' && id !== 'firefly-gold' && id !== 'poppy-red' && id !== 'plum' && id !== 'moonstone',
+          (id) =>
+            id !== 'lily-green' && id !== 'firefly-gold' && id !== 'poppy-red' && id !== 'plum' && id !== 'moonstone' && id !== 'chocolate',
         ),
       ),
       'canal swatches',
@@ -707,6 +755,7 @@ describe('Unfound silhouettes', () => {
     expect(swatchDigests(['poppy-red']), 'poppy-red swatch').toBe(CHINAMPA_SWATCH_DIGEST);
     expect(swatchDigests(['plum']), 'plum swatch').toBe(CHINAMPA_2_SWATCH_DIGEST);
     expect(swatchDigests(['moonstone']), 'moonstone swatch').toBe(MOONSTONE_SWATCH_DIGEST);
+    expect(swatchDigests(['chocolate']), 'chocolate swatch').toBe(CHOCOLATE_SWATCH_DIGEST);
   });
 });
 
@@ -771,6 +820,12 @@ describe('Home Tank Decoration glows', () => {
       'spring-cave/crystal-wind-chime',
       'spring-cave/geode-lamp',
       'spring-cave/crystal-arch',
+      'spring-cave/mossy-rock',
+      'spring-cave/bubble-stone',
+      'spring-cave/ancient-clay-pot',
+      'spring-cave/glowing-stalactite',
+      'spring-cave/bubble-machine',
+      'spring-cave/underground-waterfall',
     ]);
     for (const decoration of decorations) {
       const slug = treasureSlug(decoration.id);
@@ -857,7 +912,7 @@ describe('Home Tank Hanging and wide Decorations', () => {
   const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
   const HANGING_SLUGS = TANK_DECORATION_SLUGS.filter((slug) => TANK_DECORATION_SHAPES[slug].placement === 'hanging');
 
-  it('has the Firefly string lights and the Papel picado banner, 144 wide, and the Firefly jar, the Willow swing, the Pinata and the Crystal wind chime as its Hanging Decorations', () => {
+  it('has the Firefly string lights and the Papel picado banner, 144 wide, and the Firefly jar, the Willow swing, the Pinata, the Crystal wind chime and the Glowing stalactite as its Hanging Decorations', () => {
     expect(HANGING_SLUGS).toEqual([
       'firefly-string-lights',
       'firefly-jar',
@@ -865,6 +920,7 @@ describe('Home Tank Hanging and wide Decorations', () => {
       'willow-swing',
       'pinata',
       'crystal-wind-chime',
+      'glowing-stalactite',
     ]);
     expect(TANK_DECORATION_SHAPES['firefly-string-lights'].width).toBe(144);
     expect(TANK_DECORATION_SHAPES['papel-picado-banner'].width).toBe(144);
@@ -1780,10 +1836,10 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       'pearl-tail-charm',
       'firefly-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(96);
     expect(TREASURE_ICON_SLUGS.slice(23, 34)).toEqual(AREA3_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(17);
+    expect(TREASURE_ICON_SLUGS.slice(78)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(DREAM_SWATCH_IDS).toHaveLength(18);
     expect(AREA3_ICON_SLUGS).toEqual([...AREA3_ITEM_SLUGS, 'paint-shell-firefly-gold']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
   });
@@ -1930,9 +1986,9 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       expect(badges['golden-lotus-throne']).toBe('star');
     });
 
-    it('lists the 31 tank Decorations in catalogue order, canal, pond, Area 3, Area 4, Area 5, then Area 6', () => {
+    it('lists the 37 tank Decorations in catalogue order, canal, pond, Area 3, Area 4, Area 5, Area 6, then Area 7', () => {
       const catalogue = ALL_TREASURES.filter(isDecoration).map((d) => treasureSlug(d.id));
-      expect(catalogue).toHaveLength(31);
+      expect(catalogue).toHaveLength(37);
       expect([...TANK_DECORATION_SLUGS]).toEqual(catalogue);
       expect(Object.keys(TANK_DECORATION_BADGES)).toEqual(catalogue);
     });
@@ -2051,11 +2107,11 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
       'golden-corn',
       'monarch-wings',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(96);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(34, 45)).toEqual(CHINAMPA_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(17);
+    expect(TREASURE_ICON_SLUGS.slice(78)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(DREAM_SWATCH_IDS).toHaveLength(18);
     expect(DREAM_SWATCH_IDS[14]).toBe('poppy-red');
     expect(CHINAMPA_ICON_SLUGS).toEqual([...CHINAMPA_ITEM_SLUGS, 'paint-shell-poppy-red']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -2426,11 +2482,11 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       'alebrije-statue',
       'rainbow-serape-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(96);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(45, 56)).toEqual(CHINAMPA_2_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(17);
+    expect(TREASURE_ICON_SLUGS.slice(78)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(DREAM_SWATCH_IDS).toHaveLength(18);
     expect(DREAM_SWATCH_IDS[15]).toBe('plum');
     expect(CHINAMPA_2_ICON_SLUGS).toEqual([...CHINAMPA_2_ITEM_SLUGS, 'paint-shell-plum']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -2789,10 +2845,10 @@ describe('Spring cave Area 6 treasure art (issue #77, ND-12)', () => {
       'crystal-arch',
       'crystal-crown',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(96);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(56, 67)).toEqual(SPRING_CAVE_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(TREASURE_ICON_SLUGS.slice(78)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
     expect(SPRING_CAVE_ICON_SLUGS).toEqual([...SPRING_CAVE_ITEM_SLUGS, 'paint-shell-moonstone']);
     expect(SPRING_CAVE_TREASURES).toHaveLength(12);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -3128,10 +3184,10 @@ describe('Spring cave Area 6 treasure art (issue #77, ND-12)', () => {
 });
 
 describe('Moonstone Dream swatch (issue #77)', () => {
-  it('lists Moonstone as the seventeenth and last Dream swatch, with its Paint shell icon slug last', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(17);
-    expect(DREAM_SWATCH_IDS.at(-1)).toBe('moonstone');
-    expect(TREASURE_ICON_SLUGS.at(-1)).toBe('paint-shell-moonstone');
+  it('lists Moonstone as the seventeenth Dream swatch, with its Paint shell icon slug just before Chocolate\'s', () => {
+    expect(DREAM_SWATCH_IDS).toHaveLength(18);
+    expect(DREAM_SWATCH_IDS[16]).toBe('moonstone');
+    expect(TREASURE_ICON_SLUGS.at(-2)).toBe('paint-shell-moonstone');
   });
 
   it('draws the Moonstone swatch and Paint shell icon in the Moonstone body colour, a light plain tile, baked', () => {
@@ -3142,6 +3198,462 @@ describe('Moonstone Dream swatch (issue #77)', () => {
     bakes.length = 0;
     const tex = bakeTreasureTextures({} as never, 2);
     expect(tex.swatches.moonstone.key).toBe('dream-swatch-moonstone-32');
+  });
+});
+
+describe('Spring cave Area 7 treasure art (issue #105, ND-13)', () => {
+  /**
+   * The outer fills each icon may paint (exported by treasurePalette.ts), by item. Gems, gold trim, the yellow trim
+   * band, the stalactite glow, the goggle lenses, the lantern flame, the cape's set stones, ink and glows are free.
+   */
+  const OUTER_FILLS: Readonly<Record<string, readonly string[]>> = {
+    'mossy-rock': [MOSSY_ROCK_FILL, MOSSY_ROCK_MOSS],
+    'bubble-stone': [BUBBLE_FILL, BUBBLE_STONE_FILL],
+    'climbing-helmet': [CLIMBING_HELMET_FILL],
+    'pebble-necklace': [PEBBLE_NECKLACE_CORD, PEBBLE_NECKLACE_STONE],
+    'ancient-clay-pot': [CLAY_POT_FILL],
+    'glowing-stalactite': [STALACTITE_ROCK, STALACTITE_HOOK],
+    'cave-goggles': [GOGGLES_STRAP, GOGGLES_FRAME],
+    'bubble-machine': [BUBBLE_FILL, BUBBLE_MACHINE_NOZZLE, BUBBLE_MACHINE_FILL],
+    'glow-tail-lantern': [LANTERN_FRAME, LANTERN_GLASS],
+    'underground-waterfall': [WATERFALL_ROCK, WATERFALL_WATER, WATERFALL_BASE],
+    'gemstone-cape': [GEMSTONE_CAPE_FILL],
+  };
+  const FREE_STYLES = new Set(
+    [
+      GOLD_TRIM,
+      BOAT_TRIM,
+      CASTLE_GEM,
+      PYRAMID_GEM,
+      GEM_GLINT,
+      TREASURE_STAR,
+      INK,
+      STALACTITE_GLOW,
+      GOGGLES_LENS,
+      LANTERN_FLAME,
+      ...GEMSTONE_CAPE_STONES,
+    ].map((c) => c.toLowerCase()),
+  );
+  const SPRING_CAVE_2_ITEM_SLUGS = SPRING_CAVE_2_ICON_SLUGS.filter((slug) => !slug.startsWith('paint-shell-'));
+  /** The catalogue rarity of each item, which the icon's rarity look ladder (guide 6i) must follow. */
+  const RARITY_OF: Readonly<Record<string, Treasure['rarity']>> = {
+    'mossy-rock': 'common',
+    'bubble-stone': 'common',
+    'climbing-helmet': 'common',
+    'pebble-necklace': 'common',
+    'ancient-clay-pot': 'rare',
+    'glowing-stalactite': 'rare',
+    'cave-goggles': 'rare',
+    'bubble-machine': 'epic',
+    'glow-tail-lantern': 'epic',
+    'underground-waterfall': 'legendary',
+    'gemstone-cape': 'legendary',
+  };
+  const SIZES = [28, 32, 48, 80] as const;
+  const REACH_TOLERANCE = 0.05;
+  /** The ink widths of the shipped icons that an Area 7 painter may use: item 2.8, details 1.6, trim lines 1.2. */
+  const ALLOWED_INK = new Set([2.8, 1.6, 1.2]);
+  /** The Pebble necklace's cord is a tube: colour 3.2 with 2.4 ink each side, 8 in all. */
+  const TUBE_INK = new Set([8]);
+  const SHINE = 'rgba(255,255,255,0.8)';
+  /** Counts of shines, gold trim bands, yellow trim bands, gem glints and stars painted by an icon. */
+  const count = (slug: TreasureIconSlug): { shine: number; gold: number; band: number; glint: number; star: number } => {
+    const ops = record((ctx) => paintTreasureIcon(ctx, slug, 80)).ops;
+    const whites = ops.filter((op) => op.op === 'fill' && op.fillStyle === GEM_GLINT);
+    const uses = (op: Op, command: string): boolean => JSON.stringify(op.args[0]).includes(`"${command}"`);
+    return {
+      shine: ops.filter((op) => op.op === 'fill' && op.fillStyle === SHINE).length,
+      gold: ops.filter((op) => op.op === 'fillRect' && op.fillStyle === GOLD_TRIM).length,
+      band: ops.filter((op) => op.op === 'fillRect' && op.fillStyle === BOAT_TRIM).length,
+      glint: whites.filter((op) => uses(op, 'ellipse')).length,
+      star: whites.filter((op) => uses(op, 'arcTo')).length,
+    };
+  };
+
+  it('lists the eleven Area 7 items after the Area 6 ones, in catalogue order, with the Chocolate Paint shell last of all', () => {
+    expect(SPRING_CAVE_2_ITEM_SLUGS).toHaveLength(11);
+    expect(SPRING_CAVE_2_ITEM_SLUGS).toEqual(
+      addedBy(SPRING_CAVE_2_TREASURES, 'spring-cave')
+        .filter((treasure) => treasure.category !== 'paintShell')
+        .map((treasure) => treasureSlug(treasure.id)),
+    );
+    expect(SPRING_CAVE_2_ITEM_SLUGS).toEqual([
+      'mossy-rock',
+      'bubble-stone',
+      'climbing-helmet',
+      'pebble-necklace',
+      'ancient-clay-pot',
+      'glowing-stalactite',
+      'cave-goggles',
+      'bubble-machine',
+      'glow-tail-lantern',
+      'underground-waterfall',
+      'gemstone-cape',
+    ]);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(96);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
+    expect(TREASURE_ICON_SLUGS.slice(56, 67)).toEqual(SPRING_CAVE_ICON_SLUGS.filter((slug) => !slug.startsWith('paint-shell-')));
+    expect(TREASURE_ICON_SLUGS.slice(67, 78)).toEqual(SPRING_CAVE_2_ITEM_SLUGS);
+    expect(TREASURE_ICON_SLUGS.slice(78)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(SPRING_CAVE_2_ICON_SLUGS).toEqual([...SPRING_CAVE_2_ITEM_SLUGS, 'paint-shell-chocolate']);
+    expect(SPRING_CAVE_2_TREASURES).toHaveLength(12);
+    expect(SPRING_CAVE_2_ICON_SLUGS.some((slug) => SPRING_CAVE_ICON_SLUGS.includes(slug))).toBe(false);
+    expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
+    expect(new Set(ALL_TREASURES.map((treasure) => treasureSlug(treasure.id)))).toEqual(new Set(TREASURE_ICON_SLUGS));
+  });
+
+  it('draws the Chocolate Paint shell with the Chocolate swatch, and bakes an icon and silhouette for all twelve treasures', () => {
+    const shell = SPRING_CAVE_2_TREASURES.find((treasure) => treasure.category === 'paintShell');
+    expect(shell?.category === 'paintShell' ? shell.dreamColour : undefined).toBe('chocolate');
+    expect(treasureSlug(shell?.id ?? '')).toBe('paint-shell-chocolate');
+    bakes.length = 0;
+    const tex = bakeTreasureTextures({} as never, 2);
+    for (const size of [28, 32, 48] as const) {
+      for (const slug of SPRING_CAVE_2_ICON_SLUGS) expect(tex.icons[size][slug].key, `${slug} ${size}`).toBe(`treasure-${slug}-${size}`);
+    }
+    for (const slug of SPRING_CAVE_2_ICON_SLUGS) expect(tex.silhouettes[slug].key, slug).toBe(treasureSilhouetteKey(slug));
+    for (const slug of SPRING_CAVE_2_ICON_SLUGS) expect(bakes.some((b) => b.key === treasureSilhouetteKey(slug)), slug).toBe(true);
+    expect(tex.swatches.chocolate.key).toBe('dream-swatch-chocolate-32');
+  });
+
+  it('follows the catalogue rarity of each item, and keeps the ladder: Ancient clay pot Rare, Bubble machine Epic, Underground waterfall and Gemstone cape Legendary', () => {
+    const catalogue = new Map(SPRING_CAVE_2_TREASURES.map((treasure) => [treasureSlug(treasure.id), treasure.rarity]));
+    for (const slug of SPRING_CAVE_2_ITEM_SLUGS) expect(catalogue.get(slug), slug).toBe(RARITY_OF[slug]);
+    expect(RARITY_OF['ancient-clay-pot']).toBe('rare');
+    expect(RARITY_OF['bubble-machine']).toBe('epic');
+    expect(RARITY_OF['underground-waterfall']).toBe('legendary');
+    expect(RARITY_OF['gemstone-cape']).toBe('legendary');
+  });
+
+  it('keeps every Area 7 outer fill at 9:1 or more with ink, and none a rarity badge fill', () => {
+    const fills = [...new Set(Object.values(OUTER_FILLS).flat())];
+    for (const fill of fills) {
+      expect(fill, fill).toMatch(/^#[0-9a-f]{6}$/);
+      expect(contrastRatio(fill, INK), fill).toBeGreaterThanOrEqual(9);
+      expect(Object.values(BADGE_FILL), fill).not.toContain(fill);
+    }
+    // Eleven distinct outer fills: the rest of the twenty-one names are aliases of a shipped colour.
+    expect(fills.map((c) => c.toLowerCase())).toEqual(
+      [
+        MOSSY_ROCK_FILL,
+        MOSSY_ROCK_MOSS,
+        BUBBLE_FILL,
+        BUBBLE_STONE_FILL,
+        CLIMBING_HELMET_FILL,
+        PEBBLE_NECKLACE_CORD,
+        PEBBLE_NECKLACE_STONE,
+        CLAY_POT_FILL,
+        STALACTITE_ROCK,
+        STALACTITE_HOOK,
+        GOGGLES_STRAP,
+        GOGGLES_FRAME,
+        BUBBLE_MACHINE_NOZZLE,
+        BUBBLE_MACHINE_FILL,
+        LANTERN_FRAME,
+        LANTERN_GLASS,
+        WATERFALL_ROCK,
+        WATERFALL_WATER,
+        WATERFALL_BASE,
+        GEMSTONE_CAPE_FILL,
+      ].filter((c, i, all) => all.indexOf(c) === i),
+    );
+    expect(fills).toHaveLength(13);
+    // Six of them are new to Area 7; the others are shipped colours.
+    expect([BUBBLE_FILL, CLIMBING_HELMET_FILL, CLAY_POT_FILL, STALACTITE_ROCK, GOGGLES_FRAME, LANTERN_GLASS, GEMSTONE_CAPE_FILL]).toEqual([
+      '#d4f4ff',
+      '#ffd2a6',
+      '#f8d2b4',
+      '#dcd8ec',
+      '#c5f0c0',
+      '#fff0b8',
+      '#e6dcff',
+    ]);
+  });
+
+  it('shares the shipped colours where the Area 7 fills alias them', () => {
+    expect(MOSSY_ROCK_FILL).toBe(PEBBLE_STACK_FILL);
+    expect(MOSSY_ROCK_MOSS).toBe(MOSS_BALL_FILL);
+    expect(BUBBLE_STONE_FILL).toBe(PEBBLE_A);
+    expect(PEBBLE_NECKLACE_CORD).toBe(GOLDEN_LOTUS_BASE);
+    expect(PEBBLE_NECKLACE_STONE).toBe(PEBBLE_STACK_FILL);
+    expect(STALACTITE_HOOK).toBe(FIREFLY_HOOK);
+    expect(GOGGLES_STRAP).toBe(PEBBLE_A);
+    expect(BUBBLE_MACHINE_FILL).toBe(PEARL_CHARM_CORD);
+    expect(BUBBLE_MACHINE_NOZZLE).toBe(PEBBLE_A);
+    expect(LANTERN_FRAME).toBe(PEBBLE_A);
+    expect(WATERFALL_ROCK).toBe(STALACTITE_ROCK);
+    expect(WATERFALL_WATER).toBe(FIREFLY_JAR_GLASS);
+    expect(WATERFALL_BASE).toBe(GOLDEN_LOTUS_BASE);
+  });
+
+  it.each(SPRING_CAVE_2_ITEM_SLUGS.map((slug) => [slug] as const))('%s paints its own Area 7 fills and no other outer colour', (slug) => {
+    const styles = hexStyles((ctx) => paintTreasureIcon(ctx, slug, 48));
+    const own = OUTER_FILLS[slug].map((c) => c.toLowerCase());
+    for (const fill of own) expect(styles, `${slug} uses ${fill}`).toContain(fill);
+    for (const style of styles) {
+      if (FREE_STYLES.has(style)) continue;
+      expect(own, `${slug} paints only its own fills, ${style} is not one`).toContain(style);
+    }
+  });
+
+  it.each(SPRING_CAVE_2_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i keeps its frame: the ink inside the icon box and the texture frame, reaching nearly the whole longest side',
+    (slug, size) => {
+      const half = size / 2;
+      const frame = frameBox(treasureIconTextureSize(size));
+      for (const paint of [paintTreasureIcon, paintTreasureSilhouette]) {
+        const { box } = inkReach((ctx) => paint(ctx, slug, size));
+        expect(box.minX, `${slug} left`).toBeGreaterThanOrEqual(Math.max(-half - REACH_TOLERANCE, frame.minX));
+        expect(box.maxX, `${slug} right`).toBeLessThanOrEqual(Math.min(half + REACH_TOLERANCE, frame.maxX));
+        expect(box.minY, `${slug} top`).toBeGreaterThanOrEqual(Math.max(-half - REACH_TOLERANCE, frame.minY));
+        expect(box.maxY, `${slug} bottom`).toBeLessThanOrEqual(Math.min(half + REACH_TOLERANCE, frame.maxY));
+      }
+      const { box } = inkReach((ctx) => paintTreasureIcon(ctx, slug, size));
+      expect(Math.max(box.maxX - box.minX, box.maxY - box.minY), `${slug} longest side`).toBeGreaterThanOrEqual(size - 2);
+    },
+  );
+
+  it.each(SPRING_CAVE_2_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i has its ink outline at the shipped widths, the item outline 2.8 among them',
+    (slug, size) => {
+      const ink = record((ctx) => paintTreasureIcon(ctx, slug, size)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK,
+      );
+      const widths = new Set(ink.map((op) => op.lineWidth));
+      const allowed = slug === 'pebble-necklace' ? new Set([...ALLOWED_INK, ...TUBE_INK]) : ALLOWED_INK;
+      expect(widths.has(2.8), `${slug} has the 2.8 item outline`).toBe(true);
+      for (const width of widths) expect(allowed, `${slug} ink ${width}`).toContain(width);
+      // The silhouette keeps the outer ink and drops the details.
+      const flat = record((ctx) => paintTreasureSilhouette(ctx, slug, size)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK && op.lineWidth === 2.8,
+      );
+      expect(flat.length, `${slug} silhouette outer ink`).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(SPRING_CAVE_2_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i has its one white shine, and none in the unfound silhouette',
+    (slug, size) => {
+      const shines = (paint: typeof paintTreasureIcon): number =>
+        record((ctx) => paint(ctx, slug, size)).ops.filter((op) => op.op === 'fill' && op.fillStyle === SHINE).length;
+      expect(shines(paintTreasureIcon), slug).toBe(1);
+      expect(shines(paintTreasureSilhouette), `${slug} silhouette`).toBe(0);
+    },
+  );
+
+  it('draws every Area 7 unfound silhouette in the flat fill alone, so no icon is told apart by colour', () => {
+    for (const slug of SPRING_CAVE_2_ITEM_SLUGS) {
+      const fills = hexStyles((ctx) => paintTreasureSilhouette(ctx, slug, 32));
+      expect([...fills].sort(), slug).toEqual([INK, TREASURE_SILHOUETTE_FILL].map((c) => c.toLowerCase()).sort());
+    }
+  });
+
+  it('gives every Area 7 icon its own outline: no two silhouettes are the same drawing, nor any Area 6 one', () => {
+    const digests = [...SPRING_CAVE_ICON_SLUGS, ...SPRING_CAVE_2_ITEM_SLUGS].map((slug) =>
+      callLogDigest((ctx) => paintTreasureSilhouette(ctx, slug, 48)),
+    );
+    expect(new Set(digests).size).toBe(digests.length);
+  });
+
+  it('keeps the Area 7 cue values pale: 9:1 fills have relative luminance 0.607 or more, so ink or fill is 3:1 or better on any background', () => {
+    // The spring cave sits under a dark layer, so the pale fills matter most here (guide 10).
+    for (const fill of [...new Set(Object.values(OUTER_FILLS).flat())]) {
+      expect(relativeLuminance(fill), fill).toBeGreaterThanOrEqual(0.607);
+    }
+    // The gold bands are only a little apart from the pale fills they cross (the pebble C plinth 1.21:1, as the Crystal
+    // arch's and the Golden corn's plinth bands; the amethyst cape 1.24:1), so like every Rare yellow band each is set
+    // between two thin ink lines.
+    expect(contrastRatio(GOLD_TRIM, WATERFALL_BASE)).toBeGreaterThan(1.2);
+    expect(contrastRatio(GOLD_TRIM, GEMSTONE_CAPE_FILL)).toBeGreaterThan(1.2);
+    for (const slug of ['ancient-clay-pot', 'glowing-stalactite', 'cave-goggles', 'underground-waterfall', 'gemstone-cape'] as const) {
+      const lines = record((ctx) => paintTreasureIcon(ctx, slug, 80)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK && op.lineWidth === 1.2,
+      );
+      expect(lines.length, `${slug} trim band lines`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  describe('rarity ladder (guide 6i)', () => {
+    const byRarity = (rarity: Treasure['rarity']): TreasureIconSlug[] =>
+      SPRING_CAVE_2_ITEM_SLUGS.filter((slug) => RARITY_OF[slug] === rarity);
+
+    it('gives Legendary the gold trim, one gem and one star', () => {
+      expect(byRarity('legendary')).toEqual(['underground-waterfall', 'gemstone-cape']);
+      for (const slug of byRarity('legendary')) expect(count(slug), slug).toMatchObject({ gold: 1, glint: 1, star: 1, band: 0 });
+    });
+
+    it('gives Epic one gem and no gold, no star and no trim band', () => {
+      expect(byRarity('epic')).toEqual(['bubble-machine', 'glow-tail-lantern']);
+      for (const slug of byRarity('epic')) expect(count(slug), slug).toMatchObject({ gold: 0, glint: 1, star: 0, band: 0 });
+    });
+
+    it('gives Rare its one yellow trim band and no gem, gold or star', () => {
+      expect(byRarity('rare')).toEqual(['ancient-clay-pot', 'glowing-stalactite', 'cave-goggles']);
+      for (const slug of byRarity('rare')) expect(count(slug), slug).toMatchObject({ gold: 0, glint: 0, star: 0, band: 1 });
+    });
+
+    it('gives Common one flat colour and one shine: no trim band, no gem, no gold and no star', () => {
+      expect(byRarity('common')).toEqual(['mossy-rock', 'bubble-stone', 'climbing-helmet', 'pebble-necklace']);
+      for (const slug of byRarity('common')) expect(count(slug), slug).toMatchObject({ gold: 0, band: 0, glint: 0, star: 0, shine: 1 });
+    });
+
+    it('gives each item exactly one shine', () => {
+      for (const slug of SPRING_CAVE_2_ITEM_SLUGS) expect(count(slug).shine, slug).toBe(1);
+    });
+  });
+
+  it('draws the Pebble necklace cord as a tube of colour 3.2 with 2.4 ink, the Shell necklace\'s construction', () => {
+    const strokes = record((ctx) => paintTreasureIcon(ctx, 'pebble-necklace', 80)).ops.filter((op) => op.op === 'stroke');
+    const tube = strokes.filter((op) => op.strokeStyle === PEBBLE_NECKLACE_CORD);
+    expect(tube).toHaveLength(1);
+    expect(tube[0].lineWidth).toBe(3.2);
+    expect(strokes.some((op) => op.strokeStyle === INK && op.lineWidth === 3.2 + 2 * 2.4)).toBe(true);
+    // Three pebbles on it, and the unfound silhouette turns the cord into the flat fill.
+    expect(record((ctx) => paintTreasureIcon(ctx, 'pebble-necklace', 80)).ops.filter((op) => op.op === 'fill' && op.fillStyle === PEBBLE_NECKLACE_STONE)).toHaveLength(3);
+    const flat = record((ctx) => paintTreasureSilhouette(ctx, 'pebble-necklace', 80)).ops.filter((op) => op.op === 'stroke');
+    expect(flat.some((op) => op.strokeStyle === TREASURE_SILHOUETTE_FILL && op.lineWidth === 3.2)).toBe(true);
+  });
+
+  it('gives the Glowing stalactite its glow and the Glow tail lantern its flame inside the silhouette, and keeps them out of the unfound one', () => {
+    for (const [slug, colour] of [
+      ['glowing-stalactite', STALACTITE_GLOW],
+      ['glow-tail-lantern', LANTERN_FLAME],
+      ['cave-goggles', GOGGLES_LENS],
+    ] as const) {
+      expect(hexStyles((ctx) => paintTreasureIcon(ctx, slug, 80)), slug).toContain(colour.toLowerCase());
+      expect(hexStyles((ctx) => paintTreasureSilhouette(ctx, slug, 80)), slug).not.toContain(colour.toLowerCase());
+    }
+  });
+
+  it('sets the Gemstone cape with five stones in three colours, none of them a counted gem', () => {
+    const ops = record((ctx) => paintTreasureIcon(ctx, 'gemstone-cape', 80)).ops;
+    const stones = ops.filter((op) => op.op === 'fill' && GEMSTONE_CAPE_STONES.includes(op.fillStyle as string));
+    expect(stones).toHaveLength(5);
+    expect(new Set(stones.map((op) => op.fillStyle)).size).toBe(3);
+    expect(GEMSTONE_CAPE_STONES.every((c) => c !== CASTLE_GEM && c !== PYRAMID_GEM && c !== BOW_GEM)).toBe(true);
+  });
+
+  describe('Decorations in the Home Tank', () => {
+    const FLOORS = ['mossy-rock', 'bubble-stone', 'ancient-clay-pot', 'bubble-machine', 'underground-waterfall'] as const;
+    const PX = 80;
+    const bakeShipped = (): ReturnType<typeof bakeTankTextures> => {
+      bakes.length = 0;
+      return bakeTankTextures({} as never, 2, { decorationPx: PX, rand: () => 0.5 });
+    };
+    const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
+
+    it('matches the catalogue placement kinds, rarities and standard widths', () => {
+      const decorations = new Map(addedBy(SPRING_CAVE_2_TREASURES, 'spring-cave').filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
+      expect([...decorations.keys()]).toEqual([
+        'mossy-rock',
+        'bubble-stone',
+        'ancient-clay-pot',
+        'glowing-stalactite',
+        'bubble-machine',
+        'underground-waterfall',
+      ]);
+      for (const slug of FLOORS) expect(placementKind(decorations.get(slug) as Decoration), slug).toBe('floor');
+      expect(placementKind(decorations.get('glowing-stalactite') as Decoration)).toBe('hanging');
+      for (const decoration of decorations.values()) expect(decoration.width, decoration.id).toBeUndefined();
+      const badges = TANK_DECORATION_BADGES as Readonly<Record<string, BadgeShape>>;
+      expect(badges['mossy-rock']).toBe('circle');
+      expect(badges['bubble-stone']).toBe('circle');
+      expect(badges['ancient-clay-pot']).toBe('diamond');
+      expect(badges['glowing-stalactite']).toBe('diamond');
+      expect(badges['bubble-machine']).toBe('shield');
+      expect(badges['underground-waterfall']).toBe('star');
+      for (const slug of FLOORS) expect(TANK_DECORATION_SHAPES[slug], slug).toEqual({ placement: 'floor' });
+      expect(TANK_DECORATION_SHAPES['glowing-stalactite']).toEqual({ placement: 'hanging' });
+    });
+
+    it.each(FLOORS.flatMap((slug) => [48, 80].map((size) => [slug, size] as const)))(
+      '%s at %i is anchored at its lowest fill edge, the icon box edge',
+      (slug, size) => {
+        const { box } = inkReach((ctx) => paintTreasureIcon(ctx, slug, size));
+        expect(decorationBaseOffset(slug, size), `${slug} ${size}`).toBeCloseTo(box.maxY, 1);
+        expect(decorationBaseOffset(slug, size), `${slug} ${size}`).toBeCloseTo(size / 2, 1);
+      },
+    );
+
+    it('bakes a tank sprite and glow for each Floor one, anchored at the icon box edge', () => {
+      const tex = bakeShipped();
+      const iconFrame = treasureIconTextureSize(PX);
+      for (const slug of FLOORS) {
+        expect(tex.decorations[slug].key).toBe(`tank-deco-${slug}-80`);
+        expect(tex.decorationGlows[slug].key).toBe(`tank-deco-glow-${slug}-80`);
+        const sprite = bakeOf(tex.decorations[slug].key);
+        expect(sprite.size.originY - iconFrame.originY, slug).toBeCloseTo(40, 0);
+        expect(sprite.size.originY - iconFrame.originY, slug).toBeCloseTo(decorationBaseOffset(slug, PX), 9);
+        expect(sprite.size, slug).toEqual({ ...iconFrame, originY: iconFrame.originY + decorationBaseOffset(slug, PX) });
+      }
+    });
+
+    it('bakes the Glowing stalactite from its icon at 80, hanging from its top-centre hook', () => {
+      const tex = bakeShipped();
+      const iconFrame = treasureIconTextureSize(PX);
+      const sprite = bakeOf(tex.decorations['glowing-stalactite'].key);
+      expect(sprite.size).toEqual({ ...iconFrame, originY: iconFrame.originY - PX / 2 });
+      expect(sprite.size.originY).toBe(1);
+      expect(sprite.size.h).toBe(82);
+      expect(sprite.size.originX * 2).toBe(sprite.size.w);
+      const before = (ctx: CanvasRenderingContext2D): void => {
+        ctx.translate(0, PX / 2);
+        paintTreasureIcon(ctx, 'glowing-stalactite', PX);
+      };
+      expect(callLogDigest(sprite.paint)).toBe(callLogDigest(before));
+      // The hook ring's ink touches the hook point, and the stalactite's tip reaches the base point one footprint below.
+      const { box: reach } = inkReach((ctx) => paintTreasureIcon(ctx, 'glowing-stalactite', PX));
+      expect(reach.minY + PX / 2).toBeGreaterThanOrEqual(-0.05);
+      expect(reach.minY + PX / 2).toBeLessThan(1);
+      expect(reach.maxY + PX / 2).toBeGreaterThan(PX - 1.5);
+      expect(reach.maxY + PX / 2).toBeLessThanOrEqual(PX + REACH_TOLERANCE);
+    });
+
+    it('centres the Glowing stalactite glow on its box, with the sprite anchor at the hook', () => {
+      const tex = bakeShipped();
+      const glow = bakeOf(tex.decorationGlows['glowing-stalactite'].key);
+      const frame = rarityGlowTextureSize(96);
+      expect(glow.size).toEqual({ ...frame, originY: frame.originY - PX / 2 });
+      const rec = record(glow.paint);
+      expect(rec.calls[0]).toEqual(['translate', [0, PX / 2]]);
+      expect(parseRgba(rec.gradients[0].stops[0][1]).rgb).toEqual(channelsOf(BADGE_FILL.diamond));
+    });
+
+    it('glows every Area 7 Decoration in its catalogue rarity: Common, Rare, Epic and Legendary', () => {
+      const tex = bakeShipped();
+      const rarityColour = { common: 'circle', rare: 'diamond', epic: 'shield', legendary: 'star' } as const;
+      for (const decoration of addedBy(SPRING_CAVE_2_TREASURES, 'spring-cave').filter(isDecoration)) {
+        const slug = treasureSlug(decoration.id) as TankDecorationSlug;
+        const glow = bakeOf(tex.decorationGlows[slug].key);
+        const rec = record(glow.paint);
+        expect(parseRgba(rec.gradients[0].stops[0][1]).rgb, decoration.id).toEqual(channelsOf(BADGE_FILL[rarityColour[decoration.rarity]]));
+      }
+    });
+  });
+});
+
+describe('Chocolate Dream swatch (issue #105)', () => {
+  it('lists Chocolate as the eighteenth and last Dream swatch, with its Paint shell icon slug last', () => {
+    expect(DREAM_SWATCH_IDS).toHaveLength(18);
+    expect(DREAM_SWATCH_IDS.at(-1)).toBe('chocolate');
+    expect(TREASURE_ICON_SLUGS.at(-1)).toBe('paint-shell-chocolate');
+  });
+
+  it('draws the Chocolate swatch and Paint shell icon in the Chocolate body colour, a dark plain tile with the rim light, baked', () => {
+    expect(DREAM_SWATCH.chocolate).toEqual({ body: '#6c391d', pattern: 'plain', marks: [], dark: true });
+    // A dark body: the white edge carries it (9.37:1), not the ink (1.54:1).
+    expect(contrastRatio(DREAM_SWATCH.chocolate.body, '#ffffff')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(DREAM_SWATCH.chocolate.body, INK)).toBeLessThan(3);
+    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-chocolate', 48))).toContain('#6c391d');
+    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'chocolate', 32))).toContain('#6c391d');
+    // The dark rim along the top of the Paint shell blob, as on Plum.
+    const rim = (id: 'chocolate' | 'plum'): number =>
+      record((ctx) => paintTreasureIcon(ctx, `paint-shell-${id}`, 48)).ops.filter((op) => op.op === 'stroke' && op.lineWidth === 1.2 && op.strokeStyle !== INK).length;
+    expect(rim('chocolate')).toBe(rim('plum'));
+    expect(rim('chocolate')).toBeGreaterThan(0);
+    bakes.length = 0;
+    const tex = bakeTreasureTextures({} as never, 2);
+    expect(tex.swatches.chocolate.key).toBe('dream-swatch-chocolate-32');
   });
 });
 

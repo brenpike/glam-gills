@@ -1,5 +1,5 @@
 /**
- * Worn looks of the thirty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the forty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -8,7 +8,8 @@
  * Straw sun hat, Marigold necklace, Garden overalls, Monarch hair clip and Monarch
  * wings, and the chinampa Area 5's Bee headband, Bandana, Sunflower sunglasses,
  * Embroidered shirt, Hummingbird tail ribbon and Rainbow serape cape, and the spring cave Area 6's
- * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, painted on the anchors
+ * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, and the spring cave Area 7's
+ * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -59,6 +60,15 @@
  * CRYSTAL_CROWN_BAND; each 9:1 or better with ink, none red), so a worn look and its icon
  * cannot drift. Their other colours are internal details: ink at the stripe alpha, the
  * vest's belt, the cuff's gem and the crown's gold band. No look has net-like lines.
+ *
+ * The Area 7 looks (issue #105, ND-13) keep to the same footprints and rules. Their outer
+ * fills are the icons' own colours, imported by name from treasurePalette.ts
+ * (CLIMBING_HELMET_FILL, PEBBLE_NECKLACE_CORD, PEBBLE_NECKLACE_STONE, GOGGLES_FRAME,
+ * LANTERN_FRAME, LANTERN_GLASS, GEMSTONE_CAPE_FILL; each 9:1 or better with ink, none red),
+ * so a worn look and its icon cannot drift. Their other colours are internal details: ink at
+ * the stripe alpha, the goggles' yellow buckle, the lantern's flame and gem, and the cape's set
+ * stones and gold band. The Cave goggles keep the glasses construction (clear lens tint, never
+ * dark), so the eyes always show. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -94,6 +104,8 @@ import {
   EMBROIDERED_SHIRT_FILL,
   EMBROIDERY_BAND,
   EMBROIDERY_PETALS,
+  GEMSTONE_CAPE_STONES,
+  LANTERN_FLAME,
   GARDEN_OVERALLS_FILL,
   HUMMINGBIRD_RIBBON_FILL,
   MARIGOLD_PETAL,
@@ -110,6 +122,7 @@ import {
   BOW_FILL,
   BOW_GEM,
   CAVE_CRYSTAL_FILL,
+  CLIMBING_HELMET_FILL,
   CRYSTAL_CROWN_BAND,
   CRYSTAL_CUFF_BAND,
   DIVING_TANK_FILL,
@@ -126,12 +139,16 @@ import {
   FLIPPER_RIDGE,
   FROGGY_BOOT,
   GEM_GLINT,
+  GEMSTONE_CAPE_FILL,
   GLASSES_FRAME,
   GLASSES_GEM,
   GLASSES_LENS,
+  GOGGLES_FRAME,
   GOLD_TRIM,
   HAT_FILL,
   LADYBUG_SHELL,
+  LANTERN_FRAME,
+  LANTERN_GLASS,
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_SOCK_FILL,
@@ -141,6 +158,8 @@ import {
   PAINT_SHELL_RIDGE,
   PEARL_CHARM_CORD,
   PEARL_FILL,
+  PEBBLE_NECKLACE_CORD,
+  PEBBLE_NECKLACE_STONE,
   POND_WEED_SCARF,
   RAINCOAT_FILL,
   SOCK_FILL,
@@ -208,12 +227,18 @@ export type WearableArtSlug =
   | 'crystal-pendant'
   | 'explorer-vest'
   | 'crystal-tail-cuff'
-  | 'crystal-crown';
+  | 'crystal-crown'
+  | 'climbing-helmet'
+  | 'pebble-necklace'
+  | 'cave-goggles'
+  | 'glow-tail-lantern'
+  | 'gemstone-cape';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
- * chinampa Area 5's six and the spring cave Area 6's five last, so WEARABLE_ART_SLUGS finds each slot's canal slug first.
+ * chinampa Area 5's six, the spring cave Area 6's five and the spring cave Area 7's five last, so WEARABLE_ART_SLUGS
+ * finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
   'sun-hat': 'head',
@@ -252,6 +277,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'explorer-vest': 'shirt',
   'crystal-tail-cuff': 'tail',
   'crystal-crown': 'head',
+  'climbing-helmet': 'head',
+  'pebble-necklace': 'neck',
+  'cave-goggles': 'face',
+  'glow-tail-lantern': 'tail',
+  'gemstone-cape': 'back',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -2833,6 +2863,267 @@ function paintCrystalCrown(ctx: CanvasRenderingContext2D): void {
 }
 
 // ---------------------------------------------------------------------------
+// Head: Climbing helmet (Common)
+// ---------------------------------------------------------------------------
+
+/** The helmet shell: its base on the brim (x from, x to, y) and its top y; rounder and taller than the Miner's headlamp dome. */
+const HELMET_DOME = { x0: 21.6, x1: 40.6, base: -25.6, top: -38.4 } as const;
+/** The three vents across the shell: centre x, centre y, half width, half height and tilt, ink at the stripe alpha. */
+const HELMET_VENTS: readonly { readonly x: number; readonly y: number; readonly rx: number; readonly ry: number; readonly rot: number }[] = [
+  { x: 26.2, y: -31.4, rx: 0.9, ry: 2.6, rot: -0.3 },
+  { x: 31.1, y: -33.4, rx: 0.9, ry: 2.8, rot: 0 },
+  { x: 36, y: -31.4, rx: 0.9, ry: 2.6, rot: 0.3 },
+];
+
+/** The helmet shell as one closed path: rising from the base at the rear, over the top, down to the base at the front. */
+function helmetDomePath(): Path2D {
+  const { x0, x1, base, top } = HELMET_DOME;
+  const mid = (x0 + x1) / 2;
+  const dome = new Path2D();
+  dome.moveTo(x0, base);
+  dome.bezierCurveTo(x0 - 0.4, base - (base - top) * 0.8, mid - 5.6, top, mid, top);
+  dome.bezierCurveTo(mid + 5.6, top, x1 + 0.4, base - (base - top) * 0.8, x1, base);
+  dome.closePath();
+  return dome;
+}
+
+/**
+ * Common (issue #105): a CLIMBING_HELMET_FILL pale tangerine climbing helmet: the Miner's headlamp's brim (the
+ * Sun hat's tilted ellipse, a little narrower) under a round, taller shell, merged into one `blob` silhouette
+ * (ink 2.0 all outside the fill). Inside it, three vents across the shell (ink at the stripe alpha: the same
+ * colour darkened, not a second colour), clipped to the shell; one shine; no trim. The icon's chin strap is left
+ * off: it would cross the eyes. Ink included it fills HEAD_FOOTPRINT: x 16.4 to 45.6, lowest ink y -19.5 on the
+ * brim, as the Miner's headlamp's, so the glasses keep their clearance; the shell's top is about y -40.4.
+ */
+function paintClimbingHelmet(ctx: CanvasRenderingContext2D): void {
+  const brim = ellipsePath(LAMP_BRIM.cx, LAMP_BRIM.cy, LAMP_BRIM.rx, LAMP_BRIM.ry, LAMP_BRIM.rot);
+  const dome = helmetDomePath();
+  blobs(ctx, [brim, dome], CLIMBING_HELMET_FILL);
+  ctx.save();
+  ctx.clip(dome);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  for (const v of HELMET_VENTS) ctx.fill(ellipsePath(v.x, v.y, v.rx, v.ry, v.rot));
+  ctx.restore();
+  shine(ctx, 24.6, -29.4, 1, 2.4, 0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Pebble necklace (Common)
+// ---------------------------------------------------------------------------
+
+/** The three pebbles' centre x along the chain, the middle one under the mouth; the half width of each, and the most half height (fitted to the band). */
+const NECKLACE_PEBBLE_XS: readonly number[] = [20.8, 28.2, 35.6];
+const NECKLACE_PEBBLE_HALF_W = 3.6;
+const NECKLACE_PEBBLE_MAX_HALF_H = 4.3;
+/**
+ * The thin ink ring round each pebble that sets it off the chain (thinner than the Crystal pendant's 0.9, so the
+ * pebbles keep enough of their own colour over the swim-view floor), and the specks on it (ink at the stripe alpha).
+ */
+const NECKLACE_PEBBLE_RING_LW = 0.5;
+const NECKLACE_SPECK_R = 0.45;
+
+/** A pebble fitted inside the scarf band at `x`: a smooth oval as tall as the band allows there. */
+function necklacePebble(x: number): { readonly path: Path2D; readonly cx: number; readonly cy: number; readonly ry: number } {
+  const upper = Math.max(scarfUpperAt(x - NECKLACE_PEBBLE_HALF_W), scarfUpperAt(x), scarfUpperAt(x + NECKLACE_PEBBLE_HALF_W));
+  const lower = Math.min(scarfLowerAt(x - NECKLACE_PEBBLE_HALF_W), scarfLowerAt(x), scarfLowerAt(x + NECKLACE_PEBBLE_HALF_W));
+  const cy = (upper + lower) / 2;
+  const ry = Math.min(NECKLACE_PEBBLE_MAX_HALF_H, (lower - upper) / 2 - 0.1);
+  return { path: ellipsePath(x, cy, NECKLACE_PEBBLE_HALF_W, ry), cx: x, cy, ry };
+}
+
+/**
+ * Common (issue #105): three PEBBLE_NECKLACE_STONE grey-blue pebbles on a chain of PEBBLE_NECKLACE_CORD pale
+ * cord strung round the neck: the Crystal pendant's chain in the Pond-weed scarf's band, with three smooth ovals
+ * fitted to the band, merged into one silhouette with 0.6 of ink outside the fill (as the scarf: the Neck footprint
+ * is too shallow for 2.0). A thin ink ring (0.5) sets each pebble off the chain. Two specks on each pebble (ink at
+ * the stripe alpha, the same colour darkened); one shine on the middle pebble; no trim. Everything lies inside the
+ * scarf's band, so it keeps the gill-root zone, the cheek heart zone and the silhouette outline's outer half as the
+ * scarf does; the mouth paints over its front.
+ */
+function paintPebbleNecklace(ctx: CanvasRenderingContext2D): void {
+  const pebbles = NECKLACE_PEBBLE_XS.map(necklacePebble);
+  silhouette(
+    ctx,
+    [{ path: pendantChainPath(), fill: PEBBLE_NECKLACE_CORD }, ...pebbles.map((p) => ({ path: p.path, fill: PEBBLE_NECKLACE_STONE }))],
+    SCARF_OL,
+  );
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = NECKLACE_PEBBLE_RING_LW;
+  for (const p of pebbles) ctx.stroke(p.path);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  for (const p of pebbles) {
+    ctx.fill(ellipsePath(p.cx + 1.1, p.cy + p.ry * 0.35, NECKLACE_SPECK_R, NECKLACE_SPECK_R));
+    ctx.fill(ellipsePath(p.cx - 0.9, p.cy + p.ry * 0.55, NECKLACE_SPECK_R, NECKLACE_SPECK_R));
+  }
+  ctx.restore();
+  const middle = pebbles[1];
+  shine(ctx, middle.cx - 1.2, middle.cy - middle.ry * 0.45, 0.9, 0.5, -0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Face: Cave goggles (Rare)
+// ---------------------------------------------------------------------------
+
+/** The strap buckle on the bridge (the Heart glasses' gem place): centre, half width and half height, and corner radius. */
+const GOGGLES_BUCKLE: Pt = { x: 35.25, y: -14.85 };
+const GOGGLES_BUCKLE_HALF_W = 2.5;
+const GOGGLES_BUCKLE_HALF_H = 1.5;
+const GOGGLES_BUCKLE_R = 0.8;
+
+/**
+ * Rare (issue #105): the glasses construction (guide 6i) in GOGGLES_FRAME pale glass green: the same merged
+ * two-lens frame with a band of 3.5 (colour 2.1, ink 0.7 each side), a clear lens tint (white at 0.25, never dark:
+ * the icon's sky lenses would hide the eyes) and the eyes painting above it, so the eyes always show. Its one trim
+ * band is a small #ffe14a strap buckle on the bridge, above the top notch, in the one place that clears both eye
+ * zones and stays in the Face footprint (the Heart glasses' gem place): a rounded bar 5 x 3, its ink 0.6 outside
+ * (the thin band ink, as the Sunflower sunglasses' flower). No gem (that is the Heart glasses' Epic detail).
+ */
+function paintCaveGoggles(ctx: CanvasRenderingContext2D): void {
+  const frame = glassesPath();
+  ctx.fillStyle = GLASSES_LENS;
+  ctx.fill(frame);
+  inkMany(ctx, [seg(frame, GLASSES_BAND_W, GOGGLES_FRAME, GLASSES_BAND_OL)]);
+  const { x, y } = GOGGLES_BUCKLE;
+  silhouette(
+    ctx,
+    [
+      {
+        path: roundRectPath(x - GOGGLES_BUCKLE_HALF_W, y - GOGGLES_BUCKLE_HALF_H, x + GOGGLES_BUCKLE_HALF_W, y + GOGGLES_BUCKLE_HALF_H, GOGGLES_BUCKLE_R),
+        fill: BOAT_TRIM,
+      },
+    ],
+    BAND_LW / 2,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tail: Glow tail lantern (Epic)
+// ---------------------------------------------------------------------------
+
+/** The lantern in the Tail frame (y' down): the handle ring, the cap, the glass and the base, each a box or a circle. */
+const LANTERN_RING: Pt = { x: 0, y: -12.4 };
+const LANTERN_RING_R = 1.6;
+const LANTERN_CAP = { x0: -6.2, x1: 6.2, top: -11.4, bottom: -8.4, inset: 2 } as const;
+const LANTERN_BODY = { x0: -5.2, x1: 5.2, y0: -8.8, y1: 1.6, r: 2 } as const;
+const LANTERN_FOOT = { x0: -6.8, x1: 6.8, y0: 1.2, y1: 4.4, r: 1.2 } as const;
+/**
+ * How far the whole lantern sits toward the head from the anchor (frame x'), so its tip-side foot keeps a Dream
+ * marker star 0.6 or more clear at every swim phase.
+ */
+const LANTERN_SHIFT = 1;
+/** The flame inside the glass, round the gem at the glass's heart. */
+const LANTERN_FLAME_AT: Pt = { x: 0, y: -3.6 };
+const LANTERN_FLAME_RX = 3.6;
+const LANTERN_FLAME_RY = 4.2;
+
+/**
+ * Epic (issue #105): a lantern standing on the tail's top edge: a LANTERN_GLASS pale amber glass body under a
+ * LANTERN_FRAME pebble A cap and handle ring and on a pebble A foot, one merged `blob` silhouette (ink 2.0 all
+ * outside the fill). Inside the glass, a still #ffd34d flame (a flat fill, no flicker) round one rounded gem
+ * (radius 2.5, outline 1.2, the Golden bow's pink): the Epic detail. One shine on the glass; no trim. Painted in
+ * the Tail frame (x' along the local tail direction toward the head, y' down): the foot rests on the tail's top
+ * edge, as the Pearl tail charm's pearl does, and the lantern stands above it, set LANTERN_SHIFT toward the head
+ * (ink included, 7.8 toward the tail tip and 9.8 toward the head), so a Dream marker star past it stays clear at every swim phase. Everything, ink included,
+ * stays within TAIL_SLOT_REACH of the anchor.
+ */
+function paintGlowTailLantern(ctx: CanvasRenderingContext2D): void {
+  const cap = LANTERN_CAP;
+  const body = LANTERN_BODY;
+  const foot = LANTERN_FOOT;
+  ctx.translate(LANTERN_SHIFT, 0);
+  const glass = roundRectPath(body.x0, body.y0, body.x1, body.y1, body.r);
+  silhouette(ctx, [
+    { path: ellipsePath(LANTERN_RING.x, LANTERN_RING.y, LANTERN_RING_R, LANTERN_RING_R), fill: LANTERN_FRAME },
+    {
+      path: roundedPolygon(
+        [
+          { x: cap.x0, y: cap.bottom },
+          { x: cap.x0 + cap.inset, y: cap.top },
+          { x: cap.x1 - cap.inset, y: cap.top },
+          { x: cap.x1, y: cap.bottom },
+        ],
+        0.8,
+      ),
+      fill: LANTERN_FRAME,
+    },
+    { path: glass, fill: LANTERN_GLASS },
+    { path: roundRectPath(foot.x0, foot.y0, foot.x1, foot.y1, foot.r), fill: LANTERN_FRAME },
+  ]);
+  ctx.save();
+  ctx.clip(glass);
+  ctx.fillStyle = LANTERN_FLAME;
+  ctx.fill(ellipsePath(LANTERN_FLAME_AT.x, LANTERN_FLAME_AT.y, LANTERN_FLAME_RX, LANTERN_FLAME_RY));
+  ctx.restore();
+  shine(ctx, body.x0 + 1.4, body.y0 + 2.6, 0.55, 1.4, 0.1);
+  gem(ctx, LANTERN_FLAME_AT.x, LANTERN_FLAME_AT.y, BOW_GEM, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Gemstone cape (Legendary)
+// ---------------------------------------------------------------------------
+
+/** The set stones along the cape: share of the length from the rear, v' of the centre and colour index; their half size and ink. */
+const CAPE_GEMSTONES: readonly { readonly share: number; readonly v: number; readonly colour: number }[] = [
+  { share: 0.16, v: -3.6, colour: 0 },
+  { share: 0.36, v: -6.6, colour: 1 },
+  { share: 0.52, v: -2.6, colour: 2 },
+];
+const CAPE_GEMSTONE_HALF = 1.6;
+const CAPE_GEMSTONE_OL = 0.6;
+
+/**
+ * Legendary (issue #105): a GEMSTONE_CAPE_FILL pale amethyst cape draped along the back, the Rainbow serape
+ * cape's outline (its top edge sagging a little between square, softly rounded ends), one `blob` silhouette (ink
+ * 2.0 all outside the fill) in the Back box of the look, ink included: the fills are 2.0 inside the box, so the
+ * cape runs the box's length and stands 13 proud of the back. Three small faceted stones are set in it (sky,
+ * amethyst and mint, the icon's, each a diamond with 0.6 of ink: picture details, not counted gems). The
+ * Legendary trim is one #ffc12e clasp band across the front (between two 0.6 ink lines, clipped inside) and one
+ * static 4-point star (R 3, outline 1.2) behind it. One shine. No gem (the icon has one at the clasp). Painted in
+ * the Back frame (x' along the torso edge toward the snout, y' + into the body), so its lower edge, y' +1, keeps
+ * off the Shirt.
+ */
+function paintGemstoneCape(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const top = box.minV + ITEM_LW;
+  const bottom = box.maxV - ITEM_LW;
+  const rear = box.minU + ITEM_LW;
+  const front = box.maxU - ITEM_LW;
+  const length = front - rear;
+  const cape = new Path2D();
+  cape.moveTo(rear, bottom);
+  cape.lineTo(rear, top + SERAPE_CORNER_R);
+  cape.quadraticCurveTo(rear, top, rear + SERAPE_CORNER_R, top);
+  cape.quadraticCurveTo(rear + length / 2, top + 2 * SERAPE_SAG, front - SERAPE_CORNER_R, top);
+  cape.quadraticCurveTo(front, top, front, top + SERAPE_CORNER_R);
+  cape.lineTo(front, bottom);
+  cape.closePath();
+  silhouette(ctx, [{ path: cape, fill: GEMSTONE_CAPE_FILL }]);
+  ctx.save();
+  ctx.clip(cape);
+  trimBand(ctx, { x0: front - SERAPE_BAND_FROM, x1: front - SERAPE_BAND_TO, y0: top - 1, y1: bottom + 1 }, GOLD_TRIM, false, SERAPE_BAND_LW);
+  ctx.restore();
+  const h = CAPE_GEMSTONE_HALF;
+  for (const stone of CAPE_GEMSTONES) {
+    const u = rear + length * stone.share;
+    const v = stone.v;
+    const diamond = roundedPolygon(
+      [
+        { x: u, y: v - h },
+        { x: u + h, y: v },
+        { x: u, y: v + h },
+        { x: u - h, y: v },
+      ],
+      0.3,
+    );
+    shape(ctx, diamond, GEMSTONE_CAPE_STONES[stone.colour], 2 * CAPE_GEMSTONE_OL);
+  }
+  shine(ctx, rear + 2, top + 3.4, 1, 0.7, -0.1);
+  legendStar(ctx, front - SERAPE_STAR_BACK, SERAPE_STAR_V, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -2969,6 +3260,23 @@ export function paintBodyWearable(
     case 'crystal-crown':
       paintCrystalCrown(ctx);
       break;
+    case 'climbing-helmet':
+      paintClimbingHelmet(ctx);
+      break;
+    case 'pebble-necklace':
+      paintPebbleNecklace(ctx);
+      break;
+    case 'cave-goggles':
+      paintCaveGoggles(ctx);
+      break;
+    case 'glow-tail-lantern':
+      inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintGlowTailLantern(ctx));
+      break;
+    case 'gemstone-cape': {
+      const back = backFootprint(look);
+      inFrame(ctx, back.frame, () => paintGemstoneCape(ctx, back.box));
+      break;
+    }
     default:
       break;
   }

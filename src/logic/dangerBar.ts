@@ -60,8 +60,11 @@ interface PathSample {
   along: number;
 }
 
-/** The moving threats and the water they swim in: its size and its safe area (issue #130, ND-2). */
-type WaterGeometry = ThreatGeometry & Pick<ZoneLayout, 'width' | 'bedTop' | 'safeArea'>;
+/**
+ * The moving threats and the water they swim in: its size and its safe area (issue #130, ND-2), and
+ * its solid rock walls, which are not water (issue #105, ND-8; absent means none).
+ */
+type WaterGeometry = ThreatGeometry & Pick<ZoneLayout, 'width' | 'bedTop' | 'safeArea'> & Partial<Pick<ZoneLayout, 'rockWalls'>>;
 
 /** Everything a whole-water bar reads: the threats, the water and the area's size. */
 type WholeWaterGeometry = WaterGeometry & Pick<ZoneLayout, 'height'>;
@@ -497,8 +500,17 @@ function buildWaterGrid(layout: WaterGeometry): WaterGrid {
   const xs = gridLine(bounds.minX, bounds.maxX);
   const ys = gridLine(bounds.minY, bounds.maxY);
   const reaches = reachesOf(layout);
-  const quiet = ys.flatMap((y) => xs.map((x) => isQuietPoint({ x, y }, layout.safeArea, reaches)));
+  const rock = layout.rockWalls ?? [];
+  const quiet = ys.flatMap((y) => xs.map((x) => isQuietPoint({ x, y }, layout.safeArea, reaches) && !inRock({ x, y }, rock)));
   return { xs, ys, quiet };
+}
+
+/**
+ * Whether a point is inside a rock wall, edges included (issue #105, ND-8). Rock is not water, so a
+ * grid point in it is never quiet: a quiet swim ends at the rock as it ends at a threat.
+ */
+function inRock(point: Point, walls: readonly Readonly<{ x0: number; x1: number; y0: number; y1: number }>[]): boolean {
+  return walls.some((wall) => point.x >= wall.x0 && point.x <= wall.x1 && point.y >= wall.y0 && point.y <= wall.y1);
 }
 
 /** Grid positions from `from` every QUIET_GRID_STEP px, then `to` itself, so the last one sits on the water's edge. */

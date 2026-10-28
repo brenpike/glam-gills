@@ -49,12 +49,31 @@ export interface NetDrift {
   readonly offset: number;
 }
 
+/** Which way a pulsing current's vent blows, along one axis (issue #105, ND-5). */
+export type PulseFlow = 'left' | 'right' | 'up' | 'down';
+
+/**
+ * A pulsing current's cycle and flow (issue #105, ND-5): the calm in seconds, the flow and the
+ * offset in seconds of element time at which its calm starts. The warning and the surge are
+ * PULSING_CURRENTS' shared values (pulsingCurrents.ts).
+ */
+export interface CurrentPulse {
+  readonly calmFor: number;
+  readonly flow: PulseFlow;
+  readonly offset: number;
+}
+
 export interface HazardSpawn {
   id: string;
   type: HazardType;
   shape: HazardShape;
   /** Drift path (N3); absent means the hazard never moves. */
   drift?: NetDrift;
+  /**
+   * The pulse of a pulsing current (issue #105, ND-5), whose shape is its band; absent on every
+   * other hazard. Build it with pulsingCurrentSpawn().
+   */
+  pulse?: CurrentPulse;
 }
 
 /**
@@ -123,6 +142,20 @@ export interface GlowPlantSpot {
   radius: number;
 }
 
+/**
+ * A pebble's groove (issue #105, ND-8): the pebble's centre rolls in a straight line from (`x0`,
+ * `y0`) to (`x1`, `y1`), never back. `radius` is the pebble's in px. Not a sweep: the pebble never
+ * hits; it only blocks the axolotl (pebble.ts).
+ */
+export interface PebbleGroove {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** Must be greater than 0. */
+  radius: number;
+}
+
 export interface ElementSpawn {
   id: string;
   type: ElementType;
@@ -132,6 +165,8 @@ export interface ElementSpawn {
   matPair?: MatPair;
   /** Glow-plant geometry (issue #77, ND-8); absent on every element that is not a glow-plant. */
   glowPlant?: GlowPlantSpot;
+  /** Pebble groove (issue #105, ND-8); absent on every element that is not a pebble. */
+  pebble?: PebbleGroove;
 }
 
 /**

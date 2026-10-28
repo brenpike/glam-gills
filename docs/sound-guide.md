@@ -114,6 +114,8 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | Lighting a glow-plant | The light spreading through the dark is the reward. A soft glass chime is an open question (PRD), to sketch and measure first (section 7). |
 | The glow-plant hint | A gentle nudge to look, not an alarm: a sound each time it shows would repeat (section 2). |
 | Swimming into or out of the dark | The darkness and the axolotl's glow show it; a sound for the dark would feel like danger music. |
+| A pulsing vent's warning and surge | The bubbles at the mouth and the streaks show it. A vent costs no leg, so it gets no warning ripple, and a sound on every cycle would repeat (section 2). |
+| A pebble rolling, and its hint arrow | The pebble moving is the reward, and the arrow is a gentle nudge, not an alarm. |
 | Entering the Home Spot ring | The Go home button shows; banking has its own sound. |
 | Find toasts and the first-trip hint | The find sound already played. |
 | Pause and resume | The tap plays; the music goes soft (PRD M9). |

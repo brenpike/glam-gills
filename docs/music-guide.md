@@ -48,7 +48,7 @@ Every sound is made live in code with Web Audio. There are no audio files (PRD M
 | Canal Paddle | Canal (Area 1) | G major | 6/8 lilt, with a 1-2 3-4 5-6 flip in bars 4 and 8 | 68 (dotted quarter) | Marimba tune, strummed chords, soft kick, shaker, bubble pops |
 | Lily Pad Hop | Lily pad pond (Areas 2 and 3) | F major | 4/4, straight | 104 bpm | Flute-like whistle tune doubled by marimba, plucked strings going oom-pah, wood block, a boing at phrase ends |
 | Garden Boats | Chinampa gardens (Areas 4 and 5) | D mixolydian | 4/4 on a 3-3-2 beat | 112 bpm | Marimba tune with whistle, nylon guitar strums, guiro, box-drum slap, soft kick |
-| Cenote Glow | Spring cave (Area 6) | E dorian | 4/4, slow and straight | 66 bpm | Glass bell tune, a soft pad and a deep bass on each bar, glass sparkles, water drips, and the echo |
+| Cenote Glow | Spring cave (Areas 6 and 7) | E dorian | 4/4, slow and straight | 66 bpm | Glass bell tune, a soft pad and a deep bass on each bar, glass sparkles, water drips, and the echo |
 
 Chords, one bar each (two chords in one bar are split at the half bar):
 

@@ -70,9 +70,20 @@ import {
   type MobileSnackPoseScene,
 } from '../logic/mobileSnacks';
 import { motionProfile, type MotionProfile } from '../logic/motion';
+import {
+  blockAtRock,
+  createPebbles,
+  nearUnrolledPebble,
+  pebbleHintShown,
+  stepPebbleHintClock,
+  stepPebbles,
+  type PebbleState,
+  type RockWall,
+} from '../logic/pebble';
 import { outfitPerks, perkTripContext, perkTuning, type PerkTuning } from '../logic/perks';
 import { isQueasy, queasySwimTuning, type SpitAvoid } from '../logic/plasticWorms';
 import { CARP_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
+import { addPulseCurrent, pulseMotion, pulsingCurrents, type PulseMotion, type PulsingCurrentSpawn } from '../logic/pulsingCurrents';
 import { mulberry32 } from '../logic/rng';
 import { areaStrandingChance, tripStranding } from '../logic/rescue';
 import { explorerAxolotl, markDashPotTipSeen, restoreSnacks, tripStart } from '../logic/session';
@@ -133,8 +144,10 @@ import { HyacinthMatView } from './HyacinthMatView';
 import { MobileSnackView } from './MobileSnackView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
+import { PebbleRoomView } from './PebbleRoomView';
 import { PlasticWormView } from './PlasticWormView';
 import { PredatorView } from './PredatorView';
+import { PulsingCurrentView } from './PulsingCurrentView';
 import { readSession, returnToHomeTank, writeSession } from './sceneFlow';
 import { faceSprite } from './spriteFacing';
 import { StrandedView } from './StrandedView';
@@ -338,6 +351,20 @@ export class SwimScene extends Phaser.Scene {
   private darkLightsNow: DarkLight[] = [];
   /** The tadpole and shrimp poses, or null in an area with no mobile snacks. */
   private mobileSnackView: MobileSnackView | null = null;
+  /** The area's pulsing vents (issue #105, ND-5); empty in an area with none. Fixed for the trip. */
+  private vents: readonly Readonly<PulsingCurrentSpawn>[] = [];
+  /** The pulsing vents' mouths, bubbles and surges, or null in an area with no vents. */
+  private pulsingCurrentView: PulsingCurrentView | null = null;
+  /** The pulsing current motion for the reduced-motion preference, worked out again only when it changes. */
+  private pulseMotionNow: PulseMotion = pulseMotion(false);
+  /** The area's solid rock walls (issue #105, ND-8); empty in an area with none. Fixed for the trip. */
+  private rockWalls: readonly Readonly<RockWall>[] = [];
+  /** Each pebble's place along its groove this trip (trip state only: every pebble starts at its start). */
+  private pebbleStates: readonly PebbleState[] = [];
+  /** Seconds of swimming near an unrolled pebble without moving it, for the hint (stepPebbleHintClock). */
+  private pebbleHintTime = 0;
+  /** The rock walls and pebbles, or null in an area with neither. */
+  private pebbleRoomView: PebbleRoomView | null = null;
   /** What every mobile snack pose shares this frame, reused each frame. */
   private mobileSnackScene: MobileSnackPoseScene = { clock: 0, reduced: false, head: { x: 0, y: 0 } };
   private homeSpotView!: HomeSpotView;
@@ -431,6 +458,12 @@ export class SwimScene extends Phaser.Scene {
     this.glowPlantView = null;
     this.darkLightsNow = [];
     this.mobileSnackView = null;
+    this.vents = [];
+    this.pulsingCurrentView = null;
+    this.rockWalls = [];
+    this.pebbleStates = [];
+    this.pebbleHintTime = 0;
+    this.pebbleRoomView = null;
     this.swimPhase = (TAU * T_STATIC) / 1.2;
     this.gillPhase = (TAU * T_STATIC) / 0.8;
   }
@@ -447,6 +480,7 @@ export class SwimScene extends Phaser.Scene {
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     this.glowPlantMotion = glowMotion(!this.motion.ambient);
+    this.pulseMotionNow = pulseMotion(!this.motion.ambient);
     this.bounds = swimBounds(zone);
     this.spitAvoid = { bounds: this.bounds, currents: zone.currents, safeArea: zone.safeArea };
     this.rand = mulberry32(SIM_SEED);
@@ -487,6 +521,9 @@ export class SwimScene extends Phaser.Scene {
     });
     this.dashPotTip = createDashPotTip(session.hub);
     this.setUpMats();
+    this.vents = pulsingCurrents(zone.hazards);
+    this.rockWalls = zone.rockWalls ?? [];
+    this.pebbleStates = createPebbles(this.trip.elements);
     this.dashKeyLatched = true;
     this.tripCtx = perkTripContext(this.perks, this.bounds);
     this.registry.set(REGISTRY_KEYS.total, this.items.length);
@@ -585,6 +622,15 @@ export class SwimScene extends Phaser.Scene {
    * treasure and snack star dark rule share that one list, and the layer is redrawn only when a light
    * moved, grew or appeared while the camera view meets the dark water. The glow-plant motion object is worked out
    * again only when reduced motion changes.
+   * Spring cave Area 7 (#105): Areas 1 to 6 build and call nothing new. PulsingCurrentView and
+   * PebbleRoomView are made once per trip, and only in an area with pulsing vents, rock walls or a
+   * pebble. Where there are vents, addPulseCurrent adds to the steady current's own result and
+   * allocates nothing, and PulsingCurrentView reuses its sprites and allocates only its render
+   * argument object. Where there is rock or a pebble, each swimming frame stepPebbles builds its step
+   * result and the body's point, a roll builds one new pebble state, blockAtRock builds a point only
+   * when a wall is in the way, and PebbleRoomView allocates its render argument object and each
+   * pebble's centre point: the same bounded class as the residual below. The pulsing current motion
+   * object is worked out again only when reduced motion changes.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -631,11 +677,14 @@ export class SwimScene extends Phaser.Scene {
     const zone = this.zone;
     const pos = { x: this.swim.x, y: this.swim.y };
     this.dashingThisFrame = this.dash.phase === 'dashing';
+    const current = currentAt(pos, zone.currents);
+    // INVARIANT: the vents surge on the element time the trip reaches this frame, as the mats do.
+    if (this.vents.length > 0) addPulseCurrent(current, pos, this.vents, this.trip.elementTime + dt);
     const swum = stepSwim(
       this.swim,
       steer,
       {
-        current: currentAt(pos, zone.currents),
+        current,
         dragMul: reedDragAt(pos, zone.reedPatches),
         bounds: this.bounds,
         dashing: this.dashingThisFrame,
@@ -643,7 +692,7 @@ export class SwimScene extends Phaser.Scene {
       dt,
       this.swimTuning(),
     );
-    this.swim = this.blockAtMats(pos, swum, dt);
+    this.swim = this.blockAtRockAndPebbles(pos, this.blockAtMats(pos, swum, dt), dt);
     const previousPhase = this.dash.phase;
     this.dash = updateDash(this.dash, dt, this.perks.swim);
     if (this.dash.phase !== previousPhase || this.dash.phase === 'cooldown') {
@@ -686,6 +735,30 @@ export class SwimScene extends Phaser.Scene {
     const avoid = this.matAvoid;
     if (avoid === null) return swum;
     const blocked = blockExplorer(prev, swum, this.trip.elements, this.trip.elementTime + dt, avoid);
+    if (blocked.x === swum.x && blocked.y === swum.y) return swum;
+    return {
+      ...swum,
+      x: blocked.x,
+      y: blocked.y,
+      vx: blocked.x === swum.x ? swum.vx : 0,
+      vy: blocked.y === swum.y ? swum.vy : 0,
+    };
+  }
+
+  /**
+   * Rock walls and pebbles (issue #105, ND-8): the swim step from `prev` to `swum` against the
+   * pebbles first, so a push rolls one and the body stays at its edge, then stopped at the rock, with
+   * the velocity zeroed on each axis the rock or a pebble changed. Steps the pebble hint clock too.
+   * Called only while swimming. An area with neither returns `swum` itself and calls nothing.
+   */
+  private blockAtRockAndPebbles(prev: Vec2, swum: SwimState, dt: number): SwimState {
+    if (this.rockWalls.length === 0 && this.pebbleStates.length === 0) return swum;
+    const rolled = stepPebbles(this.pebbleStates, this.trip.elements, prev, swum, dt);
+    const moved = rolled.pebbles !== this.pebbleStates;
+    this.pebbleStates = rolled.pebbles;
+    const near = nearUnrolledPebble(swum, this.pebbleStates, this.trip.elements);
+    this.pebbleHintTime = stepPebbleHintClock(this.pebbleHintTime, { dt, near, rolled: moved, paused: false });
+    const blocked = blockAtRock(prev, rolled.pos, this.rockWalls);
     if (blocked.x === swum.x && blocked.y === swum.y) return swum;
     return {
       ...swum,
@@ -810,6 +883,11 @@ export class SwimScene extends Phaser.Scene {
     this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, dark, this.trip.elements) : null;
     this.glowPlantView =
       glowPlants(this.trip.elements).length > 0 ? new GlowPlantView(this, this.assets, this.trip.elements) : null;
+    this.pulsingCurrentView = this.vents.length > 0 ? new PulsingCurrentView(this, this.assets, this.vents) : null;
+    this.pebbleRoomView =
+      this.rockWalls.length > 0 || this.pebbleStates.length > 0
+        ? new PebbleRoomView(this, this.assets, this.rockWalls, this.trip.elements)
+        : null;
 
     this.bubbleImages = Array.from({ length: BUBBLE_MAX_ALIVE }, () =>
       this.add.image(0, 0, baked.bubbles[0].key).setVisible(false).setDepth(DEPTH.bubbles),
@@ -1375,6 +1453,7 @@ export class SwimScene extends Phaser.Scene {
   private handleReducedMotion(payload: ReducedMotionPayload): void {
     this.motion = motionProfile(payload.reduced);
     this.glowPlantMotion = glowMotion(payload.reduced);
+    this.pulseMotionNow = pulseMotion(payload.reduced);
     this.cameras.main.setLerp(this.motion.cameraLerp, this.motion.cameraLerp);
     if (!this.motion.turnTween) {
       this.tweens.killTweensOf(this.turn);
@@ -1414,6 +1493,8 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.destroy();
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
+    this.pulsingCurrentView?.destroy();
+    this.pebbleRoomView?.destroy();
     this.hyacinthMatView?.destroy();
     this.axolotlView.destroy();
   }
@@ -1450,6 +1531,8 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
     this.renderDarkCave();
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
+    this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
+    this.pebbleRoomView?.render({ pebbles: this.pebbleStates, hint: this.trip.phase === 'swimming' && pebbleHintShown(this.pebbleHintTime) });
     this.fireflyView?.render(this.motion, this.clock);
     this.renderReeds(dt, t);
     this.renderSnacks();

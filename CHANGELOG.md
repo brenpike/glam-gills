@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-10-28
+
+### Added
+
+- Area 7, the second Spring cave area. It is 8 screens wide and 2 screens tall, and you climb up through the cave to find the exit at the top right (#105).
+- Watch out for pulsing vents. A vent goes calm, then bubbles build at its mouth, then it blasts a strong current that pushes you back. Swim across while it is calm. A vent never costs a leg (#105).
+- A big round pebble blocks a side room. Swim into it from outside to roll it out of the way. If you stay near it for a while, an arrow shows you which way to push (#105).
+- The side room has solid rock walls, and it hides the special treasure, the Ancient clay pot (#105).
+- Crayfish, carp, stalactites and geyser vents are back in Area 7, and the crayfish walk a little faster (#105).
+- 12 new treasures to find in Area 7, including the Ancient clay pot and the Chocolate Dream colour (#105).
+- A new fact card: "Underwater springs" (#105).
+- The refuge's Spring cave section now has trash from Area 7 too (#105).
+
 ## [0.52.0] - 2026-10-28
 
 ### Added

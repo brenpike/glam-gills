@@ -9,6 +9,7 @@ import type { PredatorRoute } from './predators';
 import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
 import { SNACK_DART, type SnackDartRule } from './snackDart';
+import { SPRING_CAVE_2_AREA_ID, SPRING_CAVE_2_LAYOUT } from './springCave2Layout';
 import { SPRING_CAVE_AREA_ID, SPRING_CAVE_LAYOUT } from './springCaveLayout';
 import { bestStarsFor, starCount, type AreaStarsRecord } from './stars';
 import { CANAL_AREA_ID, CANAL_LAYOUT, type AreaLayoutData, type Point } from './zone';
@@ -30,7 +31,7 @@ export const POND_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'pond', name:
 /** The chinampa gardens habitat, home of Areas 4 and 5. */
 export const CHINAMPA_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'chinampa', name: 'Chinampa gardens', look: 'chinampa' });
 
-/** The spring cave habitat, home of Area 6. */
+/** The spring cave habitat, home of Areas 6 and 7. */
 export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
 
 /** Every habitat. */
@@ -224,6 +225,33 @@ export const SPRING_CAVE_AREA: Readonly<AreaData> = Object.freeze({
   strandingChance: 0.3,
 });
 
+/**
+ * Area 7, the spring cave again, the first climb, with the pulsing vents and the pebble (issue
+ * #105).
+ */
+export const SPRING_CAVE_2_AREA: Readonly<AreaData> = Object.freeze({
+  id: SPRING_CAVE_2_AREA_ID,
+  number: 7,
+  habitatId: SPRING_CAVE_HABITAT.id,
+  layout: SPRING_CAVE_2_LAYOUT,
+  /**
+   * Provisional exit at the top of the climb, in the top right, at the end of the main path (ND-2):
+   * inside the swim bounds, out of the safe area and every predator's reach, clear of every
+   * stalactite and geyser sweep, every pulsing vent and the pebble room, and clear of every hiding
+   * spot by more than the exit radius plus the find pickup radius.
+   */
+  exit: Object.freeze({ x: 3720, y: 200, radius: 40 }),
+  specialTreasureId: 'spring-cave/ancient-clay-pot',
+  /**
+   * Provisional drift, a little faster than Area 6 (PRD H4; ND-11): the same amplitudes with
+   * shorter periods. That is below the 17 px/s a one-leg axolotl makes against the steady spring
+   * outflow and at most half the 40 px/s Snack magnet pull. No snacks dart once: the shrimp replace
+   * the one-time darters.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 7.3, periodY: 5.84 }),
+  strandingChance: 0.3,
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -232,6 +260,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CHINAMPA_AREA,
   CHINAMPA_2_AREA,
   SPRING_CAVE_AREA,
+  SPRING_CAVE_2_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */

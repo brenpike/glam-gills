@@ -61,11 +61,14 @@ export interface Gap {
 
 /**
  * Every obstacle of a zone: each hazard by its reach from its whole drift path (hazardSweep, N3),
+ * but a pulsing current, which is swum through, not round (issue #105, ND-6),
  * then each moving hazard sweep by its touch reach (ND-8), then each extra shape by its keep-out,
  * then each predator route by its strike range (zoneThreats). No extras gives the zone's own obstacles.
  */
 export function obstaclesOf(layout: GapGeometry, extras: readonly ExtraObstacle[] = []): Obstacle[] {
-  const hazards = layout.hazards.map((hazard): Obstacle => ({ id: hazard.id, kind: 'shape', shape: hazardSweep(hazard), keepOut: hazard.type.reach }));
+  const hazards = layout.hazards
+    .filter((hazard) => hazard.pulse === undefined)
+    .map((hazard): Obstacle => ({ id: hazard.id, kind: 'shape', shape: hazardSweep(hazard), keepOut: hazard.type.reach }));
   const moving = (layout.movingHazards ?? []).map(
     (spawn): Obstacle => ({ id: spawn.id, kind: 'shape', shape: movingHazardSweep(spawn), keepOut: spawn.type.touchReach }),
   );

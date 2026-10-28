@@ -210,6 +210,53 @@ export const CRYSTAL_ARCH_BASE = GOLDEN_LOTUS_BASE;
 /** Crystal crown base band, a pale silver-white (so the gold band across it reads in greyscale, 1.46:1). 12.96:1. */
 export const CRYSTAL_CROWN_BAND = '#f0f3fa';
 
+// ---- Spring cave Area 7 silhouette fills (issue #105, ND-13; all at least 9:1 with ink) ----
+// Icons and the worn looks of the five Area 7 Wearables share these (the worn looks import them from here, they
+// never repeat the hex). The second cave area keeps Area 6's cool pale stone and adds a pale terracotta pot, a
+// pale tangerine helmet, a pale glass green goggle frame, a pale lantern amber and a pale amethyst cape. None
+// equals a BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour say so.
+
+/** Mossy rock stone, the pebble stack's pale river-stone grey-blue. Alias of PEBBLE_STACK_FILL. 10.80:1. */
+export const MOSSY_ROCK_FILL = PEBBLE_STACK_FILL;
+/** Mossy rock moss cap, the lily-pad socks' pale pad green. Alias of MOSS_BALL_FILL. 11.09:1. */
+export const MOSSY_ROCK_MOSS = MOSS_BALL_FILL;
+/** Bubble stone, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const BUBBLE_STONE_FILL = FIREFLY_HOOK;
+/** Bubbles: the Bubble stone's and the Bubble machine's, a pale bubble aqua. 12.46:1. */
+export const BUBBLE_FILL = '#d4f4ff';
+/** Climbing helmet, a pale tangerine shell. 10.30:1. */
+export const CLIMBING_HELMET_FILL = '#ffd2a6';
+/** Pebble necklace cord, pebble C. Alias of GOLDEN_LOTUS_BASE. 10.70:1. */
+export const PEBBLE_NECKLACE_CORD = GOLDEN_LOTUS_BASE;
+/** Pebble necklace pebbles, the pebble stack's grey-blue. Alias of PEBBLE_STACK_FILL. 10.80:1. */
+export const PEBBLE_NECKLACE_STONE = PEBBLE_STACK_FILL;
+/** Ancient clay pot, a pale terracotta (the true clay red-brown fails 9:1). 10.19:1. */
+export const CLAY_POT_FILL = '#f8d2b4';
+/** Glowing stalactite rock and its ceiling slab, a pale lilac-grey stone. 10.33:1. */
+export const STALACTITE_ROCK = '#dcd8ec';
+/** Glowing stalactite hook ring, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const STALACTITE_HOOK = FIREFLY_HOOK;
+/** Cave goggles frames, a pale glass green. 11.38:1. */
+export const GOGGLES_FRAME = '#c5f0c0';
+/** Cave goggles strap, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const GOGGLES_STRAP = FIREFLY_HOOK;
+/** Bubble machine body, the shell necklace cord's soft pink. Alias of NECKLACE_CORD. 11.19:1. */
+export const BUBBLE_MACHINE_FILL = NECKLACE_CORD;
+/** Bubble machine nozzle, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const BUBBLE_MACHINE_NOZZLE = FIREFLY_HOOK;
+/** Glow tail lantern glass, a pale glowing amber. 12.62:1. */
+export const LANTERN_GLASS = '#fff0b8';
+/** Glow tail lantern cap, base and handle ring, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const LANTERN_FRAME = FIREFLY_HOOK;
+/** Underground waterfall cliff, the stalactite's lilac-grey stone. Alias of STALACTITE_ROCK. 10.33:1. */
+export const WATERFALL_ROCK = STALACTITE_ROCK;
+/** Underground waterfall water and pool, the firefly jar's pale glass blue. Alias of FIREFLY_JAR_GLASS. 11.84:1. */
+export const WATERFALL_WATER = FIREFLY_JAR_GLASS;
+/** Underground waterfall plinth, pebble C. Alias of GOLDEN_LOTUS_BASE. 10.70:1. */
+export const WATERFALL_BASE = GOLDEN_LOTUS_BASE;
+/** Gemstone cape, a pale amethyst. 11.00:1. */
+export const GEMSTONE_CAPE_FILL = '#e6dcff';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -261,7 +308,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The seventeen Dream colour ids, in the order the guide lists them (3f). */
+/** The eighteen Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -279,7 +326,8 @@ export type DreamSwatchId =
   | 'firefly-gold'
   | 'poppy-red'
   | 'plum'
-  | 'moonstone';
+  | 'moonstone'
+  | 'chocolate';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars';
@@ -328,4 +376,5 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
   'poppy-red': { body: '#e8402f', pattern: 'plain', marks: [], dark: false },
   plum: { body: '#933f93', pattern: 'plain', marks: [], dark: true },
   moonstone: { body: '#f5f7fc', pattern: 'plain', marks: [], dark: false },
+  chocolate: { body: '#6c391d', pattern: 'plain', marks: [], dark: true },
 };

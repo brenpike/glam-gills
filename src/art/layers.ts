@@ -46,9 +46,14 @@
  * hole over it. Hint sparkles (`hint`) are above it and are hidden by the game rules, not by depth.
  * `glowPlant` (the glow-plants and their hint, issue #77, ND-8) sits just over `darkWater`, so the
  * darkness never hides a plant, and below the tilapia.
+ * `pulsingCurrent` (a pulsing vent's mouth, its warning bubbles, its surge streaks and its surging
+ * band, issue #105, ND-7) sits just above treasures and below collectibles: a cue object above the
+ * haze, and snacks never sit in a band. `rock` (the solid rock walls and the pebble, issue #105,
+ * ND-8) sits above the glow-plants and below the tilapia: what is drawn is what blocks, so snacks,
+ * treasure spots and the dark layer are behind it, and every predator and the axolotl draw in front.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
- * < haze < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure
- * < collectibles < darkWater < glowPlant < tilapia < movingHazard < heronStab < halo < friend < axolotl < queasyTint
+ * < haze < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
+ * < collectibles < darkWater < glowPlant < rock < tilapia < movingHazard < heronStab < halo < friend < axolotl < queasyTint
  * < bubbles < surface < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
@@ -75,11 +80,15 @@ export const DEPTH = {
   treasureGlow: 27,
   /** Provisional. Dash pots and treasures revealed by a crumble: cue objects above the haze. */
   treasure: 28,
+  /** Provisional. A pulsing vent's mouth, bubbles, streaks and surging band: above treasures, below collectibles. */
+  pulsingCurrent: 29,
   collectibles: 30,
   /** Provisional. The dark layer over an area's dark part: above collectibles, below the glow-plants and the tilapia. */
   darkWater: 32,
   /** Provisional. Glow-plants and their hint: just above the dark layer, below the tilapia. */
   glowPlant: 33,
+  /** Provisional. Solid rock walls and the pebble: above the glow-plants, below the tilapia. */
+  rock: 34,
   /** Provisional. Predator: behind the axolotl, in front of collectibles. */
   tilapia: 35,
   /** Provisional. Moving hazard shadow, shaft and bow: in front of the tilapia, behind the heron stab, the halo and the axolotl. */

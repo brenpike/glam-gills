@@ -817,7 +817,7 @@ describe('decorateLayout', () => {
   });
 
   it('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    expect(SHIPPED_DECORATIONS).toHaveLength(31);
+    expect(SHIPPED_DECORATIONS).toHaveLength(37);
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const problems = supportedCanvases().flatMap((view) =>
       maxCounts.flatMap((maxTrayCount) =>
@@ -990,43 +990,56 @@ function traysFrom(least: number): number[] {
   return Array.from({ length: SHIPPED_DECORATIONS.length - least + 1 }, (_, index) => least + index);
 }
 
-/** Canvases where a tray of 18 to 31 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
+/** Canvases where a tray of 18 to 37 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
 const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 440 }, traysFrom(22)],
   [{ cssW: 320, cssH: 480 }, traysFrom(22)],
+  [{ cssW: 320, cssH: 568 }, traysFrom(32)],
+  [{ cssW: 320, cssH: 600 }, traysFrom(32)],
   [{ cssW: 340, cssH: 440 }, traysFrom(23)],
   [{ cssW: 340, cssH: 480 }, traysFrom(23)],
+  [{ cssW: 340, cssH: 568 }, traysFrom(33)],
+  [{ cssW: 340, cssH: 600 }, traysFrom(33)],
   [{ cssW: 360, cssH: 440 }, traysFrom(18)],
   [{ cssW: 360, cssH: 480 }, traysFrom(23)],
   [{ cssW: 360, cssH: 568 }, traysFrom(28)],
+  [{ cssW: 360, cssH: 600 }, traysFrom(33)],
   [{ cssW: 375, cssH: 440 }, traysFrom(18)],
   [{ cssW: 375, cssH: 480 }, traysFrom(23)],
   [{ cssW: 375, cssH: 568 }, traysFrom(28)],
+  [{ cssW: 375, cssH: 600 }, traysFrom(33)],
   [{ cssW: 390, cssH: 440 }, traysFrom(22)],
   [{ cssW: 390, cssH: 480 }, traysFrom(28)],
+  [{ cssW: 390, cssH: 568 }, traysFrom(34)],
   [{ cssW: 414, cssH: 440 }, traysFrom(28)],
   [{ cssW: 414, cssH: 480 }, traysFrom(28)],
   [{ cssW: 430, cssH: 440 }, traysFrom(22)],
   [{ cssW: 430, cssH: 480 }, traysFrom(28)],
   [{ cssW: 459, cssH: 440 }, traysFrom(26)],
+  [{ cssW: 459, cssH: 480 }, traysFrom(33)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 460, cssH }, traysFrom(19)]),
   [{ cssW: 460, cssH: 414 }, traysFrom(26)],
   [{ cssW: 460, cssH: 440 }, traysFrom(26)],
+  [{ cssW: 460, cssH: 480 }, traysFrom(33)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 480, cssH }, traysFrom(19)]),
   [{ cssW: 480, cssH: 414 }, traysFrom(19)],
   [{ cssW: 480, cssH: 440 }, traysFrom(26)],
+  [{ cssW: 480, cssH: 480 }, traysFrom(33)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 520, cssH }, traysFrom(22)]),
   [{ cssW: 520, cssH: 414 }, traysFrom(30)],
   [{ cssW: 520, cssH: 440 }, traysFrom(30)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 568, cssH }, traysFrom(25)]),
-  ...[640, 667].flatMap((cssW) =>
-    [320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW, cssH }, traysFrom(28)]),
-  ),
+  [{ cssW: 568, cssH: 414 }, traysFrom(34)],
+  [{ cssW: 568, cssH: 440 }, traysFrom(34)],
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 640, cssH }, traysFrom(28)]),
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 667, cssH }, traysFrom(28)]),
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 736, cssH }, traysFrom(31)]),
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 800, cssH }, traysFrom(36)]),
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 844, cssH }, traysFrom(37)]),
 ];
 
 describe('decorate tray pages', () => {
-  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 30 or more on the other narrow canvases, 25 at 568 wide, 28 at 640 and 667 wide and 31 at 736 wide', () => {
+  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 34 or more on the other narrow and tall canvases, 25 at 568 wide, 28 at 640 and 667 wide, 31 at 736 wide, 36 at 800 wide and 37 at 844 wide', () => {
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const paged = supportedCanvases().flatMap((view) => {
       const counts = maxCounts.filter((trayCount) => sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length).pageCount > 1);

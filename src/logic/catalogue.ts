@@ -88,7 +88,8 @@ export type DreamColourId =
   | 'firefly-gold'
   | 'poppy-red'
   | 'plum'
-  | 'moonstone';
+  | 'moonstone'
+  | 'chocolate';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -178,9 +179,18 @@ export const MOONSTONE: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
+/** The spring cave's Area 7 Dream colour, a solid brown held by that area's one Paint shell (issue #105). */
+export const CHOCOLATE: DreamColour = Object.freeze({
+  id: 'chocolate',
+  name: 'Chocolate',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
- * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), then Moonstone (Area 6).
+ * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone (Area 6),
+ * then Chocolate (Area 7).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -192,6 +202,7 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   PLUM,
   TIE_DYE_GALAXY,
   MOONSTONE,
+  CHOCOLATE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -710,8 +721,71 @@ export const SPRING_CAVE_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The spring cave Area 7 treasures, all new, in rarity order (issue #105, the owner's 12): 6
+ * Decorations, 5 Wearables and the Chocolate Paint shell. The Ancient clay pot is the area's special
+ * treasure. Every perk comes from PERK_VALUES for its type and rarity, and no two Wearables share a
+ * perk type (ND-13).
+ */
+export const SPRING_CAVE_2_TREASURES: readonly Treasure[] = Object.freeze([
+  { id: 'spring-cave/mossy-rock', name: 'Mossy rock', rarity: 'common', category: 'decoration' },
+  { id: 'spring-cave/bubble-stone', name: 'Bubble stone', rarity: 'common', category: 'decoration' },
+  {
+    id: 'spring-cave/climbing-helmet',
+    name: 'Climbing helmet',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('dash', 'common'),
+  },
+  {
+    id: 'spring-cave/pebble-necklace',
+    name: 'Pebble necklace',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('regrowth', 'common'),
+  },
+  { id: 'spring-cave/ancient-clay-pot', name: 'Ancient clay pot', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'spring-cave/glowing-stalactite',
+    name: 'Glowing stalactite',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'spring-cave/cave-goggles',
+    name: 'Cave goggles',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'face',
+    perk: createPerk('treasureSense', 'rare'),
+  },
+  createPaintShell(CHOCOLATE, 'spring-cave'),
+  { id: 'spring-cave/bubble-machine', name: 'Bubble machine', rarity: 'epic', category: 'decoration' },
+  {
+    id: 'spring-cave/glow-tail-lantern',
+    name: 'Glow tail lantern',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'tail',
+    perk: createPerk('snackMagnet', 'epic'),
+  },
+  { id: 'spring-cave/underground-waterfall', name: 'Underground waterfall', rarity: 'legendary', category: 'decoration' },
+  {
+    id: 'spring-cave/gemstone-cape',
+    name: 'Gemstone cape',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('shell', 'legendary'),
+  },
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
- * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's.
+ * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
+ * then the spring cave Area 7's.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -720,6 +794,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CHINAMPA_TREASURES,
   ...CHINAMPA_2_TREASURES,
   ...SPRING_CAVE_TREASURES,
+  ...SPRING_CAVE_2_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

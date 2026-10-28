@@ -388,9 +388,9 @@ describe('card copy fit', () => {
     expect(SORTED_AXOLOTL_NAMES[0]).toBe('Golden albino axolotl');
   });
 
-  it('brings home at most the 20 canal treasures on one trip, of the 84 in the catalogue', () => {
+  it('brings home at most the 20 canal treasures on one trip, of the 96 in the catalogue', () => {
     expect(MAX_TRIP_FINDS).toBe(20);
-    expect(SORTED_NAMES).toHaveLength(84);
+    expect(SORTED_NAMES).toHaveLength(96);
   });
 
   it.each(CANVAS_WIDTHS)(
@@ -439,7 +439,7 @@ describe('card copy fit', () => {
 });
 
 describe('area fact card copy fit', () => {
-  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite and the geyser', () => {
+  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser and the underwater springs', () => {
     expect(AREA_FACT_CARDS.map((card) => card.id)).toEqual([
       'tilapia',
       'carp',
@@ -454,6 +454,7 @@ describe('area fact card copy fit', () => {
       'crayfish',
       'stalactite-drip',
       'geyser-vent',
+      'pulsing-current',
     ]);
   });
 
@@ -781,6 +782,7 @@ describe('area beaten card copy fit (H5, H8)', () => {
       'Scarecrow',
       'Piñata',
       'Fossil ammonite',
+      'Ancient clay pot',
     ]);
   });
 

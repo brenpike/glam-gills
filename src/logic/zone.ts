@@ -11,6 +11,7 @@ import {
 } from './hazards';
 import type { DarkWater } from './glowPlants';
 import type { MobileSnackMix } from './mobileSnacks';
+import type { RockWall } from './pebble';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import type { PredatorRoute } from './predators';
 import { mulberry32 } from './rng';
@@ -257,6 +258,10 @@ export interface ZoneLayout {
   mobileSnacks?: MobileSnackMix;
   /** The dark part of the area (issue #77, ND-7); absent means the whole area is lit. */
   darkWater?: DarkWater;
+  /** Solid rock walls (issue #105, ND-8); absent means none. */
+  rockWalls?: RockWall[];
+  /** Walled side rooms behind a pebble (issue #105, ND-8); absent means none. */
+  sideRooms?: RockWall[];
 }
 
 /** An area's size in world px. */
@@ -323,6 +328,17 @@ export interface AreaLayoutData {
   readonly mobileSnacks?: Readonly<MobileSnackMix>;
   /** The dark part of the area (issue #77, ND-7): fixed area data, never seeded. Absent means none. */
   readonly darkWater?: Readonly<DarkWater>;
+  /**
+   * Solid rock walls (issue #105, ND-8): fixed area data, never seeded. The axolotl's body never
+   * enters one (blockAtRock), and no snack starts within SNACK_HAZARD_CLEARANCE of one. Absent means none.
+   */
+  readonly rockWalls?: readonly Readonly<RockWall>[];
+  /**
+   * Walled side rooms behind a pebble (issue #105, ND-8): the water inside the walls, reached only
+   * once the pebble rolls. No snack starts within SNACK_HAZARD_CLEARANCE of one, so the exit never
+   * needs the pebble. Absent means none.
+   */
+  readonly sideRooms?: readonly Readonly<RockWall>[];
 }
 
 /** The canal cave. */
@@ -620,13 +636,22 @@ function snackAreas(data: AreaLayoutData, current: CurrentZone | undefined, boun
   return [...inCurrent, ...strata];
 }
 
-/** The sweep of every element that has geometry, then of every moving hazard, in data order. */
+/** A rock wall or side room as a rect shape. */
+function rockRect(rock: Readonly<RockWall>): HazardRect {
+  return { kind: 'rect', x0: rock.x0, x1: rock.x1, y0: rock.y0, y1: rock.y1 };
+}
+
+/**
+ * The sweep of every element that has geometry, then of every moving hazard, then every rock wall
+ * and side room (issue #105, ND-8), in data order.
+ */
 function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
   const elementSweeps = data.elements.flatMap((element) => {
     const sweep = elementSweep(element);
     return sweep ? [sweep] : [];
   });
-  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep)];
+  const rock = [...(data.rockWalls ?? []), ...(data.sideRooms ?? [])].map(rockRect);
+  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep), ...rock];
 }
 
 /**
@@ -838,6 +863,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     type: copyElementType(element.type),
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
+    ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
   };
 }
 
@@ -851,29 +877,37 @@ function copyMobileSnackMix(mix: Readonly<MobileSnackMix>): MobileSnackMix {
   };
 }
 
-/** A copy of the hazard sharing no object with the data; its drift copied only when set. */
+/** A copy of the hazard sharing no object with the data; its drift and pulse copied only when set. */
 function copyHazard(hazard: Readonly<HazardSpawn>): HazardSpawn {
-  return { ...hazard, shape: { ...hazard.shape }, ...(hazard.drift ? { drift: { ...hazard.drift } } : {}) };
+  return {
+    ...hazard,
+    shape: { ...hazard.shape },
+    ...(hazard.drift ? { drift: { ...hazard.drift } } : {}),
+    ...(hazard.pulse ? { pulse: { ...hazard.pulse } } : {}),
+  };
 }
 
 /** The layout's optional fields, each copied only when its data is set. */
 function optionalLayoutParts(
   data: Readonly<AreaLayoutData>,
-): Pick<ZoneLayout, 'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks' | 'darkWater'> {
+): Pick<ZoneLayout, 'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks' | 'darkWater' | 'rockWalls' | 'sideRooms'> {
   return {
     ...(data.tilapia ? { tilapia: { ...data.tilapia } } : {}),
     ...(data.bankOverhangs ? { bankOverhangs: data.bankOverhangs.map((overhang) => ({ ...overhang })) } : {}),
     ...(data.movingHazards ? { movingHazards: data.movingHazards.map((spawn) => ({ ...spawn })) } : {}),
     ...(data.mobileSnacks ? { mobileSnacks: copyMobileSnackMix(data.mobileSnacks) } : {}),
     ...(data.darkWater ? { darkWater: { ...data.darkWater } } : {}),
+    ...(data.rockWalls ? { rockWalls: data.rockWalls.map((wall) => ({ ...wall })) } : {}),
+    ...(data.sideRooms ? { sideRooms: data.sideRooms.map((room) => ({ ...room })) } : {}),
   };
 }
 
 /**
  * Deterministically builds an area's zone layout from its data and a mulberry32 seed. The rules
  * read the layout's width, height and bedTop, never the canal constants. The optional tilapia
- * tuning, bank overhangs, bank spots, moving hazards, mobile snacks and dark water make no rand()
- * draws; only snack starts near a drifting net's path or a moving hazard's sweep are redrawn.
+ * tuning, bank overhangs, bank spots, moving hazards, mobile snacks, dark water, rock walls and side
+ * rooms make no rand() draws; only snack starts near a drifting net's path, a moving hazard's sweep,
+ * a rock wall or a side room are redrawn.
  */
 export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLayout {
   const rand = mulberry32(seed);

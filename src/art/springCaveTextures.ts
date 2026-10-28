@@ -24,6 +24,20 @@ import {
   paintSpringOutflow,
   type GlowPlantState,
 } from './drawSpringCave';
+import {
+  PEBBLE_HINT_TEX,
+  PEBBLE_TEX,
+  SURGE_STREAK_TEX,
+  VENT_BUBBLE_TEX,
+  VENT_MOUTH_TEX,
+  paintPebble,
+  paintPebbleHint,
+  paintRockWall,
+  paintSurgeStreak,
+  paintVentBubble,
+  paintVentMouth,
+  rockWallTex,
+} from './drawPebbleRoom';
 import { bake, type TexInfo } from './textures';
 
 /** Fixed texture keys of the spring cave props. */
@@ -36,7 +50,20 @@ export const SPRING_CAVE_TEX = {
   glowPlantLit: 'spring-cave-glow-plant-lit',
   glowPlantHint: 'spring-cave-glow-plant-hint',
   softLight: 'spring-cave-soft-light',
+  pebble: 'spring-cave-pebble',
+  pebbleHint: 'spring-cave-pebble-hint',
+  ventMouth: 'spring-cave-vent-mouth',
+  ventBubble: 'spring-cave-vent-bubble',
+  surgeStreak: 'spring-cave-surge-streak',
 } as const;
+
+/** The texture key prefix of a baked rock wall; each key ends with the wall's size (issue #105, ND-8). */
+export const ROCK_WALL_KEY_PREFIX = 'spring-cave-rock-wall-';
+
+/** The key a rock wall `w` x `h` logical px is baked under, and found by, in SpringCaveTextures.rockWalls. */
+export function rockWallSizeKey(w: number, h: number): string {
+  return `${w}x${h}`;
+}
 
 /** The soft light bakes at this many texture pixels per logical unit, or at `bakeScale` when that is lower: a soft gradient needs no more. */
 export const SOFT_LIGHT_BAKE_SCALE = 1;
@@ -79,10 +106,37 @@ export interface SpringCaveTextures {
    * radius / SOFT_LIGHT_RADIUS / info.scale. Baked at SOFT_LIGHT_BAKE_SCALE or lower.
    */
   readonly softLight: TexInfo;
+  /** The pebble (issue #105, ND-8; PEBBLE_TEX): anchor is its centre. The scene turns it as it rolls. */
+  readonly pebble: TexInfo;
+  /** The pebble's hint arrow (PEBBLE_HINT_TEX), pointing along +x; anchor is the middle of its tail. */
+  readonly pebbleHint: TexInfo;
+  /** A pulsing vent's mouth (issue #105, ND-7; VENT_MOUTH_TEX), blowing along -x; anchor is the middle of its opening. */
+  readonly ventMouth: TexInfo;
+  /** One warning bubble (VENT_BUBBLE_TEX); anchor is its centre. */
+  readonly ventBubble: TexInfo;
+  /** One surge streak (SURGE_STREAK_TEX), along +x; anchor is its middle. */
+  readonly surgeStreak: TexInfo;
+  /**
+   * The solid rock walls (issue #105, ND-8), one bake per wall size in any area, keyed by
+   * rockWallSizeKey: anchor is the wall's top-left corner, drawn at its rect's own size.
+   */
+  readonly rockWalls: ReadonlyMap<string, TexInfo>;
 }
 
-/** Bake the spring cave props at `bakeScale` texture pixels per logical unit. */
-export function bakeSpringCaveTextures(scene: Phaser.Scene, bakeScale: number): SpringCaveTextures {
+/**
+ * Bake the spring cave props at `bakeScale` texture pixels per logical unit, with one rock wall bake
+ * for each of `rockWallSizes`, [w, h] in logical px.
+ */
+export function bakeSpringCaveTextures(
+  scene: Phaser.Scene,
+  bakeScale: number,
+  rockWallSizes: readonly (readonly [number, number])[] = [],
+): SpringCaveTextures {
+  const rockWalls = new Map<string, TexInfo>();
+  for (const [w, h] of rockWallSizes) {
+    const key = rockWallSizeKey(w, h);
+    if (!rockWalls.has(key)) rockWalls.set(key, bake(scene, `${ROCK_WALL_KEY_PREFIX}${key}`, rockWallTex(w, h), bakeScale, (ctx) => paintRockWall(ctx, w, h)));
+  }
   return {
     grotto: {
       back: bake(scene, SPRING_CAVE_TEX.grottoBack, GROTTO_TEX, bakeScale, paintGrottoBack),
@@ -96,5 +150,11 @@ export function bakeSpringCaveTextures(scene: Phaser.Scene, bakeScale: number): 
       hint: bake(scene, SPRING_CAVE_TEX.glowPlantHint, GLOW_PLANT_TEX, bakeScale, (ctx) => paintGlowPlant(ctx, 'hint')),
     },
     softLight: bake(scene, SPRING_CAVE_TEX.softLight, SOFT_LIGHT_TEX, Math.min(bakeScale, SOFT_LIGHT_BAKE_SCALE), paintSoftLight),
+    pebble: bake(scene, SPRING_CAVE_TEX.pebble, PEBBLE_TEX, bakeScale, paintPebble),
+    pebbleHint: bake(scene, SPRING_CAVE_TEX.pebbleHint, PEBBLE_HINT_TEX, bakeScale, paintPebbleHint),
+    ventMouth: bake(scene, SPRING_CAVE_TEX.ventMouth, VENT_MOUTH_TEX, bakeScale, paintVentMouth),
+    ventBubble: bake(scene, SPRING_CAVE_TEX.ventBubble, VENT_BUBBLE_TEX, bakeScale, paintVentBubble),
+    surgeStreak: bake(scene, SPRING_CAVE_TEX.surgeStreak, SURGE_STREAK_TEX, bakeScale, paintSurgeStreak),
+    rockWalls,
   };
 }

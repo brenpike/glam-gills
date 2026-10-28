@@ -240,6 +240,30 @@ export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The underwater springs fact card, shown the first time the axolotl meets a pulsing current (PRD
+ * C13; issue #105, the owner's text of 2026-10-22, ND-14).
+ * Sources, checked 2026-10-28 (web research only, read through search summaries; the game fetches
+ * nothing):
+ * Lucia Mouat, The Christian Science Monitor, "Mexico's Floating Gardens", 1992-02-21,
+ * https://www.csmonitor.com/1992/0221/21101.html (the canals were "once fed by crystal springs";
+ * a resident says the springs were tapped for Mexico City's drinking water in 1952);
+ * Wikipedia, "Lake Xochimilco", https://en.wikipedia.org/wiki/Lake_Xochimilco (the lake was fed by
+ * springs, later piped to supply Mexico City);
+ * NSW Department of Education, "Axolotls – food and water",
+ * https://education.nsw.gov.au/teaching-and-learning/animals-in-schools/animals-in-schools-species/axolotls/axolotls-food-water
+ * (axolotls do best in cool water, about 15 to 18 °C and never above 22 °C, kept clean).
+ * Owner to verify: "long ago" reads the springs' tapping in the 1950s; "clean water" reads the
+ * sources' "crystal springs"; every source was read through a search summary only, as this
+ * session's network could not open the pages.
+ */
+export const UNDERWATER_SPRINGS_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'pulsing-current',
+  name: 'Underwater springs',
+  title: 'Underwater springs',
+  body: "Long ago, springs bubbling up from underground filled Xochimilco's canals with clean water. Axolotls need cool, clean water to stay healthy.",
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",
@@ -403,6 +427,12 @@ export const CARP_MEET_RANGE = 180;
  * card can show before the first pinch.
  */
 export const CRAYFISH_MEET_RANGE = 180;
+
+/**
+ * Distance in px from a pulsing current's band within which the axolotl meets it (issue #105,
+ * ND-6). Provisional; tune in play. Short, so the card shows as the axolotl comes up to a vent.
+ */
+export const PULSING_CURRENT_MEET_RANGE = 60;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl

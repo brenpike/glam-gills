@@ -337,12 +337,13 @@ export function createTrip(
   };
 }
 
-/** A copy of the element sharing its type; the mat pair and glow-plant geometry, when set, are copied. */
+/** A copy of the element sharing its type; the mat pair, glow-plant and pebble geometry, when set, are copied. */
 function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
   return {
     ...element,
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
+    ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
   };
 }
 
