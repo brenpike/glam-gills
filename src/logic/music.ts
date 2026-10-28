@@ -4,7 +4,7 @@
  * the music switch's stored value and labels, and the music levels. The synth that plays the notes is
  * browser glue in src/platform/musicPlayer.ts. Nothing here reads danger, legs or trip state (M5).
  */
-import { CANAL_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, areaTimeOfDay, type AreaData } from './areas';
+import { CANAL_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
 import { mulberry32 } from './rng';
 
 /** A part of a cue, which the synth can mix on its own. */
@@ -86,7 +86,10 @@ export interface MusicCue {
   id: string;
   name: string;
   key: string;
-  /** Letter name of the key's home note, such as `'F'`; fireflies chime from its pentatonic notes. */
+  /**
+   * Letter name of the key's home note, such as `'F'`, or for a mode its major key's, such as `'D'`
+   * for E dorian; fireflies chime from its pentatonic notes.
+   */
   tonic: string;
   /**
    * The key of the sounds while this cue plays, or would play with music off (PRD S12; ADR 0026):
@@ -311,6 +314,44 @@ export const GARDEN_BOATS: Readonly<MusicCue> = Object.freeze({
   dusk: Object.freeze({ bpm: 86, swing: 0.12 }),
 });
 
+/** Id of the spring cave's cue. */
+export const CENOTE_GLOW_ID = 'cenote-glow';
+
+const EM9 = chord('Em9', 'E3 G3 B3 F#4', 'E2');
+const A_OPEN = chord('A', 'E3 A3 C#4', 'A2');
+const CMAJ7 = chord('Cmaj7', 'G3 B3 C4 E4', 'C3');
+
+/**
+ * Cenote Glow, the spring cave's cue (M3): calm and full of wonder, never spooky, E dorian at 66 bpm
+ * in a slow, straight 4/4, glass bells over a soft pad and a deep bass, water drips, and an echo
+ * (prototypes/music/sketches.html). E dorian uses D major's notes, so the sounds play in D.
+ */
+export const CENOTE_GLOW: Readonly<MusicCue> = Object.freeze({
+  id: CENOTE_GLOW_ID,
+  name: 'Cenote Glow',
+  key: 'E dorian',
+  tonic: 'D',
+  soundKey: 'D',
+  bpm: 66,
+  beatsPerBar: 4,
+  stepsPerBeat: 2,
+  swing: 0,
+  bars: Object.freeze([bar(EM9), bar(A_OPEN), bar(CMAJ7), bar(D_LOW), bar(EM9), bar(A_OPEN), bar(CMAJ7), bar(D_LOW)]),
+  tune: Object.freeze([
+    tuneBar([0, 'B4', 4], [4, 'E5', 4]),
+    tuneBar([0, 'C#5', 6], [6, 'E5', 2]),
+    tuneBar([0, 'G5', 4], [4, 'F#5', 2], [6, 'E5', 2]),
+    tuneBar([0, 'F#5', 8]),
+    tuneBar([0, 'B4', 4], [4, 'E5', 2], [6, 'F#5', 2]),
+    tuneBar([0, 'A5', 4], [4, 'G5', 2], [6, 'F#5', 2]),
+    tuneBar([0, 'E5', 4], [4, 'G5', 4]),
+    tuneBar([0, 'F#5', 4], [4, 'D5', 4]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 52, swing: 0 }),
+  echo: 0.4,
+});
+
 /**
  * The dusk version of habitat cue `cue` (the dusk rule, M4): the same tune and chords at the cue's
  * dusk pace, played by the shared dusk arrangement. Throws for a cue with no dusk pace (the Home cue)
@@ -335,6 +376,7 @@ export const HABITAT_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object
   [CANAL_HABITAT.id]: CANAL_PADDLE,
   [POND_HABITAT.id]: LILY_PAD_HOP,
   [CHINAMPA_HABITAT.id]: GARDEN_BOATS,
+  [SPRING_CAVE_HABITAT.id]: CENOTE_GLOW,
 });
 
 /** Each habitat cue's dusk version, by the day cue's id, made once so the same version is reused. */
@@ -449,13 +491,18 @@ const RING_S = Object.freeze({
   guitar: 1.6,
   strum: 0.28,
   firefly: 0.7,
+  glass: 2.6,
 });
+/** Seconds a water drip lasts. */
+const DRIP_S = 0.12;
 /** Wood block pitches: the beat, and the higher off-beat tick. */
 const WOOD_BLOCK_MIDI = Object.freeze({ beat: noteMidi('A5'), offBeat: noteMidi('D6') });
 /** The pentatonic steps fireflies chime from, above the key's home note in octave 6. */
 const FIREFLY_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9]);
 /** Garden Boats' made-up phrases: the pentatonic steps plus the mixolydian flat 7th. */
 const MIXOLYDIAN_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9, 10, 12]);
+/** Cenote Glow's glass line: the minor pentatonic steps above E5, all in E dorian. */
+const MINOR_PENTATONIC_STEPS: readonly number[] = Object.freeze([0, 3, 5, 7, 10, 12]);
 
 function pick<T>(random: () => number, list: readonly T[]): T {
   return list[Math.floor(random() * list.length)];
@@ -623,6 +670,30 @@ function arrangeGardenBoats(cue: Readonly<MusicCue>, place: StepPlace, random: (
 }
 
 /**
+ * Cenote Glow's arrangement for one step. A soft pad and a deep bass hold each bar's chord, glass
+ * bells sparkle an octave above the chord now and then, and glass bells play the tune; every third
+ * pass the tune rests for a made-up glass line from the minor pentatonic. Water drips at random.
+ */
+function arrangeCenoteGlow(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  if (step === 0) {
+    for (const midi of sounding.notes) notes.push(note('pad', 'chords', midi, 0.055, stepS * 8.2, at));
+    notes.push(note('bass', 'bass', sounding.root, 0.3, stepS * 6, at));
+  }
+  if (step % 2 === 1 && random() < 0.35) notes.push(note('glass', 'chords', pick(random, sounding.notes) + 12, 0.05, RING_S.glass, at));
+  const line = place.pass % 3 === 2;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  if (hit !== undefined && !line) notes.push(note('glass', 'tune', hit.midi, 0.2, RING_S.glass, at));
+  if (line && step % 4 === 0 && random() < 0.6) {
+    notes.push(note('glass', 'tune', noteMidi('E5') + pick(random, MINOR_PENTATONIC_STEPS), 0.14, RING_S.glass, at));
+  }
+  if (random() < 0.1) notes.push(note('drip', 'sparkles', null, 0.07, DRIP_S, at + random() * stepS));
+  return notes;
+}
+
+/**
  * The shared dusk rule (M4; docs/music-guide.md, section 5), for any habitat cue's dusk version: soft
  * held chords with the root under each chord change and a light kalimba on the other beats; a faint
  * shaker and no drums; the tune on a music box every pass (raised an octave when below C5), softer on
@@ -675,6 +746,8 @@ export function arrangeStep(cue: Readonly<MusicCue>, index: number, seed: number
       return arrangeLilyPadHop(cue, place, random, at);
     case GARDEN_BOATS_ID:
       return arrangeGardenBoats(cue, place, random, at);
+    case CENOTE_GLOW_ID:
+      return arrangeCenoteGlow(cue, place, random, at);
     default:
       throw new Error(`music: no arrangement for cue ${cue.id}`);
   }

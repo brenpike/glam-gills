@@ -29,8 +29,11 @@ export const POND_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'pond', name:
 /** The chinampa gardens habitat, home of Areas 4 and 5. */
 export const CHINAMPA_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'chinampa', name: 'Chinampa gardens', look: 'chinampa' });
 
+/** The spring cave habitat, home of Area 6. */
+export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
+
 /** Every habitat. */
-export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT]);
+export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT]);
 
 /** The habitat with this id, or undefined when there is none. */
 export function habitatById(id: string): Readonly<Habitat> | undefined {

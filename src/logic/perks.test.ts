@@ -6,6 +6,7 @@ import {
   CHINAMPA_TREASURES,
   PERK_VALUES,
   POND_2_TREASURES,
+  SPRING_CAVE_TREASURES,
   WEARABLE_SLOTS,
   type PerkType,
   type Wearable,
@@ -92,6 +93,9 @@ const AREA_4_WEARABLE_IDS: readonly string[] = CHINAMPA_TREASURES.filter((treasu
 const AREA_5_WEARABLE_IDS: readonly string[] = CHINAMPA_2_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
   (treasure) => treasure.id,
 );
+const AREA_6_WEARABLE_IDS: readonly string[] = SPRING_CAVE_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
+  (treasure) => treasure.id,
+);
 
 describe('outfitPerks', () => {
   it('gives nothing for an empty outfit', () => {
@@ -127,11 +131,12 @@ describe('outfitPerks', () => {
 });
 
 describe('catalogue Wearable perks (F9)', () => {
-  it('covers the pond and chinampa Wearables', () => {
+  it('covers the pond, chinampa and spring cave Wearables', () => {
     const ids = CATALOGUE_WEARABLES.map((wearable) => wearable.id);
     expect(ids.some((id) => id.startsWith('canal/'))).toBe(true);
     expect(ids.some((id) => id.startsWith('pond/'))).toBe(true);
     expect(ids.some((id) => id.startsWith('chinampa/'))).toBe(true);
+    expect(ids.some((id) => id.startsWith('spring-cave/'))).toBe(true);
   });
 
   it('gives every Wearable one existing perk at its PERK_VALUES value', () => {
@@ -189,6 +194,22 @@ describe('catalogue Wearable perks (F9)', () => {
       expect(PERK_ORDER, wearable.id).toContain(wearable.perk.type);
       expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
     }
+  });
+
+  it('gives the Area 6 Wearables existing perks at the PERK_VALUES value for their rarity, not all the same (issue #77)', () => {
+    const area6 = CATALOGUE_WEARABLES.filter((wearable) => AREA_6_WEARABLE_IDS.includes(wearable.id));
+    expect(area6.map((wearable) => [wearable.id, wearable.rarity, wearable.slot, wearable.perk])).toEqual([
+      ['spring-cave/miners-headlamp', 'common', 'head', { type: 'treasureSense', value: 15 }],
+      ['spring-cave/crystal-pendant', 'common', 'neck', { type: 'regrowth', value: 10 }],
+      ['spring-cave/explorer-vest', 'rare', 'shirt', { type: 'dash', value: 15 }],
+      ['spring-cave/crystal-tail-cuff', 'epic', 'tail', { type: 'snackMagnet', value: 50 }],
+      ['spring-cave/crystal-crown', 'legendary', 'head', { type: 'speed', value: 10 }],
+    ]);
+    for (const wearable of area6) {
+      expect(PERK_ORDER, wearable.id).toContain(wearable.perk.type);
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+    }
+    expect(new Set(area6.map((wearable) => wearable.perk.type)).size).toBeGreaterThan(1);
   });
 
   it('puts Shell only on Epic or Legendary Wearables', () => {

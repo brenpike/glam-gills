@@ -643,8 +643,75 @@ export const CHINAMPA_2_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The spring cave Area 6 treasures, all new, in rarity order (issue #77): 6 Decorations, 5 Wearables
+ * and the Moonstone Paint shell. The Fossil ammonite is the area's special treasure. Every perk comes
+ * from PERK_VALUES for its type and rarity, and no two Wearables share a perk type.
+ */
+export const SPRING_CAVE_TREASURES: readonly Treasure[] = Object.freeze([
+  { id: 'spring-cave/pebble-stack', name: 'Pebble stack', rarity: 'common', category: 'decoration' },
+  {
+    id: 'spring-cave/glow-moss-ball',
+    name: 'Glow moss ball',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'spring-cave/miners-headlamp',
+    name: "Miner's headlamp",
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('treasureSense', 'common'),
+  },
+  {
+    id: 'spring-cave/crystal-pendant',
+    name: 'Crystal pendant',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('regrowth', 'common'),
+  },
+  { id: 'spring-cave/fossil-ammonite', name: 'Fossil ammonite', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'spring-cave/crystal-wind-chime',
+    name: 'Crystal wind chime',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'spring-cave/explorer-vest',
+    name: 'Explorer vest',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('dash', 'rare'),
+  },
+  createPaintShell(MOONSTONE, 'spring-cave'),
+  { id: 'spring-cave/geode-lamp', name: 'Geode lamp', rarity: 'epic', category: 'decoration' },
+  {
+    id: 'spring-cave/crystal-tail-cuff',
+    name: 'Crystal tail cuff',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'tail',
+    perk: createPerk('snackMagnet', 'epic'),
+  },
+  { id: 'spring-cave/crystal-arch', name: 'Crystal arch', rarity: 'legendary', category: 'decoration' },
+  {
+    id: 'spring-cave/crystal-crown',
+    name: 'Crystal crown',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('speed', 'legendary'),
+  },
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
- * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's.
+ * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -652,6 +719,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...POND_2_TREASURES,
   ...CHINAMPA_TREASURES,
   ...CHINAMPA_2_TREASURES,
+  ...SPRING_CAVE_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

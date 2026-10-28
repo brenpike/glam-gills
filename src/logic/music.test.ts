@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, AREA_LOOK_TIMES, CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, HABITATS, POND_2_AREA, POND_AREA, areaTimeOfDay } from './areas';
+import {
+  AREAS,
+  AREA_LOOK_TIMES,
+  CANAL_AREA,
+  CHINAMPA_2_AREA,
+  CHINAMPA_AREA,
+  HABITATS,
+  POND_2_AREA,
+  POND_AREA,
+  SPRING_CAVE_HABITAT,
+  areaTimeOfDay,
+} from './areas';
 import {
   CANAL_PADDLE,
+  CENOTE_GLOW,
   DRUM_VOICES,
   GARDEN_BOATS,
   HABITAT_CUES,
@@ -30,10 +42,13 @@ import {
   type MusicScreen,
 } from './music';
 import { SAVE_STORAGE_KEYS } from './save';
+import { SOUNDS, inSoundKey, soundKeyFor, soundNotes, type SoundId } from './sounds';
 
 const HOME_SCREENS: readonly MusicScreen[] = ['title', 'homeTank', 'creator', 'areaMap', 'refuge'];
 const SEED = 7;
-const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS];
+const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW];
+/** Pitch classes of E dorian, which uses D major's notes, above C. */
+const E_DORIAN_PITCHES: readonly number[] = ['E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'].map((name) => noteMidi(name) % 12);
 const DUSK_HABITAT_CUES: readonly Readonly<MusicCue>[] = DAY_HABITAT_CUES.map((cue) => tripCueFor({ habitatId: habitatOf(cue), look: 'pond-dusk' }));
 const ALL_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES, ...DUSK_HABITAT_CUES];
 
@@ -128,6 +143,14 @@ describe('habitat cues (M3)', () => {
     expect(chordNames(LILY_PAD_HOP)).toEqual(['F', 'Dm', 'Gm', 'C', 'F', 'A7', 'Bb C', 'F']);
     expect([GARDEN_BOATS.key, GARDEN_BOATS.bpm]).toEqual(['D mixolydian', 112]);
     expect(chordNames(GARDEN_BOATS)).toEqual(['D', 'C', 'G', 'D', 'Bm', 'G', 'Em A', 'D']);
+    expect([CENOTE_GLOW.key, CENOTE_GLOW.bpm, CENOTE_GLOW.beatsPerBar, CENOTE_GLOW.stepsPerBeat, CENOTE_GLOW.swing]).toEqual(['E dorian', 66, 4, 2, 0]);
+    expect(chordNames(CENOTE_GLOW)).toEqual(['Em9', 'A', 'Cmaj7', 'D', 'Em9', 'A', 'Cmaj7', 'D']);
+  });
+
+  it('plays Cenote Glow in the spring cave', () => {
+    expect(HABITAT_CUES[SPRING_CAVE_HABITAT.id]).toBe(CENOTE_GLOW);
+    expect(tripCueFor({ habitatId: SPRING_CAVE_HABITAT.id })).toBe(CENOTE_GLOW);
+    expect(CENOTE_GLOW.name).toBe('Cenote Glow');
   });
 
   it('keeps each 6/8 bar of Canal Paddle to six steps', () => {
@@ -142,8 +165,9 @@ describe('the dusk rule (M4)', () => {
     for (const dusk of DUSK_HABITAT_CUES) expect(() => duskVersion(dusk)).toThrow();
   });
 
-  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86', () => {
-    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86]);
+  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52', () => {
+    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52]);
+    expect(CENOTE_GLOW.dusk).toEqual({ bpm: 52, swing: 0 });
     DAY_HABITAT_CUES.forEach((day, i) => {
       const dusk = DUSK_HABITAT_CUES[i];
       expect(dusk.tune).toBe(day.tune);
@@ -199,8 +223,8 @@ describe('the dusk rule (M4)', () => {
     }
   });
 
-  it('gives every day habitat cue drums, so the dusk version is what takes them away', () => {
-    for (const day of DAY_HABITAT_CUES) {
+  it('gives every day habitat cue but Cenote Glow drums, so the dusk version is what takes them away', () => {
+    for (const day of DAY_HABITAT_CUES.filter((cue) => cue !== CENOTE_GLOW)) {
       expect(notesOf(day, SEED, 1).flat().some((n) => DRUM_VOICES.includes(n.voice))).toBe(true);
     }
   });
@@ -216,13 +240,96 @@ describe('music voices', () => {
 });
 
 describe('the music echo', () => {
-  it('is off for every cue so far, which plays only the shared room reverb', () => {
-    for (const cue of ALL_CUES) expect(cue.echo).toBeUndefined();
+  it('is 0.4 for Cenote Glow and its dusk version, and off for every other cue, which plays only the shared room reverb', () => {
+    for (const cue of ALL_CUES) {
+      const cenote = (cue.dayId ?? cue.id) === CENOTE_GLOW.id;
+      expect(cue.echo, cue.id).toBe(cenote ? 0.4 : undefined);
+    }
   });
 
   it("keeps a day cue's echo in its dusk version", () => {
     expect(duskVersion({ ...CANAL_PADDLE, echo: 0.4 }).echo).toBe(0.4);
     expect(duskVersion(CANAL_PADDLE).echo).toBeUndefined();
+  });
+});
+
+describe('Cenote Glow (prototypes/music/sketches.html)', () => {
+  const PER_LOOP = stepsPerLoop(CENOTE_GLOW);
+
+  it('holds each bar on a soft pad and a deep bass from its first step', () => {
+    notesOf(CENOTE_GLOW, SEED, 1).forEach((notes, index) => {
+      const place = stepPlace(CENOTE_GLOW, index);
+      const pads = notes.filter((n) => n.voice === 'pad');
+      const basses = notes.filter((n) => n.voice === 'bass');
+      if (place.step !== 0) {
+        expect(pads).toHaveLength(0);
+        expect(basses).toHaveLength(0);
+        return;
+      }
+      expect(pads.map((n) => n.midi)).toEqual([...place.chord.notes]);
+      expect(basses.map((n) => n.midi)).toEqual([place.chord.root]);
+      for (const n of pads) expect(n.velocity).toBe(0.055);
+    });
+  });
+
+  it('plays its tune on glass bells, resting every third pass for a glass line from the minor pentatonic above E5', () => {
+    const steps = notesOf(CENOTE_GLOW, SEED, 6);
+    const perBar = stepsPerBar(CENOTE_GLOW);
+    for (let pass = 0; pass < 6; pass++) {
+      const tune = steps.slice(pass * PER_LOOP, (pass + 1) * PER_LOOP).flat().filter((n) => n.part === 'tune');
+      for (const n of tune) expect(n.voice).toBe('glass');
+      if (pass % 3 !== 2) {
+        CENOTE_GLOW.tune.forEach((tuneBar, barIndex) => {
+          for (const tuneNote of tuneBar) {
+            const played = steps[pass * PER_LOOP + barIndex * perBar + tuneNote.step].filter((n) => n.part === 'tune');
+            expect(played.map((n) => n.midi)).toEqual([tuneNote.midi]);
+          }
+        });
+        continue;
+      }
+      expect(tune.length).toBeGreaterThan(0);
+      for (const n of tune) expect([0, 3, 5, 7, 10, 12]).toContain((n.midi ?? 0) - noteMidi('E5'));
+    }
+  });
+
+  it('sparkles glass bells an octave above the chord on odd steps, drips water, and plays no drums', () => {
+    const notes = notesOf(CENOTE_GLOW, SEED);
+    notes.forEach((step, index) => {
+      const place = stepPlace(CENOTE_GLOW, index);
+      for (const n of step.filter((each) => each.part === 'chords' && each.voice === 'glass')) {
+        expect(place.step % 2).toBe(1);
+        expect(place.chord.notes.map((midi) => midi + 12)).toContain(n.midi);
+      }
+    });
+    const flat = notes.flat();
+    expect(flat.some((n) => n.part === 'chords' && n.voice === 'glass')).toBe(true);
+    expect(flat.some((n) => n.voice === 'drip')).toBe(true);
+    for (const n of flat) {
+      expect(DRUM_VOICES).not.toContain(n.voice);
+      expect(n.part).not.toBe('percussion');
+      if (n.part === 'sparkles') expect(n.voice).toBe('drip');
+    }
+  });
+});
+
+describe('the key of Cenote Glow (S12)', () => {
+  it("is D, the home note of E dorian's major key, in its dusk version too", () => {
+    expect(CENOTE_GLOW.soundKey).toBe('D');
+    expect(CENOTE_GLOW.tonic).toBe('D');
+    expect(soundKeyFor(tripCueFor({ habitatId: SPRING_CAVE_HABITAT.id }))).toBe('D');
+    expect(soundKeyFor(duskVersion(CENOTE_GLOW))).toBe('D');
+  });
+
+  it('plays every pitched sound from the D major pentatonic over it, which stays in E dorian', () => {
+    const key = soundKeyFor(CENOTE_GLOW);
+    for (const id of Object.keys(SOUNDS) as SoundId[]) {
+      for (const version of Object.keys(SOUNDS[id].versions)) {
+        for (const midi of soundNotes(id, version, key).flatMap((n) => n.midis)) {
+          expect(inSoundKey(key, midi)).toBe(true);
+          expect(E_DORIAN_PITCHES).toContain(midi % 12);
+        }
+      }
+    }
   });
 });
 

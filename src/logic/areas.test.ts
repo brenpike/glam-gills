@@ -11,6 +11,7 @@ import {
   POND_2_AREA,
   POND_AREA,
   POND_HABITAT,
+  SPRING_CAVE_HABITAT,
   areaById,
   areaFactCards,
   atExit,
@@ -339,7 +340,7 @@ describe('habitats', () => {
     expect(CANAL_HABITAT).toEqual({ id: 'canal', name: 'Canal', look: 'canal' });
     expect(POND_HABITAT).toEqual({ id: 'pond', name: 'Lily pad pond', look: 'pond' });
     expect(CHINAMPA_HABITAT).toEqual({ id: 'chinampa', name: 'Chinampa gardens', look: 'chinampa' });
-    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT]);
+    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT]);
     expect(Object.isFrozen(CANAL_HABITAT)).toBe(true);
     expect(Object.isFrozen(POND_HABITAT)).toBe(true);
     expect(Object.isFrozen(CHINAMPA_HABITAT)).toBe(true);
@@ -351,10 +352,19 @@ describe('habitats', () => {
     expect(CHINAMPA_2_AREA.habitatId).toBe(CHINAMPA_HABITAT.id);
   });
 
+  it('has the spring cave habitat, with its own look, after the chinampa gardens', () => {
+    expect(SPRING_CAVE_HABITAT).toEqual({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
+    expect(Object.isFrozen(SPRING_CAVE_HABITAT)).toBe(true);
+    expect(HABITATS.at(-1)).toBe(SPRING_CAVE_HABITAT);
+    expect(new Set(HABITATS.map((habitat) => habitat.id)).size).toBe(HABITATS.length);
+    expect(new Set(HABITATS.map((habitat) => habitat.look)).size).toBe(HABITATS.length);
+  });
+
   it('finds a habitat by id', () => {
     expect(habitatById('canal')).toBe(CANAL_HABITAT);
     expect(habitatById('pond')).toBe(POND_HABITAT);
     expect(habitatById('chinampa')).toBe(CHINAMPA_HABITAT);
+    expect(habitatById('spring-cave')).toBe(SPRING_CAVE_HABITAT);
     expect(habitatById(UNKNOWN_ID)).toBeUndefined();
   });
 
