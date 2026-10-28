@@ -5,6 +5,8 @@ import {
   CANAL_CLEAN_UPS_FACT,
   CARP_FACT,
   CARP_MEET_RANGE,
+  CRAYFISH_FACT,
+  CRAYFISH_MEET_RANGE,
   FACT_CARD_OK_LABEL,
   FACT_CARD_UNFOUND_HINT,
   GARTER_SNAKE_FACT,
@@ -28,7 +30,7 @@ import {
   unfoundFactCardHint,
   type ThreatSighting,
 } from './factCards';
-import { CARP, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
+import { CARP, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
 import type { SafeArea } from './zone';
 
 const BANNED = [
@@ -359,6 +361,34 @@ describe('shrimp fact card copy', () => {
 
   it('uses a meet range of 120 px', () => {
     expect(SHRIMP_MEET_RANGE).toBe(120);
+  });
+});
+
+describe('crayfish fact card copy (issue #77, ND-14)', () => {
+  it("has the crayfish id, name and title, the owner's body, and no hint of its own", () => {
+    expect(CRAYFISH_FACT).toEqual({
+      id: 'crayfish',
+      name: 'Crayfish',
+      title: 'Meet the crayfish',
+      body: 'Crayfish are small cousins of lobsters that walk along the bottom. They open their claws wide to warn other animals. Axolotls stay safe by swimming up and away.',
+    });
+    expect(CRAYFISH_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(CRAYFISH_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    expect([...EARLIER_CARD_IDS, CARP_FACT.id, PUNTING_POLE_FACT.id, TADPOLE_FACT.id, SHRIMP_FACT.id]).not.toContain(
+      CRAYFISH_FACT.id,
+    );
+  });
+
+  it.each([CRAYFISH_FACT.name, CRAYFISH_FACT.title, CRAYFISH_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('uses a meet range of 180 px, larger than the lunge range', () => {
+    expect(CRAYFISH_MEET_RANGE).toBe(180);
+    expect(CRAYFISH_MEET_RANGE).toBeGreaterThan(CRAYFISH.lungeRange);
   });
 });
 

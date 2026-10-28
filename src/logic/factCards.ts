@@ -166,6 +166,28 @@ export const CARP_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The crayfish fact card, shown the first time the axolotl meets a crayfish (PRD C13; issue #77,
+ * ND-14). The body is the owner's (issue #77, owner interrogation, 2026-10-22).
+ * Sources, checked 2026-10-27 (web research only; the game fetches nothing):
+ * Helfrich and DiStefano, Virginia Cooperative Extension, "Sustaining America's Aquatic Biodiversity -
+ * Crayfish Biodiversity and Conservation", publication 420-524, https://pubs.ext.vt.edu/420/420-524/420-524.html
+ * ("Like its saltwater cousin, the lobster"; "Many spend most of their lives walking on stream and
+ * lake bottoms (largely at night)"; "When threatened, the crayfish assumes a defensive position
+ * with the body lifted and the claws elevated and spread");
+ * The Australian Museum, "Crayfish", https://australian.museum/learn/animals/crustaceans/crayfish/
+ * ("They forage on the stream bed").
+ * Owner to verify: "small" is not checked against a size source; "to warn other animals" reads the
+ * source's defensive position as a warning; "Axolotls stay safe by swimming up and away" is the
+ * game's rule (the crayfish reaches only along the floor), not checked against a source.
+ */
+export const CRAYFISH_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'crayfish',
+  name: 'Crayfish',
+  title: 'Meet the crayfish',
+  body: 'Crayfish are small cousins of lobsters that walk along the bottom. They open their claws wide to warn other animals. Axolotls stay safe by swimming up and away.',
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",
@@ -322,6 +344,13 @@ export const GARTER_SNAKE_MEET_RANGE = 180;
  * range so the card can show before the first sweep.
  */
 export const CARP_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a crayfish (issue #77, ND-14). Provisional;
+ * tune in play. The same as the tilapia's, and larger than the crayfish's 90 px lunge range so the
+ * card can show before the first pinch.
+ */
+export const CRAYFISH_MEET_RANGE = 180;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl

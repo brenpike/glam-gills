@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { FactCard } from './factCards';
+import { blockExplorer } from './hyacinthMats';
 import {
+  GLOW_PLANT,
   elementActive,
   elementSweep,
   hazardCentre,
@@ -12,6 +14,7 @@ import {
   shapeDistance,
 } from './hazards';
 import type { ElementSpawn, HazardRect, HazardSpawn, HazardType } from './hazards';
+import { swimBounds } from './zone';
 
 const TEST_FACT: FactCard = {
   id: 'test-fact',
@@ -384,5 +387,37 @@ describe('hazardSweep', () => {
       expect(shape.y0).toBeGreaterThanOrEqual(sweep.y0 - 1e-9);
       expect(shape.y1).toBeLessThanOrEqual(sweep.y1 + 1e-9);
     }
+  });
+});
+
+const GLOW_PLANT_SPAWN: ElementSpawn = {
+  id: 'glow-plant-1',
+  type: GLOW_PLANT,
+  offset: 0,
+  glowPlant: { x: 300, y: 200, radius: 14 },
+};
+
+describe('the glow-plant element (issue #77, ND-8)', () => {
+  it('is a puzzle element with no fact card and no meet range', () => {
+    expect(GLOW_PLANT).toEqual({ id: 'glow-plant', name: 'Glow-plant', kind: 'puzzle', period: 1, activeFor: 1 });
+    expect(GLOW_PLANT).not.toHaveProperty('fact');
+    expect(GLOW_PLANT).not.toHaveProperty('meetRange');
+    expect(Object.isFrozen(GLOW_PLANT)).toBe(true);
+  });
+
+  it('is always active', () => {
+    for (let time = -12; time <= 24; time += 0.25) {
+      expect(elementActive(GLOW_PLANT_SPAWN, time)).toBe(true);
+    }
+  });
+
+  it('has no sweep, so it is never a hit and never blocks', () => {
+    expect(elementSweep(GLOW_PLANT_SPAWN)).toBeNull();
+    const next = blockExplorer({ x: 260, y: 200 }, { x: 300, y: 200 }, [GLOW_PLANT_SPAWN], 0, {
+      bounds: swimBounds(),
+      nets: [],
+      currents: [],
+    });
+    expect(next).toEqual({ x: 300, y: 200 });
   });
 });

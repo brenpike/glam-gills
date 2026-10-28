@@ -57,10 +57,17 @@ export interface HazardSpawn {
   drift?: NetDrift;
 }
 
+/**
+ * How an element behaves: 'cycle' runs a fixed timing cycle, as the mat pairs do; 'puzzle' is a
+ * puzzle element, such as the glow-plant (issue #77, ND-8): always active, never a hit and with no
+ * fact card.
+ */
+export type ElementKind = 'cycle' | 'puzzle';
+
 export interface ElementType {
   id: string;
   name: string;
-  kind: 'cycle';
+  kind: ElementKind;
   /** Length of one full cycle in seconds. Must be greater than 0. */
   period: number;
   /** Seconds per cycle the element is active; at or above `period` means always active. */
@@ -105,6 +112,17 @@ export interface MatPair {
   openHeight: number;
 }
 
+/**
+ * A glow-plant's place (issue #77, ND-8): a circle centred on (`x`, `y`) with `radius` px, which the
+ * axolotl's body touches to light the plant. Not a sweep: nothing about it blocks or hits.
+ */
+export interface GlowPlantSpot {
+  x: number;
+  y: number;
+  /** Must be greater than 0. */
+  radius: number;
+}
+
 export interface ElementSpawn {
   id: string;
   type: ElementType;
@@ -112,7 +130,23 @@ export interface ElementSpawn {
   offset: number;
   /** Mat pair geometry; absent on elements with no geometry. */
   matPair?: MatPair;
+  /** Glow-plant geometry (issue #77, ND-8); absent on every element that is not a glow-plant. */
+  glowPlant?: GlowPlantSpot;
 }
+
+/**
+ * The glow-plant (issue #77, ND-8), a puzzle element: always active (`activeFor` equals `period`),
+ * with no fact card and no meet range, so it is never met. It has no sweep (elementSweep), so it
+ * never blocks the axolotl, never counts as a hazard for the snacks and never costs a leg; the
+ * Shell perk plays no part. Each spawn carries its own `glowPlant` geometry.
+ */
+export const GLOW_PLANT: Readonly<ElementType> = Object.freeze({
+  id: 'glow-plant',
+  name: 'Glow-plant',
+  kind: 'puzzle',
+  period: 1,
+  activeFor: 1,
+});
 
 /** Returns 0 when `pos` is inside the shape, else the distance from `pos` to its edge. */
 export function shapeDistance(pos: Point, shape: HazardShape): number {
@@ -165,7 +199,7 @@ export function elementActive(element: ElementSpawn, timeS: number): boolean {
 /**
  * The rectangle the element's moving parts can ever occupy: for a mat pair, its whole
  * `x0..x1` by `rowTop..rowBottom`, since closed mats meet at the channel. Null when the element
- * has no geometry.
+ * has no mat pair, a glow-plant included (issue #77, ND-8).
  */
 export function elementSweep(element: Readonly<ElementSpawn>): HazardRect | null {
   const pair = element.matPair;

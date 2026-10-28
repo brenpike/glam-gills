@@ -365,6 +365,24 @@ describe('habitats', () => {
   });
 });
 
+describe('strandingChance', () => {
+  it.each([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA].map((area) => [area.id, area] as const))(
+    'leaves %s without its own strandingChance, so it keeps the 40% default',
+    (_id, area) => {
+      expect(area.strandingChance).toBeUndefined();
+      expect('strandingChance' in area).toBe(false);
+    },
+  );
+
+  it('keeps any area strandingChance a number from 0 to 1', () => {
+    for (const area of AREAS) {
+      if (area.strandingChance === undefined) continue;
+      expect(area.strandingChance, area.id).toBeGreaterThanOrEqual(0);
+      expect(area.strandingChance, area.id).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
 describe('canal area layout', () => {
   it('is the canal layout data and builds the canal zone', () => {
     expect(CANAL_AREA.layout).toBe(CANAL_LAYOUT);

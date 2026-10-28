@@ -491,6 +491,31 @@ export const CARP: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
+ * Provisional crayfish values (issue #77, ND-5); tune in play. The crayfish walks its floor stretch
+ * at patrolSpeed, stops and opens its claws wide for 0.8 s (the PRD's 0.8 s floor) when the
+ * axolotl is within lungeRange of it, then pinches lungeSpeed x lungeDuration = 120 px forward and
+ * rests for the 1.8 s cooldown. Its reach is the bottom only: it warns only while on its stretch
+ * and its pinch stays level along the floor (the `warnOnRoute` and `levelStrike` rules on
+ * CRAYFISH_SPECIES in src/logic/predators.ts), so mid-water above the reach is safe. Hit, touch
+ * and body reach, and the gentle bump, are the tilapia's, so they match a Medium axolotl at every
+ * size (PRD F4).
+ */
+export const CRAYFISH: Readonly<TilapiaTuning> = Object.freeze({
+  minWindup: 0.8,
+  windup: 0.8,
+  cooldown: 1.8,
+  lungeRange: 90,
+  lungeSpeed: 400,
+  lungeDuration: 0.3,
+  hitRadius: TILAPIA.hitRadius,
+  contactRadius: TILAPIA.contactRadius,
+  bodyRadius: TILAPIA.bodyRadius,
+  patrolSpeed: 60,
+  bumpSpeed: TILAPIA.bumpSpeed,
+  bumpCooldown: TILAPIA.bumpCooldown,
+});
+
+/**
  * Provisional chase defaults for each predator type (PRD open question 251, ND-4); tune in play.
  * None is wired into a real area. Each speed is strictly between the 2-leg (112.5 px/s) and 4-leg
  * (150 px/s) top speeds, and each sight is greater than its predator's lungeRange (ND-3). This one
@@ -524,6 +549,16 @@ export const CARP_CHASE: Readonly<ChaseTuning> = Object.freeze({
   sight: 220,
   leash: 120,
   speed: 115,
+});
+
+/**
+ * Provisional chase default for a crayfish (issue #77, ND-5). It chases along its floor stretch
+ * only, so its leash is 0.
+ */
+export const CRAYFISH_CHASE: Readonly<ChaseTuning> = Object.freeze({
+  sight: 200,
+  leash: 0,
+  speed: 120,
 });
 
 /** Provisional carried-home values; a gentle float of 1.5 to 5 s, or a 1.5 s still bubble. */

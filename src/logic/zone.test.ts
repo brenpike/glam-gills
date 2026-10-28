@@ -4,6 +4,7 @@ import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
 import { depthBands } from './dangerBar';
 import { netDrift } from './ghostNets';
+import { glowPlantSpawn, type DarkWater } from './glowPlants';
 import {
   elementSweep,
   hazardSweep,
@@ -1184,5 +1185,51 @@ describe('mobile snacks in the layout (ND-22, ND-23; issue #131, ND-13)', () => 
   it('keeps the canal free of moving hazards and mobile snacks', () => {
     expect(CANAL_LAYOUT.movingHazards).toBeUndefined();
     expect(CANAL_LAYOUT.mobileSnacks).toBeUndefined();
+  });
+});
+
+const DARK_WATER: DarkWater = { x0: 1200, x1: 1920, y0: SURF, y1: BED_TOP };
+const GLOW_PLANTS_DATA: readonly ElementSpawn[] = [
+  glowPlantSpawn('canal/glow-plant-1', { x: 1300, y: 290, radius: 14 }),
+  glowPlantSpawn('canal/glow-plant-2', { x: 1700, y: 290, radius: 14 }),
+];
+
+describe('dark water and glow-plants in the layout (issue #77, ND-7 and ND-8)', () => {
+  it.each(ALL_SEEDS)('copies the dark water with no rand() draw for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ darkWater: DARK_WATER }), seed);
+    const { darkWater, ...rest } = zone;
+    expect(darkWater).toEqual(DARK_WATER);
+    expect(darkWater).not.toBe(DARK_WATER);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no dark water key to a layout that has none', () => {
+    expect(buildZone(CANAL_LAYOUT, DEFAULT_ZONE_SEED)).not.toHaveProperty('darkWater');
+  });
+
+  it.each(ALL_SEEDS)('copies each glow-plant and its geometry with no rand() draw for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ elements: GLOW_PLANTS_DATA }), seed);
+    const { elements, ...rest } = zone;
+    expect(elements).toEqual(GLOW_PLANTS_DATA);
+    elements.forEach((element, index) => {
+      expect(element).not.toBe(GLOW_PLANTS_DATA[index]);
+      expect(element.glowPlant).not.toBe(GLOW_PLANTS_DATA[index].glowPlant);
+      expect(element).not.toHaveProperty('matPair');
+    });
+    const { elements: canalElements, ...canalRest } = buildCanalZone(seed);
+    expect(canalElements).toEqual([]);
+    expect(rest).toStrictEqual(canalRest);
+  });
+
+  it.each([
+    ['canal', CANAL_LAYOUT],
+    ['pond-1', POND_LAYOUT],
+    ['pond-2', POND_2_LAYOUT],
+    ['chinampa-1', CHINAMPA_LAYOUT],
+    ['chinampa-2', CHINAMPA_2_LAYOUT],
+  ] as const)('keeps %s fully lit, with no glow-plant', (_, layout) => {
+    expect(layout.darkWater).toBeUndefined();
+    expect(layout.elements.some((element) => element.glowPlant !== undefined)).toBe(false);
+    expect(buildZone(layout, DEFAULT_ZONE_SEED)).not.toHaveProperty('darkWater');
   });
 });

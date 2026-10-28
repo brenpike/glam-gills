@@ -78,6 +78,11 @@ export interface AreaData {
   look?: AreaLookVariant;
   /** Which of the area's snacks dart away a little (PRD H4, N2); absent means none dart. */
   snackDart?: Readonly<SnackDartRule>;
+  /**
+   * Chance from 0 to 1 that a trip here with nobody waiting has a stranded axolotl (PRD C2);
+   * absent means STRANDING_CHANCE. Read it through areaStrandingChance.
+   */
+  strandingChance?: number;
 }
 
 /** What touching the exit did this frame. */

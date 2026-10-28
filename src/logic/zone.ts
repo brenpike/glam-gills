@@ -9,6 +9,7 @@ import {
   type HazardRect,
   type HazardSpawn,
 } from './hazards';
+import type { DarkWater } from './glowPlants';
 import type { MobileSnackMix } from './mobileSnacks';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import type { PredatorRoute } from './predators';
@@ -254,6 +255,8 @@ export interface ZoneLayout {
   movingHazards?: MovingHazardSpawn[];
   /** Mobile snacks (ND-23); absent means none. Their spawns are in `collectibles`. */
   mobileSnacks?: MobileSnackMix;
+  /** The dark part of the area (issue #77, ND-7); absent means the whole area is lit. */
+  darkWater?: DarkWater;
 }
 
 /** An area's size in world px. */
@@ -318,6 +321,8 @@ export interface AreaLayoutData {
    * none.
    */
   readonly mobileSnacks?: Readonly<MobileSnackMix>;
+  /** The dark part of the area (issue #77, ND-7): fixed area data, never seeded. Absent means none. */
+  readonly darkWater?: Readonly<DarkWater>;
 }
 
 /** The canal cave. */
@@ -832,6 +837,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     ...element,
     type: copyElementType(element.type),
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
+    ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
   };
 }
 
@@ -853,20 +859,21 @@ function copyHazard(hazard: Readonly<HazardSpawn>): HazardSpawn {
 /** The layout's optional fields, each copied only when its data is set. */
 function optionalLayoutParts(
   data: Readonly<AreaLayoutData>,
-): Pick<ZoneLayout, 'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks'> {
+): Pick<ZoneLayout, 'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks' | 'darkWater'> {
   return {
     ...(data.tilapia ? { tilapia: { ...data.tilapia } } : {}),
     ...(data.bankOverhangs ? { bankOverhangs: data.bankOverhangs.map((overhang) => ({ ...overhang })) } : {}),
     ...(data.movingHazards ? { movingHazards: data.movingHazards.map((spawn) => ({ ...spawn })) } : {}),
     ...(data.mobileSnacks ? { mobileSnacks: copyMobileSnackMix(data.mobileSnacks) } : {}),
+    ...(data.darkWater ? { darkWater: { ...data.darkWater } } : {}),
   };
 }
 
 /**
  * Deterministically builds an area's zone layout from its data and a mulberry32 seed. The rules
  * read the layout's width, height and bedTop, never the canal constants. The optional tilapia
- * tuning, bank overhangs, bank spots, moving hazards and mobile snacks make no rand() draws; only
- * snack starts near a drifting net's path or a moving hazard's sweep are redrawn.
+ * tuning, bank overhangs, bank spots, moving hazards, mobile snacks and dark water make no rand()
+ * draws; only snack starts near a drifting net's path or a moving hazard's sweep are redrawn.
  */
 export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLayout {
   const rand = mulberry32(seed);
