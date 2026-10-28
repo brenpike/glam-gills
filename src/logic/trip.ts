@@ -14,6 +14,13 @@ import {
 } from './encounter';
 import { metThreatIds, type ThreatSighting } from './factCards';
 import { createGhostNets, endSnag, isSnagged, stepGhostNets, type GhostNetState } from './ghostNets';
+import {
+  darkHintPlant,
+  inDarkWater,
+  lightGlowPlants,
+  stepDarkHintClock,
+  type DarkWater,
+} from './glowPlants';
 import { elementSweep, hazardShapeAt, shapeDistance, type ElementSpawn } from './hazards';
 import { zoneThreats } from './hiding';
 import { createLegs, isProtected, presentCount, quantizeProgress, type LegsState } from './legs';
@@ -76,11 +83,11 @@ export const LEG_PROGRESS_STEPS = 10;
 
 /**
  * The zone parts a trip is built from: the encounter parts, the area id, the Home Spot start point
- * and ring, the finds (treasure pools), the hiding spots, the main swim path and the elements
- * (none when absent).
+ * and ring, the finds (treasure pools), the hiding spots, the main swim path, the elements (none
+ * when absent) and the dark water (none when absent).
  */
 export type TripSource = EncounterSource &
-  Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath'> & {
+  Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> & {
     elements?: readonly Readonly<ElementSpawn>[];
   };
 
@@ -125,6 +132,10 @@ export interface CarryState {
  * when the trip starts, and it advances only on swimming steps, so it stops while paused, banked,
  * carrying or ended. A drifting ghost net is where `hazardShapeAt` puts it at `elementTime` (ND-11,
  * PRD open question 258).
+ * `darkWater` is the area's dark water, or null when the whole area is lit. `litGlowPlants` is the
+ * glow-plant element ids lit this trip, in lighting order; they are trip state only, never saved,
+ * so every plant is unlit at a new trip. `darkHintTime` is the hint clock (stepDarkHintClock) in
+ * seconds and `darkHint` the unlit plant the hint points at, or null (issue #77, ND-8).
  */
 export interface TripState {
   phase: TripPhase;
@@ -154,6 +165,10 @@ export interface TripState {
   ghostNets: GhostNetState;
   elements: ElementSpawn[];
   elementTime: number;
+  darkWater: DarkWater | null;
+  litGlowPlants: string[];
+  darkHintTime: number;
+  darkHint: string | null;
 }
 
 /**
@@ -264,7 +279,8 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * placement. A plastic worm waits at the centre of each plastic worm hazard of the source, and the
  * axolotl starts not queasy; worms never change the placement. The source's ghost net hazards are
  * the trip's nets, and the axolotl starts not snagged; nets never change the placement here. The
- * source's elements are the trip's elements, with the element clock at 0. Throws
+ * source's elements are the trip's elements, with the element clock at 0. The source's dark water
+ * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. Throws
  * when a pool cannot be placed
  * or `options.area` is not the source's area.
  */
@@ -314,17 +330,26 @@ export function createTrip(
     ghostNets: createGhostNets(source.hazards ?? []),
     elements: (source.elements ?? []).map(copyTripElement),
     elementTime: 0,
+    darkWater: source.darkWater ? { ...source.darkWater } : null,
+    litGlowPlants: [],
+    darkHintTime: 0,
+    darkHint: null,
   };
 }
 
-/** A copy of the element sharing its type; the mat pair, when set, is copied. */
+/** A copy of the element sharing its type; the mat pair and glow-plant geometry, when set, are copied. */
 function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
-  return { ...element, ...(element.matPair ? { matPair: { ...element.matPair } } : {}) };
+  return {
+    ...element,
+    ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
+    ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
+  };
 }
 
 /**
  * Starts the next trip from an ended one, with the same area, Home Spot, routes, tilapia tuning,
- * finds, spots, main swim path, leg count and banked finds, an empty Trip Bag and nothing found.
+ * finds, spots, main swim path, dark water, leg count and banked finds, an empty Trip Bag and
+ * nothing found. Every glow-plant is unlit again, with the hint clock at 0 and no hint.
  * `tripSeed` (default: the seed after this trip's) picks this trip's treasures afresh, and every
  * Dash pot is sealed again. The treasures returned when carried home (`ending.returned`) come back this trip, always
  * placed, and the area's special treasure is always placed while unbanked, on top of the treasure
@@ -346,6 +371,7 @@ export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.
       spots: state.spots,
       mainPath: state.mainPath,
       elements: state.elements,
+      ...(state.darkWater ? { darkWater: state.darkWater } : {}),
     },
     { count: state.encounter.legs.slots.length },
     state.holdings.banked,
@@ -510,6 +536,11 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * previous element time plus the capped step (ND-11, PRD open question 258). A snag
  * never touches the legs, protected time, the Shell, the finds or the exit; a following stranded
  * axolotl is never snagged. The element clock advances by the capped step on every swimming step.
+ * Each unlit glow-plant the axolotl centre touches is lit (lightGlowPlants) and stays lit for the
+ * trip; lighting is silent and emits no event. The hint clock (stepDarkHintClock) adds the capped
+ * step while the axolotl centre is in the dark water, and goes back to 0 on a new light or out of
+ * the dark; then `darkHint` is the plant darkHintPlant picks. A step that ends the trip, a paused
+ * step, the banked card and the carry leave the hint clock and the hint as they were.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -564,8 +595,9 @@ export function foundInfos(ids: readonly FindId[]): FoundInfo[] {
 
 /**
  * Trip display state: the phase, the quantized legs display state, the finds, the ending, the
- * stranded axolotl and the fact card due. `banked` counts banked treasures only,
- * not rescued axolotls; `bag` includes a following axolotl.
+ * stranded axolotl, the fact card due, the lit glow-plants and the glow-plant hint. `banked`
+ * counts banked treasures only, not rescued axolotls; `bag` includes a following axolotl. The hint
+ * shows only while swimming.
  */
 export function tripSnapshot(state: TripState): TripSnapshot {
   return {
@@ -579,6 +611,8 @@ export function tripSnapshot(state: TripState): TripSnapshot {
     ending: state.ending ? copyEnding(state.ending) : null,
     rescue: state.rescue ? rescueSnapshot(state.rescue, state) : null,
     factCardDue: factCardDue(state),
+    litGlowPlants: [...state.litGlowPlants],
+    glowPlantHint: state.phase === 'swimming' ? state.darkHint : null,
   };
 }
 
@@ -598,6 +632,8 @@ export function idleTripSnapshot(): TripSnapshot {
     ending: null,
     rescue: null,
     factCardDue: null,
+    litGlowPlants: [],
+    glowPlantHint: null,
   };
 }
 
@@ -613,7 +649,9 @@ export function sameTripSnapshot(a: TripSnapshot, b: TripSnapshot): boolean {
     sameIds(foundIds(a.found), foundIds(b.found)) &&
     sameEnding(a.ending, b.ending) &&
     sameRescue(a.rescue, b.rescue) &&
-    a.factCardDue === b.factCardDue
+    a.factCardDue === b.factCardDue &&
+    sameIds(a.litGlowPlants, b.litGlowPlants) &&
+    a.glowPlantHint === b.glowPlantHint
   );
 }
 
@@ -788,11 +826,13 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const rescued = stepRescue({ ...state, ...pickup }, input.axolotlPos, step, events);
   const ghostNets = stepSnag(state.ghostNets, input.axolotlPos, step, elementTime, events);
   const met = meetThreats(state.met, result.state, state.elements, input.axolotlPos, elementTime, ctx.encounter);
+  const glow = stepGlowPlants(state, input.axolotlPos, step);
   const inside = isInHomeSpot(input.axolotlPos, state.homeSpot);
   const next: TripState = {
     ...state,
     ...pots,
     ...rescued,
+    ...glow,
     encounter: result.state,
     inHomeSpot: inside,
     met,
@@ -804,6 +844,25 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
   if (result.impulse) return { state: next, events, impulse: result.impulse };
   return { state: next, events };
+}
+
+/**
+ * Lights every unlit glow-plant the axolotl centre `pos` touches, then steps the hint clock by
+ * `step` seconds and picks the hinted plant (issue #77, ND-8). The lit ids are the state's own
+ * array when no new plant was lit.
+ */
+function stepGlowPlants(
+  state: TripState,
+  pos: Point,
+  step: number,
+): Pick<TripState, 'litGlowPlants' | 'darkHintTime' | 'darkHint'> {
+  const lit = lightGlowPlants(state.litGlowPlants, state.elements, pos);
+  const litGlowPlants = lit === state.litGlowPlants ? state.litGlowPlants : [...lit];
+  const inDark = state.darkWater !== null && inDarkWater(pos, state.darkWater);
+  const newLight = litGlowPlants !== state.litGlowPlants;
+  const darkHintTime = stepDarkHintClock(state.darkHintTime, { dt: step, inDark, newLight, paused: false });
+  const darkHint = darkHintPlant(darkHintTime, pos, state.elements, litGlowPlants);
+  return { litGlowPlants, darkHintTime, darkHint };
 }
 
 /**
