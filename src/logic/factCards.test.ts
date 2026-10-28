@@ -11,6 +11,7 @@ import {
   FACT_CARD_UNFOUND_HINT,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
+  GEYSER_FACT,
   GHOST_NET_FACT,
   HERON_FACT,
   HERON_MEET_RANGE,
@@ -19,6 +20,7 @@ import {
   REFUGE_FACT_CARDS,
   SHRIMP_FACT,
   SHRIMP_MEET_RANGE,
+  STALACTITE_FACT,
   TADPOLE_FACT,
   TADPOLE_MEET_RANGE,
   TILAPIA_FACT,
@@ -389,6 +391,41 @@ describe('crayfish fact card copy (issue #77, ND-14)', () => {
   it('uses a meet range of 180 px, larger than the lunge range', () => {
     expect(CRAYFISH_MEET_RANGE).toBe(180);
     expect(CRAYFISH_MEET_RANGE).toBeGreaterThan(CRAYFISH.lungeRange);
+  });
+});
+
+describe('stalactite and geyser fact card copy (issue #77, ND-3, option B)', () => {
+  it('has the stalactite id, name, title and body, and no hint of its own', () => {
+    expect(STALACTITE_FACT).toEqual({
+      id: 'stalactite-drip',
+      name: 'Stalactite',
+      title: 'Stalactites',
+      body: 'Stalactites hang from cave roofs like rock icicles. Each drip of water leaves a tiny bit of rock behind, so they grow very slowly.',
+    });
+    expect(STALACTITE_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(STALACTITE_FACT)).toBe(true);
+  });
+
+  it('has the geyser id, name, title and body, and no hint of its own', () => {
+    expect(GEYSER_FACT).toEqual({
+      id: 'geyser-vent',
+      name: 'Geyser',
+      title: 'Geysers',
+      body: 'Geysers are hot springs that burst up again and again. Hot rock deep underground heats the water until it shoots out, then the geyser rests and fills up.',
+    });
+    expect(GEYSER_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(GEYSER_FACT)).toBe(true);
+  });
+
+  it('has ids apart from the other cards and from each other', () => {
+    const others = [...EARLIER_CARD_IDS, CARP_FACT.id, PUNTING_POLE_FACT.id, TADPOLE_FACT.id, SHRIMP_FACT.id, CRAYFISH_FACT.id];
+    expect(others).not.toContain(STALACTITE_FACT.id);
+    expect(others).not.toContain(GEYSER_FACT.id);
+    expect(STALACTITE_FACT.id).not.toBe(GEYSER_FACT.id);
+  });
+
+  it.each([STALACTITE_FACT, GEYSER_FACT].flatMap((card) => [card.name, card.title, card.body]))('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 /**
  * Risk ladder fairness (B10, issue #70; PRD open question 264, ND-17) on Area 6, the spring cave,
- * with its crayfish, its common carp and its punting poles (issue #77, ND-3 to ND-6), using the
+ * with its crayfish, its common carp, its dripping stalactites and its geyser vent (issue #77, ND-3
+ * to ND-6), using the
  * shared harness in riskFairness.ts on #130's relaxed safe start (ND-11). It also proves the area
  * can be beaten with one leg and that every crayfish pinch is avoidable by swimming up (ND-5, ND-9).
  */
@@ -11,7 +12,7 @@ import { currentAt, reedDragAt } from './environment';
 import { shapeDistance } from './hazards';
 import { meetsThreatRiskRule, turnDistance, zoneThreats } from './hiding';
 import { legSwimTuning } from './legs';
-import { PUNTING_POLE, movingHazardPeriod, movingHazardSweep } from './movingHazards';
+import { GEYSER_VENT, STALACTITE_DRIP, movingHazardPeriod, movingHazardSweep } from './movingHazards';
 import { CARP_SPECIES, CRAYFISH_SPECIES, routeLoopDistance, type PredatorRoute } from './predators';
 import {
   DT,
@@ -60,7 +61,7 @@ const ONE_LEG_FAR_START_SPOTS = ['spring-cave-1/spot-cave-1', 'spring-cave-1/spo
  */
 const LEVEL_PINCH_MISSED_POTS = ['spring-cave-1/spot-cave-2', 'spring-cave-1/spot-cave-3'];
 /** First start time in seconds, as measured, for a one-leg swim of the main path to the exit without a hit (issue #77, ND-9). */
-const ONE_LEG_EXIT_START = 15;
+const ONE_LEG_EXIT_START = 15.25;
 /** Longest one-leg swim from the Home Spot to the exit, in seconds, before it counts as stuck. */
 const ONE_LEG_SWIM_LIMIT = 180;
 /** Px from a main path waypoint at which the swim steers for the next one. */
@@ -275,15 +276,15 @@ describe('risk fairness on the default Area 6 zone', () => {
   const spots = poolSpots(zone);
   const crayfish = zone.predatorRoutes.filter((route) => route.species.id === CRAYFISH_SPECIES.id);
   const carp = zone.predatorRoutes.filter((route) => route.species.id === CARP_SPECIES.id);
-  const poles = zone.movingHazards ?? [];
+  const movingHazards = zone.movingHazards ?? [];
 
-  it('plays three crayfish, six carp and four punting poles, no tilapia: start times over the longest stretch, loop and pole cycle, waiting out the longest strike', () => {
+  it('plays three crayfish, six carp, four stalactites and one geyser vent, no tilapia: start times over the longest stretch, loop and hazard cycle, waiting out the longest strike', () => {
     expect(zone.tilapiaRoutes).toEqual([]);
     expect(crayfish.map((route) => [route.id, route.species])).toEqual([0, 1, 2].map((n) => [`crayfish-${n}`, SPRING_CAVE_CRAYFISH]));
     expect(carp.map((route) => [route.id, route.species])).toEqual([0, 1, 2, 3, 4, 5].map((n) => [`carp-${n}`, SPRING_CAVE_CARP]));
-    expect(poles).toHaveLength(4);
+    expect(movingHazards.map((spawn) => spawn.type)).toEqual([STALACTITE_DRIP, STALACTITE_DRIP, STALACTITE_DRIP, STALACTITE_DRIP, GEYSER_VENT]);
     const wades = zone.predatorRoutes.map((route) => loopSeconds(route, route.species.tuning.patrolSpeed));
-    expect(startWindow).toBeCloseTo(Math.max(...wades, ...poles.map((spawn) => movingHazardPeriod(spawn.type))), 9);
+    expect(startWindow).toBeCloseTo(Math.max(...wades, ...movingHazards.map((spawn) => movingHazardPeriod(spawn.type))), 9);
     expect(startWindow).toBeCloseTo(20.5, 9);
     expect(lastStartIndex).toBe(Math.floor(startWindow / START_STEP));
     expect(parkSteps).toBe(Math.max(tailSteps(SPRING_CAVE_CRAYFISH.tuning), tailSteps(SPRING_CAVE_CARP.tuning)));
@@ -303,14 +304,14 @@ describe('risk fairness on the default Area 6 zone', () => {
     }
   });
 
-  it.each(spots)('bands $id by S = 90 for the crayfish, S = 130 for the carp and the touch reach for the poles', (spot) => {
+  it.each(spots)('bands $id by S = 90 for the crayfish, S = 130 for the carp and the touch reach for the stalactites and the geyser', (spot) => {
     const threats = zoneThreats(zone);
-    expect(threats.map((threat) => threat.strike)).toEqual([90, 90, 90, 130, 130, 130, 130, 130, 130, 18, 18, 18, 18]);
-    expect(PUNTING_POLE.touchReach).toBe(18);
+    expect(threats.map((threat) => threat.strike)).toEqual([90, 90, 90, 130, 130, 130, 130, 130, 130, 18, 18, 18, 18, 18]);
+    expect([STALACTITE_DRIP.touchReach, GEYSER_VENT.touchReach]).toEqual([18, 18]);
     expect(meetsThreatRiskRule(spot, spot.rarity, threats)).toBe(true);
   });
 
-  it.each(spots)("finds a safe start on #130's relaxed rule past every carp reach, every crayfish lunge and every pole sweep for $id", (spot) => {
+  it.each(spots)("finds a safe start on #130's relaxed rule past every carp reach, every crayfish lunge and every stalactite and geyser sweep for $id", (spot) => {
     const start = nearestSafeStart(spot, zone);
     expect(SPRING_CAVE_CARP.tuning.lungeRange + CARP_CHASE.leash).toBe(CARP_REACH);
     expect(SPRING_CAVE_CRAYFISH.tuning.lungeRange).toBe(CRAYFISH_REACH);
@@ -318,7 +319,7 @@ describe('risk fairness on the default Area 6 zone', () => {
     for (const route of carp) expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(CARP_REACH);
     for (const route of crayfish) expect(routeLoopDistance(start, route.waypoints), route.id).toBeGreaterThan(CRAYFISH_REACH);
     expect(outOfPredatorReach(start, zone)).toBe(true);
-    for (const spawn of poles) expect(shapeDistance(start, movingHazardSweep(spawn)), spawn.id).toBeGreaterThan(spawn.type.touchReach);
+    for (const spawn of movingHazards) expect(shapeDistance(start, movingHazardSweep(spawn)), spawn.id).toBeGreaterThan(spawn.type.touchReach);
   });
 
   it.each(spots)('lets the axolotl grab $id without a hit from a safe start for some start time', (spot) => {
@@ -378,7 +379,7 @@ describe('beating Area 6 with one leg (issue #77, ND-9)', () => {
 });
 
 describe('Area 6 risk fairness on other seeds', () => {
-  it.each(EXTRA_SEEDS)('keeps every spot, route, pole, current and the main path identical to the default seed for seed %i, so every proof holds for it too', (seed) => {
+  it.each(EXTRA_SEEDS)('keeps every spot, route, stalactite, geyser, current and the main path identical to the default seed for seed %i, so every proof holds for it too', (seed) => {
     const layout = buildZone(SPRING_CAVE_LAYOUT, seed);
     expect(layout.tilapiaRoutes).toEqual(springCave.zone.tilapiaRoutes);
     expect(layout.predatorRoutes).toEqual(springCave.zone.predatorRoutes);

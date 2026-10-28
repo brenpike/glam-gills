@@ -1,7 +1,7 @@
 import { hazardCentre, legHazardAt, type HazardSpawn } from './hazards';
 import { inSightCover, type SightCoverGeometry } from './hiding';
 import { createLegs, isProtected, speedUpRegrowth, tryHit, updateLegs, type LegsState } from './legs';
-import { movingHazardTipDepth, movingHazardTouches, type MovingHazardSpawn } from './movingHazards';
+import { movingHazardTip, movingHazardTouches, type MovingHazardSpawn } from './movingHazards';
 import {
   TILAPIA_SPECIES,
   bumpImpulse,
@@ -16,7 +16,6 @@ import {
 import { LEGS, SWIM, TILAPIA, type LegTuning, type TilapiaTuning } from './tuning';
 import type { Vec2 } from './vec';
 import {
-  SURF,
   swimBounds,
   type CaveArea,
   type PadSpec,
@@ -400,15 +399,15 @@ function applyHazard(state: EncounterState, axolotlPos: Point, ctx: EncounterCon
 
 /**
  * Hits the axolotl from the first moving hazard whose shaft touches it at the encounter's
- * `hazardTime`, if any, from the tip of that shaft; the bump cooldown is unchanged.
+ * `hazardTime`, if any, from the tip of that shaft where it really is: below the surface or a roof,
+ * or above the floor (issue #77, ND-3); the bump cooldown is unchanged.
  */
 function applyMovingHazard(state: EncounterState, axolotlPos: Point, ctx: EncounterContext): HitPass {
   const { movingHazards, hazardTime } = state;
   if (!movingHazards || hazardTime === undefined) return { state, events: [], hit: false };
   const spawn = movingHazards.find((candidate) => movingHazardTouches(candidate, hazardTime, axolotlPos));
   if (!spawn) return { state, events: [], hit: false };
-  const from: Point = { x: spawn.x, y: SURF + movingHazardTipDepth(spawn, hazardTime) };
-  return applyHit(state, { id: spawn.id, from }, ctx);
+  return applyHit(state, { id: spawn.id, from: movingHazardTip(spawn, hazardTime) }, ctx);
 }
 
 /**

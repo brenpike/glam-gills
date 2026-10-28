@@ -70,7 +70,7 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | | Dash ready again | One soft bloop and a high kalimba note, when Tail Dash goes from recharging to ready, once per recharge. The start of a trip plays nothing. | 2 |
 | | Bump a sealed pot | One soft, hollow clay knock, and a quieter echo, once each time the axolotl touches a sealed pot without dashing. | 2 |
 | | Dash pot breaks | A hollow clay "tok", a little crumble, bubbles rising. The crumble's knocks land at fixed times and pitches, where the sketch picks them at random. | 2 |
-| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. A punting pole on screen plays it too, once when its warning starts; a pole off screen plays nothing. At most one ripple plays a frame (section 4). | 2 |
+| Bumps, hazards, predators | Predator warning | Ripple: a soft water swish with two low marimba notes, once when the telegraph starts. Every moving hazard plays it too, a punting pole, a stalactite drip or a geyser vent, once when its warning starts with its sweep on screen where it really is, down from the surface or a roof or up from the floor; one off screen plays nothing. At most one ripple plays a frame (section 4). | 2 |
 | | Lose a leg | Uh-oh: a soft puff with two low marimba notes falling a minor third (steps −2 then −3), left unresolved. Only a hit that costs a leg plays it. | 1 |
 | | Shell perk blocks a hit | A bright shell tink and a bubble. | 2 |
 | | Leg grows back | Three rising marimba notes ending on the home note an octave up (steps 2, 3, 5), and a bubble. | 1 |

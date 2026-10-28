@@ -348,9 +348,17 @@ describe('tripStranding and strandingRoll', () => {
 });
 
 describe('areaStrandingChance', () => {
-  it.each(AREAS.map((area) => [area.id, area] as const))('gives %s the 40% stranding chance', (_id, area) => {
+  const defaultChanceAreas = AREAS.filter((area) => area.strandingChance === undefined);
+
+  it.each(defaultChanceAreas.map((area) => [area.id, area] as const))('gives %s the 40% stranding chance', (_id, area) => {
     expect(areaStrandingChance(area)).toBe(STRANDING_CHANCE);
     expect(areaStrandingChance(area)).toBe(0.4);
+  });
+
+  it('gives every area but Area 6 the 40% default, and Area 6 its own 30% (issue #77)', () => {
+    expect(defaultChanceAreas.map((area) => area.number)).toEqual([1, 2, 3, 4, 5]);
+    const springCave = AREAS.find((area) => area.number === 6);
+    expect(springCave && areaStrandingChance(springCave)).toBe(0.3);
   });
 
   it('gives STRANDING_CHANCE when the area has no strandingChance', () => {

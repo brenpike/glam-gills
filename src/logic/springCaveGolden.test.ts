@@ -1,9 +1,9 @@
 /**
  * Golden guard for the spring cave, Area 6 ('spring-cave-1'): its built zone, its trip placements,
- * and the encounter and trip rules, its crayfish, chasing common carp, punting poles, mobile snacks,
- * spring outflow, dark water and glow-plants included, played along a fixed scripted swim that
- * swims down into the dark, waits there for the glow-plant hint, lights every glow-plant, then parks
- * by every crayfish, carp and pole sweep (issue #77). Any change here means a shared rule changed spring-cave-1 behaviour.
+ * and the encounter and trip rules, its crayfish, chasing common carp, dripping stalactites, geyser
+ * vent, mobile snacks, spring outflow, dark water and glow-plants included, played along a fixed
+ * scripted swim that swims down into the dark, waits there for the glow-plant hint, lights every
+ * glow-plant, then parks by every crayfish, carp, stalactite and geyser sweep (issue #77). Any change here means a shared rule changed spring-cave-1 behaviour.
  */
 import { describe, expect, it } from 'vitest';
 import { SPRING_CAVE_TREASURES } from './catalogue';
@@ -139,8 +139,8 @@ function routeCentre(route: { waypoints: readonly Point[] }): Point {
   return { x: sumX / count, y: sumY / count };
 }
 
-/** The centre of each punting pole's sweep, in data order. */
-function listPoleCentres(zone: ZoneLayout): Point[] {
+/** The centre of each stalactite's and geyser's sweep, in data order. */
+function listMovingHazardCentres(zone: ZoneLayout): Point[] {
   return (zone.movingHazards ?? []).map((spawn) => hazardCentre(movingHazardSweep(spawn)));
 }
 
@@ -151,11 +151,11 @@ function listGlowPlantCentres(zone: ZoneLayout): Point[] {
 
 /**
  * Every place the scripted swim parks after the glow-plants, west to east: each crayfish
- * stretch's middle and each carp loop's centre, then each pole sweep's centre, west to east.
+ * stretch's middle and each carp loop's centre, then each stalactite and geyser sweep's centre, west to east.
  */
 function listParkSpots(zone: ZoneLayout): Point[] {
   const byX = (first: Point, second: Point) => first.x - second.x;
-  return [...zone.predatorRoutes.map(routeCentre).sort(byX), ...listPoleCentres(zone).sort(byX)];
+  return [...zone.predatorRoutes.map(routeCentre).sort(byX), ...listMovingHazardCentres(zone).sort(byX)];
 }
 
 /**
@@ -310,7 +310,7 @@ describe('spring-cave-1 golden', () => {
     }
   });
 
-  it('scripts a swim that parks at every crayfish stretch middle, every carp loop centre and every pole sweep centre', () => {
+  it('scripts a swim that parks at every crayfish stretch middle, every carp loop centre and every stalactite and geyser sweep centre', () => {
     expect(defaultZone.tilapiaRoutes).toEqual([]);
     expect(defaultZone.predatorRoutes.map((route) => route.species.id)).toEqual([
       'crayfish',
@@ -323,12 +323,18 @@ describe('spring-cave-1 golden', () => {
       'carp',
       'carp',
     ]);
-    expect(defaultZone.movingHazards ?? []).toHaveLength(4);
-    const parkSpots = [...defaultZone.predatorRoutes.map(routeCentre), ...listPoleCentres(defaultZone)];
+    expect((defaultZone.movingHazards ?? []).map((spawn) => spawn.type.id)).toEqual([
+      'stalactite-drip',
+      'stalactite-drip',
+      'stalactite-drip',
+      'stalactite-drip',
+      'geyser-vent',
+    ]);
+    const parkSpots = [...defaultZone.predatorRoutes.map(routeCentre), ...listMovingHazardCentres(defaultZone)];
     for (const at of parkSpots) expect(countFramesAt(positions, at)).toBeGreaterThanOrEqual(PARK_FRAMES);
   });
 
-  it("scripts a swim that runs through the spring outflow and every punting pole's sweep", () => {
+  it("scripts a swim that runs through the spring outflow and every stalactite's and geyser's sweep", () => {
     const current = defaultZone.currents[0];
     const inCurrent = positions.some(
       (pos) => pos.x >= current.x0 && pos.x <= current.x1 && pos.y >= current.y0 && pos.y <= current.y1,

@@ -1,15 +1,23 @@
-import { PUNTING_POLE_FACT, type FactCard } from './factCards';
+import { GEYSER_FACT, PUNTING_POLE_FACT, STALACTITE_FACT, type FactCard } from './factCards';
 import type { HazardRect } from './hazards';
 import { PUNTING_POLES, TILAPIA } from './tuning';
 import { SURF, type Point } from './zone';
 
 /**
- * A moving hazard type (N3, PRD open question 255, ND-8): a straight shaft that comes down from the
- * surface at its spawn's x on a fixed cycle and costs a leg on touch (A4). Each cycle runs, from
- * the spawn's offset: `restFor` at rest, `warnFor` warning (the A2 telegraph), `jabFor` with the
- * tip going down to the depth at a steady speed, `holdFor` held at the depth, then `liftFor` with
- * the tip going back up at a steady speed. The five times fill the period. Every moving hazard
- * type is a danger part (ND-13). `look` names the textures baked for it.
+ * Where a moving hazard's shaft starts and which way it goes (issue #77, ND-3): 'surface' comes
+ * down from the water surface, 'roof' comes down from a rock roof, and 'floor' goes up from the
+ * floor.
+ */
+export type MovingHazardFrom = 'surface' | 'roof' | 'floor';
+
+/**
+ * A moving hazard type (N3, PRD open question 255, ND-8): a straight shaft that comes from its
+ * base at its spawn's x on a fixed cycle and costs a leg on touch (A4). The base is the surface,
+ * a rock roof or the floor (`from`); the shaft goes down from the surface or a roof and up from the
+ * floor. Each cycle runs, from the spawn's offset: `restFor` at rest, `warnFor` warning (the A2
+ * telegraph), `jabFor` with the tip going out to its reach at a steady speed, `holdFor` held there,
+ * then `liftFor` with the tip going back to the base at a steady speed. The five times fill the
+ * period. Every moving hazard type is a danger part (ND-13). `look` names the textures baked for it.
  */
 export interface MovingHazardType {
   readonly id: string;
@@ -20,7 +28,12 @@ export interface MovingHazardType {
   readonly jabFor: number;
   readonly holdFor: number;
   readonly liftFor: number;
-  /** Depth in px below the surface the tip reaches; a spawn may set its own. */
+  /** Where the shaft starts (issue #77, ND-3); absent means 'surface'. */
+  readonly from?: MovingHazardFrom;
+  /**
+   * Reach in px the tip goes from the base: below the surface or roof, above the floor. Called the
+   * depth for every type; a spawn may set its own.
+   */
   readonly depth: number;
   /** Shaft half width in px. */
   readonly halfWidth: number;
@@ -40,8 +53,13 @@ export interface MovingHazardSpawn {
   readonly x: number;
   /** Seconds of hazard time at which the cycle starts (the start of the rest). */
   readonly offset: number;
-  /** This spawn's own depth in px below the surface; absent means `type.depth`. */
+  /** This spawn's own depth in px from its base; absent means `type.depth`. */
   readonly depth?: number;
+  /**
+   * World y of the base for a roof or floor type: the roof line it hangs from or the floor it
+   * stands on (issue #77, ND-3). Absent for a surface type, whose base is the surface.
+   */
+  readonly baseY?: number;
 }
 
 /** Where a moving hazard is in its cycle, in cycle order. */
@@ -74,21 +92,87 @@ export const PUNTING_POLE: Readonly<MovingHazardType> = Object.freeze({
   dangerPart: true,
 });
 
+/**
+ * The stalactite drip (issue #77, ND-3, option B): a thin stream of drips falling from a
+ * stalactite's tip under a rock roof on a fixed cycle; the whole stream touches. Provisional
+ * values; tune in play. The same 4 s cycle and the same sizes as the punting pole, with a slower
+ * fall (0.4 s) and a shorter hold (0.6 s) and stop (0.4 s), so its warning and its danger match the
+ * pole's while it reads as falling water.
+ */
+export const STALACTITE_DRIP: Readonly<MovingHazardType> = Object.freeze({
+  id: 'stalactite-drip',
+  name: 'Stalactite drip',
+  look: 'stalactite-drip',
+  restFor: 1.6,
+  warnFor: 1.0,
+  jabFor: 0.4,
+  holdFor: 0.6,
+  liftFor: 0.4,
+  from: 'roof',
+  depth: 180,
+  halfWidth: 5,
+  touchReach: 18,
+  meetRange: 180,
+  fact: STALACTITE_FACT,
+  dangerPart: true,
+});
+
+/**
+ * The geyser vent (issue #77, ND-3, option B): a vent on the floor bursting a column of water and
+ * bubbles up to its height on a fixed cycle; the whole column touches. Provisional values; tune in
+ * play. A 5.2 s cycle with a longer warning (1.2 s) than the pole's, as it bursts up from below, a
+ * 0.4 s burst, a 0.8 s hold and a 0.6 s fall back; the column is a little wider than the pole.
+ */
+export const GEYSER_VENT: Readonly<MovingHazardType> = Object.freeze({
+  id: 'geyser-vent',
+  name: 'Geyser vent',
+  look: 'geyser-vent',
+  restFor: 2.2,
+  warnFor: 1.2,
+  jabFor: 0.4,
+  holdFor: 0.8,
+  liftFor: 0.6,
+  from: 'floor',
+  depth: 140,
+  halfWidth: 8,
+  touchReach: 18,
+  meetRange: 180,
+  fact: GEYSER_FACT,
+  dangerPart: true,
+});
+
 /** Seconds in one full cycle: the sum of the five phase times. */
 export function movingHazardPeriod(type: Readonly<MovingHazardType>): number {
   return type.restFor + type.warnFor + type.jabFor + type.holdFor + type.liftFor;
 }
 
-/** The spawn's depth in px below the surface: its own when set, else its type's. */
+/** The spawn's depth in px from its base: its own when set, else its type's. */
 export function movingHazardDepth(spawn: Readonly<MovingHazardSpawn>): number {
   return spawn.depth ?? spawn.type.depth;
+}
+
+/** Where the type's shaft starts: its own `from`, else 'surface'. */
+export function movingHazardFrom(type: Readonly<MovingHazardType>): MovingHazardFrom {
+  return type.from ?? 'surface';
+}
+
+/** World y of the spawn's base: the surface for a surface type, else the spawn's `baseY`. */
+export function movingHazardBaseY(spawn: Readonly<MovingHazardSpawn>): number {
+  return spawn.baseY ?? SURF;
+}
+
+/** Which way the spawn's shaft goes from its base, as a sign of y: 1 down (surface, roof), -1 up (floor). */
+export function movingHazardDirection(spawn: Readonly<MovingHazardSpawn>): 1 | -1 {
+  return movingHazardFrom(spawn.type) === 'floor' ? -1 : 1;
 }
 
 /**
  * A moving hazard spawn for area data (ND-8). `offset` is the hazard time at which the cycle
  * starts; any offset is valid. `depth`, when given, overrides the type's depth for this spawn only.
- * Throws RangeError when `type.warnFor` is under the A2 floor (0.8 s), any phase time is negative
- * or not a number, the period is not above 0, or the depth is not above 0.
+ * `baseY` is the world y of the base: needed for a roof or floor type, refused for a surface type
+ * (issue #77, ND-3). Throws RangeError when `type.warnFor` is under the A2 floor (0.8 s), any phase
+ * time is negative or not a number, the period is not above 0, the depth is not above 0, or the
+ * base is missing, not finite or given to a surface type.
  */
 export function movingHazardSpawn(
   id: string,
@@ -96,6 +180,7 @@ export function movingHazardSpawn(
   x: number,
   offset: number,
   depth?: number,
+  baseY?: number,
 ): MovingHazardSpawn {
   const times = [type.restFor, type.warnFor, type.jabFor, type.holdFor, type.liftFor];
   if (!times.every((seconds) => seconds >= 0)) {
@@ -112,7 +197,21 @@ export function movingHazardSpawn(
   if (!(effectiveDepth > 0)) {
     throw new RangeError(`movingHazardSpawn ${id}: depth ${effectiveDepth} must be greater than 0`);
   }
-  return depth === undefined ? { id, type, x, offset } : { id, type, x, offset, depth };
+  checkBaseY(id, type, baseY);
+  const spawn: MovingHazardSpawn = depth === undefined ? { id, type, x, offset } : { id, type, x, offset, depth };
+  return baseY === undefined ? spawn : { ...spawn, baseY };
+}
+
+/** Throws RangeError unless a surface type has no `baseY` and a roof or floor type has a finite one. */
+function checkBaseY(id: string, type: Readonly<MovingHazardType>, baseY: number | undefined): void {
+  const from = movingHazardFrom(type);
+  if (from === 'surface') {
+    if (baseY !== undefined) throw new RangeError(`movingHazardSpawn ${id}: a surface hazard starts at the surface, so it takes no baseY`);
+    return;
+  }
+  if (baseY === undefined || !Number.isFinite(baseY)) {
+    throw new RangeError(`movingHazardSpawn ${id}: a ${from} hazard needs a finite baseY, got ${baseY}`);
+  }
 }
 
 /** Seconds into the cycle at `hazardTime`, in [0, period), counted from the spawn's offset. */
@@ -122,7 +221,7 @@ function cycleSeconds(spawn: Readonly<MovingHazardSpawn>, hazardTime: number): n
   return seconds < 0 ? (seconds + period) % period : seconds;
 }
 
-/** The tip's depth in px below the surface `seconds` into the cycle, for a hazard reaching `depth`. */
+/** The tip's depth in px from the base `seconds` into the cycle, for a hazard reaching `depth`. */
 function tipDepthAt(type: Readonly<MovingHazardType>, depth: number, seconds: number): number {
   const jabStart = type.restFor + type.warnFor;
   if (seconds < jabStart) return 0;
@@ -149,31 +248,46 @@ export function movingHazardPhase(spawn: Readonly<MovingHazardSpawn>, hazardTime
 }
 
 /**
- * The tip's depth in px below the surface at `hazardTime`: 0 at rest and during the warning,
- * going down at a steady speed to the depth over the jab, the depth through the hold, and back up
- * at a steady speed over the lift.
+ * The tip's depth in px from the base at `hazardTime`: 0 at rest and during the warning, going out
+ * at a steady speed to the depth over the jab, the depth through the hold, and back to the base at
+ * a steady speed over the lift.
  */
 export function movingHazardTipDepth(spawn: Readonly<MovingHazardSpawn>, hazardTime: number): number {
   return tipDepthAt(spawn.type, movingHazardDepth(spawn), cycleSeconds(spawn, hazardTime));
 }
 
 /**
- * The shaft at `hazardTime`: the rect x ± halfWidth from the surface down to the tip. Null at rest
- * and during the warning, when it is out of the water. At the first instant of the jab the rect
- * has no height yet, but it still touches within the touch reach of the surface.
+ * The world point of the tip at `hazardTime`: the spawn's x, its depth from the base the way the
+ * shaft goes (down from the surface or a roof, up from the floor). At the base at rest and during
+ * the warning.
+ */
+export function movingHazardTip(spawn: Readonly<MovingHazardSpawn>, hazardTime: number): Point {
+  return { x: spawn.x, y: movingHazardBaseY(spawn) + movingHazardDirection(spawn) * movingHazardTipDepth(spawn, hazardTime) };
+}
+
+/** The rect x ± halfWidth from the base to `reach` px along the shaft's way. */
+function shaftRect(spawn: Readonly<MovingHazardSpawn>, reach: number): HazardRect {
+  const { halfWidth } = spawn.type;
+  const base = movingHazardBaseY(spawn);
+  const end = base + movingHazardDirection(spawn) * reach;
+  return { kind: 'rect', x0: spawn.x - halfWidth, x1: spawn.x + halfWidth, y0: Math.min(base, end), y1: Math.max(base, end) };
+}
+
+/**
+ * The shaft at `hazardTime`: the rect x ± halfWidth from the base to the tip. Null at rest and
+ * during the warning, when it is out of the water. At the first instant of the jab the rect has no
+ * height yet, but it still touches within the touch reach of the base.
  */
 export function movingHazardShape(spawn: Readonly<MovingHazardSpawn>, hazardTime: number): HazardRect | null {
   const { type } = spawn;
   const seconds = cycleSeconds(spawn, hazardTime);
   if (seconds < type.restFor + type.warnFor) return null;
-  const tip = tipDepthAt(type, movingHazardDepth(spawn), seconds);
-  return { kind: 'rect', x0: spawn.x - type.halfWidth, x1: spawn.x + type.halfWidth, y0: SURF, y1: SURF + tip };
+  return shaftRect(spawn, tipDepthAt(type, movingHazardDepth(spawn), seconds));
 }
 
-/** Every place the shaft can be: the jab rect at full depth, x ± halfWidth from the surface down. */
+/** Every place the shaft can be: the jab rect at full depth, x ± halfWidth from the base. */
 export function movingHazardSweep(spawn: Readonly<MovingHazardSpawn>): HazardRect {
-  const { halfWidth } = spawn.type;
-  return { kind: 'rect', x0: spawn.x - halfWidth, x1: spawn.x + halfWidth, y0: SURF, y1: SURF + movingHazardDepth(spawn) };
+  return shaftRect(spawn, movingHazardDepth(spawn));
 }
 
 /**
@@ -184,8 +298,9 @@ export function movingHazardTouches(spawn: Readonly<MovingHazardSpawn>, hazardTi
   const { type } = spawn;
   const seconds = cycleSeconds(spawn, hazardTime);
   if (seconds < type.restFor + type.warnFor) return false;
-  const tipY = SURF + tipDepthAt(type, movingHazardDepth(spawn), seconds);
+  const base = movingHazardBaseY(spawn);
+  const tipY = base + movingHazardDirection(spawn) * tipDepthAt(type, movingHazardDepth(spawn), seconds);
   const dx = Math.max(spawn.x - type.halfWidth - pos.x, 0, pos.x - spawn.x - type.halfWidth);
-  const dy = Math.max(SURF - pos.y, 0, pos.y - tipY);
+  const dy = Math.max(Math.min(base, tipY) - pos.y, 0, pos.y - Math.max(base, tipY));
   return Math.hypot(dx, dy) <= type.touchReach;
 }

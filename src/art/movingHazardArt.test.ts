@@ -1,6 +1,7 @@
 /**
- * Moving hazard looks (issue #117, ND-8, ND-9, ND-18): the punting pole's contrast and greyscale
- * cues, and the look table and its bake, headless. The painters run against a recording context and
+ * Moving hazard looks (issue #117, ND-8, ND-9, ND-18; issue #77, ND-3): the punting pole's, the
+ * stalactite drip's and the geyser vent's contrast and greyscale cues, and the look table, its
+ * places and its bake, headless. The painters run against a recording context and
  * a stub Path2D (the same approach as predatorArt.test.ts and chinampaArt.test.ts): every fill and
  * stroke is kept with the style, width and alpha it was painted under. The bake runs against a fake
  * scene whose canvases record.
@@ -45,17 +46,61 @@ import {
   poleShaftPieceLift,
   poleShaftPieceTo,
 } from './drawPuntingPole';
+import {
+  GEYSER_BUBBLES_RISE,
+  GEYSER_BUBBLES_TEX,
+  GEYSER_CHIMNEY_TEX,
+  GEYSER_COLUMN_LENGTH,
+  GEYSER_COLUMN_TEX,
+  GEYSER_COLUMN_W,
+  GEYSER_FOOT_DROP,
+  GEYSER_FROTH,
+  GEYSER_MOUTH_RISE,
+  GEYSER_RING,
+  GEYSER_RING_TEX,
+  GEYSER_WATER,
+  paintGeyserBubbles,
+  paintGeyserChimney,
+  paintGeyserColumn,
+  paintGeyserRing,
+} from './drawGeyserVent';
+import { SPRING_ROCK } from './drawSpringCave';
+import {
+  DRIP_COUNT,
+  DRIP_DROP_ALONG,
+  DRIP_DROP_R,
+  DRIP_DROP_TEX,
+  DRIP_HALF_W,
+  DRIP_RING,
+  DRIP_RING_ALONG,
+  DRIP_RING_RY,
+  DRIP_RING_TEX,
+  DRIP_SHINE,
+  DRIP_SPACING,
+  DRIP_STREAM_LENGTH,
+  DRIP_STREAM_TEX,
+  DRIP_WATER,
+  STALACTITE_HALF_W,
+  STALACTITE_TEX,
+  STALACTITE_TIP_Y,
+  paintDripDrop,
+  paintDripRing,
+  paintDripStream,
+  paintStalactite,
+} from './drawStalactite';
 import { habitatLook } from './habitatLook';
 import {
   MOVING_HAZARD_LOOKS,
   MOVING_HAZARD_PARTS,
   bakeMovingHazardTextures,
+  movingHazardLookPlace,
   movingHazardLookTextures,
   movingHazardTextureKey,
 } from './movingHazardTextures';
 import { EYE, INK, LW, WHITE } from './palette';
 import type { TexSize } from './canvasKit';
-import { PUNTING_POLE } from '../logic/movingHazards';
+import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth } from '../logic/movingHazards';
+import { SPRING_CAVE_LAYOUT } from '../logic/springCaveLayout';
 import { PUNTING_POLES } from '../logic/tuning';
 import { SURF } from '../logic/zone';
 
@@ -331,9 +376,15 @@ const DOCUMENTED_COLOURS: readonly (readonly [string, string, string])[] = [
   ['POLE_SHINE', POLE_SHINE, 'rgba(255,255,255,0.5)'],
   ['BOAT_SHADOW', BOAT_SHADOW, 'rgba(12,38,78,0.55)'],
   ['POLE_RING', POLE_RING, '#ffffff'],
+  ['DRIP_WATER', DRIP_WATER, '#dff7ff'],
+  ['DRIP_SHINE', DRIP_SHINE, 'rgba(255,255,255,0.85)'],
+  ['DRIP_RING', DRIP_RING, '#ffffff'],
+  ['GEYSER_WATER', GEYSER_WATER, '#e3f9ff'],
+  ['GEYSER_FROTH', GEYSER_FROTH, '#ffffff'],
+  ['GEYSER_RING', GEYSER_RING, '#ffffff'],
 ];
 
-describe('punting pole colours are the values written down', () => {
+describe('moving hazard colours are the values written down', () => {
   it.each(DOCUMENTED_COLOURS)('%s is %s', (_name, constant, documented) => {
     expect(constant).toBe(documented);
   });
@@ -622,6 +673,14 @@ describe('every painter', () => {
     ['paintPuntingShadow', paintPuntingShadow],
     ['paintPuntingShaft', paintPuntingShaft],
     ['paintPuntingRing', paintPuntingRing],
+    ['paintStalactite', paintStalactite],
+    ['paintDripDrop', paintDripDrop],
+    ['paintDripStream', paintDripStream],
+    ['paintDripRing', paintDripRing],
+    ['paintGeyserChimney', paintGeyserChimney],
+    ['paintGeyserBubbles', paintGeyserBubbles],
+    ['paintGeyserColumn', paintGeyserColumn],
+    ['paintGeyserRing', paintGeyserRing],
   ];
 
   it.each(PAINTERS)('%s paints the same ops every time, so no time or randomness is in it', (_name, paint) => {
@@ -869,5 +928,189 @@ describe('the shaft in pieces at a spawn\'s own depth (issue #118, ND-4)', () =>
     const fullLength = 440 + aboveSurface;
     expect(poleShaftPieceCount(fullLength, fullLength)).toBe(3);
     expect(piecesFor(fullLength, fullLength)).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stalactite drip and geyser vent (issue #77, ND-3, option B)
+// ---------------------------------------------------------------------------
+
+/** Every part of the two spring cave looks, its painter and its frame. */
+const SPRING_CAVE_PARTS: readonly (readonly [string, (ctx: CanvasRenderingContext2D) => void, TexSize])[] = [
+  ['stalactite', paintStalactite, STALACTITE_TEX],
+  ['drip drop', paintDripDrop, DRIP_DROP_TEX],
+  ['drip stream', paintDripStream, DRIP_STREAM_TEX],
+  ['drip rings', paintDripRing, DRIP_RING_TEX],
+  ['geyser chimney', paintGeyserChimney, GEYSER_CHIMNEY_TEX],
+  ['geyser bubbles', paintGeyserBubbles, GEYSER_BUBBLES_TEX],
+  ['geyser column', paintGeyserColumn, GEYSER_COLUMN_TEX],
+  ['geyser ring', paintGeyserRing, GEYSER_RING_TEX],
+];
+
+describe('stalactite drip and geyser vent contrast (guide 3c, 10)', () => {
+  it.each([
+    ['DRIP_WATER', DRIP_WATER],
+    ['GEYSER_WATER', GEYSER_WATER],
+    ['SPRING_ROCK', SPRING_ROCK],
+  ])('%s reaches the outer edge, so it is 4.5:1 or better against INK', (_name, fill) => {
+    expect(contrast(fill, INK)).toBeGreaterThanOrEqual(OUTER_FILL_RATIO);
+  });
+
+  it('the water is light and the rock is mid: the drips and the column read as light shapes in ink in greyscale', () => {
+    expect(contrast(DRIP_WATER, INK)).toBeGreaterThanOrEqual(9);
+    expect(contrast(GEYSER_WATER, INK)).toBeGreaterThanOrEqual(9);
+    expect(luminance(DRIP_WATER)).toBeGreaterThan(luminance(SPRING_ROCK));
+    expect(luminance(GEYSER_WATER)).toBeGreaterThan(luminance(SPRING_ROCK));
+  });
+
+  it('the rings are white and ink, as the pole ring is', () => {
+    expect(DRIP_RING).toBe(WHITE);
+    expect(GEYSER_RING).toBe(WHITE);
+  });
+});
+
+describe('stalactite drip and geyser vent frames (guide 10)', () => {
+  it.each(SPRING_CAVE_PARTS)('fits the %s in its frame with its ink and at least 4 px of padding', (_name, paint, tex) => {
+    expectPadded(record(paint).ops, tex);
+  });
+
+  it.each(SPRING_CAVE_PARTS)('inks the %s: an opaque INK line is painted, and no eye, text or image', (_name, paint) => {
+    const { ops } = record(paint);
+    expect(ops.some((op) => isStroke(op) && op.strokeStyle === INK && op.globalAlpha === 1)).toBe(true);
+    expect(fillColours(ops)).not.toContain(EYE);
+    expect(ops.filter((op) => op.op === 'fillText' || op.op === 'strokeText' || op.op === 'drawImage')).toEqual([]);
+  });
+});
+
+describe('the stalactite (the bow of a roof hazard)', () => {
+  const { ops } = record(paintStalactite);
+
+  it('is one SPRING_ROCK cone hanging down from its anchor on the rock\'s underside to its tip, nothing of it over the rock', () => {
+    const cone = ops.find((op) => isFill(op) && op.fillStyle === SPRING_ROCK) as Op;
+    expect(cone).toBeDefined();
+    const box = opBounds(cone);
+    expect(box.minY).toBeCloseTo(0, 9);
+    expect([box.minX, box.maxX]).toEqual([-STALACTITE_HALF_W, STALACTITE_HALF_W]);
+    expect(box.maxY).toBeGreaterThan(STALACTITE_TIP_Y - 1);
+    expect(box.maxY).toBeLessThanOrEqual(STALACTITE_TIP_Y + 1);
+    expect(STALACTITE_TIP_Y).toBeGreaterThan(0);
+    for (const op of ops) expect(opBounds(op).minY).toBeGreaterThanOrEqual(-STALACTITE_TEX.originY + MIN_PAD);
+  });
+
+  it('inks its sides and tip but not its root, so it grows out of the ledge\'s rock with no line across it', () => {
+    const ink = ops.filter((op) => isStroke(op) && op.strokeStyle === INK);
+    expect(ink).toHaveLength(1);
+    const box = opBounds(ink[0]);
+    expect(box.maxY).toBeGreaterThan(STALACTITE_TIP_Y - 1);
+    expect(cmdsOf(ink[0]).map((cmd) => cmd[0])).not.toContain('closePath');
+    expect(cmdsOf(ink[0])[0]).toEqual(['moveTo', -STALACTITE_HALF_W, 0]);
+  });
+
+  it('hangs the drop from its tip: its pointed top behind the stalactite, its round part below the tip, DRIP_DROP_ALONG px under the rock', () => {
+    const drop = record(paintDripDrop).ops.find((op) => isFill(op) && op.fillStyle === DRIP_WATER) as Op;
+    const box = opBounds(drop);
+    expect(DRIP_DROP_ALONG).toBe(STALACTITE_TIP_Y + 2);
+    expect(DRIP_DROP_ALONG + box.minY).toBeLessThan(STALACTITE_TIP_Y);
+    expect(DRIP_DROP_ALONG + box.maxY).toBeGreaterThan(STALACTITE_TIP_Y);
+  });
+
+  it('grows the ripple rings just under the drop, clear of it', () => {
+    expect(DRIP_RING_ALONG - DRIP_RING_RY).toBeGreaterThan(DRIP_DROP_ALONG + DRIP_DROP_R);
+  });
+});
+
+describe('the drip stream (the shaft of a roof hazard)', () => {
+  const { ops } = record(paintDripStream);
+
+  it('is the logic stream: drips as wide as twice the halfWidth, the art reaching every Area 6 stalactite from its rock', () => {
+    expect(2 * DRIP_HALF_W).toBe(2 * STALACTITE_DRIP.halfWidth);
+    const place = movingHazardLookPlace(STALACTITE_DRIP.look);
+    for (const spawn of (SPRING_CAVE_LAYOUT.movingHazards ?? []).filter((each) => each.type === STALACTITE_DRIP)) {
+      expect(movingHazardDepth(spawn) + place.shaftPastBase, spawn.id).toBeLessThanOrEqual(DRIP_STREAM_LENGTH);
+    }
+  });
+
+  it('has its lowest drip on the anchor and the art running up from it, a drip every DRIP_SPACING px', () => {
+    const drips = ops.filter((op) => isFill(op) && op.fillStyle === DRIP_WATER);
+    expect(drips).toHaveLength(DRIP_COUNT);
+    const centres = drips.map((op) => ellipsesOf(op)[0][1]);
+    for (let i = 1; i < centres.length; i++) expect(centres[i - 1] - centres[i]).toBeCloseTo(DRIP_SPACING, 9);
+    for (const op of ops) expect(opBounds(op).maxY).toBeLessThanOrEqual(1 + EPS);
+    expect(Math.min(...ops.map((op) => opBounds(op).minY))).toBeLessThan(-DRIP_STREAM_LENGTH);
+  });
+});
+
+describe('the geyser chimney and column (the bow and shaft of a floor hazard)', () => {
+  it('sits the chimney on the bed: its mouth GEYSER_MOUTH_RISE px up, its foot sunk GEYSER_FOOT_DROP px into the bed', () => {
+    const cone = record(paintGeyserChimney).ops.find((op) => isFill(op) && op.fillStyle === SPRING_ROCK) as Op;
+    const box = opBounds(cone);
+    expect(box.maxY).toBeCloseTo(GEYSER_FOOT_DROP, 9);
+    expect(box.minY).toBeLessThanOrEqual(-GEYSER_MOUTH_RISE);
+    expect(box.minY).toBeGreaterThan(-GEYSER_MOUTH_RISE - 3);
+  });
+
+  it('is the logic column: as wide as twice the halfWidth, the art reaching the Area 6 geyser past the bed', () => {
+    expect(GEYSER_COLUMN_W).toBe(2 * GEYSER_VENT.halfWidth);
+    const place = movingHazardLookPlace(GEYSER_VENT.look);
+    for (const spawn of (SPRING_CAVE_LAYOUT.movingHazards ?? []).filter((each) => each.type === GEYSER_VENT)) {
+      expect(movingHazardDepth(spawn) + place.shaftPastBase, spawn.id).toBeLessThanOrEqual(GEYSER_COLUMN_LENGTH);
+    }
+  });
+
+  it('has the column top at the anchor and the art running DOWN from it, as the column goes up from the bed', () => {
+    const { ops } = record(paintGeyserColumn);
+    const water = tubePairs(ops).find(({ colour }) => colour.strokeStyle === GEYSER_WATER)?.colour as Op;
+    expect(water.lineWidth).toBe(GEYSER_COLUMN_W);
+    expect(opBounds(water).minY).toBeCloseTo(0, 9);
+    expect(opBounds(water).maxY).toBeCloseTo(GEYSER_COLUMN_LENGTH + GEYSER_COLUMN_W / 2, 9);
+    expect(GEYSER_COLUMN_TEX.originY).toBeLessThanOrEqual(2 + MIN_PAD + 1);
+  });
+
+  it('puts the bubbles over the mouth, clear of the chimney', () => {
+    expect(GEYSER_BUBBLES_RISE - GEYSER_BUBBLES_TEX.h + GEYSER_BUBBLES_TEX.originY).toBeGreaterThan(GEYSER_MOUTH_RISE - MIN_PAD);
+  });
+});
+
+describe('look places (issue #77, ND-3)', () => {
+  it('keeps the pole where it was: 44 px of shaft over the surface, lifted 24 px at rest, its shadow 14 px down, its ring on the water, stacking', () => {
+    expect(movingHazardLookPlace('punting-pole')).toEqual({
+      shaftPastBase: POLE_SHAFT_LENGTH - PUNTING_POLES.depth,
+      restBack: 24,
+      shadowAlong: PUNTING_SHADOW_DROP,
+      ringAlong: 0,
+      shaftLength: POLE_SHAFT_LENGTH,
+      stacks: true,
+    });
+    expect(POLE_SHAFT_LENGTH - PUNTING_POLES.depth).toBe(44);
+  });
+
+  it('hides the drip stream and the geyser column at rest, so only the warning cues show before the strike', () => {
+    for (const look of ['stalactite-drip', 'geyser-vent']) {
+      const place = movingHazardLookPlace(look);
+      expect(place.restBack, look).toBe(place.shaftPastBase);
+      expect(place.stacks, look).toBe(false);
+    }
+    expect(movingHazardLookPlace('stalactite-drip')).toMatchObject({
+      shaftPastBase: 0,
+      shadowAlong: DRIP_DROP_ALONG,
+      ringAlong: DRIP_RING_ALONG,
+      shaftLength: DRIP_STREAM_LENGTH,
+    });
+    expect(movingHazardLookPlace('geyser-vent')).toMatchObject({ shadowAlong: GEYSER_BUBBLES_RISE, ringAlong: GEYSER_MOUTH_RISE, shaftLength: GEYSER_COLUMN_LENGTH });
+  });
+
+  it('names every logic type\'s look, and throws on an unknown one', () => {
+    for (const type of [PUNTING_POLE, STALACTITE_DRIP, GEYSER_VENT]) expect(MOVING_HAZARD_LOOKS[type.look].id).toBe(type.look);
+    expect(Object.keys(MOVING_HAZARD_LOOKS)).toEqual(['punting-pole', 'stalactite-drip', 'geyser-vent']);
+    expect(() => movingHazardLookPlace('gondola')).toThrow(/unknown moving hazard look "gondola"/);
+    expect(() => movingHazardLookPlace('toString')).toThrow(/unknown moving hazard look/);
+  });
+
+  it('bakes the four stalactite drip and geyser vent textures under their own keys', () => {
+    const { baked, created } = bakeOnly(['stalactite-drip', 'geyser-vent']);
+    expect([...created].sort()).toEqual(
+      ['stalactite-drip', 'geyser-vent'].flatMap((look) => MOVING_HAZARD_PARTS.map((part) => movingHazardTextureKey(look, part))).sort(),
+    );
+    expect(Object.keys(baked)).toEqual(['stalactite-drip', 'geyser-vent']);
   });
 });

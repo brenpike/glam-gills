@@ -18,7 +18,7 @@ import {
   predatorTypeCount,
 } from './dangerBar';
 import { currentAt, reedDragAt } from './environment';
-import { CARP_FACT, CRAYFISH_FACT, PUNTING_POLE_FACT, SHRIMP_FACT, TADPOLE_FACT } from './factCards';
+import { CARP_FACT, CRAYFISH_FACT, GEYSER_FACT, SHRIMP_FACT, STALACTITE_FACT, TADPOLE_FACT } from './factCards';
 import {
   DARK_SHOWN_PARTS,
   GLOW_PLANTS,
@@ -48,7 +48,15 @@ import {
   tadpoleWanderClear,
 } from './mobileSnacks';
 import { CENOTE_GLOW, tripCueFor } from './music';
-import { PUNTING_POLE, movingHazardDepth, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
+import {
+  GEYSER_VENT,
+  STALACTITE_DRIP,
+  movingHazardBaseY,
+  movingHazardDepth,
+  movingHazardDirection,
+  movingHazardSweep,
+  type MovingHazardSpawn,
+} from './movingHazards';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { placeTreasures } from './placement';
 import { CARP_SPECIES, CRAYFISH_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute } from './predators';
@@ -104,8 +112,8 @@ const TRIP_SEEDS = Array.from({ length: 200 }, (_, i) => i * 104729 + 17);
 const CARP_STRIKE = SPRING_CAVE_CARP.tuning.lungeRange;
 const CRAYFISH_STRIKE = SPRING_CAVE_CRAYFISH.tuning.lungeRange;
 const STRANDING_ROUTE_CLEARANCE = 80;
-/** Least px from a stranding place to every pole sweep: the touch reach plus the rescue reach. */
-const STRAND_POLE_CLEARANCE = PUNTING_POLE.touchReach + RESCUE.reachRadius;
+/** Least px from a stranding place to every stalactite and geyser sweep: the touch reach plus the rescue reach. */
+const STRAND_HAZARD_CLEARANCE = STALACTITE_DRIP.touchReach + RESCUE.reachRadius;
 const FRAME = 1 / 60;
 const BEAT_MAX_SECONDS = 180;
 const WAYPOINT_REACH = 8;
@@ -137,7 +145,9 @@ const ROW_OPENINGS: Readonly<Record<number, readonly (readonly [number, number])
 const EMPTY_SLOTS = { most: 4, mean: 2.4 };
 const CRAYFISH_IDS = [0, 1, 2].map((n) => `crayfish-${n}`);
 const CARP_IDS = [0, 1, 2, 3, 4, 5].map((n) => `carp-${n}`);
-const POLE_IDS = [1, 2, 3, 4].map((n) => `spring-cave-1/punting-pole-${n}`);
+const STALACTITE_IDS = [1, 2, 3, 4].map((n) => `spring-cave-1/stalactite-${n}`);
+const GEYSER_IDS = ['spring-cave-1/geyser-1'];
+const MOVING_HAZARD_IDS = [...STALACTITE_IDS, ...GEYSER_IDS];
 const PLANT_IDS = [1, 2, 3, 4, 5, 6].map((n) => `spring-cave-1/glow-plant-${n}`);
 
 const zone = buildZone(SPRING_CAVE_LAYOUT, DEFAULT_ZONE_SEED);
@@ -251,13 +261,13 @@ function oneLegSeconds(from: Point, targets: readonly Point[], layout: ZoneLayou
   return Infinity;
 }
 
-/** The zone's punting poles, in data order. */
-function polesOf(layout: { readonly movingHazards?: readonly Readonly<MovingHazardSpawn>[] }): readonly Readonly<MovingHazardSpawn>[] {
+/** The zone's moving hazards, the stalactites then the geyser, in data order. */
+function movingHazardsOf(layout: { readonly movingHazards?: readonly Readonly<MovingHazardSpawn>[] }): readonly Readonly<MovingHazardSpawn>[] {
   return layout.movingHazards ?? [];
 }
 
-/** Where a pole can touch the body centre: its sweep grown by the touch reach on every side. */
-function poleZone(spawn: Readonly<MovingHazardSpawn>): HazardRect {
+/** Where a stalactite or geyser can touch the body centre: its sweep grown by the touch reach on every side. */
+function touchZone(spawn: Readonly<MovingHazardSpawn>): HazardRect {
   const sweep = movingHazardSweep(spawn);
   const { touchReach } = spawn.type;
   return { kind: 'rect', x0: sweep.x0 - touchReach, x1: sweep.x1 + touchReach, y0: sweep.y0 - touchReach, y1: sweep.y1 + touchReach };
@@ -310,7 +320,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
     expect(zone.cave.id).toBe('spring-cave-1/cave');
   });
 
-  it('is frozen data, down to each crayfish stretch, carp loop, punting pole, glow-plant and mobile snack', () => {
+  it('is frozen data, down to each crayfish stretch, carp loop, stalactite, geyser, glow-plant and mobile snack', () => {
     expect(Object.isFrozen(SPRING_CAVE_LAYOUT)).toBe(true);
     expect(Object.isFrozen(SPRING_CAVE_CARP)).toBe(true);
     expect(Object.isFrozen(SPRING_CAVE_CARP.tuning)).toBe(true);
@@ -334,7 +344,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
       expect(part).toBeDefined();
       expect(Object.isFrozen(part)).toBe(true);
     }
-    for (const spawn of polesOf(SPRING_CAVE_LAYOUT)) expect(Object.isFrozen(spawn), spawn.id).toBe(true);
+    for (const spawn of movingHazardsOf(SPRING_CAVE_LAYOUT)) expect(Object.isFrozen(spawn), spawn.id).toBe(true);
     for (const wander of SPRING_CAVE_LAYOUT.mobileSnacks?.wanders ?? []) {
       expect(Object.isFrozen(wander), `tadpole at ${wander.points[0].x}`).toBe(true);
       for (const point of wander.points) expect(Object.isFrozen(point), `tadpole at ${wander.points[0].x}`).toBe(true);
@@ -354,7 +364,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
     }
   });
 
-  it('has 36 snacks (6 worms, 6 bugs, 13 tadpoles and 11 shrimp), 3 crayfish, 6 carp, 4 punting poles, 6 glow-plants and 11 treasure slots, and no tilapia, nets, reeds or pads (issue #77, ND-4, ND-8, ND-10)', () => {
+  it('has 36 snacks (6 worms, 6 bugs, 13 tadpoles and 11 shrimp), 3 crayfish, 6 carp, 4 stalactites, 1 geyser, 6 glow-plants and 11 treasure slots, and no tilapia, nets, reeds, pads or punting poles (issue #77, ND-3, ND-4, ND-8, ND-10)', () => {
     for (const seed of ALL_SEEDS) {
       const layout = springCave(seed);
       expect(layout.collectibles).toHaveLength(36);
@@ -362,7 +372,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
       expect(['worm', 'bug', 'tadpole', 'shrimp'].map((kind) => kinds.filter((each) => each === kind).length)).toEqual([6, 6, 13, 11]);
       expect(layout.tilapiaRoutes).toEqual([]);
       expect(layout.hazards).toEqual([]);
-      expect(polesOf(layout).map((spawn) => spawn.id)).toEqual(POLE_IDS);
+      expect(movingHazardsOf(layout).map((spawn) => spawn.id)).toEqual(MOVING_HAZARD_IDS);
       expect(layout.reeds).toEqual([]);
       expect(layout.reedPatches).toEqual([]);
       expect(layout.pads).toEqual([]);
@@ -373,7 +383,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
     ]);
     expect(crayfishOf(zone).map((route) => route.id)).toEqual(CRAYFISH_IDS);
     expect(carpCount(zone)).toBe(6);
-    for (const spawn of polesOf(zone)) expect(spawn.type, spawn.id).toBe(PUNTING_POLE);
+    expect(movingHazardsOf(zone).map((spawn) => spawn.type)).toEqual([...STALACTITE_IDS.map(() => STALACTITE_DRIP), GEYSER_VENT]);
     expect(zone.elements.map((element) => [element.id, element.type.id])).toEqual(PLANT_IDS.map((id) => [id, 'glow-plant']));
     expect(SPRING_CAVE_LAYOUT.elements.every((element) => element.type === GLOW_PLANT)).toBe(true);
     expect(SPRING_CAVE_LAYOUT.padCount).toBe(0);
@@ -419,13 +429,14 @@ describe('SPRING_CAVE_LAYOUT', () => {
     });
   });
 
-  it('names the crayfish, the carp and the punting pole as its threats, and gives their cards, then the tadpole and shrimp cards, with no card for the glow-plant (issue #77, ND-8)', () => {
-    expect(threatIds(SPRING_CAVE_LAYOUT)).toEqual(['crayfish', 'carp', 'punting-pole']);
-    expect(threatIds(zone)).toEqual(['crayfish', 'carp', 'punting-pole']);
-    expect(threatFactCards(SPRING_CAVE_LAYOUT)).toEqual([CRAYFISH_FACT, CARP_FACT, PUNTING_POLE_FACT]);
+  it('names the crayfish, the carp, the stalactite drip and the geyser vent as its threats, and gives their cards, then the tadpole and shrimp cards, with no card for the glow-plant (issue #77, ND-3, ND-8)', () => {
+    const threats = ['crayfish', 'carp', 'stalactite-drip', 'geyser-vent'];
+    expect(threatIds(SPRING_CAVE_LAYOUT)).toEqual(threats);
+    expect(threatIds(zone)).toEqual(threats);
+    expect(threatFactCards(SPRING_CAVE_LAYOUT)).toEqual([CRAYFISH_FACT, CARP_FACT, STALACTITE_FACT, GEYSER_FACT]);
     const expected = {
-      ids: ['crayfish', 'carp', 'punting-pole', 'tadpole', 'shrimp'],
-      cards: [CRAYFISH_FACT, CARP_FACT, PUNTING_POLE_FACT, TADPOLE_FACT, SHRIMP_FACT],
+      ids: [...threats, 'tadpole', 'shrimp'],
+      cards: [CRAYFISH_FACT, CARP_FACT, STALACTITE_FACT, GEYSER_FACT, TADPOLE_FACT, SHRIMP_FACT],
     };
     expect(sourceFactCards(SPRING_CAVE_LAYOUT)).toEqual(expected);
     expect(sourceFactCards(zone)).toEqual(expected);
@@ -515,12 +526,12 @@ describe('Area 6 exit (issue #77, ND-2)', () => {
     expect(inSafeArea(exit, zone.safeArea)).toBe(false);
   });
 
-  it('keeps the exit out of every predator strike, clear of every pole sweep, the current and the grotto', () => {
+  it('keeps the exit out of every predator strike, clear of every stalactite and geyser sweep, the current and the grotto', () => {
     for (const { route, strike } of strikeRoutes(zone)) {
       expect(routeLoopDistance(exit, route.waypoints), route.id).toBeGreaterThan(strike + exit.radius);
     }
-    for (const spawn of polesOf(zone)) {
-      expect(shapeDistance(exit, movingHazardSweep(spawn)), spawn.id).toBeGreaterThan(exit.radius + PUNTING_POLE.touchReach);
+    for (const spawn of movingHazardsOf(zone)) {
+      expect(shapeDistance(exit, movingHazardSweep(spawn)), spawn.id).toBeGreaterThan(exit.radius + spawn.type.touchReach);
     }
     for (const current of zone.currents) {
       expect(shapeDistance(exit, { kind: 'rect', x0: current.x0, x1: current.x1, y0: current.y0, y1: current.y1 })).toBeGreaterThan(exit.radius);
@@ -549,13 +560,13 @@ describe('Area 6 danger bar (issue #77, ND-4)', () => {
     expect([layout.width, layout.height, layout.bedTop]).toEqual([zone.width, zone.height, zone.bedTop]);
   });
 
-  it('has 13 moving threats for its 15 screens, 2 predator types and 1 moving hazard type, and every predator chases', () => {
+  it('has 14 moving threats for its 15 screens, 2 predator types and 2 moving hazard types, and every predator chases', () => {
     const screens = (zone.width / SCREEN_W) * (zone.height / WORLD_H);
     expect(screens).toBe(15);
-    expect(movingThreatCount(zone)).toBe(13);
+    expect(movingThreatCount(zone)).toBe(14);
     expect(movingThreatCount(zone)).toBeGreaterThanOrEqual(Math.ceil(0.75 * screens));
     expect(predatorTypeCount(zone)).toBe(2);
-    expect(movingHazardTypeCount(zone)).toBe(1);
+    expect(movingHazardTypeCount(zone)).toBe(2);
     for (const route of zone.predatorRoutes) expect(route.species.tuning.chase, route.id).toBeDefined();
   });
 
@@ -645,32 +656,60 @@ describe('Area 6 crayfish (issue #77, ND-5)', () => {
   });
 });
 
-describe('Area 6 punting poles (issue #77, ND-3, option A)', () => {
-  const poles = polesOf(zone);
+describe('Area 6 stalactites and geyser vent (issue #77, ND-3, option B)', () => {
+  const hazards = movingHazardsOf(zone);
+  const stalactites = hazards.filter((spawn) => spawn.type === STALACTITE_DRIP);
+  const geysers = hazards.filter((spawn) => spawn.type === GEYSER_VENT);
 
-  it('has four poles in x order, at fixed places, depths and offsets, 2 s out of step with the next', () => {
-    expect(poles.map((spawn) => spawn.id)).toEqual(POLE_IDS);
-    expect(poles.map((spawn) => [spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
-      [400, 200, 0],
-      [1150, 200, 2],
-      [1450, 72, 0],
-      [1900, 200, 2],
+  it('has four stalactites in x order, at the places and offsets of the first pass\'s punting poles, 2 s out of step with the next, each stream ending where the pole\'s tip did', () => {
+    expect(stalactites.map((spawn) => spawn.id)).toEqual(STALACTITE_IDS);
+    expect(stalactites.map((spawn) => [spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
+      [400, 170, 0],
+      [1150, 170, 2],
+      [1450, 42, 0],
+      [1900, 170, 2],
     ]);
-    for (let i = 1; i < poles.length; i++) expect(poles[i].x, poles[i].id).toBeGreaterThan(poles[i - 1].x);
+    expect(stalactites.map((spawn) => movingHazardSweep(spawn).y1)).toEqual([280, 280, 152, 280]);
+    for (let i = 1; i < stalactites.length; i++) expect(stalactites[i].x, stalactites[i].id).toBeGreaterThan(stalactites[i - 1].x);
   });
 
-  it('jabs each pole into the top row only, its touch zone clear of the safe area and the exit', () => {
-    for (const spawn of poles) {
-      const touch = poleZone(spawn);
-      expect(touch.y1, spawn.id).toBeLessThanOrEqual(WORLD_H);
+  it('hangs each stalactite from the underside of a rock ledge in the top row, never from the surface, its touch reaching the top of the swim water and its stream falling from the rock down into the top row only', () => {
+    const ledges = zone.bankOverhangs ?? [];
+    expect(stalactites.map((spawn) => ledges.findIndex((ledge) => ledge.x0 <= spawn.x && spawn.x <= ledge.x1))).toEqual([0, 1, 2, 2]);
+    for (const spawn of stalactites) {
+      const sweep = movingHazardSweep(spawn);
+      const roof = ledges.find((ledge) => ledge.x0 <= sweep.x0 && sweep.x1 <= ledge.x1 && ledge.y0 === movingHazardBaseY(spawn));
+      expect(roof, spawn.id).toBeDefined();
+      expect(movingHazardBaseY(spawn), spawn.id).toBe(110);
+      expect(movingHazardBaseY(spawn), spawn.id).toBeGreaterThan(SURF);
+      expect(movingHazardDirection(spawn), spawn.id).toBe(1);
+      expect(touchZone(spawn).y0, spawn.id).toBeLessThanOrEqual(bounds.minY);
+      expect(touchZone(spawn).y1, spawn.id).toBeLessThanOrEqual(WORLD_H);
+    }
+  });
+
+  it('stands one geyser vent on the bed of the bottom row, in the lit part, its column bursting 140 px up from the bed top', () => {
+    expect(geysers.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([[GEYSER_IDS[0], 910, 140, 0]]);
+    for (const spawn of geysers) {
+      expect(movingHazardBaseY(spawn), spawn.id).toBe(zone.bedTop);
+      expect(movingHazardDirection(spawn), spawn.id).toBe(-1);
+      expect(movingHazardSweep(spawn), spawn.id).toEqual({ kind: 'rect', x0: 902, x1: 918, y0: zone.bedTop - 140, y1: zone.bedTop });
+      expect(touchZone(spawn).y0, spawn.id).toBeGreaterThan(2 * WORLD_H);
+      expect(inDarkWater({ x: spawn.x, y: zone.bedTop }, dark), spawn.id).toBe(false);
+    }
+  });
+
+  it('keeps every touch zone clear of the safe area and the exit', () => {
+    for (const spawn of hazards) {
+      const touch = touchZone(spawn);
       expect(touch.x0, spawn.id).toBeGreaterThan(zone.safeArea.x1);
       expect(shapeDistance(exit, touch), spawn.id).toBeGreaterThan(exit.radius);
     }
   });
 
-  it('keeps every pole sweep farther than the strike from every patrol loop: 90 px for the crayfish, 130 px for the carp (the strike-only pole rule)', () => {
+  it('keeps every stalactite and geyser sweep farther than the strike from every patrol loop: 90 px for the crayfish, 130 px for the carp (the strike-only rule)', () => {
     expect([CRAYFISH_STRIKE, CARP_STRIKE]).toEqual([90, 130]);
-    for (const spawn of poles) {
+    for (const spawn of hazards) {
       const sweep = movingHazardSweep(spawn);
       for (const { route, strike } of strikeRoutes(zone)) {
         expect(shapeRouteDistance(sweep, route.waypoints), `${spawn.id} to ${route.id}`).toBeGreaterThan(strike);
@@ -678,27 +717,34 @@ describe('Area 6 punting poles (issue #77, ND-3, option A)', () => {
     }
   });
 
-  it('never overlaps two pole touch zones', () => {
-    for (let i = 0; i < poles.length; i++) {
-      for (let j = i + 1; j < poles.length; j++) {
-        expect(rectDistance(poleZone(poles[i]), poleZone(poles[j])), `${poles[i].id} to ${poles[j].id}`).toBeGreaterThan(0);
+  it('never overlaps two touch zones', () => {
+    for (let i = 0; i < hazards.length; i++) {
+      for (let j = i + 1; j < hazards.length; j++) {
+        expect(rectDistance(touchZone(hazards[i]), touchZone(hazards[j])), `${hazards[i].id} to ${hazards[j].id}`).toBeGreaterThan(0);
       }
     }
   });
 
-  it('jabs the first two poles across the main path in the top row, stops the short third one just over it, out of its touch reach, and keeps the fourth past the way down', () => {
+  it('drips the first two stalactites across the main path in the top row, stops the short third one just over it, out of its touch reach, and keeps the fourth past the way down', () => {
     const samples = pathSamples(zone.mainPath, 2).filter((point) => point.y < WORLD_H);
-    const crossing = poles.filter((spawn) => samples.some((point) => shapeDistance(point, movingHazardSweep(spawn)) === 0));
-    expect(crossing.map((spawn) => spawn.id)).toEqual(POLE_IDS.slice(0, 2));
-    const [, , short, last] = poles;
+    const crossing = stalactites.filter((spawn) => samples.some((point) => shapeDistance(point, movingHazardSweep(spawn)) === 0));
+    expect(crossing.map((spawn) => spawn.id)).toEqual(STALACTITE_IDS.slice(0, 2));
+    const [, , short, last] = stalactites;
     expect(samples.some((point) => point.x === short.x)).toBe(true);
     for (const point of samples) expect(shapeDistance(point, movingHazardSweep(short)), `path at ${point.x}, ${point.y}`).toBeGreaterThan(short.type.touchReach);
     expect(last.x).toBeGreaterThan(Math.max(...zone.mainPath.filter((point) => point.y < WORLD_H).map((point) => point.x)));
   });
+
+  it('stops the geyser column short of the main path, out of its touch reach', () => {
+    const samples = pathSamples(zone.mainPath, 2);
+    for (const spawn of geysers) {
+      for (const point of samples) expect(shapeDistance(point, movingHazardSweep(spawn)), `${spawn.id}: path at ${point.x}, ${point.y}`).toBeGreaterThan(spawn.type.touchReach);
+    }
+  });
 });
 
 describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
-  it.each(ALL_SEEDS)('match their labels against every threat, S = 90 for the crayfish, S = 130 for the carp and the touch reach for the poles, with the turn clearance, for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('match their labels against every threat, S = 90 for the crayfish, S = 130 for the carp and the touch reach for the stalactites and the geyser, with the turn clearance, for seed %i', (seed) => {
     const layout = springCave(seed);
     const ids = layout.spots.map((spot) => spot.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -785,11 +831,12 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
     }
   });
 
-  it('has three rock ledges: two in the top row over the main path and one in the dark below it', () => {
+  it('has four rock ledges: three in the top row, the roofs the stalactites hang from, two of them over the main path, and one in the dark below it', () => {
     expect(zone.bankChunks).toEqual([]);
     expect(zone.bankOverhangs).toEqual([
-      { x0: 860, x1: 1100, y0: 110, y1: 170 },
-      { x0: 1610, x1: 1730, y0: 110, y1: 170 },
+      { x0: 340, x1: 460, y0: 110, y1: 170 },
+      { x0: 860, x1: 1190, y0: 110, y1: 170 },
+      { x0: 1400, x1: 1960, y0: 110, y1: 170 },
       { x0: 1330, x1: 1660, y0: 895, y1: 945 },
     ]);
   });
@@ -862,7 +909,7 @@ describe('Area 6 carp, spring outflow and stranding places', () => {
     }
   });
 
-  it.each(ALL_SEEDS)('keeps every stranding place out of the dark, 80 px from every route, clear of poles, spots, the current and the grotto for seed %i (ND-7)', (seed) => {
+  it.each(ALL_SEEDS)('keeps every stranding place out of the dark, 80 px from every route, clear of stalactites, the geyser, spots, the current and the grotto for seed %i (ND-7)', (seed) => {
     const layout = springCave(seed);
     expect(layout.strandingPlaces.map((place) => place.id)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `spring-cave-1/strand-${n}`));
     for (const place of layout.strandingPlaces) {
@@ -872,8 +919,8 @@ describe('Area 6 carp, spring outflow and stranding places', () => {
       expect(layout.currents.some((current) => isInsideCurrent(place, current)), place.id).toBe(false);
       expect(shapeDistance(place, { kind: 'rect', ...layout.cave }), place.id).toBeGreaterThan(0);
       expect(routeDistance(place, layout.predatorRoutes), place.id).toBeGreaterThanOrEqual(STRANDING_ROUTE_CLEARANCE);
-      for (const spawn of polesOf(layout)) {
-        expect(shapeDistance(place, movingHazardSweep(spawn)), `${place.id} to ${spawn.id}`).toBeGreaterThanOrEqual(STRAND_POLE_CLEARANCE);
+      for (const spawn of movingHazardsOf(layout)) {
+        expect(shapeDistance(place, movingHazardSweep(spawn)), `${place.id} to ${spawn.id}`).toBeGreaterThanOrEqual(STRAND_HAZARD_CLEARANCE);
       }
       for (const spot of layout.spots) {
         expect(Math.hypot(place.x - spot.x, place.y - spot.y), `${place.id} to ${spot.id}`).toBeGreaterThanOrEqual(SPOT_MIN_SPACING);
@@ -883,9 +930,9 @@ describe('Area 6 carp, spring outflow and stranding places', () => {
 });
 
 describe('Area 6 gaps and routes (the level layout ladder; issue #77, ND-11)', () => {
-  it('swims the main path through a gap tighter than Area 5 narrowest, between the short pole and carp-1, and never under the safe passing width', () => {
+  it('swims the main path through a gap tighter than Area 5 narrowest, between the short stalactite and carp-1, and never under the safe passing width', () => {
     const narrowest = narrowestPathGap(zone);
-    expect(narrowest.between).toBe('spring-cave-1/punting-pole-3 and carp-1');
+    expect(narrowest.between).toBe('spring-cave-1/stalactite-3 and carp-1');
     expect(narrowest.width).toBeCloseTo(40, 9);
     expect(narrowest.width).toBeGreaterThanOrEqual(SAFE_PASSING_WIDTH);
     expect(narrowest.width).toBeLessThan(AREA_5_NARROWEST);
@@ -941,13 +988,13 @@ describe('Area 6 dark water and glow-plants (issue #77, ND-7 to ND-9)', () => {
     }
   });
 
-  it('puts nothing the darkness may never hide under it with no light: the Home Spot, every stranding place, predator stretch and pole are lit water or shown', () => {
+  it('puts nothing the darkness may never hide under it with no light: the Home Spot, every stranding place, predator stretch, stalactite and geyser are lit water or shown', () => {
     expect(inDarkWater(zone.homeSpot, dark)).toBe(false);
     for (const place of zone.strandingPlaces) expect(inDarkWater(place, dark), place.id).toBe(false);
     for (const route of zone.predatorRoutes) {
       for (const point of route.waypoints) expect(shownInDark('predator', point, dark, []), route.id).toBe(true);
     }
-    for (const spawn of polesOf(zone)) expect(shownInDark('moving-hazard', { x: spawn.x, y: SURF }, dark, []), spawn.id).toBe(true);
+    for (const spawn of movingHazardsOf(zone)) expect(shownInDark('moving-hazard', { x: spawn.x, y: movingHazardBaseY(spawn) }, dark, []), spawn.id).toBe(true);
     for (const pos of darkGrid(60)) {
       for (const part of DARK_SHOWN_PARTS) expect(shownInDark(part, pos, dark, []), `${part} at ${pos.x}, ${pos.y}`).toBe(true);
     }
@@ -991,13 +1038,13 @@ describe('Area 6 snacks', () => {
   const drift = SPRING_CAVE_AREA.snackDrift;
   const surfacePeak = SURF + 1.6 + 0.8;
 
-  it.each(SNACK_SEEDS)('build and start at least SNACK_HAZARD_CLEARANCE from every pole sweep for seed %i', (seed) => {
+  it.each(SNACK_SEEDS)('build and start at least SNACK_HAZARD_CLEARANCE from every stalactite and geyser sweep for seed %i', (seed) => {
     const layout = springCave(seed);
     expect(layout.collectibles).toHaveLength(36);
     for (const snack of layout.collectibles) {
       expect(inBounds(snack, layout), snack.id).toBe(true);
       if (snack.kind !== 'worm' && snack.kind !== 'bug') continue;
-      for (const spawn of polesOf(layout)) {
+      for (const spawn of movingHazardsOf(layout)) {
         expect(shapeDistance(snack, movingHazardSweep(spawn)), `${snack.id} to ${spawn.id}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
       }
     }

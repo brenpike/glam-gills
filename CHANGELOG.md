@@ -14,8 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Area 6, the Spring cave, is a new habitat with its own place on the area map and its own music. It is 5 screens wide and 3 screens tall, and you swim down into the cave to find the exit (#77).
 - Crayfish walk the cave floor. A crayfish opens its claws wide before it pinches, so swim up and away (#77).
 - The bottom of the cave is dark. Your axolotl glows a little, and glow-plants light up when you touch them and stay lit for the rest of the trip. If you are stuck in the dark, the nearest glow-plant pulses (#77).
+- Watch out for two new cave dangers. Stalactites on the cave roof drip a stream of water down, and geyser vents on the cave floor burst a column of water up. A drop swells on a stalactite and bubbles rise from a vent before they go, so you have time to swim clear (#77).
 - 12 new treasures to find in Area 6, including the Fossil ammonite (the special treasure) and the Moonstone Dream colour (#77).
-- A new fact card: "Meet the crayfish" (#77).
+- Three new fact cards: "Meet the crayfish", "Stalactites" and "Geysers" (#77).
 - The refuge has a Spring cave section (#77).
 
 ## [0.51.0] - 2026-10-27

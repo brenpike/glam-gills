@@ -188,6 +188,49 @@ export const CRAYFISH_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
+ * issue #77, ND-3). Provisional copy.
+ * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
+ * National Park Service, Mammoth Cave National Park, "Stalactites, Stalagmites, and Cave Formations",
+ * https://www.nps.gov/maca/learn/nature/stalactites-stalagmites-and-cave-formations.htm
+ * ("icicle-shaped deposits that form when water dissolves overlying limestone"; "Stalactites form
+ * along ceilings and hang downward"; "When stalactites are actively forming, they drip water";
+ * "Both the calcite and gypsum formations in Mammoth Cave took thousands of years to form");
+ * National Park Service, "Growing Speleothems", https://www.nps.gov/subjects/caves/growing-speleothems.htm
+ * (calcite comes out of the dripping water onto cave ceilings, walls and floors).
+ * Owner to verify: "a tiny bit of rock" reads the sources' calcite left by the water; "very slowly"
+ * reads "thousands of years" for the whole cave's formations, not a growth rate for one stalactite.
+ */
+export const STALACTITE_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'stalactite-drip',
+  name: 'Stalactite',
+  title: 'Stalactites',
+  body: 'Stalactites hang from cave roofs like rock icicles. Each drip of water leaves a tiny bit of rock behind, so they grow very slowly.',
+});
+
+/**
+ * The geyser fact card, shown the first time the axolotl meets a geyser vent (PRD C13; issue #77,
+ * ND-3). Provisional copy.
+ * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
+ * U.S. Geological Survey, "Volcanoes: Geysers, Fumaroles, and Hot Springs",
+ * https://pubs.usgs.gov/gip/volc/geysers.html (water that seeps down "is heated, becomes less dense,
+ * and rises back to the surface along fissures and cracks"; erupting geysers are "displays of
+ * underground energy suddenly unleashed"; "This cycle can be repeated with remarkable regularity",
+ * Old Faithful erupting "on an average of about once every 65 minutes");
+ * U.S. Geological Survey, "Geysers", https://www.usgs.gov/publications/geysers (a geyser is a hot
+ * spring that erupts from time to time, pausing between eruptions).
+ * Owner to verify: "hot rock" reads the sources' heat of the magma below; the sources describe
+ * geysers on land bursting into the air, while the game's vent bursts up under water; the second
+ * source's summary was read through a search result, not the full paper.
+ */
+export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'geyser-vent',
+  name: 'Geyser',
+  title: 'Geysers',
+  body: 'Geysers are hot springs that burst up again and again. Hot rock deep underground heats the water until it shoots out, then the geyser rests and fills up.',
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",

@@ -189,15 +189,23 @@ How the **Explorer** is for 2 seconds after swimming into a **Ghost net**: it wr
 _Avoid_: trapped, caught, stuck, damage
 
 **Moving hazard**:
-A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, with a warning (its **Telegraph**) of at least 0.8 seconds before each move into the water; its looks are data. It is not a **Predator**, so it does not wait its turn: it may move while a predator warns or lunges. It is not a **Timing element**, because a timing element never costs a leg. Every moving hazard type is a **Danger part**. The first is the **Punting pole**.
+A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, with a warning (its **Telegraph**) of at least 0.8 seconds before each move into the water; its looks are data. Its shaft comes from its base: down from the surface, down from a rock roof, or up from the floor; the whole shaft touches, and a hit comes from its tip where it really is. It is not a **Predator**, so it does not wait its turn: it may move while a predator warns or lunges. It is not a **Timing element**, because a timing element never costs a leg. Every moving hazard type is a **Danger part**. The first is the **Punting pole**; the **Stalactite drip** comes from a roof and the **Geyser vent** from the floor.
 _Avoid_: trap, obstacle
 
 **Punting pole**:
 The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: oar, stick
 
+**Stalactite drip**:
+A **Moving hazard** from a rock ledge (`'stalactite-drip'` in code): a rock stalactite hangs from the underside of a rock ledge, never from the surface, and a thin stream of drips falls from under its tip down to its depth on a 4 s cycle. Before each stream a drop swells at the tip and ripple rings spread just under the drop; then the drip stream falls from the tip to its depth. The whole stream costs a leg on touch; the water below its end is safe. Its fact card is "Stalactites". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
+_Avoid_: icicle, waterfall
+
+**Geyser vent**:
+A **Moving hazard** from the floor (`'geyser-vent'` in code): a rock vent on the bed that bursts a column of water and bubbles up to its height on a 5.2 s cycle. Before each burst bubbles rise from its mouth with a shimmer ring. The whole column costs a leg on touch; the water above its top is safe. It is never shown as fire. Its fact card is "Geysers". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
+_Avoid_: volcano, jet
+
 **Telegraph**:
-A predator's or **Moving hazard**'s visible warning before a lunge or a jab; the tilapia's is a glint and a wind-up pose, the heron's is freezing and pulling its neck into an S, the garter snake's is stopping in a held S with ripple rings spreading from its head, the common carp's is tipping its nose down with a mud puff, the crayfish's is stopping with its claws raised and opened wide, and the punting pole's is the boat's shadow darkening while the pole's tip dips with a ripple ring.
+A predator's or **Moving hazard**'s visible warning before a lunge or a jab; the tilapia's is a glint and a wind-up pose, the heron's is freezing and pulling its neck into an S, the garter snake's is stopping in a held S with ripple rings spreading from its head, the common carp's is tipping its nose down with a mud puff, the crayfish's is stopping with its claws raised and opened wide, the punting pole's is the boat's shadow darkening while the pole's tip dips with a ripple ring, the stalactite drip's is a drop swelling at the tip with ripple rings just under the drop, and the geyser vent's is bubbles rising from its mouth with a shimmer ring.
 
 **Lunge**:
 A predator's strike; the tilapia's is a quick dash at the axolotl, the heron's is a stab with its beak at the spot where the axolotl was when its S-neck began, the garter snake's is a straight dart along the aim fixed at the end of its warning, the common carp's is a slow, wide tail sweep along the aim fixed at the end of its warning, and the crayfish's is a pinch straight forward along the floor, toward the axolotl's side.
@@ -318,7 +326,7 @@ _Avoid_: slot (a Slot is where a Wearable goes)
 The in-game book of morphs and fact cards, nicknamed the Axolotl-dex in game.
 
 **Fun-fact card**:
-A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 14 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Meet the crayfish" (the **Crayfish**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
+A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 16 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Meet the crayfish" (the **Crayfish**), "Stalactites" (the **Stalactite drip**), "Geysers" (the **Geyser vent**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
 
 **Save**:
 Progress kept in device storage by itself: banked treasures, the axolotls, the tank, the Collection Book, stars, the last chosen area, and the fact cards found (`metHazards`: the hazards, predators and timing elements met, then the refuge fact cards found); never anything from a trip in progress, and never the refuge's pending clean-ups and milestones.
@@ -386,7 +394,7 @@ The sound for a lost leg: two soft, low notes falling a small step, answered by 
 _Avoid_: hit sound, hurt sound
 
 **Ripple**:
-The warning sound: a soft water swish with two low notes, played once when a **Predator**'s **Telegraph** starts, or a **Moving hazard**'s on screen, never repeating or building (S9). Not the ripple rings drawn in some telegraphs.
+The warning sound: a soft water swish with two low notes, played once when a **Predator**'s **Telegraph** starts, or a **Moving hazard**'s with its sweep on screen where it really is, from the surface, a roof or the floor, never repeating or building (S9). Not the ripple rings drawn in some telegraphs.
 _Avoid_: alarm, warning beep
 
 **Lullaby**:
