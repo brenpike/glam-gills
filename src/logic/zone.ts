@@ -445,6 +445,22 @@ export function areaSize(wide: number, tall: number): AreaSize {
   return { width: SCREEN_W * wide, height, bedTop: height - BED_DEPTH };
 }
 
+/**
+ * Which part of the water a row of screens shows: 'single' for a one-row area, else 'top' for the
+ * first row, 'bottom' for the last and 'middle' for every row between.
+ */
+export type AreaRowKind = 'single' | 'top' | 'middle' | 'bottom';
+
+/** The kind of row `row` (0 on top) in an area `rows` screens tall. Throws a RangeError for a row outside the area. */
+export function areaRowKind(row: number, rows: number): AreaRowKind {
+  if (!Number.isInteger(row) || !Number.isInteger(rows) || row < 0 || row >= rows) {
+    throw new RangeError(`areaRowKind: row ${row} is not one of ${rows} rows`);
+  }
+  if (rows === 1) return 'single';
+  if (row === 0) return 'top';
+  return row === rows - 1 ? 'bottom' : 'middle';
+}
+
 const CANAL_SIZE: Readonly<AreaSize> = Object.freeze(areaSize(ZONE_SCREENS, 1));
 
 /** Rectangle the axolotl centre may occupy inside an area; the canal when no size is given. */

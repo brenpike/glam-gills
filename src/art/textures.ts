@@ -8,6 +8,7 @@
  * scene scale). Never upscale a small bake: bake at the scale you need.
  */
 import * as Phaser from 'phaser';
+import { areaRowKind } from '../logic/zone';
 import { beginDraw, type TexSize } from './canvasKit';
 import { drawAxolotl, type AxolotlPose } from './drawAxolotl';
 import type { AxolotlArtLook, Bounds } from './drawAxolotlParts';
@@ -478,7 +479,7 @@ export function bakeAreaScenery(scene: Phaser.Scene, opts: AreaSceneryOptions): 
   let deep: TexInfo | undefined;
   const bg: TexInfo[][] = [];
   for (let r = 0; r < screensTall; r++) {
-    const row: ChunkRow = screensTall === 1 ? 'single' : r === 0 ? 'top' : r === screensTall - 1 ? 'bottom' : 'middle';
+    const row: ChunkRow = areaRowKind(r, screensTall);
     const cells: TexInfo[] = [];
     for (let c = 0; c < screensWide; c++) {
       if (row === 'middle') {
