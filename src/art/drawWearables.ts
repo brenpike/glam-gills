@@ -2913,11 +2913,14 @@ function paintClimbingHelmet(ctx: CanvasRenderingContext2D): void {
 // ---------------------------------------------------------------------------
 
 /** The three pebbles' centre x along the chain, the middle one under the mouth; the half width of each, and the most half height (fitted to the band). */
-const NECKLACE_PEBBLE_XS: readonly number[] = [20.6, 27.6, 34.6];
-const NECKLACE_PEBBLE_HALF_W = 3.1;
-const NECKLACE_PEBBLE_MAX_HALF_H = 4.1;
-/** The ink ring round each pebble that sets it off the chain (as the Crystal pendant's), and the specks on it (ink at the stripe alpha). */
-const NECKLACE_PEBBLE_RING_LW = 0.9;
+const NECKLACE_PEBBLE_XS: readonly number[] = [20.8, 28.2, 35.6];
+const NECKLACE_PEBBLE_HALF_W = 3.6;
+const NECKLACE_PEBBLE_MAX_HALF_H = 4.3;
+/**
+ * The thin ink ring round each pebble that sets it off the chain (thinner than the Crystal pendant's 0.9, so the
+ * pebbles keep enough of their own colour over the swim-view floor), and the specks on it (ink at the stripe alpha).
+ */
+const NECKLACE_PEBBLE_RING_LW = 0.5;
 const NECKLACE_SPECK_R = 0.45;
 
 /** A pebble fitted inside the scarf band at `x`: a smooth oval as tall as the band allows there. */
@@ -2933,7 +2936,7 @@ function necklacePebble(x: number): { readonly path: Path2D; readonly cx: number
  * Common (issue #105): three PEBBLE_NECKLACE_STONE grey-blue pebbles on a chain of PEBBLE_NECKLACE_CORD pale
  * cord strung round the neck: the Crystal pendant's chain in the Pond-weed scarf's band, with three smooth ovals
  * fitted to the band, merged into one silhouette with 0.6 of ink outside the fill (as the scarf: the Neck footprint
- * is too shallow for 2.0). A thin ink ring (0.9) sets each pebble off the chain. Two specks on each pebble (ink at
+ * is too shallow for 2.0). A thin ink ring (0.5) sets each pebble off the chain. Two specks on each pebble (ink at
  * the stripe alpha, the same colour darkened); one shine on the middle pebble; no trim. Everything lies inside the
  * scarf's band, so it keeps the gill-root zone, the cheek heart zone and the silhouette outline's outer half as the
  * scarf does; the mouth paints over its front.
@@ -3003,12 +3006,17 @@ function paintCaveGoggles(ctx: CanvasRenderingContext2D): void {
 /** The lantern in the Tail frame (y' down): the handle ring, the cap, the glass and the base, each a box or a circle. */
 const LANTERN_RING: Pt = { x: 0, y: -12.4 };
 const LANTERN_RING_R = 1.6;
-const LANTERN_CAP = { x0: -5.4, x1: 5.4, top: -11.4, bottom: -8.4, inset: 2 } as const;
-const LANTERN_BODY = { x0: -4.4, x1: 4.4, y0: -8.8, y1: 1.6, r: 2 } as const;
-const LANTERN_FOOT = { x0: -6, x1: 6, y0: 1.2, y1: 3.8, r: 1.2 } as const;
+const LANTERN_CAP = { x0: -6.2, x1: 6.2, top: -11.4, bottom: -8.4, inset: 2 } as const;
+const LANTERN_BODY = { x0: -5.2, x1: 5.2, y0: -8.8, y1: 1.6, r: 2 } as const;
+const LANTERN_FOOT = { x0: -6.8, x1: 6.8, y0: 1.2, y1: 4.4, r: 1.2 } as const;
+/**
+ * How far the whole lantern sits toward the head from the anchor (frame x'), so its tip-side foot keeps a Dream
+ * marker star 0.6 or more clear at every swim phase.
+ */
+const LANTERN_SHIFT = 1;
 /** The flame inside the glass, round the gem at the glass's heart. */
 const LANTERN_FLAME_AT: Pt = { x: 0, y: -3.6 };
-const LANTERN_FLAME_RX = 3;
+const LANTERN_FLAME_RX = 3.6;
 const LANTERN_FLAME_RY = 4.2;
 
 /**
@@ -3017,14 +3025,15 @@ const LANTERN_FLAME_RY = 4.2;
  * outside the fill). Inside the glass, a still #ffd34d flame (a flat fill, no flicker) round one rounded gem
  * (radius 2.5, outline 1.2, the Golden bow's pink): the Epic detail. One shine on the glass; no trim. Painted in
  * the Tail frame (x' along the local tail direction toward the head, y' down): the foot rests on the tail's top
- * edge, as the Pearl tail charm's pearl does, and the lantern stands above it, no more than 8 either side of the
- * anchor along the tail, so a Dream marker star past it stays clear at every swim phase. Everything, ink included,
+ * edge, as the Pearl tail charm's pearl does, and the lantern stands above it, set LANTERN_SHIFT toward the head
+ * (ink included, 7.8 toward the tail tip and 9.8 toward the head), so a Dream marker star past it stays clear at every swim phase. Everything, ink included,
  * stays within TAIL_SLOT_REACH of the anchor.
  */
 function paintGlowTailLantern(ctx: CanvasRenderingContext2D): void {
   const cap = LANTERN_CAP;
   const body = LANTERN_BODY;
   const foot = LANTERN_FOOT;
+  ctx.translate(LANTERN_SHIFT, 0);
   const glass = roundRectPath(body.x0, body.y0, body.x1, body.y1, body.r);
   silhouette(ctx, [
     { path: ellipsePath(LANTERN_RING.x, LANTERN_RING.y, LANTERN_RING_R, LANTERN_RING_R), fill: LANTERN_FRAME },
