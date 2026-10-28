@@ -25,8 +25,8 @@ import { bake, type TexInfo } from './textures';
 /**
  * The Decorations that can stand in the Home Tank: the treasure icon slugs of the four canal
  * Decorations, the four pond ones, the six pond Area 3 ones, the six chinampa Area 4 ones, the five
- * chinampa Area 5 ones, then the six spring cave Area 6 ones (the text after `canal/`, `pond/`, `chinampa/`
- * or `spring-cave/` in src/logic/catalogue.ts), in catalogue order.
+ * chinampa Area 5 ones, the six spring cave Area 6 ones, then the six spring cave Area 7 ones (the text after
+ * `canal/`, `pond/`, `chinampa/` or `spring-cave/` in src/logic/catalogue.ts), in catalogue order.
  * This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_SLUGS = [
@@ -61,6 +61,12 @@ export const TANK_DECORATION_SLUGS = [
   'crystal-wind-chime',
   'geode-lamp',
   'crystal-arch',
+  'mossy-rock',
+  'bubble-stone',
+  'ancient-clay-pot',
+  'glowing-stalactite',
+  'bubble-machine',
+  'underground-waterfall',
 ] as const satisfies readonly TreasureIconSlug[];
 export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
 
@@ -71,8 +77,9 @@ export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
  * Firefly jar Epic, Golden lotus throne Legendary; Clay flowerpot Common, Corn husk doll Common, Scarecrow Rare,
  * Papel picado banner Rare, Willow swing Epic, Golden corn Legendary; Watering can Common, Floating gourd Common,
  * Pinata Rare, Talavera fountain Epic, Alebrije statue Legendary; Pebble stack Common, Glow moss ball Common,
- * Fossil ammonite Rare, Crystal wind chime Rare, Geode lamp Epic, Crystal arch Legendary). This file does not
- * import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
+ * Fossil ammonite Rare, Crystal wind chime Rare, Geode lamp Epic, Crystal arch Legendary; Mossy rock Common,
+ * Bubble stone Common, Ancient clay pot Rare, Glowing stalactite Rare, Bubble machine Epic, Underground waterfall
+ * Legendary). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeShape>> = {
   'pond-plant': 'circle',
@@ -106,6 +113,12 @@ export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeSh
   'crystal-wind-chime': 'diamond',
   'geode-lamp': 'shield',
   'crystal-arch': 'star',
+  'mossy-rock': 'circle',
+  'bubble-stone': 'circle',
+  'ancient-clay-pot': 'diamond',
+  'glowing-stalactite': 'diamond',
+  'bubble-machine': 'shield',
+  'underground-waterfall': 'star',
 };
 
 /** Where a Decoration goes in the Home Tank: on the gravel, on the water surface, or from the glass top. */
@@ -155,6 +168,12 @@ export const TANK_DECORATION_SHAPES: Readonly<Record<TankDecorationSlug, TankDec
   'crystal-wind-chime': { placement: 'hanging' },
   'geode-lamp': { placement: 'floor' },
   'crystal-arch': { placement: 'floor' },
+  'mossy-rock': { placement: 'floor' },
+  'bubble-stone': { placement: 'floor' },
+  'ancient-clay-pot': { placement: 'floor' },
+  'glowing-stalactite': { placement: 'hanging' },
+  'bubble-machine': { placement: 'floor' },
+  'underground-waterfall': { placement: 'floor' },
 };
 
 /** The standard Decoration footprint in tank units (TANK.decorationPx): a width x this box. */

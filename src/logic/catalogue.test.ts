@@ -4,6 +4,7 @@ import {
   CANAL_DREAM_COLOURS,
   CANAL_TREASURES,
   CHINAMPA_2_TREASURES,
+  CHOCOLATE,
   CHINAMPA_TREASURES,
   DREAM_COLOURS,
   FIREFLY_GOLD,
@@ -17,6 +18,7 @@ import {
   POPPY_RED,
   RAINBOW,
   RARITIES,
+  SPRING_CAVE_2_TREASURES,
   SPRING_CAVE_TREASURES,
   TIE_DYE_GALAXY,
   TREASURE_CATEGORIES,
@@ -705,8 +707,105 @@ describe('SPRING_CAVE_TREASURES', () => {
   });
 });
 
+describe('SPRING_CAVE_2_TREASURES', () => {
+  it("holds exactly the spring cave Area 7 treasures, the owner's 12, in rarity order (issue #105)", () => {
+    expect(SPRING_CAVE_2_TREASURES).toEqual([
+      { id: 'spring-cave/mossy-rock', name: 'Mossy rock', rarity: 'common', category: 'decoration' },
+      { id: 'spring-cave/bubble-stone', name: 'Bubble stone', rarity: 'common', category: 'decoration' },
+      {
+        id: 'spring-cave/climbing-helmet',
+        name: 'Climbing helmet',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'dash', value: 10 },
+      },
+      {
+        id: 'spring-cave/pebble-necklace',
+        name: 'Pebble necklace',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'neck',
+        perk: { type: 'regrowth', value: 10 },
+      },
+      { id: 'spring-cave/ancient-clay-pot', name: 'Ancient clay pot', rarity: 'rare', category: 'decoration' },
+      {
+        id: 'spring-cave/glowing-stalactite',
+        name: 'Glowing stalactite',
+        rarity: 'rare',
+        category: 'decoration',
+        placement: 'hanging',
+      },
+      {
+        id: 'spring-cave/cave-goggles',
+        name: 'Cave goggles',
+        rarity: 'rare',
+        category: 'wearable',
+        slot: 'face',
+        perk: { type: 'treasureSense', value: 25 },
+      },
+      {
+        id: 'spring-cave/paint-shell-chocolate',
+        name: 'Chocolate Paint shell',
+        rarity: 'rare',
+        category: 'paintShell',
+        dreamColour: 'chocolate',
+      },
+      { id: 'spring-cave/bubble-machine', name: 'Bubble machine', rarity: 'epic', category: 'decoration' },
+      {
+        id: 'spring-cave/glow-tail-lantern',
+        name: 'Glow tail lantern',
+        rarity: 'epic',
+        category: 'wearable',
+        slot: 'tail',
+        perk: { type: 'snackMagnet', value: 50 },
+      },
+      { id: 'spring-cave/underground-waterfall', name: 'Underground waterfall', rarity: 'legendary', category: 'decoration' },
+      {
+        id: 'spring-cave/gemstone-cape',
+        name: 'Gemstone cape',
+        rarity: 'legendary',
+        category: 'wearable',
+        slot: 'back',
+        perk: { type: 'shell', value: 1 },
+      },
+    ]);
+    expect(Object.isFrozen(SPRING_CAVE_2_TREASURES)).toBe(true);
+  });
+
+  it('gives every Area 7 Wearable its PERK_VALUES value, no set, and a perk type no other Area 7 Wearable has (ND-13)', () => {
+    const wearables = SPRING_CAVE_2_TREASURES.filter(isWearable);
+    for (const wearable of wearables) {
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+      expect(wearable.setId, wearable.id).toBeUndefined();
+    }
+    expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBe(wearables.length);
+  });
+
+  it('has 6 Decorations, 5 Wearables and the Chocolate Paint shell, in rarity order, with the Ancient clay pot Rare', () => {
+    expect(SPRING_CAVE_2_TREASURES).toHaveLength(12);
+    expect(SPRING_CAVE_2_TREASURES.filter(isDecoration)).toHaveLength(6);
+    expect(SPRING_CAVE_2_TREASURES.filter(isWearable)).toHaveLength(5);
+    expect(SPRING_CAVE_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['spring-cave/paint-shell-chocolate']);
+    const rarityIndexes = SPRING_CAVE_2_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
+    expect(RARITIES.map((rarity) => SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(treasureById('spring-cave/ancient-clay-pot')?.rarity).toBe('rare');
+  });
+
+  it('keeps every earlier area list unchanged ahead of it', () => {
+    expect(CANAL_TREASURES).toHaveLength(20);
+    expect(POND_TREASURES).toHaveLength(13);
+    expect(POND_2_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_TREASURES).toHaveLength(13);
+    expect(CHINAMPA_2_TREASURES).toHaveLength(13);
+    expect(SPRING_CAVE_TREASURES).toHaveLength(12);
+    expect(SPRING_CAVE_TREASURES.at(-1)?.id).toBe('spring-cave/crystal-crown');
+  });
+});
+
 describe('ALL_TREASURES', () => {
-  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5 and spring cave Area 6 treasures, in that order', () => {
+  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5, spring cave Area 6 and spring cave Area 7 treasures, in that order', () => {
     expect(ALL_TREASURES).toEqual([
       ...CANAL_TREASURES,
       ...POND_TREASURES,
@@ -714,16 +813,17 @@ describe('ALL_TREASURES', () => {
       ...CHINAMPA_TREASURES,
       ...CHINAMPA_2_TREASURES,
       ...SPRING_CAVE_TREASURES,
+      ...SPRING_CAVE_2_TREASURES,
     ]);
     expect(Object.isFrozen(ALL_TREASURES)).toBe(true);
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 84 treasures: 31 Decorations, 36 Wearables and 17 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(84);
-    expect(ALL_DECORATIONS).toHaveLength(31);
-    expect(ALL_WEARABLES).toHaveLength(36);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(17);
+  it('has 96 treasures: 37 Decorations, 41 Wearables and 18 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(96);
+    expect(ALL_DECORATIONS).toHaveLength(37);
+    expect(ALL_WEARABLES).toHaveLength(41);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(18);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -733,6 +833,7 @@ describe('ALL_TREASURES', () => {
       'canal/golden-bow',
       'pond/pearl-tail-charm',
       'chinampa/rainbow-serape-cape',
+      'spring-cave/gemstone-cape',
     ]);
     for (const wearable of shellWearables) {
       expect(['epic', 'legendary'], wearable.id).toContain(wearable.rarity);
@@ -787,7 +888,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Chocolate', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -799,8 +900,9 @@ describe('Dream colours', () => {
       PLUM,
       TIE_DYE_GALAXY,
       MOONSTONE,
+      CHOCOLATE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(17);
+    expect(DREAM_COLOURS).toHaveLength(18);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -824,6 +926,7 @@ describe('Dream colours', () => {
       'poppy-red',
       'plum',
       'moonstone',
+      'chocolate',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -846,11 +949,20 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Moonstone a rare solid, the seventeenth and last Dream colour, with a name no other Dream colour has (issue #77)', () => {
+  it('makes Moonstone a rare solid, the seventeenth Dream colour, with a name no other Dream colour has (issue #77)', () => {
     expect(MOONSTONE).toEqual({ id: 'moonstone', name: 'Moonstone', rarity: 'rare', kind: 'solid' });
     expect(Object.isFrozen(MOONSTONE)).toBe(true);
     expect(dreamColourById('moonstone')).toBe(MOONSTONE);
-    expect(DREAM_COLOURS.at(-1)).toBe(MOONSTONE);
+    expect(DREAM_COLOURS.at(16)).toBe(MOONSTONE);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Chocolate a rare solid, the eighteenth and last Dream colour, with a name no other Dream colour has (issue #105)', () => {
+    expect(CHOCOLATE).toEqual({ id: 'chocolate', name: 'Chocolate', rarity: 'rare', kind: 'solid' });
+    expect(Object.isFrozen(CHOCOLATE)).toBe(true);
+    expect(dreamColourById('chocolate')).toBe(CHOCOLATE);
+    expect(DREAM_COLOURS.at(-1)).toBe(CHOCOLATE);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });

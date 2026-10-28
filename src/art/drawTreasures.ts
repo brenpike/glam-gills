@@ -2,7 +2,8 @@
  * Treasure icon painters (guide 6i rarity ladder, 7e, 8): the twelve canal
  * Decorations and Wearables, the eleven pond ones (issue #75), the eleven pond
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
- * (issue #103), the eleven spring cave Area 6 ones (issue #77), and one Paint shell per Dream colour.
+ * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
+ * and one Paint shell per Dream colour.
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -36,6 +37,10 @@ import {
   AMMONITE_FILL,
   AMMONITE_SLAB,
   BOAT_CANOPY,
+  BUBBLE_FILL,
+  BUBBLE_MACHINE_FILL,
+  BUBBLE_MACHINE_NOZZLE,
+  BUBBLE_STONE_FILL,
   BOAT_HULL,
   BOAT_TRIM,
   BOW_FILL,
@@ -47,6 +52,8 @@ import {
   CATTAIL_HEAD,
   CATTAIL_STEM,
   CAVE_CRYSTAL_FILL,
+  CLAY_POT_FILL,
+  CLIMBING_HELMET_FILL,
   CRYSTAL_ARCH_BASE,
   CRYSTAL_CROWN_BAND,
   CRYSTAL_CUFF_BAND,
@@ -75,9 +82,12 @@ import {
   GEM_GLINT,
   GEODE_BASE_FILL,
   GEODE_ROCK_FILL,
+  GEMSTONE_CAPE_FILL,
   GLASSES_FRAME,
   GLASSES_GEM,
   GLASSES_LENS,
+  GOGGLES_FRAME,
+  GOGGLES_STRAP,
   GOLDEN_LOTUS_BASE,
   GOLDEN_LOTUS_PETAL,
   GOLDEN_LOTUS_SEAT,
@@ -90,18 +100,24 @@ import {
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_FILL,
+  LANTERN_FRAME,
+  LANTERN_GLASS,
   LILY_PAD_SOCK_FILL,
   LOTUS_LANTERN_BODY,
   LOTUS_PETAL,
   MINERS_HELMET_FILL,
   MOSS_BALL_FILL,
   MOSS_BALL_WEIGHT,
+  MOSSY_ROCK_FILL,
+  MOSSY_ROCK_MOSS,
   NECKLACE_CORD,
   NECKLACE_SHELL,
   PAINT_SHELL_FILL,
   PAINT_SHELL_RIDGE,
   PEARL_CHARM_CORD,
   PEARL_FILL,
+  PEBBLE_NECKLACE_CORD,
+  PEBBLE_NECKLACE_STONE,
   PEBBLE_STACK_FILL,
   PLANT_LEAF,
   POND_WEED_SCARF,
@@ -117,6 +133,11 @@ import {
   WATER_LILY_BLOSSOM,
   WATER_LILY_SHIRT_FILL,
   WIND_CHIME_BAR,
+  STALACTITE_HOOK,
+  STALACTITE_ROCK,
+  WATERFALL_BASE,
+  WATERFALL_ROCK,
+  WATERFALL_WATER,
   WIND_CHIME_HOOK,
   type DreamSwatchId,
 } from './treasurePalette';
@@ -248,7 +269,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The seventeen Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, then Moonstone, issue #77, last). */
+/** The eighteen Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, then Chocolate, issue #105, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -267,13 +288,14 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'poppy-red',
   'plum',
   'moonstone',
+  'chocolate',
 ];
 
 /**
  * The Decoration and Wearable slugs: the twelve canal ones (the text after `canal/`), then the
  * eleven pond ones and the eleven pond Area 3 ones (the text after `pond/`), then the eleven chinampa
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
- * Area 6 ones (the text after `spring-cave/`), in catalogue order.
+ * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -342,7 +364,18 @@ export type TreasureItemSlug =
   | 'geode-lamp'
   | 'crystal-tail-cuff'
   | 'crystal-arch'
-  | 'crystal-crown';
+  | 'crystal-crown'
+  | 'mossy-rock'
+  | 'bubble-stone'
+  | 'climbing-helmet'
+  | 'pebble-necklace'
+  | 'ancient-clay-pot'
+  | 'glowing-stalactite'
+  | 'cave-goggles'
+  | 'bubble-machine'
+  | 'glow-tail-lantern'
+  | 'underground-waterfall'
+  | 'gemstone-cape';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -414,12 +447,24 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'crystal-tail-cuff',
   'crystal-arch',
   'crystal-crown',
+  'mossy-rock',
+  'bubble-stone',
+  'climbing-helmet',
+  'pebble-necklace',
+  'ancient-clay-pot',
+  'glowing-stalactite',
+  'cave-goggles',
+  'bubble-machine',
+  'glow-tail-lantern',
+  'underground-waterfall',
+  'gemstone-cape',
 ];
 
 /**
- * All eighty-four icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All ninety-six icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
- * items, then the seventeen Paint shells in Dream order (the last, Moonstone, is the spring cave's).
+ * items, the eleven spring cave Area 7 items, then the eighteen Paint shells in Dream order (the last two,
+ * Moonstone and Chocolate, are the spring cave's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -497,6 +542,9 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The six spring cave Area 6 Decorations (issue #77) end on the same 12.6 edge: the Pebble stack's bottom stone, the
  * Fossil ammonite's slab, the Geode lamp's base and the Crystal arch's plinth (Floor items), the Glow moss ball's
  * weight (a Floating item, so the box edge) and the longest crystal rod of the Crystal wind chime (a Hanging item).
+ * The six spring cave Area 7 Decorations (issue #105) end on the same 12.6 edge: the Mossy rock's foot, the Bubble
+ * stone's base, the Ancient clay pot's foot, the Bubble machine's box and the Underground waterfall's plinth (Floor
+ * items) and the tip of the Glowing stalactite (a Hanging item).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -530,6 +578,12 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'crystal-wind-chime': 12.6,
   'geode-lamp': 12.6,
   'crystal-arch': 12.6,
+  'mossy-rock': 12.6,
+  'bubble-stone': 12.6,
+  'ancient-clay-pot': 12.6,
+  'glowing-stalactite': 12.6,
+  'bubble-machine': 12.6,
+  'underground-waterfall': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -2983,6 +3037,348 @@ function paintCrystalCrown(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Spring cave Area 7 items (issue #105)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Every outer fill is one of the Area 7 fills of
+// treasurePalette.ts (9:1 or more with ink); the five Wearables' worn looks import the same names. Shape
+// carries the meaning: a rock with a cap of moss, a holed stone breathing bubbles, a vented helmet with a chin
+// strap, pebbles on a cord, a round-bellied pot, a glowing stalactite under its rock, goggles on a strap, a box
+// that blows bubbles, a lantern with a handle, a waterfall down a cliff into a pool and a cape set with
+// gemstones. The Chocolate Paint shell uses the generic Paint shell painter (below).
+
+/** Glowing stalactite tip glow, the lit glow-plant pod's pale mint; inside the silhouette, so free. */
+export const STALACTITE_GLOW = '#d9fff6';
+/** Cave goggles lens, a pale sky tint; inside the frame, so free. */
+export const GOGGLES_LENS = '#9fe6ff';
+/** Glow tail lantern flame, a warm yellow inside the glass; free. */
+export const LANTERN_FLAME = '#ffd34d';
+/** The Gemstone cape's set stones: sky, amethyst and mint, none red; inside the silhouette, so free. */
+export const GEMSTONE_CAPE_STONES: readonly string[] = ['#8fd0ff', '#c4a3ff', '#7fe3c4'];
+
+/** Ink specks (alpha 0.30) on a stone: x, y pairs, each a small ellipse. */
+function specks(pen: Pen, xy: readonly number[]): void {
+  const { ctx, k } = pen;
+  ctx.fillStyle = INK;
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < xy.length; i += 2) ctx.fill(place(ellipse(xy[i], xy[i + 1], 0.6, 0.45), k));
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Common, Floor: a lumpy grey-blue rock with a soft green cap of moss over its top, the moss dripping a little
+ * down its sides. Ink specks on the rock and short ink tufts on the moss (alpha 0.30). One shine on the rock. The
+ * rock's flat foot is the lowest fill edge.
+ */
+function paintMossyRock(pen: Pen): void {
+  const { ctx, k } = pen;
+  const rock = roundedPolygon(pts(-12.6, 12.6, -12, 3.6, -8.4, -3.6, -1, -6.6, 7.4, -5, 12, 1.4, 12.6, 12.6), [1.2, 3, 3.4, 3.4, 3, 3, 1.2]);
+  silhouette(pen, place(rock, k), MOSSY_ROCK_FILL, ITEM_LW, () => specks(pen, [-6.4, 8.4, -2, 4.6, 4.6, 9, 8.2, 4.4, 0.6, 10.4]));
+  const moss = roundedPolygon(
+    pts(-10.6, 0.4, -9.4, -6.6, -5, -10.6, 0.6, -11.8, 6.4, -9.8, 10.2, -4.4, 10.8, 0.6, 8.6, -1.4, 5, -2.6, 2.4, -0.6, -0.8, -3, -5, -2.2, -8, -0.6),
+    [0.8, 2.4, 2.6, 2.6, 2.4, 2, 0.8, 1, 1.2, 0.8, 1.2, 1.2, 1],
+  );
+  silhouette(pen, place(moss, k), MOSSY_ROCK_MOSS, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [x, y, rot] of [
+      [-5.6, -6.4, 0.4],
+      [-0.4, -8.6, -0.2],
+      [5, -6, -0.5],
+    ]) {
+      ctx.fill(place(ellipse(x, y, 0.5, 1.4, rot), k));
+    }
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -8.4, 5.4, 0.8, 2, 0.3);
+}
+
+/** The Bubble stone's bubbles: centre and radius, the largest nearest the stone. */
+const STONE_BUBBLES = [
+  [-2.6, -3.4, 2.6],
+  [2.8, -7.8, 2],
+  [-1.2, -11.2, 1.4],
+] as const;
+
+/**
+ * Common, Floor: a smooth round pebble A stone with three holes (ink at alpha 0.30), breathing a column of three
+ * pale aqua bubbles that grow smaller as they rise. One shine on the stone. The stone's base is the lowest fill
+ * edge.
+ */
+function paintBubbleStone(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const [x, y, r] of STONE_BUBBLES) outerShape(pen, place(ellipse(x, y, r, r), k), BUBBLE_FILL, ITEM_LW);
+  silhouette(pen, place(ellipse(0, 6.4, 12.6, 6.2), k), BUBBLE_STONE_FILL, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [x, y, rx, ry] of [
+      [-2.6, 2.6, 1.8, 1],
+      [5, 5.4, 1.4, 0.9],
+      [-7, 7.4, 1.2, 0.8],
+    ]) {
+      ctx.fill(place(ellipse(x, y, rx, ry), k));
+    }
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -7.6, 3.4, 0.8, 2, 1.1);
+}
+
+/**
+ * Common: a pale tangerine climbing helmet: a tall round shell over a narrow rim, three vents (ink at alpha 0.30)
+ * across the top and an ink chin strap looping under it. One shine.
+ */
+function paintClimbingHelmet(pen: Pen): void {
+  const { ctx, k } = pen;
+  const shell = new Path2D();
+  shell.moveTo(-11, 4.6);
+  shell.ellipse(0, 4.6, 11, 17.2, 0, Math.PI, TAU);
+  shell.closePath();
+  silhouette(pen, place(shell, k), CLIMBING_HELMET_FILL, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [x, rot] of [
+      [-5.2, -0.25],
+      [0, 0],
+      [5.2, 0.25],
+    ]) {
+      ctx.fill(place(ellipse(x, -6.4, 0.9, 2.6, rot), k));
+    }
+    ctx.globalAlpha = 1;
+  });
+  const rim = roundedPolygon(pts(-12.6, 3.6, 12.6, 3.6, 12.6, 7.8, -12.6, 7.8), [1.2, 1.2, 2, 2]);
+  outerShape(pen, place(rim, k), CLIMBING_HELMET_FILL, ITEM_LW);
+  detail(pen, () => {
+    const strap = new Path2D();
+    strap.moveTo(-8.4, 7.8);
+    strap.quadraticCurveTo(0, 16, 8.4, 7.8);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    ctx.stroke(place(strap, k));
+  });
+  shine(pen, -6.4, -2.6, 0.8, 2.4, 0.3);
+}
+
+/** The Pebble necklace's three pebbles: centre, radii and tilt. */
+const NECKLACE_PEBBLES = [
+  [-5.8, 4, 3, 2.4, 0.55],
+  [5.8, 4, 3, 2.4, -0.55],
+  [0, 6.6, 3.6, 2.9, 0],
+] as const;
+
+/**
+ * Common: three smooth grey-blue pebbles on a pale cord: a U of cord hanging from the top corners (a tube, like the
+ * Shell necklace's) with the pebbles strung at the bottom, the middle one the largest, each with ink specks (alpha
+ * 0.30). One shine on the middle pebble. Sized for tube ink: the cord's centre line and the pebbles stay inside 10
+ * units of the centre.
+ */
+function paintPebbleNecklace(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cord = new Path2D();
+  cord.ellipse(0, -9, 10, 14, 0, 0, Math.PI);
+  inkMany(ctx, [outerSeg(pen, place(cord, k), TUBE_W, PEBBLE_NECKLACE_CORD, TUBE_OL)]);
+  for (const [x, y, rx, ry, rot] of NECKLACE_PEBBLES) {
+    silhouette(pen, place(ellipse(x, y, rx, ry, rot), k), PEBBLE_NECKLACE_STONE, ITEM_LW, () => specks(pen, [x + 1, y + 0.8, x - 1.2, y + 1.2]));
+  }
+  shine(pen, -1.4, 5.4, 0.5, 1.2, 1.2);
+}
+
+/**
+ * Rare, Floor: an ancient round-bellied clay pot in pale terracotta: a flared rim, a short neck, a wide belly and a
+ * small foot, one yellow trim band round the belly with a zigzag of ink (1.6) under it, and two short ink cracks of
+ * age. One shine. The foot is the lowest fill edge.
+ */
+function paintAncientClayPot(pen: Pen): void {
+  const { ctx, k } = pen;
+  const pot = roundedPolygon(
+    pts(-4.2, -10, 4.2, -10, 4.6, -7.4, 11.4, -3.6, 12.6, 1.8, 9.6, 7.8, 5.2, 9.8, 6.8, 12.6, -6.8, 12.6, -5.2, 9.8, -9.6, 7.8, -12.6, 1.8, -11.4, -3.6, -4.6, -7.4),
+    [0.6, 0.6, 1, 4, 5, 4, 1.4, 0.8, 0.8, 1.4, 4, 5, 4, 1],
+  );
+  silhouette(pen, place(pot, k), CLAY_POT_FILL, ITEM_LW, () => {
+    trimBand(pen, -2.4, 0.8, BOAT_TRIM);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    const zig = new Path2D();
+    zig.moveTo(-11, 3.6);
+    for (let i = 1; i <= 11; i++) zig.lineTo(-11 + i * 2, i % 2 === 1 ? 5.4 : 3.6);
+    zig.moveTo(6.2, -6.2);
+    zig.lineTo(7.6, -4.8);
+    zig.lineTo(7, -3.4);
+    zig.moveTo(-3, 7.6);
+    zig.lineTo(-1.8, 9);
+    ctx.stroke(place(zig, k));
+  });
+  const rim = roundedPolygon(pts(-6.6, -12.6, 6.6, -12.6, 6, -9.4, -6, -9.4), [1, 1, 0.8, 0.8]);
+  outerShape(pen, place(rim, k), CLAY_POT_FILL, ITEM_LW);
+  shine(pen, -8.4, -1.2, 0.9, 2.2, 0.3);
+}
+
+/**
+ * Rare, Hanging: a stalactite hanging from a rock slab that hangs from a pebble A hook ring on its top-centre: a
+ * long lilac-grey cone narrowing to a point, its lower third glowing pale mint, one yellow trim band across it, ink
+ * specks on the slab. One shine on the cone. The cone's tip is the lowest fill edge.
+ */
+function paintGlowingStalactite(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cone = roundedPolygon(pts(-6.4, -6, 6.4, -6, 3.4, 6.4, 0, 12.6, -3.4, 6.4), [1, 1, 2, 0.3, 2]);
+  silhouette(pen, place(cone, k), STALACTITE_ROCK, ITEM_LW, () => {
+    ctx.fillStyle = STALACTITE_GLOW;
+    ctx.fill(place(ellipse(0, 10, 6, 6.4), k));
+    trimBand(pen, -2.2, 0.6, BOAT_TRIM);
+  });
+  const slab = roundedPolygon(pts(-12.6, -6.4, -11, -9.4, -4, -10, 4, -10, 11, -9.4, 12.6, -6.4, 8.4, -4.4, -8.4, -4.4), [1.4, 2, 2, 2, 2, 1.4, 2, 2]);
+  silhouette(pen, place(slab, k), STALACTITE_ROCK, ITEM_LW, () => specks(pen, [-8.4, -7, -2.6, -7.8, 3.4, -6.8, 8.6, -7.6]));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, STALACTITE_HOOK), DETAIL_LW);
+  shine(pen, -3.4, 2.8, 0.6, 1.8, 0.35);
+}
+
+/**
+ * Rare: cave goggles: two big round pale green frames with pale sky lenses on a pebble A strap that runs across
+ * behind them, with one yellow trim band along the strap, showing on the bridge between the frames. One shine on
+ * the left lens.
+ */
+function paintCaveGoggles(pen: Pen): void {
+  const { ctx, k } = pen;
+  const strap = roundedPolygon(pts(-12.6, -3, 12.6, -3, 12.6, 3, -12.6, 3), 1.6);
+  silhouette(pen, place(strap, k), GOGGLES_STRAP, ITEM_LW, () => trimBand(pen, -1.2, 1.2, BOAT_TRIM));
+  for (const x of [-7.2, 7.2]) {
+    outerShape(pen, place(ellipse(x, 0, 5.4, 5.4), k), GOGGLES_FRAME, ITEM_LW);
+    detail(pen, () => shape(ctx, place(ellipse(x, 0, 3.4, 3.4), k), GOGGLES_LENS, DETAIL_LW));
+  }
+  shine(pen, -8.4, -1.2, 0.6, 1.3, 0.5);
+}
+
+/** The Bubble machine's bubbles: centre and radius, rising from the nozzle. */
+const MACHINE_BUBBLES = [
+  [8.4, -9, 2.4],
+  [2.2, -11.2, 1.4],
+  [10.6, -2.4, 2],
+] as const;
+
+/**
+ * Epic, Floor: a bubble machine: a soft pink box with a pebble A nozzle on its top right, blowing three pale aqua
+ * bubbles, with a dial and two vents (ink) on its front and one aqua gem as its button. One shine. The box's base
+ * is the lowest fill edge.
+ */
+function paintBubbleMachine(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const [x, y, r] of MACHINE_BUBBLES) outerShape(pen, place(ellipse(x, y, r, r), k), BUBBLE_FILL, ITEM_LW);
+  const nozzle = roundedPolygon(pts(0.8, 0, 5.6, 0, 7.6, -5.8, -1.2, -5.8), [0.6, 0.6, 1, 1]);
+  outerShape(pen, place(nozzle, k), BUBBLE_MACHINE_NOZZLE, ITEM_LW);
+  const box = roundedPolygon(pts(-12.6, -1.4, 7, -1.4, 7, 12.6, -12.6, 12.6), [2.4, 2.4, 1.6, 1.6]);
+  silhouette(pen, place(box, k), BUBBLE_MACHINE_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    const marks = new Path2D();
+    marks.moveTo(-0.6 + 2.6, 4.6);
+    marks.arc(-0.6, 4.6, 2.6, 0, TAU);
+    marks.moveTo(-0.6, 4.6);
+    marks.lineTo(0.8, 3.2);
+    for (const y of [8.8, 10.8]) {
+      marks.moveTo(-10, y);
+      marks.lineTo(4.4, y);
+    }
+    ctx.stroke(place(marks, k));
+  });
+  gem(pen, -7.6, 3.8, CASTLE_GEM);
+  shine(pen, -10, 1.8, 0.6, 1.4, 1.2);
+}
+
+/**
+ * Epic: a glow tail lantern: a pale amber glass body with a warm flame inside, under a pebble A cap and handle ring
+ * and on a pebble A base, two ink frame bars down the glass and one pink gem at the heart of the glow. One shine on
+ * the glass.
+ */
+function paintGlowTailLantern(pen: Pen): void {
+  const { ctx, k } = pen;
+  shape(ctx, place(ellipse(0, -10.8, 1.8, 1.8), k), outerFill(pen, LANTERN_FRAME), DETAIL_LW);
+  const glass = roundedPolygon(pts(-6.6, -7, 6.6, -7, 6.6, 9, -6.6, 9), 3);
+  silhouette(pen, place(glass, k), LANTERN_GLASS, ITEM_LW, () => {
+    ctx.fillStyle = LANTERN_FLAME;
+    ctx.fill(place(ellipse(0, 2, 3.4, 4.6), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    for (const x of [-3.6, 3.6]) ctx.stroke(place(line(x, -7, x, 9), k));
+  });
+  const cap = roundedPolygon(pts(-7.6, -6, -3.6, -9.6, 3.6, -9.6, 7.6, -6), [1, 1, 1, 1]);
+  outerShape(pen, place(cap, k), LANTERN_FRAME, ITEM_LW);
+  const base = roundedPolygon(pts(-8.4, 8.4, 8.4, 8.4, 8.4, 12.6, -8.4, 12.6), [1, 1, 1.6, 1.6]);
+  outerShape(pen, place(base, k), LANTERN_FRAME, ITEM_LW);
+  gem(pen, 0, 2.4, PYRAMID_GEM);
+  shine(pen, -5, -3.4, 0.6, 1.8, 0.1);
+}
+
+/**
+ * Legendary, Floor: an underground waterfall: a lilac-grey rock cliff with a pale glass blue waterfall pouring down
+ * its face into a pool, on a pebble C plinth with one gold band (the gold trim), fall lines and ripples in ink
+ * (alpha 0.30), one pink gem set in the rock and one 4-point star on the cliff. One shine. The plinth is the lowest
+ * fill edge.
+ */
+function paintUndergroundWaterfall(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cliff = roundedPolygon(pts(-12.6, 9, -12.2, -7.4, -7.4, -12.6, 7.4, -12.6, 12.2, -7.4, 12.6, 9), [0.6, 3, 3, 3, 3, 0.6]);
+  silhouette(pen, place(cliff, k), WATERFALL_ROCK, ITEM_LW, () => specks(pen, [-9.4, 2.4, -7.6, 6, 8.2, 2.2, 10, 6.6]));
+  const fall = roundedPolygon(pts(-4.4, -11.2, 4.4, -11.2, 5.6, 7.6, -5.6, 7.6), [1, 1, 0.6, 0.6]);
+  const pool = ellipse(0, 7.6, 10.4, 2.6);
+  for (const part of [fall, pool]) {
+    silhouette(pen, place(part, k), WATERFALL_WATER, ITEM_LW, () => {
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = BAND_LW;
+      ctx.globalAlpha = 0.3;
+      const lines = new Path2D();
+      for (const x of [-2.2, 0.4, 2.8]) {
+        lines.moveTo(x, -9.6);
+        lines.lineTo(x * 1.2, 5);
+      }
+      lines.moveTo(-6.8, 8);
+      lines.quadraticCurveTo(-4.4, 6.8, -2, 8);
+      lines.moveTo(2, 8);
+      lines.quadraticCurveTo(4.4, 6.8, 6.8, 8);
+      ctx.stroke(place(lines, k));
+      ctx.globalAlpha = 1;
+    });
+  }
+  const plinth = roundedPolygon(pts(-12.6, 8.4, 12.6, 8.4, 12.6, 12.6, -12.6, 12.6), [1, 1, 1.6, 1.6]);
+  silhouette(pen, place(plinth, k), WATERFALL_BASE, ITEM_LW, () => trimBand(pen, 9.6, 11.4, GOLD_TRIM));
+  gem(pen, -8.4, -3.6, PYRAMID_GEM);
+  shine(pen, -8.8, -8.6, 0.7, 1.6, 0.7);
+  legendStar(pen, 8.6, -4.4);
+}
+
+/** The Gemstone cape's set stones: centre and colour index. */
+const CAPE_STONES = [
+  [-4.4, -1.4, 0],
+  [4.6, -1.2, 1],
+  [0, 4.2, 2],
+  [-7.6, 5.4, 1],
+  [7.6, 5.4, 0],
+] as const;
+
+/**
+ * Legendary: a pale amethyst cape, narrow at the neck and wide at the hem, set with five small faceted gemstones
+ * (sky, amethyst and mint, ink 1.2), a gold band above the hem, one pink gem at the clasp and one 4-point star.
+ * One shine.
+ */
+function paintGemstoneCape(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cape = new Path2D();
+  cape.moveTo(-7, -11.8);
+  cape.quadraticCurveTo(0, -7.6, 7, -11.8);
+  cape.bezierCurveTo(10.4, -6, 12.6, 2, 12.6, 12.6);
+  cape.lineTo(-12.6, 12.6);
+  cape.bezierCurveTo(-12.6, 2, -10.4, -6, -7, -11.8);
+  cape.closePath();
+  silhouette(pen, place(cape, k), GEMSTONE_CAPE_FILL, ITEM_LW, () => {
+    for (const [x, y, i] of CAPE_STONES) {
+      shape(ctx, place(roundedPolygon(pts(x, y - 2, x + 1.6, y, x, y + 2, x - 1.6, y), 0.3), k), GEMSTONE_CAPE_STONES[i], BAND_LW);
+    }
+    trimBand(pen, 9, 11.4, GOLD_TRIM);
+  });
+  gem(pen, 0, -7.6, PYRAMID_GEM);
+  shine(pen, -7.6, -4.4, 0.7, 1.8, 0.3);
+  legendStar(pen, 9.8, -9.8);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -3585,6 +3981,39 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'crystal-crown':
       paintCrystalCrown({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'mossy-rock':
+      paintMossyRock({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'bubble-stone':
+      paintBubbleStone({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'climbing-helmet':
+      paintClimbingHelmet({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'pebble-necklace':
+      paintPebbleNecklace({ ctx, k: fitScale(size, INK_OUT_TUBE), flat });
+      break;
+    case 'ancient-clay-pot':
+      paintAncientClayPot({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'glowing-stalactite':
+      paintGlowingStalactite({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'cave-goggles':
+      paintCaveGoggles({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'bubble-machine':
+      paintBubbleMachine({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'glow-tail-lantern':
+      paintGlowTailLantern({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'underground-waterfall':
+      paintUndergroundWaterfall({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'gemstone-cape':
+      paintGemstoneCape({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

@@ -290,7 +290,7 @@ describe('habitat area labels (issue #113, ND-6)', () => {
       'Canal: Area 1',
       'Lily pad pond: Areas 2 and 3',
       'Chinampa gardens: Areas 4 and 5',
-      'Spring cave: Area 6',
+      'Spring cave: Areas 6 and 7',
     ]);
   });
 

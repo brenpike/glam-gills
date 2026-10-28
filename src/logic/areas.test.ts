@@ -11,6 +11,7 @@ import {
   POND_2_AREA,
   POND_AREA,
   POND_HABITAT,
+  SPRING_CAVE_2_AREA,
   SPRING_CAVE_AREA,
   SPRING_CAVE_HABITAT,
   areaById,
@@ -62,6 +63,7 @@ import {
   STALACTITE_FACT,
   TADPOLE_FACT,
   TILAPIA_FACT,
+  UNDERWATER_SPRINGS_FACT,
   WATER_HYACINTH_FACT,
   type FactCard,
 } from './factCards';
@@ -74,6 +76,7 @@ import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
 import { STRANDING_CHANCE, areaStrandingChance } from './rescue';
 import { SNACK_DART } from './snackDart';
+import { SPRING_CAVE_2_AREA_ID } from './springCave2Layout';
 import { SPRING_CAVE_AREA_ID, SPRING_CAVE_LAYOUT } from './springCaveLayout';
 import { NO_STARS, type AreaStars, type AreaStarsRecord } from './stars';
 import { inSafeArea } from './tilapia';
@@ -498,7 +501,7 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite and geyser cards, for the shipped areas', () => {
+  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite, geyser and underwater springs cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       CARP_FACT,
@@ -513,6 +516,7 @@ describe('threats', () => {
       CRAYFISH_FACT,
       STALACTITE_FACT,
       GEYSER_FACT,
+      UNDERWATER_SPRINGS_FACT,
     ]);
   });
 
@@ -673,6 +677,7 @@ describe('bookFactCards', () => {
       CRAYFISH_FACT,
       STALACTITE_FACT,
       GEYSER_FACT,
+      UNDERWATER_SPRINGS_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
     ]);
@@ -691,7 +696,7 @@ describe('newThingsByArea', () => {
     expect(areasOverNewLimit(AREAS)).toEqual([]);
   });
 
-  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, and the crayfish and the glow-plant in Area 6', () => {
+  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, the crayfish and the glow-plant in Area 6, and the pulsing current and the pebble in Area 7', () => {
     expect(newThingsByArea()).toEqual([
       { areaId: 'canal', threats: ['tilapia'], elements: [] },
       { areaId: 'pond-1', threats: ['plastic-worm'], elements: [] },
@@ -699,6 +704,7 @@ describe('newThingsByArea', () => {
       { areaId: 'chinampa-1', threats: ['ghost-net'], elements: [] },
       { areaId: 'chinampa-2', threats: ['garter-snake'], elements: ['water-hyacinth'] },
       { areaId: 'spring-cave-1', threats: ['crayfish'], elements: ['glow-plant'] },
+      { areaId: 'spring-cave-2', threats: ['pulsing-current'], elements: ['pebble'] },
     ]);
   });
 
@@ -871,10 +877,31 @@ describe('unlocking', () => {
     expect(newestUnlockedAreaId(area5Beaten)).toBe(SPRING_CAVE_AREA_ID);
     expect(isNewArea(area5Beaten, SPRING_CAVE_AREA_ID)).toBe(true);
     expect(isNewArea({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: EXIT_ONLY }, SPRING_CAVE_AREA_ID)).toBe(false);
-    expect(unlockedAreaIds({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: ALL_STARS })).toEqual([...firstFive, SPRING_CAVE_AREA_ID]);
+    expect(unlockedAreaIds({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: ALL_STARS })).toEqual([...firstFive, SPRING_CAVE_AREA_ID, SPRING_CAVE_2_AREA_ID]);
     expect(unlockedAreaIds({ ...area4Beaten, [SPRING_CAVE_AREA_ID]: ALL_STARS })).toEqual(firstFive);
     expect(resolveAreaId(SPRING_CAVE_AREA_ID, area4Beaten)).toBe(CHINAMPA_2_AREA_ID);
     expect(resolveAreaId(SPRING_CAVE_AREA_ID, area5Beaten)).toBe(SPRING_CAVE_AREA_ID);
+  });
+
+  it('unlocks Area 7 once Area 6 is beaten, with no new rule and no star gates, in the shipped areas (issue #105)', () => {
+    const area5Beaten: AreaStarsRecord = {
+      canal: EXIT_ONLY,
+      [POND_AREA_ID]: EXIT_ONLY,
+      [POND_2_AREA_ID]: EXIT_ONLY,
+      [CHINAMPA_AREA_ID]: EXIT_ONLY,
+      [CHINAMPA_2_AREA_ID]: EXIT_ONLY,
+    };
+    const area6Beaten: AreaStarsRecord = { ...area5Beaten, [SPRING_CAVE_AREA_ID]: EXIT_ONLY };
+    const firstSix = ['canal', POND_AREA_ID, POND_2_AREA_ID, CHINAMPA_AREA_ID, CHINAMPA_2_AREA_ID, SPRING_CAVE_AREA_ID];
+    expect(isAreaUnlocked(area5Beaten, SPRING_CAVE_2_AREA_ID)).toBe(false);
+    expect(isAreaUnlocked({ ...area5Beaten, [SPRING_CAVE_AREA_ID]: SPECIAL_ONLY }, SPRING_CAVE_2_AREA_ID)).toBe(false);
+    expect(unlockedAreaIds(area6Beaten)).toEqual([...firstSix, SPRING_CAVE_2_AREA_ID]);
+    expect(newestUnlockedAreaId(area6Beaten)).toBe(SPRING_CAVE_2_AREA_ID);
+    expect(isNewArea(area6Beaten, SPRING_CAVE_2_AREA_ID)).toBe(true);
+    expect(isNewArea({ ...area6Beaten, [SPRING_CAVE_2_AREA_ID]: EXIT_ONLY }, SPRING_CAVE_2_AREA_ID)).toBe(false);
+    expect(unlockedAreaIds({ ...area5Beaten, [SPRING_CAVE_2_AREA_ID]: ALL_STARS })).toEqual(firstSix);
+    expect(resolveAreaId(SPRING_CAVE_2_AREA_ID, area5Beaten)).toBe(SPRING_CAVE_AREA_ID);
+    expect(resolveAreaId(SPRING_CAVE_2_AREA_ID, area6Beaten)).toBe(SPRING_CAVE_2_AREA_ID);
   });
 
   it('names the newest unlocked area', () => {
@@ -959,6 +986,7 @@ describe('areaById', () => {
     expect(areaById(CHINAMPA_AREA_ID)).toBe(CHINAMPA_AREA);
     expect(areaById(CHINAMPA_2_AREA_ID)).toBe(CHINAMPA_2_AREA);
     expect(areaById(SPRING_CAVE_AREA_ID)).toBe(SPRING_CAVE_AREA);
+    expect(areaById(SPRING_CAVE_2_AREA_ID)).toBe(SPRING_CAVE_2_AREA);
   });
 
   it('returns undefined for an unknown id', () => {
@@ -968,8 +996,8 @@ describe('areaById', () => {
   });
 
   it('lists every area in number order', () => {
-    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(AREAS).toEqual([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA, SPRING_CAVE_AREA]);
+    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(AREAS).toEqual([CANAL_AREA, POND_AREA, POND_2_AREA, CHINAMPA_AREA, CHINAMPA_2_AREA, SPRING_CAVE_AREA, SPRING_CAVE_2_AREA]);
   });
 });
 
@@ -1042,18 +1070,19 @@ describe.each(AREA_CASES)('%s exit geometry', (_id, area) => {
 describe('snack drift', () => {
   const surfacePeak = SURF + 1.6 + 0.8;
 
-  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s and the Area 6 drift at about 16.0 px/s', () => {
+  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s, the Area 6 drift at about 16.0 px/s and the Area 7 drift at about 16.2 px/s', () => {
     expect(snackDriftMaxSpeed(CANAL_AREA.snackDrift)).toBeCloseTo(11.9, 1);
     expect(snackDriftMaxSpeed(POND_AREA.snackDrift)).toBeCloseTo(14.8, 1);
     expect(snackDriftMaxSpeed(POND_2_AREA.snackDrift)).toBeCloseTo(15.2, 1);
     expect(snackDriftMaxSpeed(CHINAMPA_AREA.snackDrift)).toBeCloseTo(15.6, 1);
     expect(snackDriftMaxSpeed(CHINAMPA_2_AREA.snackDrift)).toBeCloseTo(15.8, 1);
     expect(snackDriftMaxSpeed(SPRING_CAVE_AREA.snackDrift)).toBeCloseTo(16.0, 1);
+    expect(snackDriftMaxSpeed(SPRING_CAVE_2_AREA.snackDrift)).toBeCloseTo(16.2, 1);
   });
 
-  it('pins the one-leg headway against the strongest current: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 and 6', () => {
+  it('pins the one-leg headway against the strongest steady current: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 to 7', () => {
     const headways = AREAS.map((area) => SWIM.maxSpeed * LEGS.speedByLegs[0] - strongestCurrentIn(area));
-    expect(headways).toEqual([20, 20, 16, 18, 17, 17]);
+    expect(headways).toEqual([20, 20, 16, 18, 17, 17, 17]);
   });
 
   it.each(AREA_CASES)('drifts slower than a one-leg axolotl swims against the strongest current, and at most 20 px/s, in %s', (_id, area) => {

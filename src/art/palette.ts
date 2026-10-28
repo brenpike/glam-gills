@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the seventeen Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the eighteen Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -476,7 +476,8 @@ export type DreamLookId =
   | 'firefly-gold'
   | 'poppy-red'
   | 'plum'
-  | 'moonstone';
+  | 'moonstone'
+  | 'chocolate';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -545,6 +546,11 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   plum: dreamSlots('#933f93', '#873c8b', '#be8cbe', '#cea9ce', ['#f2a0ee', '#f5b5f2'], ['#de94de', '#e5a9e5']),
   // Spring cave Area 6 Dream colour (issue #77, ND-12). Body #f5f7fc is a pale silvery white (relative luminance 0.930), the lightest Dream colour: 13.43:1 with ink, so 3.66:1 worst case.
   moonstone: dreamSlots('#f5f7fc', '#dddee7', '#f9fafd', '#fbfbfe', ['#7f9fdc', '#9bb4e4'], ['#7793ce', '#92a8d8']),
+  // Spring cave Area 7 Dream colour (issue #105, ND-13). Body #6c391d is a deep chocolate brown (relative luminance 0.062):
+  // 9.37:1 with white and 1.54:1 with ink, so it follows the dark-body rules (white spots, eye ring, rim light). The named
+  // default #7b4a2c (0.093) sat 1.18:1 from Plum in greyscale, under Plum's 1.5:1 margin; #6c391d is the nearest brown
+  // that keeps 1.5:1 from Plum and 1.05:1 from Midnight blue.
+  chocolate: dreamSlots('#6c391d', '#643623', '#a78877', '#bda699', ['#ffa6c9', '#ffbad5'], ['#ea99bd', '#eeaeca']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -562,9 +568,9 @@ export const DREAM_RIM_LIGHT: MorphRim = { colour: '#cec9f0', width: 2, fin: tru
 export const DREAM_EYE_RING: MorphEyeRing = { colour: '#cec9f0', width: 1.5 };
 
 /** The dark Dream bodies (guide 3f): the morph eye is under 3:1 on them, so they get the eye ring and white spots. */
-const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum'];
+const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
-const DREAM_RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum'];
+const DREAM_RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';
 /** Guide 3b spot table: ink at 0.30 on Dream bodies of relative luminance 0.2 or more. */

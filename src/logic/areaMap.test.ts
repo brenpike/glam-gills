@@ -389,14 +389,14 @@ describe('areaMapLayout', () => {
       ['Canal: Area 1', AREA_CELL_W + 2 * PAD],
       ['Lily pad pond: Areas 2 and 3', AREA_MARKER_PX + 32 + AREA_CELL_W + 2 * PAD],
       ['Chinampa gardens: Areas 4 and 5', AREA_MARKER_PX + 32 + AREA_CELL_W + 2 * PAD],
-      ['Spring cave: Area 6', AREA_CELL_W + 2 * PAD],
+      ['Spring cave: Areas 6 and 7', AREA_MARKER_PX + 32 + AREA_CELL_W + 2 * PAD],
     ]);
   });
 
   it.each(VIEWS)("labels today's four habitat runs once each, in area order, on $cssW x $cssH", (view) => {
     const layout = areaMapLayout(view, TODAYS_AREAS, MEASURE);
     expect(layout.fits).toBe(true);
-    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2', 'spring-cave-1']);
+    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2', 'spring-cave-1', 'spring-cave-2']);
     expect(layout.habitats.map((habitat) => [habitat.id, habitat.name])).toEqual([
       ['canal', 'Canal'],
       ['pond', 'Lily pad pond'],

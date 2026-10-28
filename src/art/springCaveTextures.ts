@@ -24,7 +24,21 @@ import {
   paintSpringOutflow,
   type GlowPlantState,
 } from './drawSpringCave';
-import { bake, type TexInfo } from './textures';
+import {
+  PEBBLE_HINT_TEX,
+  PEBBLE_TEX,
+  SURGE_STREAK_TEX,
+  VENT_BUBBLE_TEX,
+  VENT_MOUTH_TEX,
+  paintPebble,
+  paintPebbleHint,
+  paintRockWall,
+  paintSurgeStreak,
+  paintVentBubble,
+  paintVentMouth,
+  rockWallTex,
+} from './drawPebbleRoom';
+import { bake, makeInfo, type TexInfo } from './textures';
 
 /** Fixed texture keys of the spring cave props. */
 export const SPRING_CAVE_TEX = {
@@ -36,7 +50,15 @@ export const SPRING_CAVE_TEX = {
   glowPlantLit: 'spring-cave-glow-plant-lit',
   glowPlantHint: 'spring-cave-glow-plant-hint',
   softLight: 'spring-cave-soft-light',
+  pebble: 'spring-cave-pebble',
+  pebbleHint: 'spring-cave-pebble-hint',
+  ventMouth: 'spring-cave-vent-mouth',
+  ventBubble: 'spring-cave-vent-bubble',
+  surgeStreak: 'spring-cave-surge-streak',
 } as const;
+
+/** The texture key prefix of a baked rock wall; each wall's key ends with its index (issue #105, ND-8). */
+export const ROCK_WALL_KEY_PREFIX = 'spring-cave-rock-wall-';
 
 /** The soft light bakes at this many texture pixels per logical unit, or at `bakeScale` when that is lower: a soft gradient needs no more. */
 export const SOFT_LIGHT_BAKE_SCALE = 1;
@@ -79,6 +101,16 @@ export interface SpringCaveTextures {
    * radius / SOFT_LIGHT_RADIUS / info.scale. Baked at SOFT_LIGHT_BAKE_SCALE or lower.
    */
   readonly softLight: TexInfo;
+  /** The pebble (issue #105, ND-8; PEBBLE_TEX): anchor is its centre. The scene turns it as it rolls. */
+  readonly pebble: TexInfo;
+  /** The pebble's hint arrow (PEBBLE_HINT_TEX), pointing along +x; anchor is the middle of its tail. */
+  readonly pebbleHint: TexInfo;
+  /** A pulsing vent's mouth (issue #105, ND-7; VENT_MOUTH_TEX), blowing along -x; anchor is the middle of its opening. */
+  readonly ventMouth: TexInfo;
+  /** One warning bubble (VENT_BUBBLE_TEX); anchor is its centre. */
+  readonly ventBubble: TexInfo;
+  /** One surge streak (SURGE_STREAK_TEX), along +x; anchor is its middle. */
+  readonly surgeStreak: TexInfo;
 }
 
 /** Bake the spring cave props at `bakeScale` texture pixels per logical unit. */
@@ -96,5 +128,24 @@ export function bakeSpringCaveTextures(scene: Phaser.Scene, bakeScale: number): 
       hint: bake(scene, SPRING_CAVE_TEX.glowPlantHint, GLOW_PLANT_TEX, bakeScale, (ctx) => paintGlowPlant(ctx, 'hint')),
     },
     softLight: bake(scene, SPRING_CAVE_TEX.softLight, SOFT_LIGHT_TEX, Math.min(bakeScale, SOFT_LIGHT_BAKE_SCALE), paintSoftLight),
+    pebble: bake(scene, SPRING_CAVE_TEX.pebble, PEBBLE_TEX, bakeScale, paintPebble),
+    pebbleHint: bake(scene, SPRING_CAVE_TEX.pebbleHint, PEBBLE_HINT_TEX, bakeScale, paintPebbleHint),
+    ventMouth: bake(scene, SPRING_CAVE_TEX.ventMouth, VENT_MOUTH_TEX, bakeScale, paintVentMouth),
+    ventBubble: bake(scene, SPRING_CAVE_TEX.ventBubble, VENT_BUBBLE_TEX, bakeScale, paintVentBubble),
+    surgeStreak: bake(scene, SPRING_CAVE_TEX.surgeStreak, SURGE_STREAK_TEX, bakeScale, paintSurgeStreak),
   };
+}
+
+/**
+ * Bake rock wall `index`, `w` x `h` logical px, at `bakeScale` (issue #105, ND-8), once per wall
+ * size, under the key ROCK_WALL_KEY_PREFIX + index. Anchor is the wall's top-left corner. A key that
+ * is already baked is reused, so a second trip bakes nothing.
+ */
+export function bakeRockWall(scene: Phaser.Scene, index: number, w: number, h: number, bakeScale: number): TexInfo {
+  const key = `${ROCK_WALL_KEY_PREFIX}${index}-${w}x${h}`;
+  const size = rockWallTex(w, h);
+  if (scene.textures.exists(key)) {
+    return makeInfo(key, bakeScale, size);
+  }
+  return bake(scene, key, size, bakeScale, (ctx) => paintRockWall(ctx, w, h));
 }

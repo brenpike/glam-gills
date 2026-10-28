@@ -98,13 +98,15 @@ export interface MobileSnackAvoid {
   worms: readonly Readonly<Point>[];
   /**
    * Shapes a box keeps SNACK_HAZARD_CLEARANCE px from: every hazard by hazardSweep (a drifting
-   * net's whole drift path), every element sweep and every moving hazard's sweep.
+   * net's whole drift path), every element sweep, every moving hazard's sweep, and every rock wall
+   * and side room (issue #105, ND-8).
    */
   keepAway: readonly HazardShape[];
   /**
-   * Every hazard by hazardSweep (a drifting net's whole drift path), which mobileSnackHardClear()
-   * keeps SNACK_HAZARD_CLEARANCE px from (issue #131, ND-7). mobileSnackAvoid() always sets it;
-   * absent, mobileSnackHardClear() uses `keepAway`, which holds every hazard sweep and more.
+   * Every hazard by hazardSweep (a drifting net's whole drift path), then every rock wall and side
+   * room (issue #105, ND-8), which mobileSnackHardClear() keeps SNACK_HAZARD_CLEARANCE px from
+   * (issue #131, ND-7). mobileSnackAvoid() always sets it; absent, mobileSnackHardClear() uses
+   * `keepAway`, which holds every hazard sweep and more.
    */
   hazards?: readonly HazardShape[];
   /** The zone's B10 threats (zoneThreats); a box stays farther than each one's strike range. */
@@ -393,7 +395,8 @@ function elementSweeps(zone: Pick<ZoneLayout, 'elements'>): HazardRect[] {
 /**
  * What a mobile snack keeps out of in this zone (ND-26). `plasticWorms` is where each plastic worm
  * is now; absent means none beyond the zone's hazards, which already hold each worm's start.
- * Measures every moving hazard's sweep itself as well as through zoneThreats.
+ * Measures every moving hazard's sweep itself as well as through zoneThreats. Every rock wall and
+ * side room is kept away from too (issue #105, ND-8), so no snack swims into rock or behind the pebble.
  */
 export function mobileSnackAvoid(
   zone: Pick<
@@ -409,11 +412,15 @@ export function mobileSnackAvoid(
     | 'tilapiaRoutes'
     | 'tilapia'
     | 'predatorRoutes'
-  >,
+  > &
+    Partial<Pick<ZoneLayout, 'rockWalls' | 'sideRooms'>>,
   plasticWorms: readonly Readonly<Point>[] = [],
 ): MobileSnackAvoid {
   const mats = elementSweeps(zone);
   const hazards = zone.hazards.map(hazardSweep);
+  const rock = [...(zone.rockWalls ?? []), ...(zone.sideRooms ?? [])].map(
+    (wall): HazardRect => ({ kind: 'rect', x0: wall.x0, x1: wall.x1, y0: wall.y0, y1: wall.y1 }),
+  );
   return {
     bounds: swimBounds(zone),
     homeSpot: zone.homeSpot,
@@ -421,8 +428,8 @@ export function mobileSnackAvoid(
     currents: zone.currents,
     mats,
     worms: plasticWorms,
-    keepAway: [...hazards, ...mats, ...(zone.movingHazards ?? []).map(movingHazardSweep)],
-    hazards,
+    keepAway: [...hazards, ...mats, ...(zone.movingHazards ?? []).map(movingHazardSweep), ...rock],
+    hazards: [...hazards, ...rock],
     threats: zoneThreats(zone),
   };
 }

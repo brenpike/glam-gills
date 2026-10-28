@@ -117,6 +117,7 @@ const ALL_AREA_MET: readonly string[] = [
   'crayfish',
   'stalactite-drip',
   'geyser-vent',
+  'pulsing-current',
 ];
 
 /** Every fact card found by playing: the area cards, then the two refuge cards. */
@@ -312,17 +313,17 @@ describe('bookListing', () => {
     expect(sections.map((section) => section.heading)).toEqual([
       'Morphs: 0 of 8 found',
       'Dream colours',
-      'Facts: 1 of 16 found',
+      'Facts: 1 of 17 found',
     ]);
   });
 
   it('counts found morphs and fact cards in the headings', () => {
     const [morphs, , factCards] = bookListing(['wild', 'melanoid', 'wild'], ['tilapia']);
     expect(morphs.heading).toBe('Morphs: 2 of 8 found');
-    expect(factCards.heading).toBe('Facts: 2 of 16 found');
-    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 14 of 16 found');
-    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 16 found');
-    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 16 of 16 found');
+    expect(factCards.heading).toBe('Facts: 2 of 17 found');
+    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 15 of 17 found');
+    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 17 found');
+    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 17 of 17 found');
     expect(bookListing(ALL_MORPHS, ['tilapia'])[0].heading).toBe('Morphs: 8 of 8 found');
   });
 
@@ -603,6 +604,7 @@ describe('bookListing', () => {
       ['crayfish', 'Explore the spring cave to find this card.'],
       ['stalactite-drip', 'Explore the spring cave to find this card.'],
       ['geyser-vent', 'Explore the spring cave to find this card.'],
+      ['pulsing-current', 'Explore the spring cave to find this card.'],
       ['axolotl-refuges', 'Visit the refuge to find this card.'],
       ['canal-clean-ups', 'Beat an area, then visit the refuge to find this card.'],
     ]);
@@ -611,13 +613,13 @@ describe('bookListing', () => {
 
   it('holds the refuge cards after the area cards, found once found, with their own hint and never a picture (C14)', () => {
     const [, , found] = bookListing([], ALL_MET);
-    expect(found.entries.slice(13, 15)).toEqual([
+    expect(found.entries.slice(14, 16)).toEqual([
       { id: 'axolotl-refuges', found: true, name: 'Axolotl refuges', text: AXOLOTL_REFUGES_FACT.body, hasPicture: false },
       { id: 'canal-clean-ups', found: true, name: 'Canal clean-ups', text: CANAL_CLEAN_UPS_FACT.body, hasPicture: false },
     ]);
     const [, , refugeOnly] = bookListing([], ['axolotl-refuges']);
-    expect(refugeOnly.entries[13].found).toBe(true);
-    expect(refugeOnly.entries[14]).toEqual({
+    expect(refugeOnly.entries[14].found).toBe(true);
+    expect(refugeOnly.entries[15]).toEqual({
       id: 'canal-clean-ups',
       found: false,
       name: '???',
@@ -661,11 +663,12 @@ describe('bookListing', () => {
         'crayfish',
         'stalactite-drip',
         'geyser-vent',
+        'pulsing-current',
         'axolotl-refuges',
         'canal-clean-ups',
         'boyOrGirl',
       ]);
-      expect(factCards.entries[15]).toEqual(boyOrGirl);
+      expect(factCards.entries[16]).toEqual(boyOrGirl);
     }
   });
 
@@ -691,7 +694,8 @@ describe('bookPages', () => {
       ['dreamColour', 5],
       ['dreamColour', 5],
       ['dreamColour', 5],
-      ['dreamColour', 2],
+      ['dreamColour', 3],
+      ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
@@ -715,8 +719,8 @@ describe('bookPages', () => {
   });
 
   it('puts every Dream colour on its own page at one row per page', () => {
-    expect(DREAM_COLOURS).toHaveLength(17);
-    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 17 + 16);
+    expect(DREAM_COLOURS).toHaveLength(18);
+    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 18 + 17);
   });
 
   it('gives an empty section one page', () => {

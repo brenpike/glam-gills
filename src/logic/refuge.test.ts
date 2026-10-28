@@ -10,6 +10,7 @@ import {
   POND_2_AREA,
   POND_AREA,
   POND_HABITAT,
+  SPRING_CAVE_2_AREA,
   SPRING_CAVE_AREA,
   SPRING_CAVE_HABITAT,
   type AreaData,
@@ -140,7 +141,10 @@ describe('refugeSections', () => {
       { areaId: CHINAMPA_AREA.id, areaNumber: 4, cleared: false },
       { areaId: CHINAMPA_2_AREA.id, areaNumber: 5, cleared: false },
     ]);
-    expect(springCave.batches).toEqual([{ areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: false }]);
+    expect(springCave.batches).toEqual([
+      { areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: false },
+      { areaId: SPRING_CAVE_2_AREA.id, areaNumber: 7, cleared: false },
+    ]);
   });
 
   it('hides every section on a fresh save', () => {
@@ -190,10 +194,16 @@ describe('refugeSections', () => {
     expect(both.batches.map((batch) => batch.cleared)).toEqual([true, true]);
   });
 
-  it('cleans the spring cave section, one batch, when Area 6 is beaten (issue #77)', () => {
-    const sections = refugeSections(beaten(SPRING_CAVE_AREA.id));
-    expect(sections.map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'clean']);
-    expect(sections[3].batches).toEqual([{ areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: true }]);
+  it('keeps the spring cave section dirty until both Area 6 and Area 7 are beaten (issues #77 and #105)', () => {
+    const area6Only = refugeSections(beaten(SPRING_CAVE_AREA.id));
+    expect(area6Only.map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'dirty']);
+    expect(area6Only[3].batches).toEqual([
+      { areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: true },
+      { areaId: SPRING_CAVE_2_AREA.id, areaNumber: 7, cleared: false },
+    ]);
+    const both = refugeSections(beaten(SPRING_CAVE_AREA.id, SPRING_CAVE_2_AREA.id))[3];
+    expect(both.state).toBe('clean');
+    expect(both.batches.map((batch) => batch.cleared)).toEqual([true, true]);
   });
 
   it('never counts a dev area', () => {
@@ -234,7 +244,7 @@ describe('refugeAreaLine (issue #113, ND-8)', () => {
   it('names the areas of a clean section', () => {
     const sections = refugeSections(beaten(...AREAS.map((area) => area.id)));
     expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean', 'clean']);
-    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Area 6']);
+    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7']);
   });
 
   it('takes the area numbers from the area data', () => {
@@ -332,8 +342,10 @@ describe('newlyCleanHabitatIds', () => {
     expect(newlyCleanHabitatIds({}, beaten(CHINAMPA_2_AREA.id, CHINAMPA_AREA.id))).toEqual([CHINAMPA_HABITAT.id]);
   });
 
-  it('lists the spring cave when Area 6 is beaten (issue #77)', () => {
-    expect(newlyCleanHabitatIds({}, beaten(SPRING_CAVE_AREA.id))).toEqual([SPRING_CAVE_HABITAT.id]);
+  it('lists the spring cave only when Area 6 and Area 7 are both beaten (issues #77 and #105)', () => {
+    const area6 = beaten(SPRING_CAVE_AREA.id);
+    expect(newlyCleanHabitatIds({}, area6)).toEqual([]);
+    expect(newlyCleanHabitatIds(area6, { ...area6, ...beaten(SPRING_CAVE_2_AREA.id) })).toEqual([SPRING_CAVE_HABITAT.id]);
   });
 
   it('lists a future habitat with no code change', () => {
