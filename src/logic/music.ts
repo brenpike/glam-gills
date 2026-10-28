@@ -30,10 +30,12 @@ export type MusicVoice =
   | 'woodBlock'
   | 'bubble'
   | 'boing'
-  | 'firefly';
+  | 'firefly'
+  | 'glass'
+  | 'drip';
 
-/** Voices with no pitch: their notes carry a null MIDI number. */
-export const UNPITCHED_VOICES: readonly MusicVoice[] = Object.freeze(['tap', 'shaker', 'kick', 'slap', 'guiro', 'boing']);
+/** Voices with no pitch: their notes carry a null MIDI number. A drip's fall is the synth's. */
+export const UNPITCHED_VOICES: readonly MusicVoice[] = Object.freeze(['tap', 'shaker', 'kick', 'slap', 'guiro', 'boing', 'drip']);
 
 /** Drum voices, which a dusk version never plays (M4). A faint shaker is not a drum. */
 export const DRUM_VOICES: readonly MusicVoice[] = Object.freeze(['tap', 'kick', 'slap', 'guiro', 'woodBlock']);
@@ -102,6 +104,11 @@ export interface MusicCue {
   dusk?: Readonly<DuskPace>;
   /** For a dusk version, the id of the day cue it is made from. */
   dayId?: string;
+  /**
+   * How much of the cue goes to the music's echo, above 0 and at most 1; absent for no echo, so
+   * only the shared room reverb. A dusk version keeps its day cue's.
+   */
+  echo?: number;
 }
 
 /** The home note of a sounds key: sounds play the major pentatonic on it (PRD S12; docs/sound-guide.md, section 3). */

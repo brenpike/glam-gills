@@ -9,6 +9,7 @@ import {
   FIREFLY_GOLD,
   GALAXY,
   LILY_GREEN,
+  MOONSTONE,
   PERK_VALUES,
   PLUM,
   POND_2_TREASURES,
@@ -683,7 +684,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -694,8 +695,9 @@ describe('Dream colours', () => {
       RAINBOW,
       PLUM,
       TIE_DYE_GALAXY,
+      MOONSTONE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(16);
+    expect(DREAM_COLOURS).toHaveLength(17);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -718,6 +720,7 @@ describe('Dream colours', () => {
       'firefly-gold',
       'poppy-red',
       'plum',
+      'moonstone',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -736,6 +739,15 @@ describe('Dream colours', () => {
     expect(PLUM).toEqual({ id: 'plum', name: 'Plum', rarity: 'rare', kind: 'solid' });
     expect(Object.isFrozen(PLUM)).toBe(true);
     expect(dreamColourById('plum')).toBe(PLUM);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Moonstone a rare solid, the seventeenth and last Dream colour, with a name no other Dream colour has (issue #77)', () => {
+    expect(MOONSTONE).toEqual({ id: 'moonstone', name: 'Moonstone', rarity: 'rare', kind: 'solid' });
+    expect(Object.isFrozen(MOONSTONE)).toBe(true);
+    expect(dreamColourById('moonstone')).toBe(MOONSTONE);
+    expect(DREAM_COLOURS.at(-1)).toBe(MOONSTONE);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });

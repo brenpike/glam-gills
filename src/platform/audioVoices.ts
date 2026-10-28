@@ -28,6 +28,8 @@ const PAD_HZ = 950;
 const PAD_RELEASE_S = 1.2;
 /** The music's boing: its low, high and end pitches in Hz. */
 const BOING_HZ: readonly number[] = Object.freeze([260, 720, 380]);
+/** A water drip: its top pitch in Hz, up to DRIP_HZ.top + DRIP_HZ.spread, and the share of it the drip falls to. */
+const DRIP_HZ = Object.freeze({ top: 1500, spread: 900, fall: 0.35 });
 /** Seconds a sound's strummed strings are apart, low to high, unless its note says. */
 const STRUM_GAP_S = 0.014;
 /** How much quieter each higher string of a sound's strum is. */
@@ -85,6 +87,10 @@ export function playMusicNote(kit: VoiceKit, out: AudioNode, note: MusicNote, ti
       return boing(kit, out, time, v, BOING_HZ);
     case 'firefly':
       return firefly(kit, out, time, midi, v);
+    case 'glass':
+      return glass(kit, out, time, midi, v, note.duration);
+    case 'drip':
+      return drip(kit, out, time, v);
     default: {
       const unhandled: never = note.voice;
       throw new Error(`audioVoices: no music voice ${String(unhandled)}`);
@@ -444,6 +450,21 @@ function bubble(kit: VoiceKit, out: AudioNode, time: number, base: number, v: nu
   osc.frequency.setValueAtTime(base, time);
   osc.frequency.exponentialRampToValueAtTime(base * 2.6, time + 0.07);
   envelope(gain, time, 0.003, v, 0.08);
+  osc.connect(gain);
+  gain.connect(out);
+  osc.start(time);
+  osc.stop(time + 0.12);
+}
+
+/** A water drip: a quick fall in pitch from a random top. */
+function drip(kit: VoiceKit, out: AudioNode, time: number, v: number): void {
+  const { ctx } = kit;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const top = DRIP_HZ.top + Math.random() * DRIP_HZ.spread;
+  osc.frequency.setValueAtTime(top, time);
+  osc.frequency.exponentialRampToValueAtTime(top * DRIP_HZ.fall, time + 0.06);
+  envelope(gain, time, 0.002, v, 0.09);
   osc.connect(gain);
   gain.connect(out);
   osc.start(time);

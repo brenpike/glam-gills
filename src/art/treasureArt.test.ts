@@ -231,9 +231,10 @@ const CHINAMPA_SLUGS: readonly string[] = addedBy(CHINAMPA_TREASURES, 'chinampa'
 const CHINAMPA_2_SLUGS: readonly string[] = addedBy(CHINAMPA_2_TREASURES, 'chinampa').map((treasure) =>
   treasureSlug(treasure.id),
 );
-/** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. */
+/** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. The Moonstone Paint shell is the spring cave's. */
 const CANAL_ICON_SLUGS = TREASURE_ICON_SLUGS.filter(
   (slug) =>
+    slug !== 'paint-shell-moonstone' &&
     !POND_SLUGS.includes(slug) &&
     !POND_2_SLUGS.includes(slug) &&
     !CHINAMPA_SLUGS.includes(slug) &&
@@ -307,6 +308,8 @@ const CHINAMPA_2_ICON_DIGESTS: Readonly<Record<number, string>> = {
   80: 'ae1c2d49a3e3277d:265',
 };
 const CHINAMPA_2_SWATCH_DIGEST = '283dbca78aec2213:21';
+/** The same digest for the Moonstone swatch (issue #77), pinned when it was authored. Re-pin it, and only it, when Moonstone is retuned on purpose. */
+const MOONSTONE_SWATCH_DIGEST = '0d26c3a93a452bc5:20';
 const EPS = 1e-9;
 
 // ---------------------------------------------------------------------------
@@ -654,7 +657,9 @@ describe('Unfound silhouettes', () => {
     }
     expect(
       swatchDigests(
-        DREAM_SWATCH_IDS.filter((id) => id !== 'lily-green' && id !== 'firefly-gold' && id !== 'poppy-red' && id !== 'plum'),
+        DREAM_SWATCH_IDS.filter(
+          (id) => id !== 'lily-green' && id !== 'firefly-gold' && id !== 'poppy-red' && id !== 'plum' && id !== 'moonstone',
+        ),
       ),
       'canal swatches',
     ).toBe(NORMAL_SWATCH_DIGEST);
@@ -662,6 +667,7 @@ describe('Unfound silhouettes', () => {
     expect(swatchDigests(['firefly-gold']), 'firefly-gold swatch').toBe(AREA3_SWATCH_DIGEST);
     expect(swatchDigests(['poppy-red']), 'poppy-red swatch').toBe(CHINAMPA_SWATCH_DIGEST);
     expect(swatchDigests(['plum']), 'plum swatch').toBe(CHINAMPA_2_SWATCH_DIGEST);
+    expect(swatchDigests(['moonstone']), 'moonstone swatch').toBe(MOONSTONE_SWATCH_DIGEST);
   });
 });
 
@@ -1722,10 +1728,10 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       'pearl-tail-charm',
       'firefly-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(72);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
     expect(TREASURE_ICON_SLUGS.slice(23, 34)).toEqual(AREA3_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(16);
+    expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(AREA3_ICON_SLUGS).toEqual([...AREA3_ITEM_SLUGS, 'paint-shell-firefly-gold']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
   });
@@ -1993,11 +1999,11 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
       'golden-corn',
       'monarch-wings',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(72);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(34, 45)).toEqual(CHINAMPA_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(16);
+    expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(DREAM_SWATCH_IDS[14]).toBe('poppy-red');
     expect(CHINAMPA_ICON_SLUGS).toEqual([...CHINAMPA_ITEM_SLUGS, 'paint-shell-poppy-red']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -2368,11 +2374,11 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       'alebrije-statue',
       'rainbow-serape-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(72);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(45, 56)).toEqual(CHINAMPA_2_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(16);
+    expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(DREAM_SWATCH_IDS[15]).toBe('plum');
     expect(CHINAMPA_2_ICON_SLUGS).toEqual([...CHINAMPA_2_ITEM_SLUGS, 'paint-shell-plum']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -2649,6 +2655,24 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       expect(rec.calls[0]).toEqual(['translate', [0, PX / 2]]);
       expect(parseRgba(rec.gradients[0].stops[0][1]).rgb).toEqual(channelsOf(BADGE_FILL.diamond));
     });
+  });
+});
+
+describe('Moonstone Dream swatch (issue #77)', () => {
+  it('lists Moonstone as the seventeenth and last Dream swatch, with its Paint shell icon slug last', () => {
+    expect(DREAM_SWATCH_IDS).toHaveLength(17);
+    expect(DREAM_SWATCH_IDS.at(-1)).toBe('moonstone');
+    expect(TREASURE_ICON_SLUGS.at(-1)).toBe('paint-shell-moonstone');
+  });
+
+  it('draws the Moonstone swatch and Paint shell icon in the Moonstone body colour, a light plain tile, baked', () => {
+    expect(DREAM_SWATCH.moonstone).toEqual({ body: '#f5f7fc', pattern: 'plain', marks: [], dark: false });
+    expect(contrastRatio(DREAM_SWATCH.moonstone.body, INK)).toBeGreaterThanOrEqual(9);
+    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-moonstone', 48))).toContain('#f5f7fc');
+    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'moonstone', 32))).toContain('#f5f7fc');
+    bakes.length = 0;
+    const tex = bakeTreasureTextures({} as never, 2);
+    expect(tex.swatches.moonstone.key).toBe('dream-swatch-moonstone-32');
   });
 });
 

@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the sixteen Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the seventeen Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -475,7 +475,8 @@ export type DreamLookId =
   | 'lily-green'
   | 'firefly-gold'
   | 'poppy-red'
-  | 'plum';
+  | 'plum'
+  | 'moonstone';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -542,6 +543,8 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   'poppy-red': dreamSlots('#e8402f', '#d13d33', '#f18c82', '#f5a9a1', ['#ffb02e', '#ffc15c'], ['#eaa231', '#eeb45b']),
   // Chinampa Area 5 Dream colour (issue #118, ND-11). Body #933f93 is a deep plum (relative luminance 0.119): 6.23:1 with white and 2.31:1 with ink, so it follows the dark-body rules (white spots, eye ring, rim light).
   plum: dreamSlots('#933f93', '#873c8b', '#be8cbe', '#cea9ce', ['#f2a0ee', '#f5b5f2'], ['#de94de', '#e5a9e5']),
+  // Spring cave Area 6 Dream colour (issue #77, ND-12). Body #f5f7fc is a pale silvery white (relative luminance 0.930), the lightest Dream colour: 13.43:1 with ink, so 3.66:1 worst case.
+  moonstone: dreamSlots('#f5f7fc', '#dddee7', '#f9fafd', '#fbfbfe', ['#7f9fdc', '#9bb4e4'], ['#7793ce', '#92a8d8']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */

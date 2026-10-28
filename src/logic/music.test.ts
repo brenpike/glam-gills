@@ -206,6 +206,26 @@ describe('the dusk rule (M4)', () => {
   });
 });
 
+describe('music voices', () => {
+  it('plays glass bells with a pitch and water drips without one, and neither is a drum', () => {
+    expect(UNPITCHED_VOICES).not.toContain('glass');
+    expect(UNPITCHED_VOICES).toContain('drip');
+    expect(DRUM_VOICES).not.toContain('glass');
+    expect(DRUM_VOICES).not.toContain('drip');
+  });
+});
+
+describe('the music echo', () => {
+  it('is off for every cue so far, which plays only the shared room reverb', () => {
+    for (const cue of ALL_CUES) expect(cue.echo).toBeUndefined();
+  });
+
+  it("keeps a day cue's echo in its dusk version", () => {
+    expect(duskVersion({ ...CANAL_PADDLE, echo: 0.4 }).echo).toBe(0.4);
+    expect(duskVersion(CANAL_PADDLE).echo).toBeUndefined();
+  });
+});
+
 describe('Sunny Tank data (docs/music-guide.md, section 4)', () => {
   it('is an 8-bar loop in G at 96 bpm, swung', () => {
     expect(SUNNY_TANK.bars).toHaveLength(8);

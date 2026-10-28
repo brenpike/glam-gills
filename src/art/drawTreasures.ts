@@ -233,7 +233,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The sixteen Dream swatches in guide 3f order (Poppy red, issue #76, then Plum, issue #103, last). */
+/** The seventeen Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, then Moonstone, issue #77, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -251,6 +251,7 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'firefly-gold',
   'poppy-red',
   'plum',
+  'moonstone',
 ];
 
 /**
@@ -378,8 +379,8 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All seventy-two icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
- * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, then the sixteen Paint shells
+ * All seventy-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, then the seventeen Paint shells
  * in Dream order.
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [

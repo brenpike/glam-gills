@@ -56,6 +56,7 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'firefly-gold',
   'poppy-red',
   'plum',
+  'moonstone',
 ];
 const DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum'];
 const RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum'];
@@ -135,9 +136,9 @@ function everyPair(): [string, DreamLookId, MorphPalette][] {
 }
 
 describe('Dream colour slots (guide 3f)', () => {
-  it('has the sixteen Dream colours with the swatch body colours', () => {
-    expect(DREAM_IDS).toHaveLength(16);
-    expect(DREAM_IDS.slice(-4)).toEqual(['lily-green', 'firefly-gold', 'poppy-red', 'plum']);
+  it('has the seventeen Dream colours with the swatch body colours', () => {
+    expect(DREAM_IDS).toHaveLength(17);
+    expect(DREAM_IDS.slice(-5)).toEqual(['lily-green', 'firefly-gold', 'poppy-red', 'plum', 'moonstone']);
     expect(DREAM_IDS).toEqual(Object.keys(DREAM_SWATCH));
     for (const id of DREAM_IDS) expect(DREAM_SLOTS[id].body, id).toBe(DREAM_SWATCH[id].body);
   });
@@ -212,6 +213,7 @@ describe('Dream colour slots (guide 3f)', () => {
       'lily-green': [1.15, 0.079],
       'poppy-red': [2.84, 0.333],
       plum: [4.39, 0.473],
+      moonstone: [1.32, 0.202],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -266,6 +268,7 @@ describe('Dream colour slots (guide 3f)', () => {
       'lily-green': [3.27, 0.393],
       'firefly-gold': [2.84, 0.333],
       plum: [1.54, 0.221],
+      moonstone: [3.76, 0.415],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -328,6 +331,7 @@ describe('Dream colour slots (guide 3f)', () => {
       'lily-green': [5.05, 0.506],
       'firefly-gold': [4.39, 0.473],
       'poppy-red': [1.54, 0.221],
+      moonstone: [5.81, 0.489],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -337,6 +341,66 @@ describe('Dream colour slots (guide 3f)', () => {
     // Plum is a deep body between Midnight blue and Rainbow in value, so Poppy red is the closest in greyscale.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
     expect(closest).toBe('poppy-red');
+  });
+
+  it('gives Moonstone the 3f mixes of its two picks, the lightest body, a 9:1 body and a plain light swatch (issue #77, ND-12)', () => {
+    const s = DREAM_SLOTS.moonstone;
+    expect([s.body, s.gillNearStem]).toEqual(['#f5f7fc', '#7f9fdc']);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // Guide 10 light-body rule: the body is 9:1 or more with ink, so its worst case on any background is 3:1 or more.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(13.43, 2);
+    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(9);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeCloseTo(3.66, 2);
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(16.26, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(2.48, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.93, 2);
+    for (const id of DREAM_IDS.filter((other) => other !== 'moonstone')) {
+      expect(relativeLuminance(s.body), id).toBeGreaterThan(relativeLuminance(DREAM_SLOTS[id].body));
+    }
+    expect(DREAM_SWATCH.moonstone).toEqual({ body: '#f5f7fc', pattern: 'plain', marks: [], dark: false });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'moonstone').extras).toEqual({ spot: 'rgba(43,35,80,0.30)' });
+  });
+
+  it('keeps Moonstone apart from every other Dream colour in greyscale and in colour, Hearts most of all (PRD F15)', () => {
+    const body = DREAM_SLOTS.moonstone.body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'moonstone').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [1.22, 0.117],
+      'sky-blue': [1.43, 0.14],
+      lavender: [1.47, 0.141],
+      'sunset-orange': [1.48, 0.159],
+      bubblegum: [1.47, 0.148],
+      'midnight-blue': [9.23, 0.599],
+      hearts: [1.07, 0.089],
+      'tie-dye': [1.12, 0.101],
+      iridescent: [1.4, 0.123],
+      rainbow: [2.59, 0.322],
+      galaxy: [10.94, 0.637],
+      'tie-dye-galaxy': [10.49, 0.625],
+      'lily-green': [1.15, 0.169],
+      'firefly-gold': [1.32, 0.202],
+      'poppy-red': [3.76, 0.415],
+      plum: [5.81, 0.489],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
+    expect(closest).toBe('hearts');
   });
 });
 
@@ -692,7 +756,7 @@ describe('Dream marker (guide 4e, 6p)', () => {
 });
 
 describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
-  it('leaves exactly the ten solids plain', () => {
+  it('leaves exactly the eleven solids plain', () => {
     const plain = DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'plain');
     expect(plain).toEqual(SOLID_IDS);
   });

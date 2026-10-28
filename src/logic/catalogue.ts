@@ -87,7 +87,8 @@ export type DreamColourId =
   | 'lily-green'
   | 'firefly-gold'
   | 'poppy-red'
-  | 'plum';
+  | 'plum'
+  | 'moonstone';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -169,9 +170,17 @@ export const PLUM: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
+/** The spring cave's Area 6 Dream colour, a pale silvery white held by that area's one Paint shell (issue #77). */
+export const MOONSTONE: DreamColour = Object.freeze({
+  id: 'moonstone',
+  name: 'Moonstone',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
- * (Area 3), Poppy red and Rainbow (Area 4), then Plum and Tie-dye galaxy (Area 5).
+ * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), then Moonstone (Area 6).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -182,6 +191,7 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   RAINBOW,
   PLUM,
   TIE_DYE_GALAXY,
+  MOONSTONE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
