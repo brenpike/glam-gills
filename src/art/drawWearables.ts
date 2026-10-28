@@ -1,5 +1,5 @@
 /**
- * Worn looks of the thirty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the thirty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -7,7 +7,8 @@
  * Water-lily shirt, Pearl tail charm and Firefly cape, and the chinampa Area 4's
  * Straw sun hat, Marigold necklace, Garden overalls, Monarch hair clip and Monarch
  * wings, and the chinampa Area 5's Bee headband, Bandana, Sunflower sunglasses,
- * Embroidered shirt, Hummingbird tail ribbon and Rainbow serape cape, painted on the anchors
+ * Embroidered shirt, Hummingbird tail ribbon and Rainbow serape cape, and the spring cave Area 6's
+ * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -51,6 +52,13 @@
  * sunflower's brown centre, the shirt's embroidery petals and the serape's stripes.
  * The Sunflower sunglasses keep the glasses construction (clear lens tint, never dark),
  * so the eyes always show. No look has net-like lines.
+ *
+ * The Area 6 looks (issue #77, ND-12) keep to the same footprints and rules. Their outer
+ * fills are the icons' own colours, imported by name from treasurePalette.ts
+ * (MINERS_HELMET_FILL, CAVE_CRYSTAL_FILL, EXPLORER_VEST_FILL, CRYSTAL_CUFF_BAND,
+ * CRYSTAL_CROWN_BAND; each 9:1 or better with ink, none red), so a worn look and its icon
+ * cannot drift. Their other colours are internal details: ink at the stripe alpha, the
+ * vest's belt, the cuff's gem and the crown's gold band. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -101,10 +109,14 @@ import {
   BOAT_TRIM,
   BOW_FILL,
   BOW_GEM,
+  CAVE_CRYSTAL_FILL,
+  CRYSTAL_CROWN_BAND,
+  CRYSTAL_CUFF_BAND,
   DIVING_TANK_FILL,
   DIVING_TANK_STRAP,
   DRAGONFLY_FRAME,
   DRAGONFLY_WING,
+  EXPLORER_VEST_FILL,
   FLIPPER_CUFF,
   FLIPPER_FILL,
   FEATHER_CAP_FILL,
@@ -123,6 +135,7 @@ import {
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_SOCK_FILL,
+  MINERS_HELMET_FILL,
   NECKLACE_CORD,
   NECKLACE_SHELL,
   PAINT_SHELL_RIDGE,
@@ -148,10 +161,17 @@ import {
 export const GARDEN_OVERALLS_PATCH = '#c8782c';
 
 // ---------------------------------------------------------------------------
+// Area 6 detail colours (issue #77)
+// ---------------------------------------------------------------------------
+
+/** Explorer vest belt strap, a tan leather: an internal detail colour inside the silhouette, so free. 2.5:1 against the vest. */
+export const EXPLORER_VEST_BELT = '#b98a50';
+
+// ---------------------------------------------------------------------------
 // The art-level outfit
 // ---------------------------------------------------------------------------
 
-/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/` or `chinampa/`). */
+/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/`, `chinampa/` or `spring-cave/`). */
 export type WearableArtSlug =
   | 'sun-hat'
   | 'shell-necklace'
@@ -183,12 +203,17 @@ export type WearableArtSlug =
   | 'sunflower-sunglasses'
   | 'embroidered-shirt'
   | 'hummingbird-tail-ribbon'
-  | 'rainbow-serape-cape';
+  | 'rainbow-serape-cape'
+  | 'miners-headlamp'
+  | 'crystal-pendant'
+  | 'explorer-vest'
+  | 'crystal-tail-cuff'
+  | 'crystal-crown';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
- * chinampa Area 5's six last, so WEARABLE_ART_SLUGS finds each slot's canal slug first.
+ * chinampa Area 5's six and the spring cave Area 6's five last, so WEARABLE_ART_SLUGS finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
   'sun-hat': 'head',
@@ -222,6 +247,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'embroidered-shirt': 'shirt',
   'hummingbird-tail-ribbon': 'tail',
   'rainbow-serape-cape': 'back',
+  'miners-headlamp': 'head',
+  'crystal-pendant': 'neck',
+  'explorer-vest': 'shirt',
+  'crystal-tail-cuff': 'tail',
+  'crystal-crown': 'head',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -2478,6 +2508,331 @@ function paintRainbowSerapeCape(ctx: CanvasRenderingContext2D, box: BackFrameBox
 }
 
 // ---------------------------------------------------------------------------
+// Head: Miner's headlamp (Common)
+// ---------------------------------------------------------------------------
+
+/** The hard hat's brim: the Sun hat's tilted ellipse, a little narrower (centre x, y, radii and tilt). */
+const LAMP_BRIM = { cx: 31, cy: -25.18, rx: 12.6, ry: 3.6, rot: -0.06 } as const;
+/** The helmet dome: its base on the brim (x from, x to, y) and its top y. */
+const LAMP_DOME = { x0: 23, x1: 39.2, base: -25.6, top: -37.4 } as const;
+/** The lamp housing on the dome's front: centre and radius; the lens inside it (ink at the stripe alpha) is this share of the radius. */
+const LAMP_HOUSING: Pt = { x: 38.4, y: -31.6 };
+const LAMP_HOUSING_R = 3.4;
+const LAMP_LENS_SHARE = 0.55;
+/** The helmet's centre rib: ink at the stripe alpha, this wide, along the dome from its top to its base, at this x. */
+const LAMP_RIB_X = 29.4;
+const LAMP_RIB_W = 1.4;
+
+/** The dome as one closed path: rising from the base at the rear, over the top, down to the base at the front. */
+function lampDomePath(): Path2D {
+  const { x0, x1, base, top } = LAMP_DOME;
+  const mid = (x0 + x1) / 2;
+  const dome = new Path2D();
+  dome.moveTo(x0, base);
+  dome.bezierCurveTo(x0 - 0.6, base - (base - top) * 0.7, mid - 4.4, top, mid, top);
+  dome.bezierCurveTo(mid + 4.4, top, x1 + 0.6, base - (base - top) * 0.7, x1, base);
+  dome.closePath();
+  return dome;
+}
+
+/**
+ * Common (issue #77): a #ffd98a pale amber hard hat, the Sun hat's hat construction: a tilted
+ * brim ellipse and a domed crown merged with a round lamp housing on the front, one `blob`
+ * silhouette (ink 2.0 all outside the fill). Inside it, the lamp lens (a disc of ink at the stripe
+ * alpha: the same colour darkened, not a second colour) and one centre rib down the dome (the
+ * same ink alpha), clipped to the hat; one shine; no trim. Ink included it fills HEAD_FOOTPRINT:
+ * x 16.4 to 45.6, lowest ink y -19.5 on the brim, as the Sun hat's, so the glasses keep their
+ * clearance; the dome's top is about y -39.4.
+ */
+function paintMinersHeadlamp(ctx: CanvasRenderingContext2D): void {
+  const brim = ellipsePath(LAMP_BRIM.cx, LAMP_BRIM.cy, LAMP_BRIM.rx, LAMP_BRIM.ry, LAMP_BRIM.rot);
+  const dome = lampDomePath();
+  const housing = ellipsePath(LAMP_HOUSING.x, LAMP_HOUSING.y, LAMP_HOUSING_R, LAMP_HOUSING_R);
+  blobs(ctx, [brim, dome, housing], MINERS_HELMET_FILL);
+  ctx.save();
+  ctx.clip(dome);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.fill(rectPath(LAMP_RIB_X - LAMP_RIB_W / 2, LAMP_DOME.top - 1, LAMP_RIB_X + LAMP_RIB_W / 2, LAMP_DOME.base + 1));
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.fill(ellipsePath(LAMP_HOUSING.x, LAMP_HOUSING.y, LAMP_HOUSING_R * LAMP_LENS_SHARE, LAMP_HOUSING_R * LAMP_LENS_SHARE));
+  ctx.restore();
+  shine(ctx, 26, -33.4, 1.1, 3, 0.2);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Crystal pendant (Common)
+// ---------------------------------------------------------------------------
+
+/** The chain: from this x to this x, and its share of the Pond-weed scarf's band height (it hangs inside the band). */
+const PENDANT_CHAIN_X0 = 4.4;
+const PENDANT_CHAIN_X1 = 39.6;
+const PENDANT_CHAIN_SHARE = 0.92;
+/** The crystal: centre x, its half width, its most half height (fitted to the band), and the share of the half height its widest point sits above the centre. */
+const PENDANT_X = 27.6;
+const PENDANT_HALF_W = 4.2;
+const PENDANT_MAX_HALF_H = 4.3;
+const PENDANT_WAIST = 0.18;
+/** The ink ring round the crystal that sets it off the chain (as the Pearl tail charm's ring), and its facet lines (ink at the stripe alpha), each this wide. */
+const PENDANT_RING_LW = 0.9;
+const PENDANT_FACET_LW = 0.9;
+
+/** The chain: a band PENDANT_CHAIN_SHARE of the scarf band's height from the first x to the last, centred in the band. */
+function pendantChainPath(): Path2D {
+  const inset = (1 - PENDANT_CHAIN_SHARE) / 2;
+  const upper = (x: number): number => scarfUpperAt(x) + inset * (scarfLowerAt(x) - scarfUpperAt(x));
+  const lower = (x: number): number => scarfLowerAt(x) - inset * (scarfLowerAt(x) - scarfUpperAt(x));
+  const steps = Math.round((PENDANT_CHAIN_X1 - PENDANT_CHAIN_X0) / 0.5);
+  const xs = Array.from({ length: steps + 1 }, (_, i) => PENDANT_CHAIN_X0 + ((PENDANT_CHAIN_X1 - PENDANT_CHAIN_X0) * i) / steps);
+  const chain = new Path2D();
+  xs.forEach((x, i) => (i === 0 ? chain.moveTo(x, upper(x)) : chain.lineTo(x, upper(x))));
+  for (let i = steps; i >= 0; i--) chain.lineTo(xs[i], lower(xs[i]));
+  chain.closePath();
+  return chain;
+}
+
+/** The crystal's four corners (a long diamond with the widest point above the middle), fitted inside the scarf band at PENDANT_X. */
+function pendantCrystal(): { readonly points: readonly Pt[]; readonly centre: Pt } {
+  const upper = scarfUpperAt(PENDANT_X);
+  const lower = scarfLowerAt(PENDANT_X);
+  const centre: Pt = { x: PENDANT_X, y: (upper + lower) / 2 };
+  const half = Math.min(PENDANT_MAX_HALF_H, (lower - upper) / 2 - 0.1);
+  const waistY = centre.y - half * PENDANT_WAIST;
+  return {
+    centre,
+    points: [
+      { x: centre.x, y: centre.y - half },
+      { x: centre.x + PENDANT_HALF_W, y: waistY },
+      { x: centre.x, y: centre.y + half },
+      { x: centre.x - PENDANT_HALF_W, y: waistY },
+    ],
+  };
+}
+
+/**
+ * Common (issue #77): a #c9f3ea pale teal crystal on a chain of the same colour, strung round the
+ * neck: the Pond-weed scarf's band, with the chain a share of its height and the crystal a long
+ * diamond that fits it, merged into one `blob` silhouette with ink 0.6 outside the fill (as the
+ * scarf: the Neck footprint is too shallow for 2.0). A thin ink ring (0.9) sets the crystal off the
+ * chain, as the Pearl tail charm's ring does the pearl. The crystal has a girdle line and a centre
+ * line (ink at the stripe alpha, the same colour darkened, not a second colour) and one shine on
+ * it; no trim. Everything lies inside the scarf's band, so it keeps the gill-root zone, the cheek
+ * heart zone and the silhouette outline's outer half as the scarf does; the mouth paints over its front.
+ */
+function paintCrystalPendant(ctx: CanvasRenderingContext2D): void {
+  const crystal = pendantCrystal();
+  const gemPath = roundedPolygon(crystal.points, 0.35);
+  silhouette(
+    ctx,
+    [
+      { path: pendantChainPath(), fill: CAVE_CRYSTAL_FILL },
+      { path: gemPath, fill: CAVE_CRYSTAL_FILL },
+    ],
+    SCARF_OL,
+  );
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = PENDANT_RING_LW;
+  ctx.stroke(gemPath);
+  const [top, right, bottom, left] = crystal.points;
+  const facets = new Path2D();
+  facets.moveTo(left.x, left.y);
+  facets.lineTo(right.x, right.y);
+  facets.moveTo(top.x, top.y);
+  facets.lineTo(crystal.centre.x - 0.6, left.y);
+  facets.lineTo(bottom.x, bottom.y);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = PENDANT_FACET_LW;
+  ctx.stroke(facets);
+  ctx.restore();
+  shine(ctx, crystal.centre.x + 1.5, crystal.points[0].y + 2.6, 0.5, 1.2, 0.5);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Explorer vest (Rare)
+// ---------------------------------------------------------------------------
+
+/** The belt's place: how far down the torso half it starts (share of the inset ry below the centre line), and its height. */
+const VEST_BELT_AT = 0.56;
+const VEST_BELT_H = 3;
+/** Thin ink lines on each side of the belt, as the Embroidered shirt's hem band. */
+const VEST_BELT_LW = 0.6;
+/**
+ * Rare (issue #77): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline
+ * arc) in a #e4ecb4 pale khaki canvas, with one #b98a50 belt strap across the lower torso (the one
+ * trim band, between two 0.6 ink lines, clipped inside the silhouette) and one shine placed as on
+ * the Tank top. No pocket: a patch of ink would hide the canvas the swim-view floor counts on a
+ * Baby's short Shirt. It sits inside the silhouette, so it never reaches the torso edge band, the
+ * front line, the tail root or a leg. No sleeves.
+ */
+function paintExplorerVest(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, EXPLORER_VEST_FILL, () => {
+    const y0 = e.cy + e.ry * VEST_BELT_AT;
+    trimBand(ctx, { x0: outline.xr - 1, x1: outline.xf + 1, y0, y1: y0 + VEST_BELT_H }, EXPLORER_VEST_BELT, true, VEST_BELT_LW);
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
+// Tail: Crystal tail cuff (Epic)
+// ---------------------------------------------------------------------------
+
+/** The cuff band across the tail, in the Tail frame: x' from, x' to, y' from (above the core top), y' to, and its corner radius. */
+const CUFF_BAND = { x0: -3.4, x1: 3.8, y0: -3.6, y1: 13, r: 2.4 } as const;
+/**
+ * The three crystal points that jut from the band toward the head and up, the head-side ones leaning
+ * further: where each leaves the band, its lean (radians from straight up, toward the head), its
+ * length and half width. Nothing reaches toward the tail tip past the band, so a Dream marker star
+ * past it stays clear at every swim phase.
+ */
+const CUFF_CRYSTALS: readonly { readonly base: Pt; readonly lean: number; readonly length: number; readonly half: number }[] = [
+  { base: { x: -0.4, y: -2.6 }, lean: 0.05, length: 9.4, half: 2.5 },
+  { base: { x: 2.6, y: -2.4 }, lean: 0.62, length: 9, half: 2.4 },
+  { base: { x: 3.4, y: 0.6 }, lean: 1.2, length: 8.8, half: 2.3 },
+];
+/** The gem on the band: its centre. */
+const CUFF_GEM: Pt = { x: 0.2, y: 6.2 };
+
+/** One crystal point: a pentagon from its base along the lean, a long tip and shoulders at 0.7 of its length. */
+function cuffCrystalPath(c: (typeof CUFF_CRYSTALS)[number]): Path2D {
+  const ux = Math.sin(c.lean);
+  const uy = -Math.cos(c.lean);
+  const at = (a: number, b: number): Pt => ({ x: c.base.x + a * ux - b * uy, y: c.base.y + a * uy + b * ux });
+  return roundedPolygon([at(-1, -c.half), at(c.length * 0.68, -c.half), at(c.length, 0), at(c.length * 0.68, c.half), at(-1, c.half)], [0.5, 0.9, 0.7, 0.9, 0.5]);
+}
+
+/**
+ * Epic (issue #77): a cuff of CRYSTAL_CUFF_BAND pebble grey wrapped across the tail, with three #c9f3ea
+ * pale teal crystal points jutting from it up and toward the head, one merged `blob` silhouette
+ * (ink 2.0 all outside the fill), and one rounded gem (radius 2.5, outline 1.2, the Golden bow's pink)
+ * on the band: the Epic detail. One shine on the tallest crystal; no trim. Painted in the Tail frame
+ * (x' along the local tail direction toward the head, y' down). Everything is behind the band toward the
+ * tail tip, so a Dream marker star past it stays clear at every swim phase; everything, ink included,
+ * stays within TAIL_SLOT_REACH of the anchor.
+ */
+function paintCrystalTailCuff(ctx: CanvasRenderingContext2D): void {
+  const { x0, x1, y0, y1, r } = CUFF_BAND;
+  silhouette(ctx, [
+    ...CUFF_CRYSTALS.map((c) => ({ path: cuffCrystalPath(c), fill: CAVE_CRYSTAL_FILL })),
+    { path: roundRectPath(x0, y0, x1, y1, r), fill: CRYSTAL_CUFF_BAND },
+  ]);
+  const tall = CUFF_CRYSTALS[0];
+  shine(ctx, tall.base.x - 0.7, tall.base.y - tall.length * 0.5, 0.55, 1.5, 0.05);
+  gem(ctx, CUFF_GEM.x, CUFF_GEM.y, BOW_GEM, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
+// Head: Crystal crown (Legendary)
+// ---------------------------------------------------------------------------
+
+/** The crown's base band: fill ends along x (round ends included), thickness, and how its lower edge rests on the head (as the Bee headband's). */
+const CROWN_BAND_X0 = 18.4;
+const CROWN_BAND_X1 = 42.2;
+const CROWN_BAND_THICK = 5.4;
+const CROWN_BAND_FLOOR = -21.5;
+const CROWN_BAND_SINK = 0.6;
+/** The gold band along the crown band's middle: its colour width, and the thin ink lines on each side. */
+const CROWN_GOLD_W = 1.8;
+const CROWN_GOLD_LW = 0.6;
+/**
+ * The five crystal points: x of each base centre, height above the band's top edge, and half width at the
+ * shoulders. A point is wider at its foot, CROWN_POINT_FOOT more each side, so neighbours meet at the band
+ * and part above it.
+ */
+const CROWN_POINTS: readonly { readonly x: number; readonly height: number; readonly half: number }[] = [
+  { x: 22.2, height: 7.6, half: 2 },
+  { x: 27, height: 11, half: 2.2 },
+  { x: 31.8, height: 14, half: 2.4 },
+  { x: 36.4, height: 10.4, half: 2.2 },
+  { x: 40.4, height: 7, half: 1.9 },
+];
+const CROWN_POINT_FOOT = 1.1;
+/** How far below the band's top edge each point's base sinks, so the two merge. */
+const CROWN_POINT_SINK = 1.6;
+/** The star's centre: above the front point, clear of it. */
+const CROWN_STAR: Pt = { x: 41.4, y: -39.4 };
+
+function crownLowerAt(x: number): number {
+  return Math.min(headTopAt(x) + CROWN_BAND_SINK, CROWN_BAND_FLOOR);
+}
+
+/** The band as one closed path: its upper edge rear to front, a round front end, its lower edge back, a round rear end. */
+function crownBandPath(): Path2D {
+  const r = CROWN_BAND_THICK / 2;
+  const xa = CROWN_BAND_X0 + r;
+  const xb = CROWN_BAND_X1 - r;
+  const steps = Math.round((xb - xa) / 0.5);
+  const xs = Array.from({ length: steps + 1 }, (_, i) => xa + ((xb - xa) * i) / steps);
+  const band = new Path2D();
+  xs.forEach((x, i) => (i === 0 ? band.moveTo(x, crownLowerAt(x) - CROWN_BAND_THICK) : band.lineTo(x, crownLowerAt(x) - CROWN_BAND_THICK)));
+  band.arc(xb, crownLowerAt(xb) - r, r, -Math.PI / 2, Math.PI / 2);
+  for (let i = steps; i >= 0; i--) band.lineTo(xs[i], crownLowerAt(xs[i]));
+  band.arc(xa, crownLowerAt(xa) - r, r, Math.PI / 2, (3 * Math.PI) / 2);
+  band.closePath();
+  return band;
+}
+
+/**
+ * Legendary (issue #77): a pebble grey band hugging the head top (as the Bee headband's) under five
+ * #c9f3ea pale teal crystal points, the middle one tallest, all one merged silhouette (ink 2.0 all
+ * outside the fill; the band and the points share no ink between them). The Legendary trim is one
+ * #ffc12e gold band along the middle of the base band (between two 0.6 ink lines, clipped inside it)
+ * and one static 4-point star (R 3, outline 1.2) above the front point, outside the silhouette. One
+ * shine on the middle point; no gem. The band rests on the head: its lower edge sits 0.6 inside the
+ * head outline's fill, except toward the snout, where it keeps the Head footprint's floor (lowest ink
+ * y -19.5). Ink included it fills HEAD_FOOTPRINT, x 16.4 to 44.2, the tallest point's top about y -41.
+ */
+function paintCrystalCrown(ctx: CanvasRenderingContext2D): void {
+  const band = crownBandPath();
+  const points = CROWN_POINTS.map((p) => {
+    const bandTop = crownLowerAt(p.x) - CROWN_BAND_THICK;
+    const baseY = bandTop + CROWN_POINT_SINK;
+    return {
+      path: roundedPolygon(
+        [
+          { x: p.x - p.half - CROWN_POINT_FOOT, y: baseY },
+          { x: p.x - p.half, y: bandTop - p.height * 0.58 },
+          { x: p.x, y: bandTop - p.height },
+          { x: p.x + p.half, y: bandTop - p.height * 0.58 },
+          { x: p.x + p.half + CROWN_POINT_FOOT, y: baseY },
+        ],
+        [0.4, 0.8, 0.9, 0.8, 0.4],
+      ),
+      fill: CAVE_CRYSTAL_FILL,
+      bandTop,
+    };
+  });
+  silhouette(ctx, [{ path: band, fill: CRYSTAL_CROWN_BAND }, ...points.map(({ path, fill }) => ({ path, fill }))]);
+  ctx.save();
+  ctx.clip(band);
+  const mid = new Path2D();
+  const xa = CROWN_BAND_X0 - 1;
+  const xb = CROWN_BAND_X1 + 1;
+  for (let x = xa; x <= xb + 1e-9; x += 0.5) {
+    const y = crownLowerAt(x) - CROWN_BAND_THICK / 2;
+    if (x === xa) mid.moveTo(x, y);
+    else mid.lineTo(x, y);
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = CROWN_GOLD_W + 2 * CROWN_GOLD_LW;
+  ctx.stroke(mid);
+  ctx.strokeStyle = GOLD_TRIM;
+  ctx.lineWidth = CROWN_GOLD_W;
+  ctx.stroke(mid);
+  ctx.restore();
+  const middle = points[2];
+  shine(ctx, CROWN_POINTS[2].x - 0.8, middle.bandTop - 6.4, 0.55, 1.7, 0.1);
+  legendStar(ctx, CROWN_STAR.x, CROWN_STAR.y, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -2599,6 +2954,21 @@ export function paintBodyWearable(
       inFrame(ctx, back.frame, () => paintRainbowSerapeCape(ctx, back.box));
       break;
     }
+    case 'miners-headlamp':
+      paintMinersHeadlamp(ctx);
+      break;
+    case 'crystal-pendant':
+      paintCrystalPendant(ctx);
+      break;
+    case 'explorer-vest':
+      paintExplorerVest(ctx, look);
+      break;
+    case 'crystal-tail-cuff':
+      inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintCrystalTailCuff(ctx));
+      break;
+    case 'crystal-crown':
+      paintCrystalCrown(ctx);
+      break;
     default:
       break;
   }

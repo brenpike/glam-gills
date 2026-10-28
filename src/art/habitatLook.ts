@@ -24,6 +24,12 @@
  * whether the chinampa props are baked for it (`chinampaProps`). The canal, pond and dusk pond say
  * 'willows', false and false, so their bakes are unchanged.
  *
+ * Spring cave contrast rule (issue #77): the spring cave look keeps the same rule. Every
+ * background colour, the cave-ceiling sky stops, the water stops, the bed stops, the rock chips and
+ * the haze-lightened deep water included, has relative luminance 0.1687 or more, so ink is 3:1 or
+ * better on all of it. The dark cave of Area 6 is a separate layer; this look is the lit water
+ * under it. Its water is a clear, cold blue and its rock a grey-blue.
+ *
  * Area looks (issue #98): an area may use a variant of its habitat's look, such as
  * the pond at dusk ('pond-dusk', Area 3). A variant is a whole palette baked into the
  * background, haze and surface, never an overlay over gameplay depths. The dusk pond
@@ -51,7 +57,7 @@ import {
 } from './palette';
 
 /** Look ids shipped so far. Must match the logic layer's Habitat.look values. */
-export type HabitatLookId = 'canal' | 'pond' | 'chinampa';
+export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave';
 
 /** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3). */
 export type AreaLookId = HabitatLookId | 'pond-dusk';
@@ -422,15 +428,87 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   chinampaProps: true,
 });
 
+/**
+ * Spring cave water (issue #77, derived, provisional): clear, cold blue, paler and greyer than the
+ * canal's aqua-to-deep-blue (hue 198 / 202 / 205 against the canal's 175 / 187 / 207). Luminance
+ * 0.7069, 0.4623 and 0.2652. Deep #4f93c4 is 4.32:1 with ink, shallow #b4e2f5 is 10.38:1.
+ */
+export const SPRING_CAVE_WATER_SHALLOW = '#b4e2f5';
+export const SPRING_CAVE_WATER_MID = '#7cbde3';
+export const SPRING_CAVE_WATER_DEEP = '#4f93c4';
+/** Spring cave haze: a cold pale blue. Lightens every water stop (deep to luminance 0.2940), so the contrast rule above still holds. */
+export const SPRING_CAVE_HAZE = 'rgba(150,205,240,0.12)';
+/** Spring cave surface line: the canal line cooled toward an icy white. */
+export const SPRING_CAVE_SURFACE_LINE = 'rgba(240,250,255,0.95)';
+/**
+ * Spring cave ceiling (issue #77, derived, provisional): the sky band is the cave's grey-blue
+ * rock roof, darker at the top and paler at the waterline. Top #9fb2c8 (luminance 0.4338, 6.63:1
+ * with ink) and horizon #c3d1df (0.6253, 9.26:1).
+ */
+export const SPRING_CAVE_SKY_TOP = '#9fb2c8';
+export const SPRING_CAVE_SKY_HORIZON = '#c3d1df';
+/**
+ * Spring cave rock bed (issue #77, derived, provisional): grey-blue rock. Top #93a5ba (luminance
+ * 0.3666, 5.71:1 with ink), bottom #7a8da6 (0.2594, 4.24:1), lip #bccadb (0.5805). Rock chips
+ * #46587a at 0.35 over the bottom stop blend to #687a97, luminance 0.1910 (3.30:1 with ink).
+ */
+export const SPRING_CAVE_BED_TOP = '#93a5ba';
+export const SPRING_CAVE_BED_BOTTOM = '#7a8da6';
+export const SPRING_CAVE_BED_LIP = '#bccadb';
+export const SPRING_CAVE_MUD = 'rgba(70,88,122,0.35)';
+
+/**
+ * Spring cave look (issue #77): clear cold blue water over a grey-blue rock bed, under a rock
+ * ceiling. No stream, no reeds, no bank in the water chunks, no pond props. The hiding place is a
+ * heap of rocks on the bed, like the canal's.
+ */
+export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
+  id: 'spring-cave',
+  sky: Object.freeze({ top: SPRING_CAVE_SKY_TOP, horizon: SPRING_CAVE_SKY_HORIZON }),
+  airWash: null,
+  rayAlphaScale: 1,
+  water: Object.freeze({
+    shallow: SPRING_CAVE_WATER_SHALLOW,
+    mid: SPRING_CAVE_WATER_MID,
+    deep: SPRING_CAVE_WATER_DEEP,
+    stopMid: WATER_STOP_MID,
+    gradientEndY: WATER_GRADIENT_END_Y,
+  }),
+  haze: SPRING_CAVE_HAZE,
+  surfaceFill: SPRING_CAVE_WATER_SHALLOW,
+  surfaceLine: SPRING_CAVE_SURFACE_LINE,
+  surfaceLineWidth: SURFACE_LINE_WIDTH,
+  bed: Object.freeze({
+    top: SPRING_CAVE_BED_TOP,
+    bottom: SPRING_CAVE_BED_BOTTOM,
+    lip: SPRING_CAVE_BED_LIP,
+    mud: SPRING_CAVE_MUD,
+    // Bare rock: a few chips, a good many pebbles.
+    mudCount: 10,
+    pebbles: PEBBLE_COLOURS,
+    pebbleShine: PEBBLE_SHINE,
+    pebbleCount: 12,
+  }),
+  edgeReeds: null,
+  stream: false,
+  cave: Object.freeze({ kind: 'rocks', anchor: 'bed' }),
+  pondProps: false,
+  firefliesPerScreen: 0,
+  bank: 'willows',
+  currentGap: false,
+  chinampaProps: false,
+});
+
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   canal: CANAL_LOOK,
   pond: POND_LOOK,
   chinampa: CHINAMPA_LOOK,
   'pond-dusk': POND_DUSK_LOOK,
+  'spring-cave': SPRING_CAVE_LOOK,
 };
 
 /** Every shipped habitat look id, in habitat order. Area-map markers are keyed by these. */
-export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa'];
+export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave'];
 
 /** Every shipped area look id: the habitat looks, then the per-area variants. */
 export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk'];

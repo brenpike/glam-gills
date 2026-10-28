@@ -13,6 +13,7 @@ import {
   CHINAMPA_TREASURES,
   POND_2_TREASURES,
   POND_TREASURES,
+  SPRING_CAVE_TREASURES,
   isDecoration,
   placementKind,
   treasureSlug,
@@ -46,12 +47,16 @@ import {
   GOLDEN_CORN_KERNEL,
   GOLDEN_CORN_ROW,
   GOURD_FILL,
+  GEODE_CAVITY,
+  GEODE_CRYSTAL,
   GOURD_WEIGHT,
+  HEADLAMP_LENS,
   HUMMINGBIRD_RIBBON_FILL,
   MARIGOLD_PETAL,
   MONARCH_BODY,
   MONARCH_SPOT,
   MONARCH_WING,
+  MOSS_GLOW_DOT,
   PAPEL_PICADO_APRICOT,
   PAPEL_PICADO_HOOK,
   PAPEL_PICADO_PINK,
@@ -100,7 +105,7 @@ import {
   paintDevDecorationIcon,
 } from './devDecorationArt';
 import { DEPTH } from './layers';
-import { INK, LILY_PAD } from './palette';
+import { INK, LILY_PAD, PEBBLE_A } from './palette';
 import {
   EXTRA_DECORATION_ICON_SIZES,
   TANK_DECORATION_BADGES,
@@ -123,6 +128,8 @@ import {
   treasureSilhouetteKey,
 } from './treasureTextures';
 import {
+  AMMONITE_FILL,
+  AMMONITE_SLAB,
   BADGE_FILL,
   BOAT_TRIM,
   BOW_GEM,
@@ -130,11 +137,16 @@ import {
   CASTLE_TRIM,
   CATTAIL_HEAD,
   CATTAIL_STEM,
+  CAVE_CRYSTAL_FILL,
+  CRYSTAL_ARCH_BASE,
+  CRYSTAL_CROWN_BAND,
+  CRYSTAL_CUFF_BAND,
   DECOY_BEAK,
   DECOY_BODY,
   DRAGONFLY_FRAME,
   DRAGONFLY_WING,
   DREAM_SWATCH,
+  EXPLORER_VEST_FILL,
   FEATHER_CAP_FILL,
   FEATHER_FILL,
   FIREFLY_BULB,
@@ -146,6 +158,8 @@ import {
   FROG_STATUE_STONE,
   FROGGY_BOOT,
   GEM_GLINT,
+  GEODE_BASE_FILL,
+  GEODE_ROCK_FILL,
   GOLD_TRIM,
   GOLDEN_LOTUS_BASE,
   GOLDEN_LOTUS_PETAL,
@@ -157,8 +171,12 @@ import {
   LILY_PAD_SOCK_FILL,
   LOTUS_LANTERN_BODY,
   LOTUS_PETAL,
+  MINERS_HELMET_FILL,
+  MOSS_BALL_FILL,
+  MOSS_BALL_WEIGHT,
   PEARL_CHARM_CORD,
   PEARL_FILL,
+  PEBBLE_STACK_FILL,
   POND_WEED_SCARF,
   PYRAMID_GEM,
   RAINCOAT_FILL,
@@ -168,6 +186,8 @@ import {
   TREASURE_STAR,
   WATER_LILY_BLOSSOM,
   WATER_LILY_SHIRT_FILL,
+  WIND_CHIME_BAR,
+  WIND_CHIME_HOOK,
   type BadgeShape,
 } from './treasurePalette';
 
@@ -205,7 +225,7 @@ const GREYSCALE_PAIRS: readonly [BadgeShape, BadgeShape, number][] = [
 ];
 /** The '?' tube width at every size. */
 const Q_LW = 2.4;
-/** The icons whose outer silhouette includes coloured tubes (cord, glasses band, wreath, lantern tassel, sunflower glasses). */
+/** The icons whose outer silhouette includes coloured tubes (cord, glasses band, wreath, lantern tassel, sunflower glasses, pendant chain). */
 const TUBE_SLUGS: readonly TreasureIconSlug[] = [
   'shell-necklace',
   'heart-glasses',
@@ -213,12 +233,13 @@ const TUBE_SLUGS: readonly TreasureIconSlug[] = [
   'lily-flower-crown',
   'dragonfly-glasses',
   'sunflower-sunglasses',
+  'crystal-pendant',
 ];
 /**
  * The treasures of an area's list whose ids start with its own `prefix`: the ones that area added.
  * Treasures that moved out of the canal (issue #146) keep their 'canal/' ids and stay canal art.
  */
-function addedBy(treasures: readonly Treasure[], prefix: 'pond' | 'chinampa'): Treasure[] {
+function addedBy(treasures: readonly Treasure[], prefix: 'pond' | 'chinampa' | 'spring-cave'): Treasure[] {
   return treasures.filter((treasure) => treasure.id.startsWith(`${prefix}/`));
 }
 /** The slugs the pond added (the text after `pond/`), from the catalogue. */
@@ -231,10 +252,14 @@ const CHINAMPA_SLUGS: readonly string[] = addedBy(CHINAMPA_TREASURES, 'chinampa'
 const CHINAMPA_2_SLUGS: readonly string[] = addedBy(CHINAMPA_2_TREASURES, 'chinampa').map((treasure) =>
   treasureSlug(treasure.id),
 );
-/** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. The Moonstone Paint shell is the spring cave's. */
+/** The slugs the spring cave Area 6 added (the text after `spring-cave/`), from the catalogue: 11 items and the Moonstone Paint shell. */
+const SPRING_CAVE_SLUGS: readonly string[] = addedBy(SPRING_CAVE_TREASURES, 'spring-cave').map((treasure) =>
+  treasureSlug(treasure.id),
+);
+/** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. */
 const CANAL_ICON_SLUGS = TREASURE_ICON_SLUGS.filter(
   (slug) =>
-    slug !== 'paint-shell-moonstone' &&
+    !SPRING_CAVE_SLUGS.includes(slug) &&
     !POND_SLUGS.includes(slug) &&
     !POND_2_SLUGS.includes(slug) &&
     !CHINAMPA_SLUGS.includes(slug) &&
@@ -248,6 +273,8 @@ const AREA3_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => POND_2_SLUGS.inclu
 const CHINAMPA_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => CHINAMPA_SLUGS.includes(slug));
 /** The icon slugs the chinampa Area 5 added: 11 items, then the Plum Paint shell. */
 const CHINAMPA_2_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => CHINAMPA_2_SLUGS.includes(slug));
+/** The icon slugs the spring cave Area 6 added: 11 items, then the Moonstone Paint shell. */
+const SPRING_CAVE_ICON_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => SPRING_CAVE_SLUGS.includes(slug));
 /**
  * Call-log digests of the normal painters, recorded before flat mode existed: per size, the
  * digest of every canal icon digest in TREASURE_ICON_SLUGS order; then every canal Dream
@@ -308,6 +335,17 @@ const CHINAMPA_2_ICON_DIGESTS: Readonly<Record<number, string>> = {
   80: 'ae1c2d49a3e3277d:265',
 };
 const CHINAMPA_2_SWATCH_DIGEST = '283dbca78aec2213:21';
+/**
+ * The same digests for the icons the spring cave Area 6 added (the 11 items, then the Moonstone Paint shell),
+ * pinned when they were authored (issue #77). Re-pin these, and only these, when the Area 6 art is retuned on
+ * purpose.
+ */
+const SPRING_CAVE_ICON_DIGESTS: Readonly<Record<number, string>> = {
+  28: '4da947d556644ca9:264',
+  32: '465056436bb6323f:264',
+  48: 'ad097f4abf318a66:264',
+  80: '9adf8734fc479810:264',
+};
 /** The same digest for the Moonstone swatch (issue #77), pinned when it was authored. Re-pin it, and only it, when Moonstone is retuned on purpose. */
 const MOONSTONE_SWATCH_DIGEST = '0d26c3a93a452bc5:20';
 const EPS = 1e-9;
@@ -654,6 +692,7 @@ describe('Unfound silhouettes', () => {
       expect(digestOf(AREA3_ICON_SLUGS), `area 3 ${size}`).toBe(AREA3_ICON_DIGESTS[size]);
       expect(digestOf(CHINAMPA_ICON_SLUGS), `area 4 ${size}`).toBe(CHINAMPA_ICON_DIGESTS[size]);
       expect(digestOf(CHINAMPA_2_ICON_SLUGS), `area 5 ${size}`).toBe(CHINAMPA_2_ICON_DIGESTS[size]);
+      expect(digestOf(SPRING_CAVE_ICON_SLUGS), `area 6 ${size}`).toBe(SPRING_CAVE_ICON_DIGESTS[size]);
     }
     expect(
       swatchDigests(
@@ -726,6 +765,12 @@ describe('Home Tank Decoration glows', () => {
       'chinampa/pinata',
       'chinampa/talavera-fountain',
       'chinampa/alebrije-statue',
+      'spring-cave/pebble-stack',
+      'spring-cave/glow-moss-ball',
+      'spring-cave/fossil-ammonite',
+      'spring-cave/crystal-wind-chime',
+      'spring-cave/geode-lamp',
+      'spring-cave/crystal-arch',
     ]);
     for (const decoration of decorations) {
       const slug = treasureSlug(decoration.id);
@@ -812,8 +857,15 @@ describe('Home Tank Hanging and wide Decorations', () => {
   const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
   const HANGING_SLUGS = TANK_DECORATION_SLUGS.filter((slug) => TANK_DECORATION_SHAPES[slug].placement === 'hanging');
 
-  it('has the Firefly string lights and the Papel picado banner, 144 wide, and the Firefly jar, the Willow swing and the Pinata as its Hanging Decorations', () => {
-    expect(HANGING_SLUGS).toEqual(['firefly-string-lights', 'firefly-jar', 'papel-picado-banner', 'willow-swing', 'pinata']);
+  it('has the Firefly string lights and the Papel picado banner, 144 wide, and the Firefly jar, the Willow swing, the Pinata and the Crystal wind chime as its Hanging Decorations', () => {
+    expect(HANGING_SLUGS).toEqual([
+      'firefly-string-lights',
+      'firefly-jar',
+      'papel-picado-banner',
+      'willow-swing',
+      'pinata',
+      'crystal-wind-chime',
+    ]);
     expect(TANK_DECORATION_SHAPES['firefly-string-lights'].width).toBe(144);
     expect(TANK_DECORATION_SHAPES['papel-picado-banner'].width).toBe(144);
     expect(TANK_DECORATION_SHAPES['firefly-jar'].width).toBeUndefined();
@@ -1728,9 +1780,9 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       'pearl-tail-charm',
       'firefly-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
     expect(TREASURE_ICON_SLUGS.slice(23, 34)).toEqual(AREA3_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
     expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(AREA3_ICON_SLUGS).toEqual([...AREA3_ITEM_SLUGS, 'paint-shell-firefly-gold']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -1878,9 +1930,9 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       expect(badges['golden-lotus-throne']).toBe('star');
     });
 
-    it('lists the 25 tank Decorations in catalogue order, canal, pond, Area 3, Area 4, then Area 5', () => {
+    it('lists the 31 tank Decorations in catalogue order, canal, pond, Area 3, Area 4, Area 5, then Area 6', () => {
       const catalogue = ALL_TREASURES.filter(isDecoration).map((d) => treasureSlug(d.id));
-      expect(catalogue).toHaveLength(25);
+      expect(catalogue).toHaveLength(31);
       expect([...TANK_DECORATION_SLUGS]).toEqual(catalogue);
       expect(Object.keys(TANK_DECORATION_BADGES)).toEqual(catalogue);
     });
@@ -1999,10 +2051,10 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
       'golden-corn',
       'monarch-wings',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(34, 45)).toEqual(CHINAMPA_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
     expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(DREAM_SWATCH_IDS[14]).toBe('poppy-red');
     expect(CHINAMPA_ICON_SLUGS).toEqual([...CHINAMPA_ITEM_SLUGS, 'paint-shell-poppy-red']);
@@ -2374,10 +2426,10 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       'alebrije-statue',
       'rainbow-serape-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(73);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(45, 56)).toEqual(CHINAMPA_2_ITEM_SLUGS);
-    expect(TREASURE_ICON_SLUGS.slice(56)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
     expect(DREAM_SWATCH_IDS).toHaveLength(17);
     expect(DREAM_SWATCH_IDS[15]).toBe('plum');
     expect(CHINAMPA_2_ICON_SLUGS).toEqual([...CHINAMPA_2_ITEM_SLUGS, 'paint-shell-plum']);
@@ -2654,6 +2706,423 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       const rec = record(glow.paint);
       expect(rec.calls[0]).toEqual(['translate', [0, PX / 2]]);
       expect(parseRgba(rec.gradients[0].stops[0][1]).rgb).toEqual(channelsOf(BADGE_FILL.diamond));
+    });
+  });
+});
+
+describe('Spring cave Area 6 treasure art (issue #77, ND-12)', () => {
+  /**
+   * The outer fills each icon may paint (exported by treasurePalette.ts), by item. Gems, gold trim, the yellow trim
+   * band, the geode cavity and crystals, the lamp lens, the moss glow dots, ink and glows are free.
+   */
+  const OUTER_FILLS: Readonly<Record<string, readonly string[]>> = {
+    'pebble-stack': [PEBBLE_STACK_FILL],
+    'glow-moss-ball': [MOSS_BALL_FILL, MOSS_BALL_WEIGHT],
+    'miners-headlamp': [MINERS_HELMET_FILL],
+    'crystal-pendant': [CAVE_CRYSTAL_FILL],
+    'fossil-ammonite': [AMMONITE_FILL, AMMONITE_SLAB],
+    'crystal-wind-chime': [CAVE_CRYSTAL_FILL, WIND_CHIME_BAR, WIND_CHIME_HOOK],
+    'explorer-vest': [EXPLORER_VEST_FILL],
+    'geode-lamp': [GEODE_ROCK_FILL, GEODE_BASE_FILL],
+    'crystal-tail-cuff': [CRYSTAL_CUFF_BAND, CAVE_CRYSTAL_FILL],
+    'crystal-arch': [CAVE_CRYSTAL_FILL, CRYSTAL_ARCH_BASE],
+    'crystal-crown': [CAVE_CRYSTAL_FILL, CRYSTAL_CROWN_BAND],
+  };
+  const FREE_STYLES = new Set(
+    [GOLD_TRIM, BOAT_TRIM, CASTLE_GEM, PYRAMID_GEM, GEM_GLINT, TREASURE_STAR, INK, GEODE_CAVITY, GEODE_CRYSTAL, HEADLAMP_LENS, MOSS_GLOW_DOT].map(
+      (c) => c.toLowerCase(),
+    ),
+  );
+  const SPRING_CAVE_ITEM_SLUGS = SPRING_CAVE_ICON_SLUGS.filter((slug) => !slug.startsWith('paint-shell-'));
+  /** The catalogue rarity of each item, which the icon's rarity look ladder (guide 6i) must follow. */
+  const RARITY_OF: Readonly<Record<string, Treasure['rarity']>> = {
+    'pebble-stack': 'common',
+    'glow-moss-ball': 'common',
+    'miners-headlamp': 'common',
+    'crystal-pendant': 'common',
+    'fossil-ammonite': 'rare',
+    'crystal-wind-chime': 'rare',
+    'explorer-vest': 'rare',
+    'geode-lamp': 'epic',
+    'crystal-tail-cuff': 'epic',
+    'crystal-arch': 'legendary',
+    'crystal-crown': 'legendary',
+  };
+  const SIZES = [28, 32, 48, 80] as const;
+  const REACH_TOLERANCE = 0.05;
+  /** The ink widths of the shipped icons that an Area 6 painter may use: item 2.8, details 1.6, trim lines 1.2. */
+  const ALLOWED_INK = new Set([2.8, 1.6, 1.2]);
+  /** The Crystal pendant's chain is a tube: colour 3.2 with 2.4 ink each side, 8 in all. */
+  const TUBE_INK = new Set([8]);
+  const SHINE = 'rgba(255,255,255,0.8)';
+  /** Counts of shines, gold trim bands, yellow trim bands, gem glints and stars painted by an icon. */
+  const count = (slug: TreasureIconSlug): { shine: number; gold: number; band: number; glint: number; star: number } => {
+    const ops = record((ctx) => paintTreasureIcon(ctx, slug, 80)).ops;
+    const whites = ops.filter((op) => op.op === 'fill' && op.fillStyle === GEM_GLINT);
+    const uses = (op: Op, command: string): boolean => JSON.stringify(op.args[0]).includes(`"${command}"`);
+    return {
+      shine: ops.filter((op) => op.op === 'fill' && op.fillStyle === SHINE).length,
+      gold: ops.filter((op) => op.op === 'fillRect' && op.fillStyle === GOLD_TRIM).length,
+      band: ops.filter((op) => op.op === 'fillRect' && op.fillStyle === BOAT_TRIM).length,
+      glint: whites.filter((op) => uses(op, 'ellipse')).length,
+      star: whites.filter((op) => uses(op, 'arcTo')).length,
+    };
+  };
+
+  it('lists the eleven Area 6 items after the Area 5 ones, in catalogue order, with the Moonstone Paint shell last of all', () => {
+    expect(SPRING_CAVE_ITEM_SLUGS).toHaveLength(11);
+    expect(SPRING_CAVE_ITEM_SLUGS).toEqual(
+      addedBy(SPRING_CAVE_TREASURES, 'spring-cave')
+        .filter((treasure) => treasure.category !== 'paintShell')
+        .map((treasure) => treasureSlug(treasure.id)),
+    );
+    expect(SPRING_CAVE_ITEM_SLUGS).toEqual([
+      'pebble-stack',
+      'glow-moss-ball',
+      'miners-headlamp',
+      'crystal-pendant',
+      'fossil-ammonite',
+      'crystal-wind-chime',
+      'explorer-vest',
+      'geode-lamp',
+      'crystal-tail-cuff',
+      'crystal-arch',
+      'crystal-crown',
+    ]);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(84);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
+    expect(TREASURE_ICON_SLUGS.slice(56, 67)).toEqual(SPRING_CAVE_ITEM_SLUGS);
+    expect(TREASURE_ICON_SLUGS.slice(67)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    expect(SPRING_CAVE_ICON_SLUGS).toEqual([...SPRING_CAVE_ITEM_SLUGS, 'paint-shell-moonstone']);
+    expect(SPRING_CAVE_TREASURES).toHaveLength(12);
+    expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
+    expect(new Set(ALL_TREASURES.map((treasure) => treasureSlug(treasure.id)))).toEqual(new Set(TREASURE_ICON_SLUGS));
+  });
+
+  it('draws the Moonstone Paint shell with the Moonstone swatch, and bakes an icon and silhouette for all twelve treasures', () => {
+    const shell = SPRING_CAVE_TREASURES.find((treasure) => treasure.category === 'paintShell');
+    expect(shell?.category === 'paintShell' ? shell.dreamColour : undefined).toBe('moonstone');
+    expect(treasureSlug(shell?.id ?? '')).toBe('paint-shell-moonstone');
+    bakes.length = 0;
+    const tex = bakeTreasureTextures({} as never, 2);
+    for (const size of [28, 32, 48] as const) {
+      for (const slug of SPRING_CAVE_ICON_SLUGS) expect(tex.icons[size][slug].key, `${slug} ${size}`).toBe(`treasure-${slug}-${size}`);
+    }
+    for (const slug of SPRING_CAVE_ICON_SLUGS) expect(tex.silhouettes[slug].key, slug).toBe(treasureSilhouetteKey(slug));
+    for (const slug of SPRING_CAVE_ICON_SLUGS) expect(bakes.some((b) => b.key === treasureSilhouetteKey(slug)), slug).toBe(true);
+    expect(tex.swatches.moonstone.key).toBe('dream-swatch-moonstone-32');
+  });
+
+  it('follows the catalogue rarity of each item, and keeps the ladder: Fossil ammonite Rare, Geode lamp Epic, Crystal arch and Crystal crown Legendary', () => {
+    const catalogue = new Map(SPRING_CAVE_TREASURES.map((treasure) => [treasureSlug(treasure.id), treasure.rarity]));
+    for (const slug of SPRING_CAVE_ITEM_SLUGS) expect(catalogue.get(slug), slug).toBe(RARITY_OF[slug]);
+    expect(RARITY_OF['fossil-ammonite']).toBe('rare');
+    expect(RARITY_OF['geode-lamp']).toBe('epic');
+    expect(RARITY_OF['crystal-arch']).toBe('legendary');
+    expect(RARITY_OF['crystal-crown']).toBe('legendary');
+  });
+
+  it('keeps every Area 6 outer fill at 9:1 or more with ink, and none a rarity badge fill', () => {
+    const fills = [...new Set(Object.values(OUTER_FILLS).flat())];
+    for (const fill of fills) {
+      expect(fill, fill).toMatch(/^#[0-9a-f]{6}$/);
+      expect(contrastRatio(fill, INK), fill).toBeGreaterThanOrEqual(9);
+      expect(Object.values(BADGE_FILL), fill).not.toContain(fill);
+    }
+    // Eleven distinct outer fills: three of the twelve are shared or aliases (pebble A, pebble C, the pale pad green).
+    expect(fills.map((c) => c.toLowerCase())).toEqual([
+      PEBBLE_STACK_FILL,
+      MOSS_BALL_FILL,
+      MOSS_BALL_WEIGHT,
+      MINERS_HELMET_FILL,
+      CAVE_CRYSTAL_FILL,
+      AMMONITE_FILL,
+      AMMONITE_SLAB,
+      WIND_CHIME_BAR,
+      EXPLORER_VEST_FILL,
+      GEODE_ROCK_FILL,
+      GEODE_BASE_FILL,
+      CRYSTAL_CUFF_BAND,
+      CRYSTAL_ARCH_BASE,
+      CRYSTAL_CROWN_BAND,
+    ].filter((c, i, all) => all.indexOf(c) === i));
+  });
+
+  it('shares the shipped colours where the Area 6 fills alias them', () => {
+    expect(MOSS_BALL_FILL).toBe(LILY_PAD_SOCK_FILL);
+    expect(MOSS_BALL_WEIGHT).toBe(FIREFLY_HOOK);
+    expect(WIND_CHIME_BAR).toBe(DECOY_BODY);
+    expect(WIND_CHIME_HOOK).toBe(FIREFLY_HOOK);
+    expect(GEODE_BASE_FILL).toBe(GOLDEN_LOTUS_BASE);
+    expect(CRYSTAL_ARCH_BASE).toBe(GOLDEN_LOTUS_BASE);
+    expect(AMMONITE_SLAB).toBe(CRYSTAL_CUFF_BAND);
+    expect(CRYSTAL_CUFF_BAND).toBe(PEBBLE_A);
+  });
+
+  it.each(SPRING_CAVE_ITEM_SLUGS.map((slug) => [slug] as const))('%s paints its own Area 6 fills and no other outer colour', (slug) => {
+    const styles = hexStyles((ctx) => paintTreasureIcon(ctx, slug, 48));
+    const own = OUTER_FILLS[slug].map((c) => c.toLowerCase());
+    for (const fill of own) expect(styles, `${slug} uses ${fill}`).toContain(fill);
+    for (const style of styles) {
+      if (FREE_STYLES.has(style)) continue;
+      expect(own, `${slug} paints only its own fills, ${style} is not one`).toContain(style);
+    }
+  });
+
+  it.each(SPRING_CAVE_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i keeps its frame: the ink inside the icon box and the texture frame, reaching nearly the whole longest side',
+    (slug, size) => {
+      const half = size / 2;
+      const frame = frameBox(treasureIconTextureSize(size));
+      for (const paint of [paintTreasureIcon, paintTreasureSilhouette]) {
+        const { box } = inkReach((ctx) => paint(ctx, slug, size));
+        expect(box.minX, `${slug} left`).toBeGreaterThanOrEqual(Math.max(-half - REACH_TOLERANCE, frame.minX));
+        expect(box.maxX, `${slug} right`).toBeLessThanOrEqual(Math.min(half + REACH_TOLERANCE, frame.maxX));
+        expect(box.minY, `${slug} top`).toBeGreaterThanOrEqual(Math.max(-half - REACH_TOLERANCE, frame.minY));
+        expect(box.maxY, `${slug} bottom`).toBeLessThanOrEqual(Math.min(half + REACH_TOLERANCE, frame.maxY));
+      }
+      const { box } = inkReach((ctx) => paintTreasureIcon(ctx, slug, size));
+      expect(Math.max(box.maxX - box.minX, box.maxY - box.minY), `${slug} longest side`).toBeGreaterThanOrEqual(size - 2);
+    },
+  );
+
+  it.each(SPRING_CAVE_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i has its ink outline at the shipped widths, the item outline 2.8 among them',
+    (slug, size) => {
+      const ink = record((ctx) => paintTreasureIcon(ctx, slug, size)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK,
+      );
+      const widths = new Set(ink.map((op) => op.lineWidth));
+      const allowed = slug === 'crystal-pendant' ? new Set([...ALLOWED_INK, ...TUBE_INK]) : ALLOWED_INK;
+      expect(widths.has(2.8), `${slug} has the 2.8 item outline`).toBe(true);
+      for (const width of widths) expect(allowed, `${slug} ink ${width}`).toContain(width);
+      // The silhouette keeps the outer ink and drops the details.
+      const flat = record((ctx) => paintTreasureSilhouette(ctx, slug, size)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK && op.lineWidth === 2.8,
+      );
+      expect(flat.length, `${slug} silhouette outer ink`).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(SPRING_CAVE_ITEM_SLUGS.flatMap((slug) => SIZES.map((size) => [slug, size] as const)))(
+    '%s at %i has its one white shine, and none in the unfound silhouette',
+    (slug, size) => {
+      const shines = (paint: typeof paintTreasureIcon): number =>
+        record((ctx) => paint(ctx, slug, size)).ops.filter((op) => op.op === 'fill' && op.fillStyle === SHINE).length;
+      expect(shines(paintTreasureIcon), slug).toBe(1);
+      expect(shines(paintTreasureSilhouette), `${slug} silhouette`).toBe(0);
+    },
+  );
+
+  it('draws every Area 6 unfound silhouette in the flat fill alone, so no icon is told apart by colour', () => {
+    for (const slug of SPRING_CAVE_ITEM_SLUGS) {
+      const fills = hexStyles((ctx) => paintTreasureSilhouette(ctx, slug, 32));
+      expect([...fills].sort(), slug).toEqual([INK, TREASURE_SILHOUETTE_FILL].map((c) => c.toLowerCase()).sort());
+    }
+  });
+
+  it('gives every Area 6 icon its own outline: no two silhouettes are the same drawing', () => {
+    const digests = SPRING_CAVE_ITEM_SLUGS.map((slug) => callLogDigest((ctx) => paintTreasureSilhouette(ctx, slug, 48)));
+    expect(new Set(digests).size).toBe(SPRING_CAVE_ITEM_SLUGS.length);
+  });
+
+  it('keeps the Area 6 cue values pale: 9:1 fills have relative luminance 0.607 or more, so ink or fill is 3:1 or better on any background', () => {
+    // The dark cave sits under a dark layer, so the pale fills matter most here (guide 10).
+    for (const fill of [...new Set(Object.values(OUTER_FILLS).flat())]) {
+      expect(relativeLuminance(fill), fill).toBeGreaterThanOrEqual(0.607);
+    }
+    // The Legendary gold band stands apart from the pale fills it crosses; the Rare yellow band is set between two thin ink lines.
+    expect(contrastRatio(GOLD_TRIM, CAVE_CRYSTAL_FILL)).toBeGreaterThan(1.3);
+    expect(contrastRatio(GOLD_TRIM, CRYSTAL_CROWN_BAND)).toBeGreaterThan(1.3);
+    for (const slug of ['fossil-ammonite', 'crystal-wind-chime', 'explorer-vest'] as const) {
+      const lines = record((ctx) => paintTreasureIcon(ctx, slug, 80)).ops.filter(
+        (op) => op.op === 'stroke' && op.strokeStyle === INK && op.lineWidth === 1.2,
+      );
+      expect(lines.length, `${slug} trim band lines`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  describe('rarity ladder (guide 6i)', () => {
+    const byRarity = (rarity: Treasure['rarity']): TreasureIconSlug[] =>
+      SPRING_CAVE_ITEM_SLUGS.filter((slug) => RARITY_OF[slug] === rarity);
+
+    it('gives Legendary the gold trim, one gem and one star', () => {
+      expect(byRarity('legendary')).toEqual(['crystal-arch', 'crystal-crown']);
+      for (const slug of byRarity('legendary')) expect(count(slug), slug).toMatchObject({ gold: 1, glint: 1, star: 1, band: 0 });
+    });
+
+    it('gives Epic one gem and no gold, no star and no trim band', () => {
+      expect(byRarity('epic')).toEqual(['geode-lamp', 'crystal-tail-cuff']);
+      for (const slug of byRarity('epic')) expect(count(slug), slug).toMatchObject({ gold: 0, glint: 1, star: 0, band: 0 });
+    });
+
+    it('gives Rare its one yellow trim band and no gem, gold or star', () => {
+      expect(byRarity('rare')).toEqual(['fossil-ammonite', 'crystal-wind-chime', 'explorer-vest']);
+      for (const slug of byRarity('rare')) expect(count(slug), slug).toMatchObject({ gold: 0, glint: 0, star: 0, band: 1 });
+    });
+
+    it('gives Common one flat colour and one shine: no trim band, no gem, no gold and no star', () => {
+      expect(byRarity('common')).toEqual(['pebble-stack', 'glow-moss-ball', 'miners-headlamp', 'crystal-pendant']);
+      for (const slug of byRarity('common')) expect(count(slug), slug).toMatchObject({ gold: 0, band: 0, glint: 0, star: 0, shine: 1 });
+    });
+
+    it('gives each item exactly one shine', () => {
+      for (const slug of SPRING_CAVE_ITEM_SLUGS) expect(count(slug).shine, slug).toBe(1);
+    });
+  });
+
+  it('draws the Crystal pendant chain as a tube of colour 3.2 with 2.4 ink, the Shell necklace\'s construction', () => {
+    const strokes = record((ctx) => paintTreasureIcon(ctx, 'crystal-pendant', 80)).ops.filter((op) => op.op === 'stroke');
+    const tube = strokes.filter((op) => op.strokeStyle === CAVE_CRYSTAL_FILL);
+    expect(tube).toHaveLength(1);
+    expect(tube[0].lineWidth).toBe(3.2);
+    expect(strokes.some((op) => op.strokeStyle === INK && op.lineWidth === 3.2 + 2 * 2.4)).toBe(true);
+    // The unfound silhouette turns the cord into the flat fill.
+    const flat = record((ctx) => paintTreasureSilhouette(ctx, 'crystal-pendant', 80)).ops.filter((op) => op.op === 'stroke');
+    expect(flat.some((op) => op.strokeStyle === TREASURE_SILHOUETTE_FILL && op.lineWidth === 3.2)).toBe(true);
+  });
+
+  it('gives the Geode lamp its glowing cavity and lilac crystals inside the rock, and keeps them out of the silhouette', () => {
+    const styles = hexStyles((ctx) => paintTreasureIcon(ctx, 'geode-lamp', 80));
+    for (const colour of [GEODE_CAVITY, GEODE_CRYSTAL]) expect(styles, colour).toContain(colour.toLowerCase());
+    const flat = hexStyles((ctx) => paintTreasureSilhouette(ctx, 'geode-lamp', 80));
+    for (const colour of [GEODE_CAVITY, GEODE_CRYSTAL]) expect(flat, colour).not.toContain(colour.toLowerCase());
+  });
+
+  it('draws the Crystal arch as one outline with a hole, the opening, so the star shows through it', () => {
+    const outline = record((ctx) => paintTreasureIcon(ctx, 'crystal-arch', 80)).ops.find(
+      (op) => op.op === 'fill' && op.fillStyle === CAVE_CRYSTAL_FILL,
+    ) as Op;
+    const nested = (outline.args[0] as unknown[][])[0][1] as unknown[][];
+    expect(nested.filter((c) => c[0] === 'closePath')).toHaveLength(2);
+    // Two sub-paths, the outer arch and the opening, wound opposite ways so a non-zero fill leaves the opening empty.
+    const starts = nested.flatMap((c, i) => (c[0] === 'moveTo' ? [i] : []));
+    expect(starts).toHaveLength(2);
+    const area = (cmds: unknown[][]): number => {
+      const points: [number, number][] = [];
+      pathPoints(cmds, IDENTITY, points);
+      return points.reduce((sum, [x, y], i) => {
+        const [nx, ny] = points[(i + 1) % points.length];
+        return sum + (x * ny - nx * y);
+      }, 0);
+    };
+    const outer = area(nested.slice(starts[0], starts[1]));
+    const opening = area(nested.slice(starts[1]));
+    expect(Math.sign(outer) * Math.sign(opening)).toBe(-1);
+    expect(Math.abs(outer)).toBeGreaterThan(Math.abs(opening));
+  });
+
+  describe('Decorations in the Home Tank', () => {
+    const FLOORS = ['pebble-stack', 'fossil-ammonite', 'geode-lamp', 'crystal-arch'] as const;
+    const FLOATS = ['glow-moss-ball'] as const;
+    const PX = 80;
+    const bakeShipped = (): ReturnType<typeof bakeTankTextures> => {
+      bakes.length = 0;
+      return bakeTankTextures({} as never, 2, { decorationPx: PX, rand: () => 0.5 });
+    };
+    const bakeOf = (key: string): BakeCall => bakes.find((b) => b.key === key) as BakeCall;
+
+    it('matches the catalogue placement kinds, rarities and standard widths', () => {
+      const decorations = new Map(addedBy(SPRING_CAVE_TREASURES, 'spring-cave').filter(isDecoration).map((d) => [treasureSlug(d.id), d]));
+      expect([...decorations.keys()]).toEqual([
+        'pebble-stack',
+        'glow-moss-ball',
+        'fossil-ammonite',
+        'crystal-wind-chime',
+        'geode-lamp',
+        'crystal-arch',
+      ]);
+      for (const slug of FLOORS) expect(placementKind(decorations.get(slug) as Decoration), slug).toBe('floor');
+      for (const slug of FLOATS) expect(placementKind(decorations.get(slug) as Decoration), slug).toBe('floating');
+      expect(placementKind(decorations.get('crystal-wind-chime') as Decoration)).toBe('hanging');
+      for (const decoration of decorations.values()) expect(decoration.width, decoration.id).toBeUndefined();
+      const badges = TANK_DECORATION_BADGES as Readonly<Record<string, BadgeShape>>;
+      expect(badges['pebble-stack']).toBe('circle');
+      expect(badges['glow-moss-ball']).toBe('circle');
+      expect(badges['fossil-ammonite']).toBe('diamond');
+      expect(badges['crystal-wind-chime']).toBe('diamond');
+      expect(badges['geode-lamp']).toBe('shield');
+      expect(badges['crystal-arch']).toBe('star');
+      for (const slug of FLOORS) expect(TANK_DECORATION_SHAPES[slug], slug).toEqual({ placement: 'floor' });
+      expect(TANK_DECORATION_SHAPES['glow-moss-ball']).toEqual({ placement: 'floating' });
+      expect(TANK_DECORATION_SHAPES['crystal-wind-chime']).toEqual({ placement: 'hanging' });
+    });
+
+    it.each([...FLOORS, ...FLOATS].flatMap((slug) => [48, 80].map((size) => [slug, size] as const)))(
+      '%s at %i is anchored at its lowest fill edge, the icon box edge',
+      (slug, size) => {
+        const { box } = inkReach((ctx) => paintTreasureIcon(ctx, slug, size));
+        expect(decorationBaseOffset(slug, size), `${slug} ${size}`).toBeCloseTo(box.maxY, 1);
+        expect(decorationBaseOffset(slug, size), `${slug} ${size}`).toBeCloseTo(size / 2, 1);
+      },
+    );
+
+    it('bakes a tank sprite and glow for each Floor and Floating one, anchored at the icon box edge', () => {
+      const tex = bakeShipped();
+      const iconFrame = treasureIconTextureSize(PX);
+      for (const slug of [...FLOORS, ...FLOATS]) {
+        expect(tex.decorations[slug].key).toBe(`tank-deco-${slug}-80`);
+        expect(tex.decorationGlows[slug].key).toBe(`tank-deco-glow-${slug}-80`);
+        const sprite = bakeOf(tex.decorations[slug].key);
+        expect(sprite.size.originY - iconFrame.originY, slug).toBeCloseTo(40, 0);
+        expect(sprite.size.originY - iconFrame.originY, slug).toBeCloseTo(decorationBaseOffset(slug, PX), 9);
+        expect(sprite.size, slug).toEqual({ ...iconFrame, originY: iconFrame.originY + decorationBaseOffset(slug, PX) });
+      }
+    });
+
+    it('sits the Glow moss ball across the waterline, 20 below the top of the 80 box', () => {
+      const fills = record((ctx) => paintTreasureIcon(ctx, 'glow-moss-ball', PX)).ops.filter(
+        (op) => op.op === 'fill' && op.fillStyle === MOSS_BALL_FILL,
+      );
+      expect(fills).toHaveLength(1);
+      const points: [number, number][] = [];
+      pathPoints(fills[0].args[0] as unknown[][], IDENTITY, points);
+      const ys = points.map(([, y]) => y);
+      expect(Math.min(...ys)).toBeLessThan(-20 - 8);
+      expect(Math.max(...ys)).toBeGreaterThan(-20 + 8);
+      expect(Math.min(...ys)).toBeGreaterThan(-40);
+    });
+
+    it('bakes the Crystal wind chime from its icon at 80, hanging from its top-centre hook', () => {
+      const tex = bakeShipped();
+      const iconFrame = treasureIconTextureSize(PX);
+      const sprite = bakeOf(tex.decorations['crystal-wind-chime'].key);
+      expect(sprite.size).toEqual({ ...iconFrame, originY: iconFrame.originY - PX / 2 });
+      expect(sprite.size.originY).toBe(1);
+      expect(sprite.size.h).toBe(82);
+      expect(sprite.size.originX * 2).toBe(sprite.size.w);
+      const before = (ctx: CanvasRenderingContext2D): void => {
+        ctx.translate(0, PX / 2);
+        paintTreasureIcon(ctx, 'crystal-wind-chime', PX);
+      };
+      expect(callLogDigest(sprite.paint)).toBe(callLogDigest(before));
+      // The hook ring's ink touches the hook point, and the longest rod reaches the base point one footprint below.
+      const { box: reach } = inkReach((ctx) => paintTreasureIcon(ctx, 'crystal-wind-chime', PX));
+      expect(reach.minY + PX / 2).toBeGreaterThanOrEqual(-0.05);
+      expect(reach.minY + PX / 2).toBeLessThan(1);
+      expect(reach.maxY + PX / 2).toBeGreaterThan(PX - 1.5);
+      expect(reach.maxY + PX / 2).toBeLessThanOrEqual(PX + REACH_TOLERANCE);
+    });
+
+    it('centres the Crystal wind chime glow on its box, with the sprite anchor at the hook', () => {
+      const tex = bakeShipped();
+      const glow = bakeOf(tex.decorationGlows['crystal-wind-chime'].key);
+      const frame = rarityGlowTextureSize(96);
+      expect(glow.size).toEqual({ ...frame, originY: frame.originY - PX / 2 });
+      const rec = record(glow.paint);
+      expect(rec.calls[0]).toEqual(['translate', [0, PX / 2]]);
+      expect(parseRgba(rec.gradients[0].stops[0][1]).rgb).toEqual(channelsOf(BADGE_FILL.diamond));
+    });
+
+    it('glows every Area 6 Decoration in its catalogue rarity: Common, Rare, Epic and Legendary', () => {
+      const tex = bakeShipped();
+      const rarityColour = { common: 'circle', rare: 'diamond', epic: 'shield', legendary: 'star' } as const;
+      for (const decoration of addedBy(SPRING_CAVE_TREASURES, 'spring-cave').filter(isDecoration)) {
+        const slug = treasureSlug(decoration.id) as TankDecorationSlug;
+        const glow = bakeOf(tex.decorationGlows[slug].key);
+        const rec = record(glow.paint);
+        expect(parseRgba(rec.gradients[0].stops[0][1]).rgb, decoration.id).toEqual(channelsOf(BADGE_FILL[rarityColour[decoration.rarity]]));
+      }
     });
   });
 });

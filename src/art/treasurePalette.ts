@@ -173,6 +173,43 @@ export const PEARL_CHARM_CORD = NECKLACE_CORD;
 /** Firefly cape, a pale night periwinkle (the true night blue fails 9:1). 10.40:1. */
 export const FIREFLY_CAPE_FILL = '#d4d9ff';
 
+// ---- Spring cave Area 6 silhouette fills (issue #77, ND-12; all at least 9:1 with ink) ----
+// Icons and the worn looks of the five Wearables share these (the worn looks import them from here, they
+// never repeat the hex). Later steps may add only internal detail colours, never outer fills. The cave is
+// cool and pale: grey-blue stone, a pale teal crystal and a pale amber lamp. None equals a BADGE_FILL
+// rarity colour. Ratios are fill against ink. Aliases of a shipped colour say so.
+
+/** Pebble stack stones, a pale river-stone grey-blue. 10.80:1. */
+export const PEBBLE_STACK_FILL = '#d6e0ee';
+/** Glow moss ball, the lily-pad socks' pale pad green. Alias of LILY_PAD_SOCK_FILL. 11.09:1. */
+export const MOSS_BALL_FILL = LILY_PAD_SOCK_FILL;
+/** Glow moss ball anchor weight, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const MOSS_BALL_WEIGHT = FIREFLY_HOOK;
+/** Miner's headlamp helmet and lamp housing, a pale amber hard hat. 10.65:1. */
+export const MINERS_HELMET_FILL = '#ffd98a';
+/** Cave crystal, a pale teal: the pendant, the wind chime rods, the tail cuff points, the arch and the crown points. 11.99:1. */
+export const CAVE_CRYSTAL_FILL = '#c9f3ea';
+/** Fossil ammonite shell, a pale sandstone. 11.31:1. */
+export const AMMONITE_FILL = '#f4e2c2';
+/** Fossil ammonite slab, pebble A. 9.50:1. */
+export const AMMONITE_SLAB = PEBBLE_A;
+/** Crystal wind chime top bar, the decoy's pale carved wood. Alias of DECOY_BODY. 10.59:1. */
+export const WIND_CHIME_BAR = DECOY_BODY;
+/** Crystal wind chime hook ring, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const WIND_CHIME_HOOK = FIREFLY_HOOK;
+/** Explorer vest, a pale khaki-green canvas. 11.62:1. */
+export const EXPLORER_VEST_FILL = '#e4ecb4';
+/** Geode lamp rock shell, a pale grey-brown stone. 10.37:1. */
+export const GEODE_ROCK_FILL = '#e4d9cf';
+/** Geode lamp base, pebble C. Alias of GOLDEN_LOTUS_BASE. 10.70:1. */
+export const GEODE_BASE_FILL = GOLDEN_LOTUS_BASE;
+/** Crystal tail cuff band, pebble A. 9.50:1. */
+export const CRYSTAL_CUFF_BAND = PEBBLE_A;
+/** Crystal arch plinth, pebble C. Alias of GOLDEN_LOTUS_BASE. 10.70:1. */
+export const CRYSTAL_ARCH_BASE = GOLDEN_LOTUS_BASE;
+/** Crystal crown base band, a pale silver-white (so the gold band across it reads in greyscale, 1.46:1). 12.96:1. */
+export const CRYSTAL_CROWN_BAND = '#f0f3fa';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */

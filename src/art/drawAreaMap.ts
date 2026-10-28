@@ -53,6 +53,16 @@
  * are the shape cue apart from the round disc and the notched pad (greyscale, guide 10);
  * the padlock badge still marks locked.
  *
+ * The Spring cave marker (issue #77) is a rounded grey-blue stone with a crystal cluster on its top
+ * edge, same frame, anchor and ink (3.5) for the stone. It reaches 56 wide to the ink edge, the stone
+ * 25 below the centre and the crystal tips about 31 above it, so it stays inside the 64 px frame and clear
+ * of the focus ring. The stone is {@link MAP_SPRING_CAVE_STONE_FILL} (7.48:1 with ink, and 3.16:1
+ * against the backdrop, so the edge passes 3:1 by its fill) in both states; the crystals are
+ * teal {@link MAP_SPRING_CAVE_CRYSTAL_FILL} (7.54:1 with ink, 3.18:1 against the backdrop)
+ * unlocked and white locked, so the stone stays the number's ground at 7.48:1 and the padlock badge
+ * still marks locked. The flat sides and the crystals on top are the shape cue apart from the
+ * disc, the notched pad and the garden plot (greyscale, guide 10).
+ *
  * Sizes are to the outer ink edge, as the guide gives them. Every value is
  * `derived (provisional)`. Presentational only: no Phaser, and no import from
  * src/logic.
@@ -309,6 +319,67 @@ function gardenPlotPath(): Path2D {
   return p;
 }
 
+/**
+ * Spring cave marker stone fill: grey-blue cave rock. Ink 2b2350 on it is 7.48:1, and against the
+ * #0c6a8c backdrop it is 3.16:1, so the marker edge passes 3:1 by its fill as the other markers
+ * do. The same in both states. Derived (provisional).
+ */
+export const MAP_SPRING_CAVE_STONE_FILL = '#a9bdd3';
+/** Spring cave marker crystal fill when unlocked: glowing teal. Ink on it is 7.54:1, backdrop 3.18:1. Locked it is white. Derived (provisional). */
+export const MAP_SPRING_CAVE_CRYSTAL_FILL = '#3fd0c0';
+/** Ink of the crystals: the badge ring width, thinner than the stone so the small shards keep their fill. */
+const CRYSTAL_LW = BADGE_LW;
+
+/**
+ * The stone and its crystals, in marker units (derived, provisional). The stone is a rounded
+ * rectangle to the ink centreline (ink edge 28 across and 22 up and down), centred `centreY` below
+ * the marker centre, so its inner ink edge stays 1.5 clear of the number box (a two-digit number,
+ * 34 x 28). Each crystal is a flat-based, pointed shard standing on the stone's top edge between
+ * `x0` and `x1`, its tip at `tipX`, `tipY`, with its shoulders at `shoulderY`.
+ */
+export const MAP_SPRING_CAVE_STONE = {
+  halfW: 28 - MARKER_LW / 2,
+  halfH: 22 - MARKER_LW / 2,
+  centreY: 3,
+  corner: 15,
+  crystals: [
+    { x0: -12, x1: -2, tipX: -7, tipY: -30, shoulderY: -24 },
+    { x0: 0, x1: 8, tipX: 4, tipY: -25.5, shoulderY: -21 },
+  ],
+} as const;
+
+/** The stone outline (centreline) as a closed rounded rectangle. */
+function caveStonePath(): Path2D {
+  const { halfW, halfH, centreY, corner } = MAP_SPRING_CAVE_STONE;
+  const cx = halfW - corner;
+  const cy = halfH - corner;
+  const p = new Path2D();
+  p.moveTo(-cx, centreY - halfH);
+  p.lineTo(cx, centreY - halfH);
+  p.arc(cx, centreY - cy, corner, -Math.PI / 2, 0);
+  p.lineTo(halfW, centreY + cy);
+  p.arc(cx, centreY + cy, corner, 0, Math.PI / 2);
+  p.lineTo(-cx, centreY + halfH);
+  p.arc(-cx, centreY + cy, corner, Math.PI / 2, Math.PI);
+  p.lineTo(-halfW, centreY - cy);
+  p.arc(-cx, centreY - cy, corner, Math.PI, (3 * Math.PI) / 2);
+  p.closePath();
+  return p;
+}
+
+/** One crystal shard (centreline): flat base on the stone's top edge, straight sides to the shoulders, a point on top. */
+function crystalPath(crystal: (typeof MAP_SPRING_CAVE_STONE.crystals)[number]): Path2D {
+  const baseY = MAP_SPRING_CAVE_STONE.centreY - MAP_SPRING_CAVE_STONE.halfH;
+  const p = new Path2D();
+  p.moveTo(crystal.x0, baseY);
+  p.lineTo(crystal.x0, crystal.shoulderY);
+  p.lineTo(crystal.tipX, crystal.tipY);
+  p.lineTo(crystal.x1, crystal.shoulderY);
+  p.lineTo(crystal.x1, baseY);
+  p.closePath();
+  return p;
+}
+
 type MarkerPainter = (ctx: CanvasRenderingContext2D, locked: boolean) => void;
 
 /** Every look's marker painter. A new `HabitatLookId` fails to compile until it has its own marker, so no look falls back to the canal's. */
@@ -320,6 +391,13 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
   },
   pond: (ctx, locked) => shape(ctx, lilyPadPath(), locked ? WHITE : MAP_POND_PAD_FILL, MARKER_LW),
   chinampa: (ctx, locked) => shape(ctx, gardenPlotPath(), locked ? WHITE : MAP_CHINAMPA_PLOT_FILL, MARKER_LW),
+  // The stone first, so its fill is the marker's own fill; the crystals stand on its top edge.
+  'spring-cave': (ctx, locked) => {
+    shape(ctx, caveStonePath(), MAP_SPRING_CAVE_STONE_FILL, MARKER_LW);
+    for (const crystal of MAP_SPRING_CAVE_STONE.crystals) {
+      shape(ctx, crystalPath(crystal), locked ? WHITE : MAP_SPRING_CAVE_CRYSTAL_FILL, CRYSTAL_LW);
+    }
+  },
 };
 
 /**
@@ -327,7 +405,9 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
  * is 60 x 48, with roots to about 31 below the centre). The canal look (default) is a disc:
  * #ffe14a unlocked, #ffffff locked. The pond look is the notched lily pad: {@link MAP_POND_PAD_FILL} unlocked, #ffffff
  * locked. The chinampa look is the garden plot with hanging roots: {@link MAP_CHINAMPA_PLOT_FILL}
- * unlocked, #ffffff locked. The number is scene text; the locked cue is the padlock badge, not
+ * unlocked, #ffffff locked. The spring cave look is the grey-blue stone with a crystal cluster:
+ * {@link MAP_SPRING_CAVE_STONE_FILL} stone, {@link MAP_SPRING_CAVE_CRYSTAL_FILL} crystals
+ * unlocked, #ffffff crystals locked. The number is scene text; the locked cue is the padlock badge, not
  * the fill. An unknown look throws a RangeError, so none falls back to the canal.
  */
 export function paintMapMarker(ctx: CanvasRenderingContext2D, locked: boolean, look: HabitatLookId = 'canal'): void {
@@ -500,12 +580,13 @@ export function paintMapPanel(ctx: CanvasRenderingContext2D, w: number, h: numbe
  * each tint is a light shade of its marker's hue. A new `HabitatLookId` fails to compile until it
  * has its tint. Ink on each is 4.5:1 or more and each is 3:1 or more against the #0c6a8c backdrop:
  * canal #fff6c9 (ink 13.21:1, backdrop 5.58:1), pond #caf2d0 (11.74:1, 4.95:1), chinampa #ffe7c6
- * (11.99:1, 5.06:1). Derived (provisional).
+ * (11.99:1, 5.06:1), spring cave #e5ebf2 (11.99:1, 5.06:1). Derived (provisional).
  */
 export const MAP_HABITAT_TINTS: Readonly<Record<HabitatLookId, string>> = {
   canal: '#fff6c9',
   pond: '#caf2d0',
   chinampa: '#ffe7c6',
+  'spring-cave': '#e5ebf2',
 };
 
 /** The habitat tint of `look`. An unknown look throws a RangeError, so none falls back to the canal's. */

@@ -7,8 +7,15 @@ import { HABITATS } from '../logic/areas';
 import { REFUGE_PICTURE, REFUGE_PICTURE_TOP_BAND_H } from '../logic/refugeUi';
 import {
   REFUGE_ART_STATES,
+  REFUGE_CAVE_ROCK,
+  REFUGE_CAVE_ROCK_LIGHT,
   REFUGE_COB,
   REFUGE_CORN,
+  REFUGE_CRYSTAL,
+  REFUGE_CRYSTAL_DULL,
+  REFUGE_CRYSTAL_LIT,
+  REFUGE_GLOW_BULB,
+  REFUGE_GLOW_STALK,
   REFUGE_HIDDEN_FILL,
   REFUGE_LETTUCE,
   REFUGE_MARIGOLD,
@@ -292,6 +299,8 @@ describe('section pictures', () => {
       const canal = record((ctx) => paintRefugeSection(ctx, 'canal', state));
       const pond = record((ctx) => paintRefugeSection(ctx, 'pond', state));
       const chinampa = record((ctx) => paintRefugeSection(ctx, 'chinampa', state));
+      const springCave = record((ctx) => paintRefugeSection(ctx, 'spring-cave', state));
+      for (const other of [canal, pond, chinampa]) expect(signature(springCave)).not.toBe(signature(other));
       expect(signature(canal)).not.toBe(signature(pond));
       expect(signature(chinampa)).not.toBe(signature(canal));
       expect(signature(chinampa)).not.toBe(signature(pond));
@@ -322,6 +331,54 @@ describe('section pictures', () => {
     // The plots own no canal stone and no lily pad.
     expect(colours('clean')).not.toContain('#47ce5a');
     expect(colours('dirty').some((c) => ['#d4cfe6', '#a9bfd6', '#efdcba'].includes(c))).toBe(false);
+  });
+
+  it('paints the spring cave as grey-blue rock: dull stubs when dirty, glowing teal crystals when clean', () => {
+    const colours = (state: RefugeArtState): string[] =>
+      fills(record((ctx) => paintRefugeSection(ctx, 'spring-cave', state))).map((f) => f.style);
+    for (const state of REFUGE_ART_STATES) {
+      // Two walls (left and its mirror) and three stalactites, in both states.
+      expect(colours(state).filter((c) => c === REFUGE_CAVE_ROCK)).toHaveLength(2);
+      expect(colours(state).filter((c) => c === REFUGE_CAVE_ROCK_LIGHT)).toHaveLength(3);
+    }
+    // Three shards in each of two clusters: dull grey when dirty, teal when clean.
+    expect(colours('dirty').filter((c) => c === REFUGE_CRYSTAL_DULL)).toHaveLength(6);
+    expect(colours('dirty')).not.toContain(REFUGE_CRYSTAL);
+    expect(colours('clean').filter((c) => c === REFUGE_CRYSTAL)).toHaveLength(6);
+    expect(colours('clean')).not.toContain(REFUGE_CRYSTAL_DULL);
+    const lit = (state: RefugeArtState): number =>
+      strokes(record((ctx) => paintRefugeSection(ctx, 'spring-cave', state))).filter((s) => s.style === REFUGE_CRYSTAL_LIT).length;
+    expect(lit('dirty')).toBe(0);
+    expect(lit('clean')).toBe(6);
+    // The cave owns no canal stone, no lily pad and no garden plot.
+    for (const state of REFUGE_ART_STATES) {
+      const all = colours(state);
+      expect(all.some((c) => ['#d4cfe6', '#efdcba', '#47ce5a', REFUGE_PLOT_SOIL, REFUGE_PLOT_TOP].includes(c))).toBe(false);
+    }
+  });
+
+  it('hangs the cave stalactites between the walls, no lower than the water surface', () => {
+    const stalactiteFills = fills(record((ctx) => paintRefugeSection(ctx, 'spring-cave', 'clean'))).filter(
+      (f) => f.style === REFUGE_CAVE_ROCK_LIGHT,
+    );
+    expect(stalactiteFills).toHaveLength(3);
+    for (const f of stalactiteFills) {
+      const ys = f.cmds.flatMap((c) => c.slice(1).filter((_, i) => i % 2 === 1) as number[]);
+      expect(Math.max(...ys)).toBeLessThanOrEqual(22);
+      const xs = f.cmds.flatMap((c) => c.slice(1).filter((_, i) => i % 2 === 0) as number[]);
+      expect(Math.min(...xs)).toBeGreaterThan(45);
+      expect(Math.max(...xs)).toBeLessThan(155);
+    }
+  });
+
+  it('keeps the other looks unchanged: the canal, pond and chinampa paint no spring cave colour', () => {
+    const caveColours = [REFUGE_CAVE_ROCK, REFUGE_CAVE_ROCK_LIGHT, REFUGE_CRYSTAL, REFUGE_CRYSTAL_DULL, REFUGE_CRYSTAL_LIT];
+    for (const look of ['canal', 'pond', 'chinampa'] as const) {
+      for (const state of REFUGE_ART_STATES) {
+        const styles = record((ctx) => paintRefugeSection(ctx, look, state)).map((p) => p.style);
+        for (const c of caveColours) expect(styles, `${look} ${state} ${c}`).not.toContain(c);
+      }
+    }
   });
 
   it('paints the canal with stone banks and the pond with lily pads and cattails', () => {
@@ -384,6 +441,40 @@ describe('section contrast (guide 10)', () => {
     }
   });
 
+  it('lists the spring cave rock and crystals as frame colours, each 3:1 or more with ink in both states', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const colours = refugeBackdropColours('spring-cave', state);
+      for (const c of [REFUGE_CAVE_ROCK, REFUGE_CAVE_ROCK_LIGHT, REFUGE_CRYSTAL, REFUGE_CRYSTAL_LIT, REFUGE_CRYSTAL_DULL]) {
+        expect(colours).toContain(c);
+      }
+    }
+    // Printed in the rock comment: wall 5.38, stalactite 7.34, crystal 7.54, lit facet 11.10, dull stub 5.45, stalk 6.34, bulb 13.03.
+    expect(contrast(INK, REFUGE_CAVE_ROCK).toFixed(2)).toBe('5.38');
+    expect(contrast(INK, REFUGE_CAVE_ROCK_LIGHT).toFixed(2)).toBe('7.34');
+    expect(contrast(INK, REFUGE_CRYSTAL).toFixed(2)).toBe('7.54');
+    expect(contrast(INK, REFUGE_CRYSTAL_LIT).toFixed(2)).toBe('11.10');
+    expect(contrast(INK, REFUGE_CRYSTAL_DULL).toFixed(2)).toBe('5.45');
+    expect(contrast(INK, REFUGE_GLOW_STALK).toFixed(2)).toBe('6.34');
+    expect(contrast(INK, REFUGE_GLOW_BULB).toFixed(2)).toBe('13.03');
+  });
+
+  it('keeps every colour a spring cave picture paints at 3:1 or more with ink, the murk blotches apart', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const painted = record((ctx) => paintRefugeSection(ctx, 'spring-cave', state));
+      for (const f of fills(painted).filter((p) => isHex(p.style) && p.style !== REFUGE_MURK && p.style !== EYE)) {
+        expect(contrast(INK, f.style), `${state} ${f.style}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('keeps the spring cave clear water cold blue and its dirty water inside the grey-brown rule', () => {
+    const clean = refugeCleanWater('spring-cave');
+    for (const c of [clean.top, clean.bottom]) {
+      const [r, , b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+      expect(b, c).toBeGreaterThan(r);
+    }
+  });
+
   it('tints the dirty water grey-brown, away from the look clear water', () => {
     for (const look of HABITAT_LOOK_IDS) {
       const dirty = refugeDirtyWater(look);
@@ -417,6 +508,18 @@ describe('plants layer', () => {
       expect(strokes(painted).length).toBeGreaterThan(3);
     }
     expect(sigs.size).toBe(HABITAT_LOOK_IDS.length);
+  });
+
+  it('paints the spring cave plants as three glow-plants on a rock mound, each a stalk and a pale bulb', () => {
+    const painted = record((ctx) => paintRefugePlants(ctx, 'spring-cave'));
+    expect(fills(painted).filter((f) => f.style === REFUGE_GLOW_BULB)).toHaveLength(3);
+    expect(strokes(painted).filter((s) => s.style === REFUGE_GLOW_STALK)).toHaveLength(3);
+    expect(fills(painted).filter((f) => f.style === REFUGE_CAVE_ROCK_LIGHT)).toHaveLength(1);
+    // The glow behind each bulb is a soft translucent disc with no ink.
+    expect(fills(painted).filter((f) => f.style.startsWith('rgba('))).toHaveLength(3);
+    for (const f of fills(painted).filter((p) => isHex(p.style))) {
+      expect(contrast(INK, f.style), f.style).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('stands bottom-centre on the bed of a picture', () => {

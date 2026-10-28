@@ -15,7 +15,9 @@
  * The pictures are keyed by {@link HabitatLookId} in `Record`s, so a new look cannot ship
  * without refuge art. Canal: stone banks. Pond: lily pads and cattails. Chinampa: garden
  * plots with ahuejote willows and roots, bare when dirty, with corn, marigolds and lettuce
- * when clean. Nothing for the spring cave or the deep canal: later habitats add their own entries.
+ * when clean. Spring cave (issue #77): grey-blue rock walls and stalactites under the cave roof,
+ * dull stubs when dirty, teal crystals glowing at the wall feet when clean, and glow-plants in the
+ * plants layer. Nothing for the deep canal: later habitats add their own entries.
  *
  * Contrast (guide 10): the picture is UI, not a cue object. Its ink frame (3.5) must read
  * on everything that meets it, so every colour that can touch the frame is held to 3:1
@@ -91,6 +93,25 @@ export const REFUGE_CORN = '#8fd14f';
 export const REFUGE_COB = '#ffd24a';
 export const REFUGE_MARIGOLD = '#ff9a2e';
 export const REFUGE_LETTUCE = '#5fcf6a';
+/**
+ * Spring cave rock and crystal colours (issue #77, derived, provisional). Each is 3:1 or more with
+ * ink, so the ink frame reads where a wall, a stalactite or a crystal meets it: wall rock #8da0b8
+ * is 5.38:1, stalactite rock #a9bbd0 7.34:1, crystal #3fd0c0 7.54:1, lit crystal facet #9af2e4
+ * 11.10:1 and the dull dirty stub #8fa3a6 5.45:1. The glow-plant stalk #4fbf9a is 6.34:1 and its
+ * bulb #caffea 13.03:1.
+ */
+export const REFUGE_CAVE_ROCK = '#8da0b8';
+export const REFUGE_CAVE_ROCK_LIGHT = '#a9bbd0';
+/** Rock layers on a wall's face. An internal detail line, never ink. */
+export const REFUGE_CAVE_STRATA = 'rgba(52,68,98,0.4)';
+export const REFUGE_CRYSTAL = '#3fd0c0';
+export const REFUGE_CRYSTAL_LIT = '#9af2e4';
+/** Dull stub of a crystal on a dirty wall: grey, no glow. */
+export const REFUGE_CRYSTAL_DULL = '#8fa3a6';
+/** Soft glow behind clean crystals and glow-plant bulbs: no ink, inside the water only. */
+export const REFUGE_CRYSTAL_GLOW = 'rgba(154,242,228,0.3)';
+export const REFUGE_GLOW_STALK = '#4fbf9a';
+export const REFUGE_GLOW_BULB = '#caffea';
 /** Resting axolotl body (the Leucistic body, guide 3b). */
 export const REFUGE_AXOLOTL_BODY = LEUCISTIC.body;
 /** Nudge badge disc: the same pink as the "New!" pill. Ink on it is 6.30:1. */
@@ -235,7 +256,8 @@ const CANAL_STONES: readonly string[] = [PEBBLE_A, PEBBLE_B, PEBBLE_C];
 /**
  * The structure colours of each look that can meet the ink frame: the canal's stones, nothing for
  * the pond (its pads and cattails stand inside the picture), and the chinampa's plot soil, plot top,
- * willow trunk, roots and crops. A new look fails to compile until it lists its own.
+ * willow trunk, roots and crops, and the spring cave's wall rock, stalactite rock and crystals. A new
+ * look fails to compile until it lists its own.
  */
 const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>> = {
   canal: CANAL_STONES,
@@ -252,12 +274,13 @@ const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>
     REFUGE_LETTUCE,
     REFUGE_DEAD_STALK,
   ],
+  'spring-cave': [REFUGE_CAVE_ROCK, REFUGE_CAVE_ROCK_LIGHT, REFUGE_CRYSTAL, REFUGE_CRYSTAL_LIT, REFUGE_CRYSTAL_DULL],
 };
 
 /**
  * Every opaque colour that can meet the ink frame of a picture of `look` in `state`: the
  * sky stops, the water stops, the bed, and the look's structure colours (the canal's stones, the
- * chinampa's plots). Each is held to 3:1 with ink (guide 10), so the frame reads on all of them.
+ * chinampa's plots, the spring cave's rock and crystals). Each is held to 3:1 with ink (guide 10), so the frame reads on all of them.
  */
 export function refugeBackdropColours(look: HabitatLookId, state: RefugeArtState): string[] {
   const l = habitatLook(look);
@@ -665,10 +688,119 @@ function paintChinampaStructure(ctx: CanvasRenderingContext2D, state: RefugeArtS
   }
 }
 
+// -- Spring cave: rock walls, stalactites and crystals ----------------------
+
+/** Ink of the cave rock (the pebble width, guide 4b). */
+const CAVE_LW = STONE_LW;
+
+/** The left rock wall, x -2 to 39, from the roof to the bed. The right wall mirrors it. */
+function caveWallPath(): Path2D {
+  const p = new Path2D();
+  p.moveTo(-2, -2);
+  p.lineTo(32, -2);
+  p.quadraticCurveTo(39, 12, 31, 26);
+  p.quadraticCurveTo(25, 40, 33, 54);
+  p.quadraticCurveTo(39, 68, 30, BED_Y + 2);
+  p.lineTo(-2, BED_Y + 2);
+  p.closePath();
+  return p;
+}
+
+/** The rock layers on a wall's face: internal detail lines. */
+function caveWallStrataPath(): Path2D {
+  const p = new Path2D();
+  for (const [y, dip] of [
+    [20, 2],
+    [42, -2],
+    [62, 2],
+  ] as const) {
+    p.moveTo(2, y);
+    p.quadraticCurveTo(15, y + dip, 26, y);
+  }
+  return p;
+}
+
+/** Stalactites hanging from the roof between the walls: x, half width, length. */
+const CAVE_STALACTITES: readonly (readonly [number, number, number])[] = [
+  [74, 6, 12],
+  [100, 7, 16],
+  [128, 5, 9],
+];
+
+function caveStalactitePath(x: number, halfW: number, len: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x - halfW, -2);
+  p.quadraticCurveTo(x - halfW * 0.5, len * 0.55, x, len);
+  p.quadraticCurveTo(x + halfW * 0.5, len * 0.55, x + halfW, -2);
+  p.closePath();
+  return p;
+}
+
+/** A crystal shard: flat base on y, `w` wide at x, `h` tall, its point `lean` to the side. */
+function crystalShardPath(x: number, y: number, w: number, h: number, lean: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x - w / 2, y);
+  p.lineTo(x - w / 2 + lean * 0.3, y - h * 0.72);
+  p.lineTo(x + lean, y - h);
+  p.lineTo(x + w / 2 + lean * 0.3, y - h * 0.72);
+  p.lineTo(x + w / 2, y);
+  p.closePath();
+  return p;
+}
+
+/** Shards of a cluster: x from the cluster centre, width, height, lean. */
+const CRYSTAL_SHARDS: readonly (readonly [number, number, number, number])[] = [
+  [-6, 6, 12, -1.5],
+  [1, 7, 17, 0.5],
+  [8, 5, 9, 1.5],
+];
+
+/**
+ * A crystal cluster standing on (x, y). Clean: three teal shards over a soft glow, each with a lit
+ * facet line. Dirty: the same three as short, dull grey stubs, no glow and no facet.
+ */
+function paintCrystalCluster(ctx: CanvasRenderingContext2D, x: number, y: number, state: RefugeArtState): void {
+  const clean = state === 'clean';
+  if (clean) {
+    const glow = new Path2D();
+    ell(glow, x + 1, y - 8, 15, 11);
+    ctx.fillStyle = REFUGE_CRYSTAL_GLOW;
+    ctx.fill(glow);
+  }
+  for (const [dx, w, h, lean] of CRYSTAL_SHARDS) {
+    shape(ctx, crystalShardPath(x + dx, y, w, clean ? h : h * 0.4, clean ? lean : 0), clean ? REFUGE_CRYSTAL : REFUGE_CRYSTAL_DULL, 1.8);
+    if (clean) {
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = REFUGE_CRYSTAL_LIT;
+      ctx.stroke(line(x + dx - w / 4, y - 2, x + dx - w / 4 + lean * 0.4, y - h * 0.62));
+    }
+  }
+}
+
+function paintSpringCaveStructure(ctx: CanvasRenderingContext2D, state: RefugeArtState): void {
+  for (const [x, halfW, len] of CAVE_STALACTITES) {
+    shape(ctx, caveStalactitePath(x, halfW, len), REFUGE_CAVE_ROCK_LIGHT, CAVE_LW);
+  }
+  for (const mirror of [false, true]) {
+    ctx.save();
+    if (mirror) {
+      ctx.translate(PIC_W, 0);
+      ctx.scale(-1, 1);
+    }
+    shape(ctx, caveWallPath(), REFUGE_CAVE_ROCK, CAVE_LW);
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = REFUGE_CAVE_STRATA;
+    ctx.stroke(caveWallStrataPath());
+    paintCrystalCluster(ctx, 42, BED_Y + 1, state);
+    ctx.restore();
+  }
+}
+
 const STRUCTURES: Readonly<Record<HabitatLookId, Structure>> = {
   canal: paintCanalStructure,
   pond: paintPondStructure,
   chinampa: paintChinampaStructure,
+  'spring-cave': paintSpringCaveStructure,
 };
 
 /** Where the small axolotls rest in a clean picture, on the bed between the banks. */
@@ -684,6 +816,11 @@ const RESTERS: Readonly<Record<HabitatLookId, readonly { readonly x: number; rea
   chinampa: [
     { x: 68, y: 70, flip: false },
     { x: 132, y: 71, flip: true },
+  ],
+  // between the crystal clusters (x 42 and 158) and the glow-plants at the centre
+  'spring-cave': [
+    { x: 74, y: 71, flip: false },
+    { x: 126, y: 70, flip: true },
   ],
 };
 
@@ -809,6 +946,10 @@ export const REFUGE_SECTION_PAINTERS: Readonly<
     dirty: (ctx) => paintRefugeSection(ctx, 'chinampa', 'dirty'),
     clean: (ctx) => paintRefugeSection(ctx, 'chinampa', 'clean'),
   },
+  'spring-cave': {
+    dirty: (ctx) => paintRefugeSection(ctx, 'spring-cave', 'dirty'),
+    clean: (ctx) => paintRefugeSection(ctx, 'spring-cave', 'clean'),
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -871,11 +1012,37 @@ function paintChinampaPlants(ctx: CanvasRenderingContext2D): void {
   paintMarigold(ctx, 13, -6, 16);
 }
 
+/**
+ * The spring cave's plants: a mossy rock mound on the bed with three glow-plants, each a curved
+ * stalk with a pale round bulb over a soft glow, growing up from the base. About 34 wide and 56
+ * tall with the glow, narrow enough to stand between the two resting axolotls ({@link REFUGE_PLANTS_TEX} is 80 x 60).
+ */
+function paintSpringCavePlants(ctx: CanvasRenderingContext2D): void {
+  const mound = new Path2D();
+  ell(mound, 0, -3, 17, 5.5);
+  shape(ctx, mound, REFUGE_CAVE_ROCK_LIGHT, 2.4);
+  for (const [x, lean, h, r] of [
+    [-8, -4, 30, 4.4],
+    [1, 2, 40, 5.2],
+    [9, 5, 24, 3.8],
+  ] as const) {
+    const glow = new Path2D();
+    ell(glow, x + lean, -5 - h, r * 2.1, r * 2.1);
+    ctx.fillStyle = REFUGE_CRYSTAL_GLOW;
+    ctx.fill(glow);
+    inkMany(ctx, [curveTube(x, -5, x - lean * 0.4, -5 - h * 0.55, x + lean, -5 - h, 2.4, REFUGE_GLOW_STALK, 1.6)]);
+    const bulb = new Path2D();
+    ell(bulb, x + lean, -5 - h, r, r);
+    shape(ctx, bulb, REFUGE_GLOW_BULB, 1.8);
+  }
+}
+
 /** Every look's plants painter. Local (0, 0) is the base of the plants, bottom-centre ({@link REFUGE_PLANTS_TEX}). */
 export const REFUGE_PLANTS_PAINTERS: Readonly<Record<HabitatLookId, PlantsPainter>> = {
   canal: paintCanalPlants,
   pond: paintPondPlants,
   chinampa: paintChinampaPlants,
+  'spring-cave': paintSpringCavePlants,
 };
 
 /** Paint the plants layer of `look` with its base at local (0, 0), growing up. */

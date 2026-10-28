@@ -1,5 +1,5 @@
 /**
- * Tilapia, heron, garter snake, carp, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
+ * Tilapia, heron, garter snake, carp, crayfish, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
  * The painters run against a recording context and a stub Path2D (the same approach as
  * treasureArt.test.ts): every fill and stroke is kept with the style, width and alpha it
  * was painted under, and every context call is logged.
@@ -28,6 +28,23 @@ import {
   paintCarpPuffStill,
   type CarpFrame,
 } from './drawCarp';
+import {
+  CRAYFISH_BELLY,
+  CRAYFISH_CLAW,
+  CRAYFISH_DARK,
+  CRAYFISH_EYE_BALL_R,
+  CRAYFISH_FOOT_Y,
+  CRAYFISH_FRAMES,
+  CRAYFISH_SHELL,
+  CRAYFISH_SHELL_RX,
+  CRAYFISH_SHELL_RY,
+  CRAYFISH_SHINE,
+  CRAYFISH_TEX,
+  CRAYFISH_WALK_FRAMES,
+  crayfishGeometry,
+  paintCrayfish,
+  type CrayfishFrame,
+} from './drawCrayfish';
 import { HALO_RX, HALO_RY, paintProtectedHalo } from './drawEffects';
 import {
   HERON_BEAK,
@@ -73,6 +90,7 @@ import { paintLegIcon } from './drawLegIcons';
 import { paintTilapia, type TilapiaPose } from './drawTilapia';
 import {
   ALERT_FILL,
+  CAVE_INTERIOR,
   BUBBLE_FILL,
   BUBBLE_STROKE,
   CARRY_RIM,
@@ -1749,6 +1767,479 @@ describe('carp mud puff (the warning cue; ink outline for greyscale)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Crayfish (issue #77; PRD N2, N3; ND-15, ND-18)
+// ---------------------------------------------------------------------------
+
+/** The least the claws must be lighter than the shell, the shell than the tail and legs, and the belly than the shell: the greyscale cues (guide 10). */
+const CRAYFISH_CLAW_RATIO = 1.4;
+const CRAYFISH_DARK_RATIO = 1.6;
+const CRAYFISH_BELLY_RATIO = 1.9;
+/** A claw is open at least this many radians wide in the warning, and closed under this many otherwise. */
+const CRAYFISH_OPEN_GAPE = 1.2;
+const CRAYFISH_CLOSED_GAPE = 0.3;
+/** Silhouette grid step, px. */
+const SIL_STEP = 1;
+
+/** The recorded parts of a painted crayfish frame. */
+function crayfishParts(frame: CrayfishFrame): { ops: Op[]; blobs: { ink: Op; fill: Op }[]; mouth: Op; seams: Op[] } {
+  const { ops } = record((ctx) => paintCrayfish(ctx, frame));
+  const mouths = ops.filter(
+    (op) => isStroke(op) && op.strokeStyle === INK && op.lineWidth === 2 && cmdsOf(op).some((cmd) => cmd[0] === 'quadraticCurveTo'),
+  );
+  expect(mouths).toHaveLength(1);
+  const seams = ops.filter((op) => isStroke(op) && op.strokeStyle === INK && op.lineWidth === 1.6);
+  return { ops, blobs: inkedFills(ops), mouth: mouths[0], seams };
+}
+
+/** Whether (x, y) is inside the frame's shell (carapace or head), shrunk by `margin` px. */
+function insideCrayfishShell(frame: CrayfishFrame, x: number, y: number, margin: number): boolean {
+  return crayfishGeometry(frame).shell.some(({ cx, cy, rx, ry, rot }) => {
+    const dx = x - cx;
+    const dy = y - cy;
+    const u = dx * Math.cos(rot) + dy * Math.sin(rot);
+    const v = -dx * Math.sin(rot) + dy * Math.cos(rot);
+    return (u / (rx - margin)) ** 2 + (v / (ry - margin)) ** 2 <= 1;
+  });
+}
+
+type SilPoly = [number, number][];
+
+/** A recorded path as polylines: ellipses sampled, curves sampled. */
+function silPolys(cmds: readonly unknown[][]): SilPoly[] {
+  const polys: SilPoly[] = [];
+  let cur: SilPoly = [];
+  for (const [name, ...args] of cmds) {
+    const n = args as number[];
+    if (name === 'moveTo') {
+      cur = [[n[0], n[1]]];
+      polys.push(cur);
+    } else if (name === 'lineTo') cur.push([n[0], n[1]]);
+    else if (name === 'quadraticCurveTo') {
+      const [x0, y0] = cur[cur.length - 1];
+      for (let i = 1; i <= 12; i++) {
+        const t = i / 12;
+        cur.push([(1 - t) ** 2 * x0 + 2 * (1 - t) * t * n[0] + t * t * n[2], (1 - t) ** 2 * y0 + 2 * (1 - t) * t * n[1] + t * t * n[3]]);
+      }
+    } else if (name === 'ellipse') {
+      const [cx, cy, rx, ry, rot] = n;
+      const ring: SilPoly = [];
+      for (let i = 0; i <= 48; i++) {
+        const a = (i / 48) * TAU;
+        const x = rx * Math.cos(a);
+        const y = ry * Math.sin(a);
+        ring.push([cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]);
+      }
+      polys.pop();
+      polys.push(ring);
+      cur = ring;
+    }
+  }
+  return polys;
+}
+
+function insidePoly(poly: SilPoly, x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    if (poly[i][1] > y !== poly[j][1] > y && x < ((poly[j][0] - poly[i][0]) * (y - poly[i][1])) / (poly[j][1] - poly[i][1]) + poly[i][0]) inside = !inside;
+  }
+  return inside;
+}
+
+function distToSegment(x: number, y: number, a: readonly [number, number], b: readonly [number, number]): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((x - a[0]) * dx + (y - a[1]) * dy) / len2));
+  return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy);
+}
+
+/**
+ * The silhouette of a frame: a grid of the pixels any fill or stroke touches (greyscale cannot see
+ * which colour it was, only where there is something). Every painted op counts, so it is the
+ * outer ink edge. Keyed [row][column] from the frame's top-left.
+ */
+function silhouetteOf(ops: readonly Op[]): boolean[][] {
+  const w = Math.ceil(CRAYFISH_TEX.w / SIL_STEP);
+  const h = Math.ceil(CRAYFISH_TEX.h / SIL_STEP);
+  const grid = Array.from({ length: h }, () => new Array<boolean>(w).fill(false));
+  for (const op of ops) {
+    const polys = silPolys(cmdsOf(op));
+    const half = isStroke(op) ? op.lineWidth / 2 : 0;
+    const all = polys.flat();
+    const box = {
+      x0: Math.min(...all.map((p) => p[0])) - half,
+      x1: Math.max(...all.map((p) => p[0])) + half,
+      y0: Math.min(...all.map((p) => p[1])) - half,
+      y1: Math.max(...all.map((p) => p[1])) + half,
+    };
+    for (let row = 0; row < h; row++) {
+      const y = row * SIL_STEP + SIL_STEP / 2 - CRAYFISH_TEX.originY;
+      if (y < box.y0 || y > box.y1) continue;
+      for (let col = 0; col < w; col++) {
+        if (grid[row][col]) continue;
+        const x = col * SIL_STEP + SIL_STEP / 2 - CRAYFISH_TEX.originX;
+        if (x < box.x0 || x > box.x1) continue;
+        const hit = isStroke(op)
+          ? polys.some((poly) => poly.some((p, i) => i + 1 < poly.length && distToSegment(x, y, p, poly[i + 1]) <= half))
+          : polys.some((poly) => insidePoly(poly, x, y));
+        if (hit) grid[row][col] = true;
+      }
+    }
+  }
+  return grid;
+}
+
+interface Silhouette {
+  /** Width and height of the box round everything painted, px. */
+  readonly width: number;
+  readonly height: number;
+  /** Painted pixels over the box's pixels: lower means more gaps. */
+  readonly solidity: number;
+  /** Height of the rows painted out in front of the head (past x = 32): only the claws are there. */
+  readonly clawSpan: number;
+}
+
+/** The measures of a frame's silhouette that the greyscale cue is read from. */
+function silhouetteMeasures(frame: CrayfishFrame): Silhouette {
+  const grid = silhouetteOf(crayfishParts(frame).ops);
+  const rows = grid.flatMap((r, i) => (r.some(Boolean) ? [i] : []));
+  const cols = grid[0].flatMap((_, c) => (grid.some((r) => r[c]) ? [c] : []));
+  const height = (rows[rows.length - 1] - rows[0] + 1) * SIL_STEP;
+  const width = (cols[cols.length - 1] - cols[0] + 1) * SIL_STEP;
+  const painted = grid.flat().filter(Boolean).length;
+  // columns past the head's front: only claws (and the pinch's arms) are out there
+  const front = Math.floor((32 + CRAYFISH_TEX.originX) / SIL_STEP);
+  const clawRows = grid.flatMap((r, i) => (r.slice(front).some(Boolean) ? [i] : []));
+  const clawSpan = (clawRows[clawRows.length - 1] - clawRows[0] + 1) * SIL_STEP;
+  return { width, height, solidity: painted / (width * height), clawSpan };
+}
+
+describe('crayfish colours (guide 3g, 10)', () => {
+  it('uses the colours the guide records', () => {
+    expect([CRAYFISH_SHELL, CRAYFISH_CLAW, CRAYFISH_DARK, CRAYFISH_BELLY, CRAYFISH_SHINE]).toEqual([
+      '#8aa5c2',
+      '#b4c8dc',
+      '#617c9c',
+      '#dbe6f0',
+      'rgba(255,255,255,0.5)',
+    ]);
+    expect(relativeLuminance(CRAYFISH_SHELL)).toBeCloseTo(0.3621, 4);
+    expect(relativeLuminance(CRAYFISH_CLAW)).toBeCloseTo(0.5618, 4);
+    expect(relativeLuminance(CRAYFISH_DARK)).toBeCloseTo(0.1936, 4);
+    expect(relativeLuminance(CRAYFISH_BELLY)).toBeCloseTo(0.7794, 4);
+  });
+
+  it('every part that reaches the outer edge is 3:1 or better against INK, and 3:1 or better against the darkest cave tone', () => {
+    for (const colour of [CRAYFISH_SHELL, CRAYFISH_CLAW, CRAYFISH_DARK]) {
+      expect(contrastRatio(colour, INK)).toBeGreaterThanOrEqual(INK_EDGE_RATIO);
+      expect(contrastRatio(colour, CAVE_INTERIOR)).toBeGreaterThanOrEqual(INK_EDGE_RATIO);
+    }
+    expect(contrastRatio(CRAYFISH_SHELL, CAVE_INTERIOR)).toBeCloseTo(6.71, 2);
+    expect(contrastRatio(CRAYFISH_SHELL, INK)).toBeCloseTo(5.65, 2);
+    expect(contrastRatio(CRAYFISH_CLAW, INK)).toBeCloseTo(8.39, 2);
+    expect(contrastRatio(CRAYFISH_DARK, INK)).toBeCloseTo(3.34, 2);
+  });
+
+  it('is no lighter than the hero, and no part is lighter than the hero belly', () => {
+    for (const colour of [CRAYFISH_SHELL, CRAYFISH_CLAW, CRAYFISH_DARK, CRAYFISH_BELLY]) {
+      expect(relativeLuminance(colour)).toBeLessThan(relativeLuminance(HERO_BELLY));
+    }
+  });
+
+  it('tells the claws from the shell, the shell from the tail and legs, and the belly from the shell, by value alone (the greyscale cue)', () => {
+    expect(contrastRatio(CRAYFISH_CLAW, CRAYFISH_SHELL)).toBeGreaterThanOrEqual(CRAYFISH_CLAW_RATIO);
+    expect(relativeLuminance(CRAYFISH_CLAW)).toBeGreaterThan(relativeLuminance(CRAYFISH_SHELL));
+    expect(contrastRatio(CRAYFISH_SHELL, CRAYFISH_DARK)).toBeGreaterThanOrEqual(CRAYFISH_DARK_RATIO);
+    expect(relativeLuminance(CRAYFISH_SHELL)).toBeGreaterThan(relativeLuminance(CRAYFISH_DARK));
+    expect(contrastRatio(CRAYFISH_BELLY, CRAYFISH_SHELL)).toBeGreaterThanOrEqual(CRAYFISH_BELLY_RATIO);
+  });
+
+  it('is a cool blue-grey, nowhere near red: not the hero pink, not a mouth red, not the carp bronze', () => {
+    const [r, g, b] = channelsOf(CRAYFISH_SHELL);
+    expect(b).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(r);
+    for (const frame of CRAYFISH_FRAMES) {
+      for (const op of crayfishParts(frame).ops) {
+        for (const colour of [op.fillStyle, op.strokeStyle]) {
+          expect(colour).not.toBe(TILAPIA_MOUTH);
+          expect(colour).not.toBe(LEGS_FILL);
+          expect(colour).not.toBe(CARP_BODY);
+        }
+      }
+    }
+  });
+
+  it('the shine is see-through white, so it never reaches the edge', () => {
+    expect(rgbaOf(CRAYFISH_SHINE)[3]).toBeLessThan(1);
+    expect(rgbaOf(CRAYFISH_SHINE).slice(0, 3)).toEqual([255, 255, 255]);
+  });
+});
+
+describe('crayfish anchors and sizes', () => {
+  it('shares one integer frame between every frame, with the anchor inside it and the tail behind it', () => {
+    expect(Number.isInteger(CRAYFISH_TEX.w) && Number.isInteger(CRAYFISH_TEX.h)).toBe(true);
+    expect(CRAYFISH_TEX.originX).toBeGreaterThan(0);
+    expect(CRAYFISH_TEX.originX).toBeLessThan(CRAYFISH_TEX.w);
+    expect(CRAYFISH_TEX.originY).toBeGreaterThan(0);
+    expect(CRAYFISH_TEX.originY).toBeLessThan(CRAYFISH_TEX.h);
+    // the tail trails well behind the anchor, toward -x, further than the 24 px body radius
+    expect(CRAYFISH_TEX.originX).toBeGreaterThan(40);
+  });
+
+  it('lists five frames: stand, two walk frames, the warning and the pinch', () => {
+    expect([...CRAYFISH_FRAMES]).toEqual(['stand', 'walkA', 'walkB', 'warn', 'pinch']);
+    expect([...CRAYFISH_WALK_FRAMES]).toEqual(['walkA', 'walkB']);
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: every part fits CRAYFISH_TEX with its ink and at least 4 px of padding', (frame) => {
+    expectPadded(crayfishParts(frame).ops, CRAYFISH_TEX);
+  });
+
+  it('is a plump shell about the size of the crayfish\'s 24 px body radius, centred on the anchor in the level frames', () => {
+    expect([CRAYFISH_SHELL_RX, CRAYFISH_SHELL_RY]).toEqual([21, 14]);
+    for (const frame of ['stand', 'walkA', 'walkB'] as const) {
+      const [carapace] = crayfishGeometry(frame).shell;
+      expect([carapace.cx, carapace.cy, carapace.rx, carapace.ry, carapace.rot]).toEqual([0, 0, 21, 14, 0]);
+    }
+  });
+
+  it('plants its feet CRAYFISH_FOOT_Y below the anchor in the stand frame, and never lower in any frame', () => {
+    const inkOf = (frame: CrayfishFrame): Box[] =>
+      crayfishParts(frame)
+        .ops.filter((op) => isStroke(op) && op.strokeStyle === INK && Math.abs(op.lineWidth - (3.6 + 2 * 2.2)) < 1e-9)
+        .map(tightOpBounds)
+        // the legs hang below the anchor; the two eye stalks (the same tube width) stand above it
+        .filter((box) => box.maxY > 0);
+    const stand = inkOf('stand');
+    expect(stand).toHaveLength(4);
+    expect(Math.max(...stand.map((b) => b.maxY))).toBeCloseTo(CRAYFISH_FOOT_Y, 9);
+    for (const frame of CRAYFISH_FRAMES) {
+      for (const box of inkOf(frame)) expect(box.maxY).toBeLessThanOrEqual(CRAYFISH_FOOT_Y + 1e-9);
+    }
+    for (const frame of ['warn', 'pinch'] as const) {
+      expect(Math.max(...inkOf(frame).map((b) => b.maxY))).toBeCloseTo(CRAYFISH_FOOT_Y, 9);
+    }
+  });
+});
+
+describe('crayfish poses', () => {
+  it('walkA and walkB swing the four feet opposite ways, lifting opposite feet, and bob the tail opposite ways; the shell stays put', () => {
+    const a = crayfishGeometry('walkA');
+    const b = crayfishGeometry('walkB');
+    const stand = crayfishGeometry('stand');
+    a.legs.forEach(([, footA], i) => {
+      const footB = b.legs[i][1];
+      const base = stand.legs[i][1][0];
+      expect(Math.sign(footA[0] - a.legs[i][0][0])).toBe(-Math.sign(footB[0] - b.legs[i][0][0]));
+      expect(footA[1]).not.toBe(footB[1]);
+      expect(Math.abs(footA[0] - base)).toBeGreaterThan(2);
+    });
+    expect(Math.sign(a.tail[0].cy - stand.tail[0].cy)).toBe(-Math.sign(b.tail[0].cy - stand.tail[0].cy));
+    for (const g of [a, b]) {
+      expect(g.shell).toEqual(stand.shell);
+      expect(g.eyes).toEqual(stand.eyes);
+      expect(g.mouth).toEqual(stand.mouth);
+      expect(g.far.gape).toBeLessThan(CRAYFISH_CLOSED_GAPE);
+      expect(g.near.gape).toBeLessThan(CRAYFISH_CLOSED_GAPE);
+    }
+  });
+
+  it('stand, walk and pinch keep both claws closed: a small mitten, gape under 0.3 radians', () => {
+    for (const frame of ['stand', 'walkA', 'walkB', 'pinch'] as const) {
+      const g = crayfishGeometry(frame);
+      expect(g.far.gape).toBeLessThan(CRAYFISH_CLOSED_GAPE);
+      expect(g.near.gape).toBeLessThan(CRAYFISH_CLOSED_GAPE);
+    }
+  });
+
+  it('warn: both claws are opened wide (over 1.2 radians), raised above the closed claws, and the shell is reared a little', () => {
+    const warn = crayfishGeometry('warn');
+    const stand = crayfishGeometry('stand');
+    for (const claw of [warn.far, warn.near]) expect(claw.gape).toBeGreaterThanOrEqual(CRAYFISH_OPEN_GAPE);
+    expect(warn.far.palm.cy).toBeLessThan(stand.far.palm.cy - 15);
+    expect(warn.near.palm.cy).toBeLessThan(stand.near.palm.cy - 5);
+    // the claw is bigger open: its pincers are longer
+    expect(warn.far.pincers[0].rx).toBeGreaterThan(stand.far.pincers[0].rx);
+    const [carapace] = warn.shell;
+    expect(carapace.rot).toBeLessThan(-0.05);
+    expect(carapace.rot).toBeGreaterThan(-0.25);
+    // the head and eyes rise with the shell, and the feet stay planted
+    expect(warn.eyes[1][1]).toBeLessThan(stand.eyes[1][1] + 1);
+    expect(warn.legs.map((leg) => leg[1][1])).toEqual(stand.legs.map((leg) => leg[1][1]));
+  });
+
+  it('pinch: both claws are closed and pushed straight forward, level along the floor, further out than any other frame', () => {
+    const tip = (frame: CrayfishFrame): number =>
+      Math.max(...[crayfishGeometry(frame).far, crayfishGeometry(frame).near].flatMap((claw) => claw.pincers.map((p) => p.cx + p.rx * Math.cos(p.rot))));
+    const pinch = crayfishGeometry('pinch');
+    for (const claw of [pinch.far, pinch.near]) {
+      for (const pincer of claw.pincers) expect(Math.abs(pincer.rot)).toBeLessThan(0.3);
+    }
+    // both arms run level: the wrist is within 4 px of the shoulder's height, along the same line
+    for (const claw of [pinch.far, pinch.near]) expect(Math.abs(claw.arm[1][1] - claw.arm[0][1])).toBeLessThan(4);
+    for (const frame of ['stand', 'walkA', 'walkB'] as const) expect(tip('pinch')).toBeGreaterThan(tip(frame) + 8);
+  });
+
+  it('every frame is drawn differently', () => {
+    const drawn = CRAYFISH_FRAMES.map((frame) => JSON.stringify(crayfishParts(frame).ops.map((op) => op.args)));
+    expect(new Set(drawn).size).toBe(CRAYFISH_FRAMES.length);
+  });
+});
+
+describe('crayfish warning in greyscale (guide 10): the open claws change the silhouette', () => {
+  const measures = Object.fromEntries(CRAYFISH_FRAMES.map((f) => [f, silhouetteMeasures(f)])) as Record<CrayfishFrame, Silhouette>;
+
+  it('the warning silhouette is much taller than any closed pose', () => {
+    for (const frame of ['stand', 'walkA', 'walkB', 'pinch'] as const) {
+      expect(measures.warn.height).toBeGreaterThanOrEqual(measures[frame].height * 1.35);
+    }
+  });
+
+  it('the warning silhouette is wider than the standing one, and has more gaps in its bounding box', () => {
+    expect(measures.warn.width).toBeGreaterThan(measures.stand.width);
+    for (const frame of ['stand', 'walkA', 'walkB', 'pinch'] as const) {
+      expect(measures.warn.solidity).toBeLessThan(measures[frame].solidity - 0.05);
+    }
+  });
+
+  it('the claws out in front of the head spread over at least 1.6 times the height of the closed claws', () => {
+    for (const frame of ['stand', 'walkA', 'walkB', 'pinch'] as const) {
+      expect(measures.warn.clawSpan).toBeGreaterThanOrEqual(measures[frame].clawSpan * 1.6);
+    }
+  });
+
+  it('the pinch is a different shape from the stand: the claws reach further forward on the level', () => {
+    expect(measures.pinch.width).toBeGreaterThan(measures.stand.width);
+    expect(Math.abs(measures.pinch.height - measures.stand.height)).toBeLessThanOrEqual(6);
+  });
+
+  it('closed frames paint two closing seams (ink lines along the claws); the open warning paints none', () => {
+    for (const frame of ['stand', 'walkA', 'walkB', 'pinch'] as const) expect(crayfishParts(frame).seams).toHaveLength(2);
+    expect(crayfishParts('warn').seams).toHaveLength(0);
+  });
+});
+
+describe('crayfish body (round, inked, no points)', () => {
+  it.each(CRAYFISH_FRAMES)('%s: the tail fan, three segments, six claw parts, the shell and two eye balls are inked rounded ellipses', (frame) => {
+    const { blobs } = crayfishParts(frame);
+    // 4 tail, 2 x (2 pincers + palm) claws, 1 shell, 2 eye balls
+    expect(blobs).toHaveLength(4 + 6 + 1 + 2);
+    for (const { ink, fill } of blobs) {
+      expect(ink.strokeStyle).toBe(INK);
+      expect(ink.lineWidth).toBeGreaterThanOrEqual(2 * 2 - 1e-9);
+      for (const cmd of cmdsOf(fill).filter((c) => c[0] === 'ellipse')) {
+        const [, cx, cy, rx, ry] = cmd as number[];
+        expect([cx, cy, rx, ry].every(Number.isFinite)).toBe(true);
+        expect(Math.min(rx, ry)).toBeGreaterThanOrEqual(3);
+      }
+    }
+    expect(blobs.map((b) => b.fill.fillStyle)).toEqual([
+      CRAYFISH_DARK,
+      CRAYFISH_DARK,
+      CRAYFISH_DARK,
+      CRAYFISH_SHELL,
+      CRAYFISH_CLAW,
+      CRAYFISH_CLAW,
+      CRAYFISH_CLAW,
+      CRAYFISH_SHELL,
+      CRAYFISH_CLAW,
+      CRAYFISH_CLAW,
+      CRAYFISH_CLAW,
+      WHITE,
+      WHITE,
+    ]);
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: the shell is one merged path of two ellipses, outlined at the guide width', (frame) => {
+    const { blobs } = crayfishParts(frame);
+    const shell = blobs.find((b) => b.fill.fillStyle === CRAYFISH_SHELL && cmdsOf(b.fill).filter((c) => c[0] === 'ellipse').length === 2)!;
+    expect(shell).toBeDefined();
+    expect(shell.ink.lineWidth).toBeCloseTo(2 * LW, 9);
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: the belly and the shine stay inside the shell', (frame) => {
+    const { ops } = crayfishParts(frame);
+    const g = crayfishGeometry(frame);
+    for (const [colour, e] of [
+      [CRAYFISH_BELLY, g.belly],
+      [CRAYFISH_SHINE, g.shine],
+    ] as const) {
+      const op = ops.find((o) => isFill(o) && o.fillStyle === colour)!;
+      expect(ellipseOf(op).slice(0, 4)).toEqual([e.cx, e.cy, e.rx, e.ry]);
+      for (const angle of [0, 1, 2, 3, 4, 5, 6]) {
+        const u = e.rx * Math.cos(angle);
+        const v = e.ry * Math.sin(angle);
+        const x = e.cx + u * Math.cos(e.rot) - v * Math.sin(e.rot);
+        const y = e.cy + u * Math.sin(e.rot) + v * Math.cos(e.rot);
+        expect(insideCrayfishShell(frame, x, y, 1)).toBe(true);
+      }
+    }
+  });
+});
+
+describe('crayfish face (round eyes, never scary, never hurting)', () => {
+  it.each(CRAYFISH_FRAMES)('%s: one closed ink smile line, inside the shell, and no mouth interior', (frame) => {
+    const { ops, mouth } = crayfishParts(frame);
+    expect(cmdsOf(mouth).map(([name]) => name)).toEqual(['moveTo', 'quadraticCurveTo']);
+    const [start, curve] = cmdsOf(mouth) as unknown as [string, ...number[]][];
+    for (const [x, y] of [
+      [start[1], start[2]],
+      [curve[3], curve[4]],
+    ]) {
+      expect(insideCrayfishShell(frame, x, y, 0.5)).toBe(true);
+    }
+    // the only fills are shell colours, the belly, the shine, the eyes and their glints: no mouth interior, no tooth, no tongue
+    expect(styleOfFills(ops)).toEqual(new Set([CRAYFISH_DARK, CRAYFISH_SHELL, CRAYFISH_CLAW, CRAYFISH_BELLY, CRAYFISH_SHINE, EYE, WHITE]));
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: two round eyes, each a white ball with a bead pupil and two glints, above the smile', (frame) => {
+    const { ops } = crayfishParts(frame);
+    const g = crayfishGeometry(frame);
+    const beads = ops.filter((op) => isFill(op) && op.fillStyle === EYE);
+    expect(beads).toHaveLength(2);
+    beads.forEach((bead, i) => {
+      const [px, py, r] = ellipseOf(bead);
+      expect([px, py]).toEqual([g.pupils[i][0], g.pupils[i][1]]);
+      expect(r).toBeGreaterThan(3);
+      // the pupil sits inside its ball, and the ball is round
+      expect(Math.hypot(px - g.eyes[i][0], py - g.eyes[i][1]) + r).toBeLessThan(CRAYFISH_EYE_BALL_R);
+      expect(g.eyes[i][1]).toBeLessThan(g.mouth[0][1]);
+    });
+    const glints = ops.filter((op) => isFill(op) && op.fillStyle === WHITE && cmdsOf(op).filter((c) => c[0] === 'ellipse').length === 2);
+    expect(glints).toHaveLength(2);
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: every claw tip is a rounded ellipse, with no points', (frame) => {
+    const g = crayfishGeometry(frame);
+    for (const claw of [g.far, g.near]) {
+      for (const pincer of [...claw.pincers, claw.palm]) {
+        expect(pincer.ry).toBeGreaterThanOrEqual(4);
+        expect(pincer.ry / pincer.rx).toBeGreaterThanOrEqual(0.2);
+      }
+    }
+  });
+
+  it.each(CRAYFISH_FRAMES)('%s: paints only crayfish colours, ink, the eye and white', (frame) => {
+    const { ops } = crayfishParts(frame);
+    const styles = new Set(ops.flatMap((op) => (isFill(op) ? [op.fillStyle] : [op.strokeStyle])));
+    expect(styles).toEqual(new Set([INK, CRAYFISH_SHELL, CRAYFISH_DARK, CRAYFISH_CLAW, CRAYFISH_BELLY, CRAYFISH_SHINE, EYE, WHITE]));
+  });
+
+  it('is never shown holding or hurting the axolotl: no frame paints the hero belly, the leg-loss sparkle, or the alert', () => {
+    for (const frame of CRAYFISH_FRAMES) {
+      const { ops } = crayfishParts(frame);
+      for (const op of ops) {
+        for (const colour of [op.fillStyle, op.strokeStyle]) {
+          expect(colour).not.toBe(POOF_SPARKLE);
+          expect(colour).not.toBe(ALERT_FILL);
+          expect(colour).not.toBe(HERO_BELLY);
+        }
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Bake
 // ---------------------------------------------------------------------------
 
@@ -1818,9 +2309,12 @@ describe('bakePredatorTextures', () => {
     'carp-puff-still',
   ];
 
-  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake and the carp under fixed keys', () => {
+  /** The crayfish (issue #77): five frames. */
+  const CRAYFISH = ['crayfish-stand', 'crayfish-walk-a', 'crayfish-walk-b', 'crayfish-warn', 'crayfish-pinch'];
+
+  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake, the carp and the crayfish under fixed keys', () => {
     const { baked, made } = withFakeScene((scene, made) => ({ baked: bakePredatorTextures(scene, 2), made }));
-    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP].sort();
+    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP, ...CRAYFISH].sort();
     expect([...made.keys()].sort()).toEqual(all);
     expect(Object.keys(baked.info).sort()).toEqual(all);
     for (const retired of ['heron-shadow', 'heron-shadow-warning', 'heron-beak-dip']) {
@@ -2011,5 +2505,51 @@ describe('bakePredatorTextures', () => {
     const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
     expect(new Set(frameKeys.map(argsOf)).size).toBe(frameKeys.length);
     expect(argsOf(PREDATOR_TEX.carpPuff)).not.toBe(argsOf(PREDATOR_TEX.carpPuffStill));
+  });
+
+  it('bakes each crayfish frame under its own key at its own size', () => {
+    const baked = withFakeScene((scene) => bakePredatorTextures(scene, 2));
+    expect(PREDATOR_TEX.crayfishStand).toBe('crayfish-stand');
+    expect(PREDATOR_TEX.crayfishWalkA).toBe('crayfish-walk-a');
+    expect(PREDATOR_TEX.crayfishWalkB).toBe('crayfish-walk-b');
+    expect(PREDATOR_TEX.crayfishWarn).toBe('crayfish-warn');
+    expect(PREDATOR_TEX.crayfishPinch).toBe('crayfish-pinch');
+    expect(baked.crayfish.stand.key).toBe('crayfish-stand');
+    expect(baked.crayfish.walkA.key).toBe('crayfish-walk-a');
+    expect(baked.crayfish.walkB.key).toBe('crayfish-walk-b');
+    expect(baked.crayfish.warn.key).toBe('crayfish-warn');
+    expect(baked.crayfish.pinch.key).toBe('crayfish-pinch');
+    for (const frame of CRAYFISH_FRAMES) {
+      const info = baked.crayfish[frame];
+      expect(info.scale).toBe(2);
+      expect([info.w, info.h, info.originX, info.originY]).toEqual([
+        CRAYFISH_TEX.w,
+        CRAYFISH_TEX.h,
+        CRAYFISH_TEX.originX,
+        CRAYFISH_TEX.originY,
+      ]);
+    }
+  });
+
+  it('paints each crayfish texture with its own painter and tone', () => {
+    const made = withFakeScene((scene, made) => {
+      bakePredatorTextures(scene, 1);
+      return made;
+    });
+    const keys = [
+      PREDATOR_TEX.crayfishStand,
+      PREDATOR_TEX.crayfishWalkA,
+      PREDATOR_TEX.crayfishWalkB,
+      PREDATOR_TEX.crayfishWarn,
+      PREDATOR_TEX.crayfishPinch,
+    ];
+    for (const key of keys) {
+      const ops = (made.get(key) as Recording).ops;
+      expect(ops.some((op) => isFill(op) && op.fillStyle === CRAYFISH_SHELL)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === CRAYFISH_CLAW)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === EYE)).toBe(true);
+    }
+    const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
+    expect(new Set(keys.map(argsOf)).size).toBe(keys.length);
   });
 });
