@@ -6,6 +6,7 @@ import type { AreaExit } from '../logic/areas';
 import type { ExitArrowSide } from '../logic/exitArrow';
 import type { MotionProfile } from '../logic/motion';
 import type { Vec2 } from '../logic/vec';
+import type { Point } from '../logic/zone';
 import type { GameAssets } from './BootScene';
 import { faceSprite } from './spriteFacing';
 
@@ -39,8 +40,8 @@ function showBaked(image: Phaser.GameObjects.Image, info: TexInfo): void {
 }
 
 /**
- * Draws the area exit: the gate standing on the bed (at `bedTop`) under the exit centre and the
- * round sign above it, both closed (slats, padlock) or open (clear opening, arrow), and a twinkle
+ * Draws the area exit: the gate standing at `base`, on the floor right under the exit centre (the
+ * bed or the top of a rock wall, from `exitGateBase`), and the round sign above it, both closed (slats, padlock) or open (clear opening, arrow), and a twinkle
  * burst around the sign when it opens. The open sign's arrow points to `arrowSide`: the baked art
  * points right, so 'left' mirrors the open sign; the closed sign is never mirrored. Visual only: the burst is driven by the frame `dt`, so it freezes with the
  * scene, and nothing here changes game state. An exit already open when the view is built shows
@@ -60,7 +61,7 @@ export class ExitView {
     scene: Phaser.Scene,
     assets: GameAssets,
     exit: AreaExit,
-    bedTop: number,
+    base: Point,
     open: boolean,
     arrowSide: ExitArrowSide,
   ) {
@@ -68,8 +69,8 @@ export class ExitView {
     this.open = open;
     this.arrowSide = arrowSide;
     const art = assets.area.exit;
-    this.gate = bakedImage(scene, open ? art.gateOpen : art.gateClosed, exit.x, bedTop, DEPTH.homeSpot);
-    this.signCentre = { x: exit.x, y: bedTop - GATE_H - SIGN_GAP_PX - SIGN_SIZE / 2 };
+    this.gate = bakedImage(scene, open ? art.gateOpen : art.gateClosed, base.x, base.y, DEPTH.homeSpot);
+    this.signCentre = { x: base.x, y: base.y - GATE_H - SIGN_GAP_PX - SIGN_SIZE / 2 };
     this.sign = bakedImage(
       scene,
       open ? art.signOpen : art.signClosed,
