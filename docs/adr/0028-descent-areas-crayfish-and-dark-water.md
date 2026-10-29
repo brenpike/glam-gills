@@ -1,6 +1,6 @@
 # ADR 0028: Descent areas, the crayfish and dark water
 
-- Status: Accepted
+- Status: Accepted. Amended in part by ADR 0030 (the crayfish pinch, stalactite and geyser values)
 - Date: 2026-10-28
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (the crayfish and the dark stay gentle, and the fact card stays true), [ADR 0008](0008-gentle-fail-state.md) (a pinch shows only the leg-loss poof), [ADR 0013](0013-axolotl-rig-and-frame-budget.md) (frame time with the dark layer), [ADR 0014](0014-area-framework.md) (the framework this generalises), [ADR 0018](0018-chinampa-gardens-ghost-nets-and-predator-ladder.md) (boot bake memory, the layout ladder), [ADR 0020](0020-u-turn-areas-garter-snake-and-hyacinth-mats.md) (the last generalisation, `warnOnRoute`, element kinds), [ADR 0022](0022-danger-pass-phase-2-seam-amendments.md) (living docs name no area), [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (the whole-water test and its depth bands), [ADR 0025](0025-procedural-background-music.md) (cues are data, made live in code), [ADR 0026](0026-procedural-sound-effects.md) (the ripple and the uh-oh)
 

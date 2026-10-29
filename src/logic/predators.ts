@@ -206,11 +206,12 @@ export const CARP_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
 
 /**
  * The crayfish (issue #77, ND-5): it walks its floor stretch and plays the shared rules with its own
- * tuning. It warns by distance, opening its claws, when the axolotl is within reach of it, pinches
- * forward along the floor, swims its route through the cooldown and bumps gently. With the
- * `warnOnRoute` rule it warns only while on its stretch, so a chase stays along the stretch, and
- * with the `levelStrike` rule its pinch stays level along the floor: its reach is the bottom only,
- * and swimming up out of it avoids every pinch.
+ * tuning. It warns by distance, opening its claws, when the axolotl is within reach of it, then
+ * pinches along the aim locked at the end of the warning, straight at the axolotl's place then, up
+ * off the floor included, so an axolotl hovering above it within reach is pinched. It swims its
+ * route through the cooldown and bumps gently. With the `warnOnRoute` rule it warns only while on
+ * its stretch, so a chase stays along the stretch and, after a pinch carried it off, it walks back
+ * onto its stretch before it warns again. Swimming away when the claws open avoids the pinch.
  */
 export const CRAYFISH_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   id: 'crayfish',
@@ -218,7 +219,7 @@ export const CRAYFISH_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   tuning: CRAYFISH,
   meetRange: CRAYFISH_MEET_RANGE,
   fact: CRAYFISH_FACT,
-  rules: Object.freeze({ warnOnRoute: true, levelStrike: true }),
+  rules: Object.freeze({ warnOnRoute: true }),
 });
 
 /** Every predator species. */

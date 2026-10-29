@@ -55,6 +55,7 @@ import {
   GEYSER_COLUMN_W,
   GEYSER_FOOT_DROP,
   GEYSER_FROTH,
+  GEYSER_MOUTH_HALF_W,
   GEYSER_MOUTH_RISE,
   GEYSER_RING,
   GEYSER_RING_TEX,
@@ -99,7 +100,8 @@ import {
 } from './movingHazardTextures';
 import { EYE, INK, LW, WHITE } from './palette';
 import type { TexSize } from './canvasKit';
-import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth } from '../logic/movingHazards';
+import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth, type MovingHazardSpawn, type MovingHazardType } from '../logic/movingHazards';
+import { SPRING_CAVE_2_LAYOUT } from '../logic/springCave2Layout';
 import { SPRING_CAVE_LAYOUT } from '../logic/springCaveLayout';
 import { PUNTING_POLES } from '../logic/tuning';
 import { SURF } from '../logic/zone';
@@ -936,6 +938,15 @@ describe('the shaft in pieces at a spawn\'s own depth (issue #118, ND-4)', () =>
 // ---------------------------------------------------------------------------
 
 /** Every part of the two spring cave looks, its painter and its frame. */
+/** Every moving hazard of the spring cave's two areas, Area 6 and Area 7, of `type`. */
+function springCaveSpawnsOf(type: Readonly<MovingHazardType>): readonly MovingHazardSpawn[] {
+  return [SPRING_CAVE_LAYOUT, SPRING_CAVE_2_LAYOUT].flatMap((layout) => (layout.movingHazards ?? []).filter((spawn) => spawn.type === type));
+}
+
+/** The longest drip stream and geyser column, px from the base, the spring cave's areas may set. */
+const SPRING_CAVE_MAX_STREAM = 250;
+const SPRING_CAVE_MAX_COLUMN = 304;
+
 const SPRING_CAVE_PARTS: readonly (readonly [string, (ctx: CanvasRenderingContext2D) => void, TexSize])[] = [
   ['stalactite', paintStalactite, STALACTITE_TEX],
   ['drip drop', paintDripDrop, DRIP_DROP_TEX],
@@ -1022,12 +1033,23 @@ describe('the stalactite (the bow of a roof hazard)', () => {
 describe('the drip stream (the shaft of a roof hazard)', () => {
   const { ops } = record(paintDripStream);
 
-  it('is the logic stream: drips as wide as twice the halfWidth, the art reaching every Area 6 stalactite from its rock', () => {
+  it('is the logic stream: drips as wide as twice the halfWidth, with no other part of the stream wider', () => {
     expect(2 * DRIP_HALF_W).toBe(2 * STALACTITE_DRIP.halfWidth);
+    const left = Math.min(...ops.map((op) => opBounds(op).minX));
+    const right = Math.max(...ops.map((op) => opBounds(op).maxX));
+    expect(right - left).toBeCloseTo(2 * STALACTITE_DRIP.halfWidth, 9);
+  });
+
+  it('reaches every Area 6 and Area 7 stalactite from its rock, and a 250 px stream, so MovingHazardView never throws', () => {
     const place = movingHazardLookPlace(STALACTITE_DRIP.look);
-    for (const spawn of (SPRING_CAVE_LAYOUT.movingHazards ?? []).filter((each) => each.type === STALACTITE_DRIP)) {
+    const spawns = springCaveSpawnsOf(STALACTITE_DRIP);
+    expect(spawns.length).toBeGreaterThan(0);
+    for (const spawn of spawns) {
       expect(movingHazardDepth(spawn) + place.shaftPastBase, spawn.id).toBeLessThanOrEqual(DRIP_STREAM_LENGTH);
+      expect(movingHazardDepth(spawn), spawn.id).toBeLessThanOrEqual(SPRING_CAVE_MAX_STREAM);
     }
+    expect(SPRING_CAVE_MAX_STREAM + place.shaftPastBase).toBeLessThanOrEqual(DRIP_STREAM_LENGTH);
+    expect(STALACTITE_DRIP.depth + place.shaftPastBase).toBeLessThanOrEqual(DRIP_STREAM_LENGTH);
   });
 
   it('has its lowest drip on the anchor and the art running up from it, a drip every DRIP_SPACING px', () => {
@@ -1049,12 +1071,21 @@ describe('the geyser chimney and column (the bow and shaft of a floor hazard)', 
     expect(box.minY).toBeGreaterThan(-GEYSER_MOUTH_RISE - 3);
   });
 
-  it('is the logic column: as wide as twice the halfWidth, the art reaching the Area 6 geyser past the bed', () => {
+  it('is the logic column: as wide as twice the halfWidth, and no wider than the chimney\'s mouth', () => {
     expect(GEYSER_COLUMN_W).toBe(2 * GEYSER_VENT.halfWidth);
+    expect(2 * GEYSER_MOUTH_HALF_W).toBeGreaterThanOrEqual(GEYSER_COLUMN_W);
+  });
+
+  it('reaches every Area 6 and Area 7 geyser past the bed, and a 304 px column, so MovingHazardView never throws', () => {
     const place = movingHazardLookPlace(GEYSER_VENT.look);
-    for (const spawn of (SPRING_CAVE_LAYOUT.movingHazards ?? []).filter((each) => each.type === GEYSER_VENT)) {
+    const spawns = springCaveSpawnsOf(GEYSER_VENT);
+    expect(spawns.length).toBeGreaterThan(0);
+    for (const spawn of spawns) {
       expect(movingHazardDepth(spawn) + place.shaftPastBase, spawn.id).toBeLessThanOrEqual(GEYSER_COLUMN_LENGTH);
+      expect(movingHazardDepth(spawn), spawn.id).toBeLessThanOrEqual(SPRING_CAVE_MAX_COLUMN);
     }
+    expect(SPRING_CAVE_MAX_COLUMN + place.shaftPastBase).toBeLessThanOrEqual(GEYSER_COLUMN_LENGTH);
+    expect(GEYSER_VENT.depth + place.shaftPastBase).toBeLessThanOrEqual(GEYSER_COLUMN_LENGTH);
   });
 
   it('has the column top at the anchor and the art running DOWN from it, as the column goes up from the bed', () => {

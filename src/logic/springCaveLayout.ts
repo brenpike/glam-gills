@@ -8,11 +8,11 @@
  * the right half of the bottom row (issue #77, ND-7), with six glow-plants in it (ND-8). The grotto
  * on the bed and the Rare ledge over the second crayfish are dead ends in the dark that hold
  * treasure spots (ND-11). It meets the full danger bar with the whole-water test (ND-4): three
- * chasing crayfish on their own floor stretches, six chasing common carp patrolling every depth,
- * four stalactites hanging from the rock ledges of the top row, under the waterline, dripping down
- * into it, and one geyser vent bursting up from the floor of the bottom row (ND-3, option B), with
- * no tilapia; and its snacks meet the
- * later row of the snack ramp, 24 of its 36 mobile (ND-10).
+ * chasing crayfish on their own floor stretches, seven chasing common carp patrolling every depth,
+ * one of them in the middle row across the main path, five stalactites hanging from the rock ledges
+ * of the top row, under the waterline, dripping down into it, and two geyser vents bursting up from
+ * the floor of the bottom row across the main path (ND-3, option B), 17 moving threats with no
+ * tilapia; and its snacks meet the later row of the snack ramp, 24 of its 36 mobile (ND-10).
  */
 import { SPRING_CAVE_TREASURES } from './catalogue';
 import { glowPlantSpawn } from './glowPlants';
@@ -44,13 +44,25 @@ export const SPRING_CAVE_CRAYFISH: Readonly<PredatorSpecies> = tunedSpecies(
 );
 
 /**
- * Area 6's common carp, one step up the predator ladder from Area 5's: a 0.925 s warning, over the
- * 0.8 s floor, a sweep at 220 px/s for 0.6 s reaching 130 px, a 2.2 s cooldown, a 40 px/s patrol and
- * the carp's chase default (issue #77, ND-6).
+ * Area 6's common carp, stronger than Area 5's (issue #77, ND-6): a 0.85 s warning, over the 0.8 s
+ * floor, a 144 px sweep at 320 px/s for 0.45 s from 130 px, a 50 px hit reach (the 32 px carp half
+ * length plus the Medium axolotl's 18 px half height) and 53 px touch, a 2.0 s cooldown, a 45 px/s
+ * patrol, and the carp's chase sight and leash at 130 px/s.
  */
 export const SPRING_CAVE_CARP: Readonly<PredatorSpecies> = tunedSpecies(
   CARP_SPECIES,
-  Object.freeze({ ...CARP, windup: 0.925, lungeSpeed: 220, lungeDuration: 0.6, lungeRange: 130, cooldown: 2.2, patrolSpeed: 40, chase: CARP_CHASE }),
+  Object.freeze({
+    ...CARP,
+    windup: 0.85,
+    lungeSpeed: 320,
+    lungeDuration: 0.45,
+    lungeRange: 130,
+    hitRadius: 50,
+    contactRadius: 53,
+    cooldown: 2.0,
+    patrolSpeed: 45,
+    chase: Object.freeze({ ...CARP_CHASE, speed: 130 }),
+  }),
 );
 
 /** Area 6's tadpole rule, the top of the later snack ramp row: 72 px/s (issue #77, ND-10). */
@@ -65,10 +77,10 @@ const SPRING_CAVE_SHRIMP = shrimpRule(60, 1.2, 60, 150);
 
 /**
  * The thirteen tadpole wander loops' turn points (issue #77, ND-10), placed after the threats: five
- * in the top row, between the stalactites and over the carp; four in the middle row, under the safe
- * area, in the two gaps between the carp and down the right edge; and four in the bottom row, at
- * the bottom left, east of the geyser vent, and two in the dark, over the Rare ledge and round the
- * exit.
+ * in the top row, between the stalactites and over the carp; three in the middle row, under the
+ * safe area, in the gap east of the way down and down the right edge; and five in the bottom row, at
+ * the bottom left, over `crayfish-0`, round the geyser vents, and two in the dark, over the west end
+ * of the Rare ledge and round the exit.
  */
 const SPRING_CAVE_LOOPS: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
   Object.freeze([[470, 110], [790, 110], [760, 260], [600, 190]] as const),
@@ -77,12 +89,12 @@ const SPRING_CAVE_LOOPS: readonly (readonly (readonly [number, number])[])[] = O
   Object.freeze([[1520, 110], [1880, 110], [1860, 260], [1680, 190]] as const),
   Object.freeze([[1960, 110], [2300, 110], [2320, 260], [2120, 190]] as const),
   Object.freeze([[50, 380], [380, 370], [260, 450], [60, 530]] as const),
-  Object.freeze([[970, 370], [1200, 370], [1290, 460], [1200, 540], [970, 540]] as const),
   Object.freeze([[1720, 370], [1960, 370], [2040, 460], [1960, 540], [1720, 540]] as const),
   Object.freeze([[2360, 570], [2350, 720], [2190, 720], [2040, 650], [2200, 600]] as const),
   Object.freeze([[60, 860], [400, 870], [350, 1010], [150, 1010]] as const),
-  Object.freeze([[940, 866], [1260, 870], [1200, 1016], [970, 1016]] as const),
-  Object.freeze([[1250, 770], [1560, 770], [1570, 920], [1300, 920]] as const),
+  Object.freeze([[500, 850], [820, 850], [820, 1000], [500, 1000]] as const),
+  Object.freeze([[840, 740], [1160, 740], [1160, 890], [840, 890]] as const),
+  Object.freeze([[1160, 770], [1480, 770], [1480, 920], [1160, 920]] as const),
   Object.freeze([[2040, 866], [2360, 870], [2330, 1016], [2150, 1016]] as const),
 ]);
 
@@ -97,11 +109,11 @@ const SPRING_CAVE_HOMES: readonly (readonly (readonly [number, number])[])[] = O
   Object.freeze([[1760, 160], [1820, 130], [1800, 200]] as const),
   Object.freeze([[2160, 160], [2220, 130], [2200, 200]] as const),
   Object.freeze([[100, 420], [160, 390], [140, 460]] as const),
-  Object.freeze([[1040, 440], [1100, 410], [1080, 480]] as const),
+  Object.freeze([[2220, 620], [2280, 590], [2260, 660]] as const),
   Object.freeze([[1760, 440], [1820, 410], [1800, 480]] as const),
   Object.freeze([[640, 620], [700, 590], [680, 660]] as const),
   Object.freeze([[300, 920], [360, 890], [340, 960]] as const),
-  Object.freeze([[1440, 800], [1500, 770], [1480, 840]] as const),
+  Object.freeze([[1240, 920], [1300, 890], [1280, 960]] as const),
   Object.freeze([[2240, 800], [2300, 770], [2280, 840]] as const),
 ]);
 
@@ -127,6 +139,9 @@ function rockLedge(x0: number, x1: number, y0: number, y1: number): Readonly<Ban
 
 /** The rock ledge in the first column of the top row, east of the safe area: the roof of `stalactite-1` (issue #77, ND-3). */
 const HOME_LEDGE = rockLedge(340, 460, 110, 170);
+
+/** The rock ledge over the main path above `carp-0`: the roof of the short `stalactite-5`. */
+const CARP_LEDGE = rockLedge(680, 750, 110, 170);
 
 /** The rock ledge over the main path in the second and third columns of the top row: Common spots, and the roof of `stalactite-2`. */
 const WEST_LEDGE = rockLedge(860, 1190, 110, 170);
@@ -229,10 +244,11 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   tilapiaRoutes: Object.freeze([]),
   /**
    * Three chasing crayfish, each on its own floor stretch in the bottom row: one in the lit part and
-   * two in the dark (issue #77, ND-5). Then six chasing common carp, each loop reaching into two
-   * depth bands (ND-4): `carp-0`, `carp-1` and `carp-2` across the line between the top and middle
-   * rows, `carp-3`, `carp-4` and `carp-5` across the line between the middle and bottom rows. The
-   * whole-water test needs all six.
+   * two in the dark (issue #77, ND-5). Then seven chasing common carp, each loop reaching into two
+   * depth bands (ND-4): `carp-0`, `carp-1`, `carp-2` and `carp-4` across the line between the top
+   * and middle rows, `carp-3`, `carp-5` and `carp-6` across the line between the middle and bottom
+   * rows. `carp-4` and `carp-6` patrol the middle row with the main path through their loops,
+   * `carp-4` moved up off the geyser vents. The whole-water test needs `carp-1` to `carp-5`.
    */
   predatorRoutes: Object.freeze([
     crayfishStretch(0, 500, 800),
@@ -242,24 +258,29 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     carpLoop(1, [[1350, 340], [1580, 340], [1580, 440], [1350, 440]]),
     carpLoop(2, [[2100, 340], [2300, 340], [2300, 440], [2100, 440]]),
     carpLoop(3, [[220, 600], [420, 600], [420, 740], [220, 740]]),
-    carpLoop(4, [[1000, 680], [1250, 680], [1250, 740], [1000, 740]]),
+    carpLoop(4, [[870, 377], [1010, 377], [1010, 600], [870, 600]]),
     carpLoop(5, [[1700, 680], [2050, 680], [2050, 740], [1700, 740]]),
+    carpLoop(6, [[1270, 500], [1520, 500], [1520, 735], [1270, 735]]),
   ]),
   /**
-   * Four stalactites hanging from the undersides of the top row's rock ledges, 30 px under the
-   * waterline, dripping down into the top row, then one geyser vent on the bed of the bottom row,
-   * bursting up; each sweep farther than every predator's strike from its loop (issue #77, ND-3,
-   * option B). The stalactites are where the punting poles of the first pass were, 2 s out of step
-   * with the next, each stream ending where the pole's tip did: the third is short, over `carp-1`,
-   * and the main path passes between its stream's end and that carp's strike. The geyser stands
-   * just east of `crayfish-0`'s stretch, west of `carp-4`, its column stopping short of the main path.
+   * Five stalactites hanging from the undersides of the top row's rock ledges, 30 px under the
+   * waterline, dripping down into the top row, then two geyser vents on the bed of the bottom row,
+   * bursting up 240 px; each sweep farther than every predator's strike from its loop (issue #77,
+   * ND-3, option B). The first four are where the punting poles of the first pass were: the first,
+   * second and fourth drip 216 px, and the third, over `carp-1`, drips as deep as that carp's strike
+   * allows, so the first three drip across the main path. The fifth is short, over `carp-0`, and
+   * the main path passes between its stream's end and that carp's strike. Both geysers stand between
+   * `crayfish-0`'s stretch and `crayfish-1`'s, in the lit part, their columns bursting across the
+   * main path along the bottom row. The offsets let a one-leg swim of the main path pass them all.
    */
   movingHazards: Object.freeze([
-    stalactiteUnder(HOME_LEDGE, 1, 400, 0, 170),
-    stalactiteUnder(WEST_LEDGE, 2, 1150, 2, 170),
-    stalactiteUnder(EAST_LEDGE, 3, 1450, 0, 42),
-    stalactiteUnder(EAST_LEDGE, 4, 1900, 2, 170),
-    geyserAt(1, 910, 0, 140),
+    stalactiteUnder(HOME_LEDGE, 1, 400, 1.4, 216),
+    stalactiteUnder(WEST_LEDGE, 2, 1150, 1.6, 216),
+    stalactiteUnder(EAST_LEDGE, 3, 1450, 1, 99),
+    stalactiteUnder(EAST_LEDGE, 4, 1900, 2, 216),
+    stalactiteUnder(CARP_LEDGE, 5, 715, 1, 42),
+    geyserAt(1, 910, 1.6, 240),
+    geyserAt(2, 1120, 4, 240),
   ]),
   hazards: Object.freeze([]),
   /** Six glow-plants in the dark part, the area's puzzle element (issue #77, ND-8). */
@@ -272,10 +293,11 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     glowPlantAt(6, 2340, 1000),
   ]),
   /**
-   * The descent, only across or down (issue #77, ND-2): right along the top row past the Common
-   * ledges, between the short stalactite's stream and `carp-1`, down between `carp-1` and `carp-2`, left
-   * along the middle row, down between `carp-3` and `carp-4`, then right along the bottom row over
-   * the Rare ledge, through the spring outflow and on to the exit in the dark.
+   * The descent, only across or down (issue #77, ND-2): right along the top row under three
+   * stalactites' streams, past the Common ledges and between the short `stalactite-5`'s stream and
+   * `carp-0`, down between `carp-1` and `carp-2`, left along the middle row through the loops of
+   * `carp-6` and `carp-4`, down between `carp-3` and `carp-4`, then right along the bottom row through
+   * both geyser columns, over the Rare ledge, through the spring outflow and on to the exit in the dark.
    */
   mainPath: Object.freeze([
     Object.freeze({ x: 120, y: 200 }),
@@ -297,7 +319,7 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-1`, x: 500, y: 140 }),
     Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-2`, x: 2300, y: 180 }),
     Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-3`, x: 500, y: 520 }),
-    Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-4`, x: 1250, y: 560 }),
+    Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-4`, x: 1140, y: 560 }),
     Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-5`, x: 2000, y: 560 }),
     Object.freeze({ id: `${SPRING_CAVE_AREA_ID}/strand-6`, x: 840, y: 900 }),
   ]),
@@ -312,12 +334,12 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   bankChunks: Object.freeze([]),
   sunChunk: 0,
   /**
-   * Rock ledges, built as bank overhangs (B5; issue #77, ND-3, ND-11): three in the top row, the rock
-   * roofs the four stalactites hang from, two of them over the main path holding the Common spots,
-   * and one in the dark over the second crayfish's stretch, a dead end below the main path, holding
-   * the Rare spots.
+   * Rock ledges, built as bank overhangs (B5; issue #77, ND-3, ND-11): four in the top row, the rock
+   * roofs the five stalactites hang from, three of them over the main path, two of those holding the
+   * Common spots, and one in the dark over the second crayfish's stretch, a dead end below the main
+   * path, holding the Rare spots.
    */
-  bankOverhangs: Object.freeze([HOME_LEDGE, WEST_LEDGE, EAST_LEDGE, RARE_LEDGE]),
+  bankOverhangs: Object.freeze([HOME_LEDGE, CARP_LEDGE, WEST_LEDGE, EAST_LEDGE, RARE_LEDGE]),
   /**
    * Under the rock ledges: Common spots along the main path in the top row; Rare spots off it, on the
    * ledge in the dark, within the second crayfish's strike band, so the special treasure is in the

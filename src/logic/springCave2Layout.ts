@@ -2,8 +2,9 @@
  * The spring cave's Area 7 (issue #105), as area data: 8 screens across, 2 down, the first climb
  * (ND-2). The Home Spot is bottom left, and the safe area is its column in the bottom row only. The
  * main path only goes across or up, never back down: right along the bottom row, through the first
- * pulsing vent, up the climb at x 800 through the second, then right along the top row under the
- * rock ledges, through the third vent and the dark stretch, to the exit at the top right.
+ * pulsing vent and the first geyser's column, up the climb at x 800 through the second vent, then
+ * right along the top row under the rock ledges and the stalactites' streams, through the third vent
+ * and the dark stretch, to the exit at the top right.
  */
 import { SPRING_CAVE_2_TREASURES } from './catalogue';
 import { glowPlantSpawn } from './glowPlants';
@@ -38,13 +39,24 @@ export const SPRING_CAVE_2_CRAYFISH: Readonly<PredatorSpecies> = tunedSpecies(
 );
 
 /**
- * Area 7's common carp, one step up the predator ladder from Area 6's (ND-4): a 0.9 s warning, over
- * the 0.8 s floor, a sweep at 225 px/s for 0.6 s reaching 135 px, a 2.0 s cooldown, a 45 px/s patrol
- * and the carp's chase default.
+ * Area 7's common carp, one step up the predator ladder from Area 6's (ND-4): a 0.8 s warning, at
+ * the 0.8 s floor, a 153 px sweep at 340 px/s for 0.45 s from 135 px, Area 6's 50 px hit reach and
+ * 53 px touch, a 1.8 s cooldown, a 50 px/s patrol, and the carp's chase sight and leash at 135 px/s.
  */
 export const SPRING_CAVE_2_CARP: Readonly<PredatorSpecies> = tunedSpecies(
   CARP_SPECIES,
-  Object.freeze({ ...CARP, windup: 0.9, lungeSpeed: 225, lungeDuration: 0.6, lungeRange: 135, cooldown: 2.0, patrolSpeed: 45, chase: CARP_CHASE }),
+  Object.freeze({
+    ...CARP,
+    windup: 0.8,
+    lungeSpeed: 340,
+    lungeDuration: 0.45,
+    lungeRange: 135,
+    hitRadius: 50,
+    contactRadius: 53,
+    cooldown: 1.8,
+    patrolSpeed: 50,
+    chase: Object.freeze({ ...CARP_CHASE, speed: 135 }),
+  }),
 );
 
 /** Area 7's tadpole rule, the top of the later snack ramp row: 72 px/s (ND-11). */
@@ -55,8 +67,8 @@ const SPRING_CAVE_2_SHRIMP = shrimpRule(60, 1.2, 60, 150);
 
 /**
  * The twelve tadpole wander loops' turn points (ND-11), placed after the threats: nine in the top
- * row, along the main path, one of them in the dark, and three in the bottom row, by the second
- * geyser, round the steady outflow and by the pebble room.
+ * row, along the main path, one of them in the dark, and three in the bottom row, under `carp-1`,
+ * west of the steady outflow and by the pebble room.
  */
 const SPRING_CAVE_2_LOOPS: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
   Object.freeze([[50, 100], [370, 100], [340, 250], [180, 182.5]] as const),
@@ -69,14 +81,14 @@ const SPRING_CAVE_2_LOOPS: readonly (readonly (readonly [number, number])[])[] =
   Object.freeze([[3170, 100], [3490, 100], [3460, 250], [3300, 182.5]] as const),
   Object.freeze([[3430, 100], [3750, 100], [3720, 250], [3560, 182.5]] as const),
   Object.freeze([[1600, 598], [1920, 598], [1890, 448], [1730, 515.5]] as const),
-  Object.freeze([[2080, 368], [2400, 368], [2370, 518], [2210, 450.5]] as const),
+  Object.freeze([[1360, 480], [1680, 480], [1650, 630], [1490, 562.5]] as const),
   Object.freeze([[3040, 648], [3360, 648], [3330, 498], [3170, 565.5]] as const),
 ]);
 
 /** The fifteen shrimp homes' hop spots (ND-11): eleven in the top row and four in the bottom row. */
 const SPRING_CAVE_2_HOMES: readonly (readonly (readonly [number, number])[])[] = Object.freeze([
   Object.freeze([[60, 290], [120, 260], [100, 330]] as const),
-  Object.freeze([[960, 140], [1020, 110], [1000, 180]] as const),
+  Object.freeze([[970, 140], [1030, 110], [1010, 180]] as const),
   Object.freeze([[1350, 140], [1410, 110], [1390, 180]] as const),
   Object.freeze([[2000, 140], [2060, 110], [2040, 180]] as const),
   Object.freeze([[2150, 140], [2210, 110], [2190, 180]] as const),
@@ -89,7 +101,7 @@ const SPRING_CAVE_2_HOMES: readonly (readonly (readonly [number, number])[])[] =
   Object.freeze([[1660, 470], [1720, 440], [1700, 510]] as const),
   Object.freeze([[1740, 600], [1800, 570], [1780, 640]] as const),
   Object.freeze([[2250, 530], [2310, 500], [2290, 570]] as const),
-  Object.freeze([[2330, 400], [2390, 370], [2370, 440]] as const),
+  Object.freeze([[2310, 450], [2370, 420], [2350, 490]] as const),
 ]);
 
 /** Seconds a tadpole takes round the closed loop through `points` at Area 7's tadpole speed. */
@@ -227,26 +239,41 @@ export const SPRING_CAVE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   cave: Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/cave`, x0: 3740, x1: 3800, y0: 580, y1: BED_TOP }),
   /** No tilapia: the spring cave is cold, clear water. */
   tilapiaRoutes: Object.freeze([]),
+  /**
+   * Three crayfish on their own floor stretches in the bottom row: `crayfish-0` under the first vent,
+   * west of `geyser-1`, `crayfish-1` under the steady outflow and `crayfish-2` in the pebble room.
+   * Then six common carp: `carp-0`'s loop cut off at its bottom right, so `geyser-1`'s column passes
+   * farther than its strike, and `carp-3` moved west, so `stalactite-4` drips its full stream.
+   */
   predatorRoutes: Object.freeze([
-    crayfishStretch(0, 360, 640),
+    crayfishStretch(0, 360, 490),
     crayfishStretch(1, 2100, 2500),
     crayfishStretch(2, 3640, 3780),
-    carpLoop(0, [[440, 120], [660, 120], [660, 310], [440, 310]]),
+    carpLoop(0, [[440, 120], [660, 120], [660, 250], [520, 310], [440, 310]]),
     carpLoop(1, [[1280, 340], [1420, 340], [1420, 495], [1280, 495]]),
     carpLoop(2, [[1900, 340], [2100, 340], [2100, 495], [1900, 495]]),
-    carpLoop(3, [[2550, 340], [2770, 340], [2770, 495], [2550, 495]]),
+    carpLoop(3, [[2530, 340], [2750, 340], [2750, 495], [2530, 495]]),
     carpLoop(4, [[3050, 360], [3250, 360], [3250, 500], [3050, 500]]),
     carpLoop(5, [[1020, 420], [1220, 420], [1220, 560], [1020, 560]]),
   ]),
+  /**
+   * Six stalactites hanging from the rock ledges of the top row, each stream across the main path,
+   * as deep as the shared rules allow up to 250 px: `stalactite-2` to 174 px over `carp-5`,
+   * `stalactite-5` to 233 px over `carp-4` from the east end of its ledge, and `stalactite-6` to just
+   * over the pebble room's lid. `stalactite-2` stands east of x 1140, so the Common spot at x 1056
+   * stays over S + 60 from its stream. Then two geyser vents, each column 240 px up: `geyser-1`
+   * across the main path between the first vent and the climb, `geyser-2` between `carp-3` and
+   * `carp-4`. The offsets let a one-leg swim of the main path pass them all.
+   */
   movingHazards: Object.freeze([
-    stalactiteUnder(CLIMB_LEDGE, 1, 856, 2, 170),
-    stalactiteUnder(WEST_LEDGE, 2, 1140, 0, 170),
-    stalactiteUnder(MIDDLE_LEDGE, 3, 2350, 2, 170),
-    stalactiteUnder(EAST_LEDGE, 4, 2900, 0, 170),
-    stalactiteUnder(LAST_LEDGE, 5, 3380, 0, 170),
-    stalactiteUnder(EXIT_LEDGE, 6, 3560, 2, 216),
-    geyserAt(1, 1560, 0, 140),
-    geyserAt(2, 2909, 1, 140),
+    stalactiteUnder(CLIMB_LEDGE, 1, 857, 0.5, 250),
+    stalactiteUnder(WEST_LEDGE, 2, 1144, 0, 174),
+    stalactiteUnder(MIDDLE_LEDGE, 3, 2350, 0.5, 250),
+    stalactiteUnder(EAST_LEDGE, 4, 2900, 2.4, 250),
+    stalactiteUnder(LAST_LEDGE, 5, 3392, 0, 233),
+    stalactiteUnder(EXIT_LEDGE, 6, 3560, 2, 229),
+    geyserAt(1, 600, 1.4, 240),
+    geyserAt(2, 2900, 1, 240),
   ]),
   /** The three pulsing vents along the main path, their calms falling 2.5, 2.2 and 2.0 s (ND-5). */
   hazards: Object.freeze([
@@ -268,7 +295,7 @@ export const SPRING_CAVE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * sweep by the touch and rescue reach, and of every vent band by the rescue reach.
    */
   strandingPlaces: Object.freeze([
-    Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/strand-1`, x: 600, y: 480 }),
+    Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/strand-1`, x: 700, y: 600 }),
     Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/strand-2`, x: 1400, y: 160 }),
     Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/strand-3`, x: 1760, y: 520 }),
     Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/strand-4`, x: 2240, y: 200 }),

@@ -168,32 +168,32 @@ describe('hazardSoundEdges: a pole warns (issue #166, ND-4)', () => {
 });
 
 describe('hazardSoundEdges: a roof or floor hazard warns where it really is (issue #77, ND-3)', () => {
-  /** Stalactite drip cycle from offset 0: rest [0, 1.6), warn [1.6, 2.6); its stream x 495..505, y 400..580 under a roof at 400. */
+  /** Stalactite drip cycle from offset 0: rest [0, 1.0), warn [1.0, 2.0); its stream x 492..508, y 400..616 under a roof at 400. */
   const DRIP = movingHazardSpawn('drip-a', STALACTITE_DRIP, 500, 0, undefined, 400);
-  /** Geyser vent cycle from offset 0: rest [0, 2.2), warn [2.2, 3.4); its column x 492..508, y 860..1000 over a floor at 1000. */
+  /** Geyser vent cycle from offset 0: rest [0, 1.4), warn [1.4, 2.6); its column x 488..512, y 760..1000 over a floor at 1000. */
   const VENT = movingHazardSpawn('vent-a', GEYSER_VENT, 500, 0, undefined, 1000);
   const SURFACE_ONLY: ViewRect = { x: 0, y: 0, width: 960, height: 380 };
 
   it('fires for a stalactite drip whose stream is on screen, and not when only the surface is', () => {
-    expect(poleEdges(1.55, 1.65, { x: 0, y: 300, width: 960, height: 540 }, [DRIP])).toEqual({
+    expect(poleEdges(0.95, 1.05, { x: 0, y: 300, width: 960, height: 540 }, [DRIP])).toEqual({
       snagEnded: false,
       poleWarned: true,
       matsOpened: false,
     });
-    expect(poleEdges(1.55, 1.65, SURFACE_ONLY, [DRIP])).toBe(NO_HAZARD_EDGES);
-    expect(poleEdges(1.55, 1.65, { x: 0, y: 580, width: 960, height: 540 }, [DRIP])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(0.95, 1.05, SURFACE_ONLY, [DRIP])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(0.95, 1.05, { x: 0, y: 616, width: 960, height: 540 }, [DRIP])).toBe(NO_HAZARD_EDGES);
   });
 
   it('fires for a geyser vent whose column over the floor is on screen, and not for a view of the surface', () => {
-    expect(poleEdges(2.15, 2.25, { x: 0, y: 700, width: 960, height: 540 }, [VENT]).poleWarned).toBe(true);
-    expect(poleEdges(2.15, 2.25, { x: 0, y: 0, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
-    expect(poleEdges(2.15, 2.25, { x: 0, y: 320, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
-    expect(poleEdges(2.15, 2.25, { x: 0, y: 330, width: 960, height: 540 }, [VENT]).poleWarned).toBe(true);
+    expect(poleEdges(1.35, 1.45, { x: 0, y: 700, width: 960, height: 540 }, [VENT]).poleWarned).toBe(true);
+    expect(poleEdges(1.35, 1.45, { x: 0, y: 0, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(1.35, 1.45, { x: 0, y: 220, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(1.35, 1.45, { x: 0, y: 230, width: 960, height: 540 }, [VENT]).poleWarned).toBe(true);
   });
 
   it('gives none when a geyser vent bursts, holds or falls back', () => {
-    expect(poleEdges(3.35, 3.45, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
-    expect(poleEdges(3.75, 3.85, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(2.55, 2.65, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(2.95, 3.05, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
   });
 });
 
