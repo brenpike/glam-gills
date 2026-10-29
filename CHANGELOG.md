@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Crayfish now pinch up at you if you hover over them. When a crayfish opens its claws, swim away.
+- Carp in the Spring cave sweep faster, and a sweep hits as soon as it touches you.
+- Stalactite drips and geyser columns are wider, reach farther and stay out longer.
+- Area 6 has more dangers along the way: one more carp, one more stalactite and one more geyser vent.
+
 ## [0.53.0] - 2026-10-28
 
 ### Added
