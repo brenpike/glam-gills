@@ -1,12 +1,17 @@
 /**
  * Spring cave art (issue #77, ND-15 and ND-18; guide 3c, 7 and 10), headless: the row details, the
- * rock ledge, the side grotto, the spring outflow marks, the glow-plant in three states and the
- * soft light, and the spring cave rows in the background chunks and their bake. The painters run
+ * rock ledge, the side grotto, the spring outflow marks, the glow-plant in three states, the
+ * soft light, the soft dark edges (ND-1 to ND-3) and their fade strips, and the spring cave rows in
+ * the background chunks and their bake. The painters run
  * against a recording context and a stub Path2D, and the Phaser bake runs against a fake scene whose
  * canvases record. No Phaser is loaded.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  DARK_EDGE_FADE_STOPS,
+  DARK_FADE_BAND,
+  DARK_FADE_STRIP_LENGTH,
+  DARK_FADE_TEX,
   GLOW_PLANT_DIM,
   GLOW_PLANT_DIM_FILL,
   GLOW_PLANT_HALF,
@@ -58,6 +63,9 @@ import {
   SPRING_SHADE_RGB,
   SPRING_WALL_BOULDERS,
   SPRING_WALL_REACH,
+  darkFadeEase,
+  darkFadeEdges,
+  paintDarkEdgeFade,
   paintGlowPlant,
   paintGrottoBack,
   paintGrottoFront,
@@ -81,6 +89,8 @@ import { CAVE_TEX } from './drawFinds';
 import type { TexSize } from './canvasKit';
 import { GLOW_PLANTS } from '../logic/glowPlants';
 import { GLOW_PLANT_RADIUS } from '../logic/springCaveLayout';
+import { AREAS } from '../logic/areas';
+import { areaSize } from '../logic/zone';
 import { INK, LW, SKY_HORIZON, SKY_TOP, SUN, SURF, VIEW_H, VIEW_W, WHITE } from './palette';
 
 vi.mock('phaser', () => ({}));
@@ -1009,6 +1019,149 @@ describe('soft light (issue #77, ND-7)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Soft dark edges
+// ---------------------------------------------------------------------------
+
+/** Every area with dark water, with its dark rect and its size from the real layout. */
+const DARK_AREAS = AREAS.flatMap((area) => {
+  const dark = area.layout.darkWater;
+  return dark === undefined ? [] : [{ number: area.number, dark, size: areaSize(area.layout.screensWide, area.layout.screensTall) }];
+});
+
+/** The dark area numbered `areaNumber`. */
+function darkAreaOf(areaNumber: number): (typeof DARK_AREAS)[number] {
+  const found = DARK_AREAS.find((entry) => entry.number === areaNumber);
+  expect(found, `area ${areaNumber}`).toBeDefined();
+  return found!;
+}
+
+/** The fully dark core of a dark area: the rect less one band at each fading edge. */
+function darkCoreOf(entry: (typeof DARK_AREAS)[number]): { w: number; h: number } {
+  const edges = darkFadeEdges(entry.dark, entry.size);
+  return {
+    w: entry.dark.x1 - entry.dark.x0 - DARK_FADE_BAND * (Number(edges.left) + Number(edges.right)),
+    h: entry.dark.y1 - entry.dark.y0 - DARK_FADE_BAND * (Number(edges.top) + Number(edges.bottom)),
+  };
+}
+
+/** The darkness a fade strip leaves at a fraction `t` of the band: the dark layer times (1 - the strip's erase strength). */
+const darkLeftBy = (t: number): number => 1 - (1 - darkFadeEase(t));
+
+describe('soft dark edges: which edges fade (ND-1)', () => {
+  it('fades Area 6 on its left and top, and keeps its right (the world side) and bottom (the bed) hard', () => {
+    const area6 = darkAreaOf(6);
+    expect(area6.dark.x1).toBe(area6.size.width);
+    expect(area6.dark.y1).toBe(area6.size.bedTop);
+    expect(darkFadeEdges(area6.dark, area6.size)).toEqual({ left: true, right: false, top: true, bottom: false });
+  });
+
+  it('fades Area 7 on its left, right and bottom, and keeps its top (the surface) hard', () => {
+    const area7 = darkAreaOf(7);
+    expect(area7.dark.y0).toBe(SURF);
+    expect(darkFadeEdges(area7.dark, area7.size)).toEqual({ left: true, right: true, top: false, bottom: true });
+  });
+
+  it('keeps an edge hard exactly at the world edge, the surface and the bed top, and fades it one px in', () => {
+    const size = { width: 1000, bedTop: 600 };
+    expect(darkFadeEdges({ x0: 0, x1: 1000, y0: SURF, y1: 600 }, size)).toEqual({ left: false, right: false, top: false, bottom: false });
+    expect(darkFadeEdges({ x0: 1, x1: 999, y0: SURF + 1, y1: 599 }, size)).toEqual({ left: true, right: true, top: true, bottom: true });
+  });
+});
+
+describe('soft dark edges: the band (ND-2)', () => {
+  it('is 96 px deep', () => {
+    expect(DARK_FADE_BAND).toBe(96);
+  });
+
+  it('leaves every area with dark water a fully dark core', () => {
+    for (const entry of DARK_AREAS) {
+      const core = darkCoreOf(entry);
+      expect(core.w, `area ${entry.number}`).toBeGreaterThan(0);
+      expect(core.h, `area ${entry.number}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('leaves Area 7 a fully dark core of 168 x 184 px', () => {
+    expect(darkCoreOf(darkAreaOf(7))).toEqual({ w: 168, h: 184 });
+  });
+});
+
+describe('soft dark edges: the ramp (ND-3)', () => {
+  const alphas = DARK_EDGE_FADE_STOPS.map(([, alpha]) => alpha);
+  const steps = alphas.slice(1).map((alpha, i) => alphas[i] - alpha);
+
+  it('is a clamped smoothstep, 3t^2 - 2t^3', () => {
+    for (const t of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) expect(darkFadeEase(t)).toBeCloseTo(3 * t ** 2 - 2 * t ** 3, 12);
+    expect(darkFadeEase(-0.5)).toBe(0);
+    expect(darkFadeEase(1.5)).toBe(1);
+    expect(darkFadeEase(0.5)).toBe(0.5);
+  });
+
+  it('samples about 13 stops evenly from the edge (t 0) to the band depth (t 1), each [t, 1 - ease(t)]', () => {
+    expect(DARK_EDGE_FADE_STOPS).toHaveLength(13);
+    DARK_EDGE_FADE_STOPS.forEach(([t, alpha], i) => {
+      expect(t).toBeCloseTo(i / 12, 12);
+      expect(alpha).toBeCloseTo(1 - darkFadeEase(t), 12);
+    });
+  });
+
+  it('runs from erase strength 1 at the edge to 0 at the band depth, and never increases', () => {
+    expect(DARK_EDGE_FADE_STOPS[0]).toEqual([0, 1]);
+    expect(DARK_EDGE_FADE_STOPS[DARK_EDGE_FADE_STOPS.length - 1]).toEqual([1, 0]);
+    for (const step of steps) expect(step).toBeGreaterThanOrEqual(0);
+  });
+
+  it('is flat at both ends, so no line shows at the edge or at the core', () => {
+    const steepest = Math.max(...steps);
+    expect(steps[0]).toBeLessThan(steepest / 4);
+    expect(steps[steps.length - 1]).toBeLessThan(steepest / 4);
+    expect(darkFadeEase(1e-3)).toBeLessThan(1e-5);
+    expect(1 - darkFadeEase(1 - 1e-3)).toBeLessThan(1e-5);
+  });
+
+  it('steps between neighbours no more than the smoothstep slope allows (1.5 per band), so no band shows', () => {
+    const bound = 1.5 / (DARK_EDGE_FADE_STOPS.length - 1);
+    for (const step of steps) expect(step).toBeLessThanOrEqual(bound + 1e-12);
+  });
+
+  it('leaves the corner where two bands meet ease(dx) x ease(dy): never darker than either band, and the same as each strip at its inner sides', () => {
+    const samples = Array.from({ length: 25 }, (_, i) => i / 24);
+    for (const dx of samples) {
+      for (const dy of samples) {
+        const corner = darkLeftBy(dx) * darkLeftBy(dy);
+        expect(corner).toBeCloseTo(darkFadeEase(dx) * darkFadeEase(dy), 12);
+        expect(corner).toBeLessThanOrEqual(Math.min(darkFadeEase(dx), darkFadeEase(dy)) + 1e-12);
+      }
+      // Past the other band (its inner side) the corner is the strip alone.
+      expect(darkLeftBy(dx) * darkLeftBy(1)).toBeCloseTo(darkFadeEase(dx), 12);
+      expect(darkLeftBy(1) * darkLeftBy(dx)).toBeCloseTo(darkFadeEase(dx), 12);
+    }
+  });
+});
+
+describe('soft dark edges: the fade strips', () => {
+  it('has an x strip DARK_FADE_BAND across and a y strip the same turned, both anchored top-left on the edge', () => {
+    expect(DARK_FADE_STRIP_LENGTH).toBeLessThan(DARK_FADE_BAND / 8);
+    expect(DARK_FADE_TEX.x).toEqual({ w: DARK_FADE_BAND, h: DARK_FADE_STRIP_LENGTH, originX: 0, originY: 0 });
+    expect(DARK_FADE_TEX.y).toEqual({ w: DARK_FADE_STRIP_LENGTH, h: DARK_FADE_BAND, originX: 0, originY: 0 });
+  });
+
+  it.each([
+    ['x', [0, 0, 96, 0]],
+    ['y', [0, 0, 0, 96]],
+  ] as const)('paints the %s strip as one white linear ramp along its axis, filling its frame, no ink', (axis, extent) => {
+    const painted = record((ctx) => paintDarkEdgeFade(ctx, axis));
+    expect(painted).toHaveLength(1);
+    expect(painted[0].gradient?.kind).toBe('linear');
+    expect(painted[0].gradient?.extent).toEqual(extent);
+    expect(painted[0].gradient?.stops).toEqual(DARK_EDGE_FADE_STOPS.map(([t, alpha]) => [t, `rgba(255,255,255,${alpha})`]));
+    expect(painted[0].cmds).toEqual([['fillRect', 0, 0, DARK_FADE_TEX[axis].w, DARK_FADE_TEX[axis].h]]);
+    expect(painted[0].style).not.toContain(INK);
+    expectInsideFrame(painted, DARK_FADE_TEX[axis]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Baking
 // ---------------------------------------------------------------------------
 
@@ -1083,5 +1236,28 @@ describe('bakeSpringCaveTextures', () => {
     expect(info.w).toBe(320);
     expect(info.originNormX).toBeCloseTo(0.5, 6);
     expect(info.originNormY).toBeCloseTo(0.5, 6);
+  });
+
+  it('bakes the two dark edge fade strips under their own keys, anchored top-left, no sharper than the soft light', () => {
+    expect(SPRING_CAVE_TEX.darkFadeX).toBe('spring-cave-dark-fade-x');
+    expect(SPRING_CAVE_TEX.darkFadeY).toBe('spring-cave-dark-fade-y');
+    const { art, created } = bake(2);
+    for (const [info, axis, key] of [
+      [art.darkFadeX, 'x', SPRING_CAVE_TEX.darkFadeX],
+      [art.darkFadeY, 'y', SPRING_CAVE_TEX.darkFadeY],
+    ] as const) {
+      expect(info.key).toBe(key);
+      expect(info.scale).toBe(SOFT_LIGHT_BAKE_SCALE);
+      expect(info.w).toBe(DARK_FADE_TEX[axis].w);
+      expect(info.h).toBe(DARK_FADE_TEX[axis].h);
+      expect(info.originNormX).toBe(0);
+      expect(info.originNormY).toBe(0);
+      expect(created.find((c) => c.key === key)).toEqual({ key, w: info.pxW, h: info.pxH });
+    }
+    // About 1:1 along the ramp at the soft light's scale, and lower when the bake is lower.
+    expect(art.darkFadeX.pxW).toBe(DARK_FADE_BAND);
+    expect(art.darkFadeY.pxH).toBe(DARK_FADE_BAND);
+    expect(bake(0.5).art.darkFadeX.scale).toBe(0.5);
+    expect(bake(0.5).art.darkFadeY.scale).toBe(0.5);
   });
 });

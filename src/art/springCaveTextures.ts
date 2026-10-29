@@ -1,21 +1,24 @@
 /**
  * Phaser glue for the spring cave props (issue #77, ND-15 and ND-18): bakes the side grotto's back
- * and front, the rock ledge, the spring outflow marks, the glow-plant in its three states and the
- * soft light into CanvasTextures. The row details (pool, walls, rock bed) are painted into the
+ * and front, the rock ledge, the spring outflow marks, the glow-plant in its three states, the
+ * soft light and the two dark edge fade strips into CanvasTextures. The row details (pool, walls, rock bed) are painted into the
  * background chunks by drawSpringCave.ts, so they have no texture here.
  * Visual only. No game state, no input, no physics.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale` through the context transform,
  * so the ink stays constant, and a sprite shows at logical size with setScale(1 / info.scale). The
- * soft light has no ink and nothing sharp, so it bakes at SOFT_LIGHT_BAKE_SCALE or less.
+ * soft light and the dark edge fade strips have no ink and nothing sharp, so they bake at
+ * SOFT_LIGHT_BAKE_SCALE or less.
  */
 import * as Phaser from 'phaser';
 import {
+  DARK_FADE_TEX,
   GLOW_PLANT_TEX,
   GROTTO_TEX,
   OUTFLOW_TEX,
   ROCK_LEDGE_TEX,
   SOFT_LIGHT_TEX,
+  paintDarkEdgeFade,
   paintGlowPlant,
   paintGrottoBack,
   paintGrottoFront,
@@ -50,6 +53,8 @@ export const SPRING_CAVE_TEX = {
   glowPlantLit: 'spring-cave-glow-plant-lit',
   glowPlantHint: 'spring-cave-glow-plant-hint',
   softLight: 'spring-cave-soft-light',
+  darkFadeX: 'spring-cave-dark-fade-x',
+  darkFadeY: 'spring-cave-dark-fade-y',
   pebble: 'spring-cave-pebble',
   pebbleHint: 'spring-cave-pebble-hint',
   ventMouth: 'spring-cave-vent-mouth',
@@ -65,7 +70,10 @@ export function rockWallSizeKey(w: number, h: number): string {
   return `${w}x${h}`;
 }
 
-/** The soft light bakes at this many texture pixels per logical unit, or at `bakeScale` when that is lower: a soft gradient needs no more. */
+/**
+ * The soft light and the dark edge fade strips bake at this many texture pixels per logical unit, or
+ * at `bakeScale` when that is lower: a soft gradient needs no more.
+ */
 export const SOFT_LIGHT_BAKE_SCALE = 1;
 
 /** The side grotto back and front: the same frame, GROTTO_TEX (the cave's CAVE_W x CAVE_H). */
@@ -106,6 +114,19 @@ export interface SpringCaveTextures {
    * radius / SOFT_LIGHT_RADIUS / info.scale. Baked at SOFT_LIGHT_BAKE_SCALE or lower.
    */
   readonly softLight: TexInfo;
+  /**
+   * The dark edge fade strip for a left or right edge (DARK_FADE_TEX.x, DARK_FADE_BAND x
+   * DARK_FADE_STRIP_LENGTH): white, erase strength 1 at its left side falling to nothing at
+   * DARK_FADE_BAND. Anchor is the top-left corner: erase it from the dark layer at the edge, stretched
+   * along y to the edge's length, flipped in x for a right edge. Baked at SOFT_LIGHT_BAKE_SCALE or lower.
+   */
+  readonly darkFadeX: TexInfo;
+  /**
+   * The dark edge fade strip for a top or bottom edge (DARK_FADE_TEX.y, DARK_FADE_STRIP_LENGTH x
+   * DARK_FADE_BAND): the same ramp along y. Anchor is the top-left corner: stretch it along x to the
+   * edge's length, flipped in y for a bottom edge. Baked at SOFT_LIGHT_BAKE_SCALE or lower.
+   */
+  readonly darkFadeY: TexInfo;
   /** The pebble (issue #105, ND-8; PEBBLE_TEX): anchor is its centre. The scene turns it as it rolls. */
   readonly pebble: TexInfo;
   /** The pebble's hint arrow (PEBBLE_HINT_TEX), pointing along +x; anchor is the middle of its tail. */
@@ -132,6 +153,7 @@ export function bakeSpringCaveTextures(
   bakeScale: number,
   rockWallSizes: readonly (readonly [number, number])[] = [],
 ): SpringCaveTextures {
+  const softScale = Math.min(bakeScale, SOFT_LIGHT_BAKE_SCALE);
   const rockWalls = new Map<string, TexInfo>();
   for (const [w, h] of rockWallSizes) {
     const key = rockWallSizeKey(w, h);
@@ -149,7 +171,9 @@ export function bakeSpringCaveTextures(
       lit: bake(scene, SPRING_CAVE_TEX.glowPlantLit, GLOW_PLANT_TEX, bakeScale, (ctx) => paintGlowPlant(ctx, 'lit')),
       hint: bake(scene, SPRING_CAVE_TEX.glowPlantHint, GLOW_PLANT_TEX, bakeScale, (ctx) => paintGlowPlant(ctx, 'hint')),
     },
-    softLight: bake(scene, SPRING_CAVE_TEX.softLight, SOFT_LIGHT_TEX, Math.min(bakeScale, SOFT_LIGHT_BAKE_SCALE), paintSoftLight),
+    softLight: bake(scene, SPRING_CAVE_TEX.softLight, SOFT_LIGHT_TEX, softScale, paintSoftLight),
+    darkFadeX: bake(scene, SPRING_CAVE_TEX.darkFadeX, DARK_FADE_TEX.x, softScale, (ctx) => paintDarkEdgeFade(ctx, 'x')),
+    darkFadeY: bake(scene, SPRING_CAVE_TEX.darkFadeY, DARK_FADE_TEX.y, softScale, (ctx) => paintDarkEdgeFade(ctx, 'y')),
     pebble: bake(scene, SPRING_CAVE_TEX.pebble, PEBBLE_TEX, bakeScale, paintPebble),
     pebbleHint: bake(scene, SPRING_CAVE_TEX.pebbleHint, PEBBLE_HINT_TEX, bakeScale, paintPebbleHint),
     ventMouth: bake(scene, SPRING_CAVE_TEX.ventMouth, VENT_MOUTH_TEX, bakeScale, paintVentMouth),
