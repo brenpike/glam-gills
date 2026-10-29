@@ -3,7 +3,7 @@
  * climb, with its crayfish, its common carp, its dripping stalactites and its geyser vents (issue
  * #105, ND-3 and ND-4), using the shared harness in riskFairness.ts on #130's relaxed safe start. It
  * also proves the area can be beaten with one leg, timing every pulsing vent (ND-5), and that every
- * crayfish pinch is avoidable by swimming up.
+ * crayfish pinch is avoidable by swimming away.
  */
 import { describe, expect, it } from 'vitest';
 import { SPRING_CAVE_2_AREA } from './areas';
@@ -29,6 +29,7 @@ import {
   poolSpots,
   ringPoints,
   tailSteps,
+  tilapiaOf,
   visitPath,
   type FairnessZone,
 } from './riskFairness';
@@ -47,14 +48,12 @@ const CRAYFISH_REACH = 90;
 const FAIR_START_RING_STEP = 20;
 /** Points tried on each ring of the wider search, in a fixed angle order. */
 const FAIR_START_RING_POINTS = 24;
-/**
- * The Legendary pot a waiting axolotl is never hit at, as measured: it sits 36 px over the floor
- * lane, right over `crayfish-1`'s stretch, so the crayfish chases under it, warns and pinches level
- * along the floor, passing just out of its hit reach.
- */
-const LEVEL_PINCH_MISSED_POTS = ['spring-cave-2/spot-current-3'];
+/** The Legendary pots right over `crayfish-1`'s stretch, as measured: its aimed pinch reaches up to each of them. */
+const POTS_OVER_CRAYFISH_1 = ['spring-cave-2/spot-current-1', 'spring-cave-2/spot-current-2', 'spring-cave-2/spot-current-3'];
+/** Spots whose nearest safe start is not fair with one leg, as measured: each is grabbed from a safe start of the wider search instead. */
+const ONE_LEG_FAR_START_SPOTS = ['spring-cave-2/spot-current-1'];
 /** First start time in seconds, as measured, for a one-leg swim of the main path to the exit without a hit (ND-5). */
-const ONE_LEG_EXIT_START = 0.75;
+const ONE_LEG_EXIT_START = 0;
 /** Longest one-leg swim from the Home Spot to the exit, in seconds, before it counts as stuck. */
 const ONE_LEG_SWIM_LIMIT = 180;
 /** Px from a main path waypoint at which the swim steers for the next one. */
@@ -228,13 +227,22 @@ function stretchSteps(route: PredatorRoute): number {
   return Math.ceil(loopSeconds(route, route.species.tuning.patrolSpeed) / DT);
 }
 
-/** Events while a one-leg axolotl swims straight up from `from` for `parkSteps`, the longest warning and strike. */
-function swimUpEvents(warned: EncounterState, from: Point, fair: FairnessZone): EncounterEvent[] {
+/** The way straight away from `predatorPos` at `from`; straight up when right on it. */
+function awayFrom(from: Point, predatorPos: Point): Point {
+  return from.x === predatorPos.x && from.y === predatorPos.y ? UP : normalize({ x: from.x - predatorPos.x, y: from.y - predatorPos.y });
+}
+
+/**
+ * Events while a one-leg axolotl swims straight away from the warning predator at `predatorPos`,
+ * from `from`, for `parkSteps`, the longest warning and strike.
+ */
+function swimAwayEvents(warned: EncounterState, from: Point, predatorPos: Point, fair: FairnessZone): EncounterEvent[] {
+  const away = awayFrom(from, predatorPos);
   let swim: SwimState = { x: from.x, y: from.y, vx: 0, vy: 0, facing: 1 };
   let encounter = warned;
   const events: EncounterEvent[] = [];
   for (let step = 0; step < fair.parkSteps; step++) {
-    swim = stepSwim(swim, UP, swimEnvAt({ x: swim.x, y: swim.y }, fair.zone), DT, oneLeg);
+    swim = stepSwim(swim, away, swimEnvAt({ x: swim.x, y: swim.y }, fair.zone), DT, oneLeg);
     const result = stepEncounter(encounter, { x: swim.x, y: swim.y }, DT, fair.ctx);
     encounter = result.state;
     events.push(...result.events);
@@ -244,21 +252,23 @@ function swimUpEvents(warned: EncounterState, from: Point, fair: FairnessZone): 
 
 /**
  * The axolotl waits PINCH_WAIT_HEIGHT above the middle of a crayfish's stretch until that crayfish
- * warns, then swims straight up with one leg until the warning and strike are over. Returns every
- * event from the warning on; throws when the crayfish never warns.
+ * warns, then swims straight away from it with one leg (STEP-001's swim-away rule) until the
+ * warning and strike are over. Returns every event from the warning on; throws when the crayfish
+ * never warns.
  */
-function swimUpFromPinch(route: PredatorRoute, fair: FairnessZone): EncounterEvent[] {
+function swimAwayFromPinch(route: PredatorRoute, fair: FairnessZone): EncounterEvent[] {
   const [first, last] = route.waypoints;
   const wait = { x: (first.x + last.x) / 2, y: CRAYFISH_FLOOR_Y - PINCH_WAIT_HEIGHT };
   let encounter = createEncounter(fair.zone);
   for (let step = 0; step < stretchSteps(route); step++) {
     const result = stepEncounter(encounter, wait, DT, fair.ctx);
     encounter = result.state;
-    if (result.events.some((event) => event.type === 'telegraph' && event.sourceId === route.id)) {
-      return [...result.events, ...swimUpEvents(encounter, wait, fair)];
+    const crayfish = encounter.predators.find((predator) => predator.routeId === route.id);
+    if (crayfish && result.events.some((event) => event.type === 'telegraph' && event.sourceId === route.id)) {
+      return [...result.events, ...swimAwayEvents(encounter, wait, crayfish.pos, fair)];
     }
   }
-  throw new Error(`swimUpFromPinch: ${route.id} never warns`);
+  throw new Error(`swimAwayFromPinch: ${route.id} never warns`);
 }
 
 /** The axolotl waiting at `at` for `seconds`, one point per step. */
@@ -278,6 +288,14 @@ function listEncounterEvents(path: readonly Point[]): EncounterEvent[] {
   return events;
 }
 
+/** Checks that a spot whose nearest safe start is not fair has a fair start, a safe start other than the nearest. */
+function expectWiderFairStart(spot: HidingSpot, fair: FairStart | null): void {
+  const { zone } = springCave2;
+  expect(fair, `${spot.id} has no fair start`).not.toBeNull();
+  expect(isSafeStart(fair?.start ?? spot, zone), spot.id).toBe(true);
+  expect(fair?.start, spot.id).not.toEqual(nearestSafeStart(spot, zone));
+}
+
 describe('risk fairness on the default Area 7 zone', () => {
   const { zone, ctx, startWindow, lastStartIndex, parkSteps } = springCave2;
   const spots = poolSpots(zone);
@@ -292,22 +310,27 @@ describe('risk fairness on the default Area 7 zone', () => {
     expect(movingHazards.map((spawn) => spawn.type)).toEqual([...Array(6).fill(STALACTITE_DRIP), GEYSER_VENT, GEYSER_VENT]);
     const wades = zone.predatorRoutes.map((route) => loopSeconds(route, route.species.tuning.patrolSpeed));
     expect(startWindow).toBeCloseTo(Math.max(...wades, ...movingHazards.map((spawn) => movingHazardPeriod(spawn.type))), 9);
-    expect(startWindow).toBeCloseTo(18.22, 2);
+    expect(startWindow).toBeCloseTo((620 + Math.hypot(140, 60)) / 50, 9);
     expect(lastStartIndex).toBe(Math.floor(startWindow / START_STEP));
-    expect(parkSteps).toBe(Math.max(tailSteps(SPRING_CAVE_2_CRAYFISH.tuning), tailSteps(SPRING_CAVE_2_CARP.tuning)));
+    expect(tailSteps(SPRING_CAVE_2_CARP.tuning)).toBe(75);
+    expect(parkSteps).toBe(Math.max(tailSteps(tilapiaOf(zone)), tailSteps(SPRING_CAVE_2_CRAYFISH.tuning), tailSteps(SPRING_CAVE_2_CARP.tuning)));
     expect(zone.hazards.map((hazard) => hazard.id)).toEqual(pulsingCurrents(zone.hazards).map((vent) => vent.id));
     expect(ctx.bounds).toEqual(swimBounds(zone));
   });
 
-  it('catches a hit when the axolotl waits at each Legendary pot but the one right over crayfish-1, and on the floor lane under it', () => {
+  it('catches a hit when the axolotl waits at each Legendary pot, the aimed pinch of crayfish-1 reaching up to the pots over its stretch', () => {
     const pots = spots.filter((spot) => spot.rarity === 'legendary');
     expect(pots).toHaveLength(3);
-    const missed = pots.filter((pot) => !pathHits(createEncounter(zone), waitAt(pot, startWindow), ctx));
-    expect(missed.map((pot) => pot.id)).toEqual(LEVEL_PINCH_MISSED_POTS);
-    for (const pot of missed) {
+    for (const pot of pots) expect(pathHits(createEncounter(zone), waitAt(pot, startWindow), ctx), pot.id).toBe(true);
+    const overCrayfish1 = pots.filter((pot) => routeLoopDistance(pot, crayfish[1].waypoints) <= CRAYFISH_REACH);
+    expect(overCrayfish1.map((pot) => pot.id)).toEqual(POTS_OVER_CRAYFISH_1);
+    for (const pot of overCrayfish1) {
+      expect(pot.y, pot.id).toBeLessThan(CRAYFISH_FLOOR_Y);
       const events = listEncounterEvents(waitAt(pot, startWindow));
-      expect(events.some((event) => event.type === 'lunge' && event.sourceId === 'crayfish-1'), pot.id).toBe(true);
-      expect(pathHits(createEncounter(zone), waitAt({ x: pot.x, y: CRAYFISH_FLOOR_Y }, startWindow), ctx), pot.id).toBe(true);
+      const hit = events.find((event) => event.type === 'hit');
+      expect(hit?.type === 'hit' && hit.sourceId, pot.id).toBe('crayfish-1');
+      const pinch = events.find((event) => event.type === 'lunge' && event.sourceId === 'crayfish-1');
+      expect(pinch?.type === 'lunge' && pinch.aim.y, pot.id).toBeLessThan(0);
     }
   });
 
@@ -359,12 +382,13 @@ describe('beating Area 7 with one leg (ND-5)', () => {
     expect(isSafeStart(fair?.start ?? spot, zone)).toBe(true);
   });
 
-  it('grabs every spot with one leg from its nearest safe start', () => {
+  it('grabs every spot with one leg from its nearest safe start but the Legendary pot at the west end of crayfish-1, grabbed from a safe start of the wider search', () => {
     const far = spots.filter((spot) => {
       const start = nearestSafeStart(spot, zone);
       return firstFairTime(start, oneLegVisitPath(start, spot, springCave2.parkSteps), springCave2) === null;
     });
-    expect(far.map((spot) => spot.id)).toEqual([]);
+    expect(far.map((spot) => spot.id)).toEqual(ONE_LEG_FAR_START_SPOTS);
+    for (const spot of far) expectWiderFairStart(spot, findFairStart(spot, springCave2, oneLegVisitPath));
   }, 60_000);
 
   it('lets a one-leg axolotl swim the main path from the Home Spot to the exit with no hit, waiting out each vent surge and swimming aside whenever a predator warns', () => {
@@ -372,10 +396,10 @@ describe('beating Area 7 with one leg (ND-5)', () => {
     expect(ONE_LEG_EXIT_START).toBeLessThanOrEqual(springCave2.startWindow);
   }, 60_000);
 
-  it.each(['crayfish-0', 'crayfish-1', 'crayfish-2'])('never lands a pinch from %s on a one-leg axolotl that swims up when its claws open', (id) => {
+  it.each(['crayfish-0', 'crayfish-1', 'crayfish-2'])('never lands a pinch from %s on a one-leg axolotl that swims straight away when its claws open', (id) => {
     const route = zone.predatorRoutes.find((candidate) => candidate.id === id);
     if (!route) throw new Error(`no route ${id}`);
-    const events = swimUpFromPinch(route, springCave2);
+    const events = swimAwayFromPinch(route, springCave2);
     expect(events.some((event) => event.type === 'telegraph' && event.sourceId === id)).toBe(true);
     expect(events.filter((event) => event.type === 'hit')).toEqual([]);
   });

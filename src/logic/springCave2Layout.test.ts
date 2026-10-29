@@ -122,9 +122,9 @@ const WAYPOINT_REACH = 8;
 /** Directions a shrimp's flick target is tried in. */
 const FLICK_DIRECTIONS = 8;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends (ND-4). */
-const LONGEST_QUIET_SWIM = { length: 471.29, from: { x: 3448, y: 646 }, to: { x: 3800, y: 374 } };
+const LONGEST_QUIET_SWIM = { length: 479.2, from: { x: 2920, y: 142 }, to: { x: 3376, y: 102 } };
 /** Longest quiet stretch of the floor lane in px, as measured (ND-4). */
-const FLOOR_QUIET_STRETCH = 99;
+const FLOOR_QUIET_STRETCH = 204;
 /** One-leg seconds along the main path to the exit, timing every vent, as measured (ND-5). */
 const ONE_LEG_EXIT_SECONDS = 52.12;
 /** Area 6's narrowest main-path gap, which Area 7's must be under (the level layout ladder). */
@@ -136,6 +136,12 @@ const CARP_IDS = [0, 1, 2, 3, 4, 5].map((n) => `carp-${n}`);
 const STALACTITE_IDS = [1, 2, 3, 4, 5, 6].map((n) => `spring-cave-2/stalactite-${n}`);
 const GEYSER_IDS = [1, 2].map((n) => `spring-cave-2/geyser-${n}`);
 const MOVING_HAZARD_IDS = [...STALACTITE_IDS, ...GEYSER_IDS];
+/** The deepest stream a stalactite may drip: its art's longest stream (src/art/movingHazardArt.test.ts). */
+const MAX_STREAM = 250;
+/** Each stalactite's stream depth before the danger retune: no stream drips less. */
+const OLD_STREAM_DEPTHS = [170, 170, 170, 170, 170, 216];
+/** y of the main path along the bottom row, between the safe area and the climb, which `geyser-1` bursts across. */
+const BOTTOM_PATH_Y = 560;
 const VENT_IDS = [1, 2, 3].map((n) => `spring-cave-2/vent-${n}`);
 const PLANT_IDS = [1, 2, 3].map((n) => `spring-cave-2/glow-plant-${n}`);
 const PEBBLE_ID = 'spring-cave-2/pebble';
@@ -436,15 +442,37 @@ describe('SPRING_CAVE_2_LAYOUT', () => {
     for (const route of crayfishOf(zone)) expect(route.species, route.id).toBe(SPRING_CAVE_2_CRAYFISH);
   });
 
-  it('plays its common carp one step up the predator ladder from Area 6, its warning over the floor, with its chase default (ND-4)', () => {
-    expect(SPRING_CAVE_2_CARP.tuning).toEqual({ ...CARP, windup: 0.9, lungeSpeed: 225, lungeDuration: 0.6, lungeRange: 135, cooldown: 2.0, patrolSpeed: 45, chase: CARP_CHASE });
-    expect(SPRING_CAVE_2_CARP.tuning.windup).toBeGreaterThan(SPRING_CAVE_2_CARP.tuning.minWindup);
+  it('plays its common carp one step up the predator ladder from Area 6: a 0.8 s warning at the floor, a 153 px sweep at 340 px/s with Area 6\'s hit reach, and a 135 px/s chase (ND-4)', () => {
+    expect(SPRING_CAVE_2_CARP.id).toBe(CARP_SPECIES.id);
+    expect(SPRING_CAVE_2_CARP.tuning).toEqual({
+      ...CARP,
+      windup: 0.8,
+      lungeSpeed: 340,
+      lungeDuration: 0.45,
+      lungeRange: 135,
+      hitRadius: 50,
+      contactRadius: 53,
+      cooldown: 1.8,
+      patrolSpeed: 50,
+      chase: { ...CARP_CHASE, speed: 135 },
+    });
+    const { tuning } = SPRING_CAVE_2_CARP;
+    expect(tuning.lungeSpeed * tuning.lungeDuration).toBeCloseTo(153, 9);
+    expect(tuning.hitRadius).toBe(tuning.bodyRadius + SAFE_PASSING_WIDTH / 2);
+    expect(tuning.contactRadius - tuning.hitRadius).toBe(CARP.contactRadius - CARP.hitRadius);
+    expect(tuning.chase).toEqual({ sight: CARP_CHASE.sight, leash: CARP_CHASE.leash, speed: 135 });
+    expect(Object.isFrozen(tuning.chase)).toBe(true);
+    expect(tuning.windup).toBe(tuning.minWindup);
+    expect(() => tunedSpecies(CARP_SPECIES, tuning)).not.toThrow();
     const area6Carp = SPRING_CAVE_CARP.tuning;
-    expect(SPRING_CAVE_2_CARP.tuning.windup).toBeLessThan(area6Carp.windup);
-    expect(SPRING_CAVE_2_CARP.tuning.lungeSpeed).toBeGreaterThan(area6Carp.lungeSpeed);
-    expect(SPRING_CAVE_2_CARP.tuning.lungeRange).toBeGreaterThan(area6Carp.lungeRange);
-    expect(SPRING_CAVE_2_CARP.tuning.cooldown).toBeLessThan(area6Carp.cooldown);
-    expect(SPRING_CAVE_2_CARP.tuning.patrolSpeed).toBeGreaterThan(area6Carp.patrolSpeed);
+    expect(tuning.windup).toBeLessThan(area6Carp.windup);
+    expect(tuning.lungeSpeed).toBeGreaterThan(area6Carp.lungeSpeed);
+    expect(tuning.lungeSpeed * tuning.lungeDuration).toBeGreaterThan(area6Carp.lungeSpeed * area6Carp.lungeDuration);
+    expect(tuning.lungeRange).toBeGreaterThan(area6Carp.lungeRange);
+    expect(tuning.hitRadius).toBe(area6Carp.hitRadius);
+    expect(tuning.cooldown).toBeLessThan(area6Carp.cooldown);
+    expect(tuning.patrolSpeed).toBeGreaterThan(area6Carp.patrolSpeed);
+    expect(tuning.chase?.speed).toBeGreaterThan(area6Carp.chase?.speed ?? Infinity);
     for (const route of carpOf(zone)) expect(route.species, route.id).toBe(SPRING_CAVE_2_CARP);
   });
 
@@ -637,7 +665,7 @@ describe('Area 7 crayfish (ND-4)', () => {
 
   it('are three floor stretches in the bottom row: crayfish-0 under the first vent, crayfish-1 under the steady outflow and crayfish-2 in the pebble room', () => {
     expect(stretches.map((route) => [route.id, ...route.waypoints.map((point) => point.x)])).toEqual([
-      ['crayfish-0', 360, 640],
+      ['crayfish-0', 360, 490],
       ['crayfish-1', 2100, 2500],
       ['crayfish-2', 3640, 3780],
     ]);
@@ -671,19 +699,53 @@ describe('Area 7 stalactites and geyser vents (ND-3)', () => {
   const stalactites = hazards.filter((spawn) => spawn.type === STALACTITE_DRIP);
   const geysers = hazards.filter((spawn) => spawn.type === GEYSER_VENT);
 
-  it('has six stalactites in x order and two geysers', () => {
+  it('has six stalactites in x order and two geysers, their offsets set so a one-leg swim of the main path can pass', () => {
     expect(stalactites.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
-      [STALACTITE_IDS[0], 856, 170, 2],
-      [STALACTITE_IDS[1], 1140, 170, 0],
-      [STALACTITE_IDS[2], 2350, 170, 2],
-      [STALACTITE_IDS[3], 2900, 170, 0],
-      [STALACTITE_IDS[4], 3380, 170, 0],
-      [STALACTITE_IDS[5], 3560, 216, 2],
+      [STALACTITE_IDS[0], 857, 250, 0.5],
+      [STALACTITE_IDS[1], 1144, 174, 0],
+      [STALACTITE_IDS[2], 2350, 250, 0.5],
+      [STALACTITE_IDS[3], 2900, 250, 2.4],
+      [STALACTITE_IDS[4], 3392, 233, 0],
+      [STALACTITE_IDS[5], 3560, 229, 2],
     ]);
     expect(geysers.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
-      [GEYSER_IDS[0], 1560, 140, 0],
-      [GEYSER_IDS[1], 2909, 140, 1],
+      [GEYSER_IDS[0], 600, 240, 1.4],
+      [GEYSER_IDS[1], 2900, 240, 1],
     ]);
+  });
+
+  it('drips each stalactite at least its old depth, and as deep as the shared rules allow up to a 250 px stream', () => {
+    expect(STALACTITE_DRIP.halfWidth).toBe(8);
+    for (const [index, spawn] of stalactites.entries()) {
+      expect(movingHazardDepth(spawn), spawn.id).toBeGreaterThanOrEqual(OLD_STREAM_DEPTHS[index]);
+      expect(movingHazardDepth(spawn), spawn.id).toBeLessThanOrEqual(MAX_STREAM);
+    }
+    expect([0, 2, 3].map((index) => movingHazardDepth(stalactites[index]))).toEqual([MAX_STREAM, MAX_STREAM, MAX_STREAM]);
+    const strikeLimited: [number, string][] = [
+      [1, 'carp-5'],
+      [4, 'carp-4'],
+    ];
+    for (const [index, id] of strikeLimited) {
+      const spawn = stalactites[index];
+      const route = zone.predatorRoutes.find((candidate) => candidate.id === id);
+      if (!route) throw new Error(`no route ${id}`);
+      expect(shapeRouteDistance(movingHazardSweep(spawn), route.waypoints), spawn.id).toBeGreaterThan(CARP_STRIKE);
+      const deeper = { ...spawn, depth: movingHazardDepth(spawn) + 1 };
+      expect(shapeRouteDistance(movingHazardSweep(deeper), route.waypoints), spawn.id).toBeLessThanOrEqual(CARP_STRIKE);
+    }
+    const last = stalactites[5];
+    const lid = walls[0];
+    expect(movingHazardSweep(last).y1).toBe(lid.y0 - 1);
+  });
+
+  it('moves stalactite-2 east of x 1140, so the Common spot at x 1056 stays over S + 60 from its stream, and stalactite-5 to the east end of its ledge', () => {
+    const [, second, , , fifth] = stalactites;
+    expect(second.x).toBeGreaterThan(1140);
+    const spot = zone.spots.find((candidate) => candidate.x === 1056 && candidate.rarity === 'common');
+    if (!spot) throw new Error('no Common spot at x 1056');
+    expect(shapeDistance(spot, movingHazardSweep(second))).toBeGreaterThan(riskBands(STALACTITE_DRIP.touchReach).common.over);
+    const ledge = (zone.bankOverhangs ?? []).find((candidate) => candidate.x0 <= fifth.x && fifth.x <= candidate.x1);
+    expect(movingHazardSweep(fifth).x1).toBe(ledge?.x1);
   });
 
   it('hangs each stalactite from the underside of a rock ledge in the top row, never from the surface, its stream in the top row only', () => {
@@ -707,13 +769,24 @@ describe('Area 7 stalactites and geyser vents (ND-3)', () => {
     expect(last.x).toBeGreaterThan(lid.x0);
   });
 
-  it('stands each geyser on the bed of the bottom row, its column 140 px up, out of the room', () => {
+  it('stands each geyser on the bed of the bottom row, its column at least 240 px up, out of the room', () => {
+    expect(GEYSER_VENT.depth).toBe(240);
     for (const spawn of geysers) {
+      expect(movingHazardDepth(spawn), spawn.id).toBeGreaterThanOrEqual(GEYSER_VENT.depth);
       expect(movingHazardBaseY(spawn), spawn.id).toBe(zone.bedTop);
       expect(movingHazardDirection(spawn), spawn.id).toBe(-1);
       expect(touchZone(spawn).y0, spawn.id).toBeGreaterThan(WORLD_H);
       expect(shapeDistance({ x: spawn.x, y: zone.bedTop }, rectOf(room)), spawn.id).toBeGreaterThan(0);
     }
+  });
+
+  it('bursts geyser-1 across the main path along the bottom row, between the safe area and the climb, at y 560', () => {
+    const [first] = geysers;
+    const climbX = zone.mainPath[2].x;
+    const samples = pathSamples(zone.mainPath, 2).filter((point) => point.y === BOTTOM_PATH_Y);
+    expect(samples.some((point) => shapeDistance(point, movingHazardSweep(first)) === 0)).toBe(true);
+    expect(touchZone(first).x0).toBeGreaterThan(zone.safeArea.x1);
+    expect(touchZone(first).x1).toBeLessThan(climbX);
   });
 
   it('keeps every touch zone clear of the safe area and the exit, and never overlaps two touch zones', () => {
@@ -1038,7 +1111,7 @@ describe('Area 7 gaps and routes (the level layout ladder)', () => {
   it('swims the main path through a gap tighter than Area 6 narrowest, between the first stalactite and carp-0 at the top of the climb, and never under the safe passing width', () => {
     const narrowest = narrowestPathGap(zone);
     expect(narrowest.between).toBe('spring-cave-2/stalactite-1 and carp-0');
-    expect(narrowest.width).toBeCloseTo(38, 9);
+    expect(narrowest.width).toBeCloseTo(36, 9);
     expect(narrowest.width).toBeGreaterThanOrEqual(SAFE_PASSING_WIDTH);
     expect(narrowest.width).toBeLessThan(AREA_6_NARROWEST);
   });
