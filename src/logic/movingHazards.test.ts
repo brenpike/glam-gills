@@ -269,9 +269,17 @@ describe('STALACTITE_DRIP and GEYSER_VENT (issue #77, ND-3, option B)', () => {
     expect(movingHazardPeriod(GEYSER_VENT)).toBeCloseTo(5.2, 9);
   });
 
-  it('touch as the pole does: the stream is as thin as the pole, the column a little wider, both with its touch reach', () => {
-    expect([STALACTITE_DRIP.halfWidth, STALACTITE_DRIP.touchReach]).toEqual([PUNTING_POLES.halfWidth, PUNTING_POLES.touchReach]);
-    expect([GEYSER_VENT.halfWidth, GEYSER_VENT.touchReach]).toEqual([8, PUNTING_POLES.touchReach]);
+  it('have their phase times: the drip out 2.0 s of its 4 s, the geyser out 2.6 s of its 5.2 s', () => {
+    expect(STALACTITE_DRIP).toMatchObject({ restFor: 1.0, warnFor: 1.0, jabFor: 0.4, holdFor: 1.2, liftFor: 0.4 });
+    expect(GEYSER_VENT).toMatchObject({ restFor: 1.4, warnFor: 1.2, jabFor: 0.4, holdFor: 1.6, liftFor: 0.6 });
+    expect(STALACTITE_DRIP.jabFor + STALACTITE_DRIP.holdFor + STALACTITE_DRIP.liftFor).toBeCloseTo(2.0, 9);
+    expect(GEYSER_VENT.jabFor + GEYSER_VENT.holdFor + GEYSER_VENT.liftFor).toBeCloseTo(2.6, 9);
+  });
+
+  it('touch with the pole\'s reach: the stream wider than the pole, the column wider still, each with its default depth', () => {
+    expect([STALACTITE_DRIP.halfWidth, STALACTITE_DRIP.touchReach, STALACTITE_DRIP.depth]).toEqual([8, PUNTING_POLES.touchReach, 216]);
+    expect([GEYSER_VENT.halfWidth, GEYSER_VENT.touchReach, GEYSER_VENT.depth]).toEqual([12, PUNTING_POLES.touchReach, 240]);
+    expect(STALACTITE_DRIP.halfWidth).toBeGreaterThan(PUNTING_POLES.halfWidth);
     expect([STALACTITE_DRIP.meetRange, GEYSER_VENT.meetRange]).toEqual([180, 180]);
   });
 });
@@ -279,9 +287,11 @@ describe('STALACTITE_DRIP and GEYSER_VENT (issue #77, ND-3, option B)', () => {
 describe('a roof hazard: the stalactite drip (issue #77, ND-3)', () => {
   const ROOF_Y = 300;
   const DRIP = movingHazardSpawn('test/drip-1', STALACTITE_DRIP, POLE_X, 0, 120, ROOF_Y);
-  /** Mid-phase times from offset 0: rest 0..1.6, warn 1.6..2.6, fall 2.6..3.0, hold 3.0..3.6, stop 3.6..4. */
-  const MID_FALL = 2.8;
-  const MID_DRIP_HOLD = 3.3;
+  /** Mid-phase times from offset 0: rest 0..1.0, warn 1.0..2.0, fall 2.0..2.4, hold 2.4..3.6, stop 3.6..4. */
+  const MID_DRIP_REST = 0.5;
+  const MID_DRIP_WARN = 1.5;
+  const MID_FALL = 2.2;
+  const MID_DRIP_HOLD = 3.0;
 
   it('starts at its roof line and goes down', () => {
     expect(movingHazardBaseY(DRIP)).toBe(ROOF_Y);
@@ -290,15 +300,15 @@ describe('a roof hazard: the stalactite drip (issue #77, ND-3)', () => {
   });
 
   it('streams from the roof line down to its depth, and its sweep is that stream at full depth', () => {
-    expect(movingHazardShape(DRIP, MID_REST)).toBeNull();
-    expect(movingHazardShape(DRIP, MID_WARN)).toBeNull();
+    expect(movingHazardShape(DRIP, MID_DRIP_REST)).toBeNull();
+    expect(movingHazardShape(DRIP, MID_DRIP_WARN)).toBeNull();
     expect(movingHazardShape(DRIP, MID_FALL)?.y1).toBeCloseTo(ROOF_Y + 60, 6);
-    expect(movingHazardShape(DRIP, MID_DRIP_HOLD)).toEqual({ kind: 'rect', x0: 995, x1: 1005, y0: ROOF_Y, y1: ROOF_Y + 120 });
-    expect(movingHazardSweep(DRIP)).toEqual({ kind: 'rect', x0: 995, x1: 1005, y0: ROOF_Y, y1: ROOF_Y + 120 });
+    expect(movingHazardShape(DRIP, MID_DRIP_HOLD)).toEqual({ kind: 'rect', x0: 992, x1: 1008, y0: ROOF_Y, y1: ROOF_Y + 120 });
+    expect(movingHazardSweep(DRIP)).toEqual({ kind: 'rect', x0: 992, x1: 1008, y0: ROOF_Y, y1: ROOF_Y + 120 });
   });
 
   it('has its tip below the roof line, at the roof line when not falling', () => {
-    expect(movingHazardTip(DRIP, MID_REST)).toEqual({ x: POLE_X, y: ROOF_Y });
+    expect(movingHazardTip(DRIP, MID_DRIP_REST)).toEqual({ x: POLE_X, y: ROOF_Y });
     expect(movingHazardTip(DRIP, MID_DRIP_HOLD)).toEqual({ x: POLE_X, y: ROOF_Y + 120 });
   });
 
@@ -307,18 +317,18 @@ describe('a roof hazard: the stalactite drip (issue #77, ND-3)', () => {
     expect(movingHazardTouches(DRIP, MID_DRIP_HOLD, { x: POLE_X, y: ROOF_Y + 120 + REACH })).toBe(true);
     expect(movingHazardTouches(DRIP, MID_DRIP_HOLD, { x: POLE_X, y: ROOF_Y + 120 + REACH + 0.01 })).toBe(false);
     expect(movingHazardTouches(DRIP, MID_DRIP_HOLD, { x: POLE_X, y: ROOF_Y - REACH - 0.01 })).toBe(false);
-    expect(movingHazardTouches(DRIP, MID_WARN, { x: POLE_X, y: ROOF_Y + 60 })).toBe(false);
+    expect(movingHazardTouches(DRIP, MID_DRIP_WARN, { x: POLE_X, y: ROOF_Y + 60 })).toBe(false);
   });
 });
 
 describe('a floor hazard: the geyser vent (issue #77, ND-3)', () => {
   const FLOOR_Y = 1000;
   const VENT = movingHazardSpawn('test/vent-1', GEYSER_VENT, POLE_X, 0, undefined, FLOOR_Y);
-  /** Mid-phase times from offset 0: rest 0..2.2, warn 2.2..3.4, burst 3.4..3.8, hold 3.8..4.6, fall 4.6..5.2. */
-  const MID_VENT_REST = 1.1;
-  const MID_VENT_WARN = 2.8;
-  const MID_BURST = 3.6;
-  const MID_VENT_HOLD = 4.2;
+  /** Mid-phase times from offset 0: rest 0..1.4, warn 1.4..2.6, burst 2.6..3.0, hold 3.0..4.6, fall 4.6..5.2. */
+  const MID_VENT_REST = 0.7;
+  const MID_VENT_WARN = 2.0;
+  const MID_BURST = 2.8;
+  const MID_VENT_HOLD = 3.8;
   const MID_FALL_BACK = 4.9;
   const TOP_Y = FLOOR_Y - GEYSER_VENT.depth;
 
@@ -332,11 +342,11 @@ describe('a floor hazard: the geyser vent (issue #77, ND-3)', () => {
     expect(movingHazardShape(VENT, MID_VENT_REST)).toBeNull();
     expect(movingHazardShape(VENT, MID_VENT_WARN)).toBeNull();
     const burst = movingHazardShape(VENT, MID_BURST);
-    expect(burst?.y0).toBeCloseTo(FLOOR_Y - 70, 6);
+    expect(burst?.y0).toBeCloseTo(FLOOR_Y - 120, 6);
     expect(burst?.y1).toBe(FLOOR_Y);
-    expect(movingHazardShape(VENT, MID_VENT_HOLD)).toEqual({ kind: 'rect', x0: 992, x1: 1008, y0: TOP_Y, y1: FLOOR_Y });
-    expect(movingHazardShape(VENT, MID_FALL_BACK)?.y0).toBeCloseTo(FLOOR_Y - 70, 6);
-    expect(movingHazardSweep(VENT)).toEqual({ kind: 'rect', x0: 992, x1: 1008, y0: TOP_Y, y1: FLOOR_Y });
+    expect(movingHazardShape(VENT, MID_VENT_HOLD)).toEqual({ kind: 'rect', x0: 988, x1: 1012, y0: TOP_Y, y1: FLOOR_Y });
+    expect(movingHazardShape(VENT, MID_FALL_BACK)?.y0).toBeCloseTo(FLOOR_Y - 120, 6);
+    expect(movingHazardSweep(VENT)).toEqual({ kind: 'rect', x0: 988, x1: 1012, y0: TOP_Y, y1: FLOOR_Y });
   });
 
   it('has its tip at the top of the column, above the floor', () => {
@@ -347,8 +357,8 @@ describe('a floor hazard: the geyser vent (issue #77, ND-3)', () => {
   it('touches the whole column within its reach, above its top and beside it, edges inclusive', () => {
     expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: POLE_X, y: TOP_Y - REACH })).toBe(true);
     expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: POLE_X, y: TOP_Y - REACH - 0.01 })).toBe(false);
-    expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: 1008 + REACH, y: FLOOR_Y - 40 })).toBe(true);
-    expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: 1008 + REACH + 0.01, y: FLOOR_Y - 40 })).toBe(false);
+    expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: 1012 + REACH, y: FLOOR_Y - 40 })).toBe(true);
+    expect(movingHazardTouches(VENT, MID_VENT_HOLD, { x: 1012 + REACH + 0.01, y: FLOOR_Y - 40 })).toBe(false);
     expect(movingHazardTouches(VENT, MID_VENT_WARN, { x: POLE_X, y: FLOOR_Y - 40 })).toBe(false);
     const tipY = movingHazardTip(VENT, MID_BURST).y;
     expect(movingHazardTouches(VENT, MID_BURST, { x: POLE_X, y: tipY - REACH + 0.01 })).toBe(true);

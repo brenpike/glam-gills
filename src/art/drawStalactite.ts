@@ -225,16 +225,16 @@ export const DRIP_STREAM_W = 3;
 const STREAM_OL = 1.2;
 /** Drips along the stream: every DRIP_SPACING px, each DRIP_HALF_W across and DRIP_HALF_H tall. */
 export const DRIP_SPACING = 18;
-export const DRIP_HALF_W = 5;
+export const DRIP_HALF_W = 8;
 const DRIP_HALF_H = 4.5;
 /** The drips' ink outline. */
 const DRIP_OUTLINE = 2;
 /**
- * Length of the art from the tip up, px: enough for a 216 px stream, over Area 6's longest, 170 px
- * from the rock. The stream's touch width is the logic's 2 x halfWidth 5 (STALACTITE_DRIP in
- * src/logic/movingHazards.ts), the drips' width.
+ * Length of the art from the tip up, px: enough for a 280 px stream, over the 250 px longest the
+ * spring cave's areas (Areas 6 and 7) may set from the rock. The stream's touch width is the
+ * logic's 2 x halfWidth 8 (STALACTITE_DRIP in src/logic/movingHazards.ts), the drips' width, 16 px.
  */
-export const DRIP_STREAM_LENGTH = 216;
+export const DRIP_STREAM_LENGTH = 280;
 /** Number of drips on the stream: the first at the tip, then every DRIP_SPACING px up the art. */
 export const DRIP_COUNT = Math.floor((DRIP_STREAM_LENGTH - DRIP_HALF_H) / DRIP_SPACING) + 1;
 

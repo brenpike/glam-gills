@@ -93,24 +93,25 @@ export const PUNTING_POLE: Readonly<MovingHazardType> = Object.freeze({
 });
 
 /**
- * The stalactite drip (issue #77, ND-3, option B): a thin stream of drips falling from a
- * stalactite's tip under a rock roof on a fixed cycle; the whole stream touches. Provisional
- * values; tune in play. The same 4 s cycle and the same sizes as the punting pole, with a slower
- * fall (0.4 s) and a shorter hold (0.6 s) and stop (0.4 s), so its warning and its danger match the
- * pole's while it reads as falling water.
+ * The stalactite drip (issue #77, ND-3, option B): a stream of drips falling from a stalactite's
+ * tip under a rock roof on a fixed cycle; the whole stream touches. Provisional values; tune in
+ * play. The same 4 s cycle and the same 1.0 s warning as the punting pole, with a 0.4 s fall, a
+ * 1.2 s hold and a 0.4 s stop, so the stream is out 2.0 s of every 4 s. It is wider than the pole
+ * (halfWidth 8, a 16 px stream) and falls 216 px by default, so a spawn under a roof reaches down
+ * into the lane below it.
  */
 export const STALACTITE_DRIP: Readonly<MovingHazardType> = Object.freeze({
   id: 'stalactite-drip',
   name: 'Stalactite drip',
   look: 'stalactite-drip',
-  restFor: 1.6,
+  restFor: 1.0,
   warnFor: 1.0,
   jabFor: 0.4,
-  holdFor: 0.6,
+  holdFor: 1.2,
   liftFor: 0.4,
   from: 'roof',
-  depth: 180,
-  halfWidth: 5,
+  depth: 216,
+  halfWidth: 8,
   touchReach: 18,
   meetRange: 180,
   fact: STALACTITE_FACT,
@@ -121,20 +122,21 @@ export const STALACTITE_DRIP: Readonly<MovingHazardType> = Object.freeze({
  * The geyser vent (issue #77, ND-3, option B): a vent on the floor bursting a column of water and
  * bubbles up to its height on a fixed cycle; the whole column touches. Provisional values; tune in
  * play. A 5.2 s cycle with a longer warning (1.2 s) than the pole's, as it bursts up from below, a
- * 0.4 s burst, a 0.8 s hold and a 0.6 s fall back; the column is a little wider than the pole.
+ * 0.4 s burst, a 1.6 s hold and a 0.6 s fall back, so the column is out 2.6 s of every 5.2 s. The
+ * column is wider than the drip stream (halfWidth 12, a 24 px column) and bursts 240 px by default.
  */
 export const GEYSER_VENT: Readonly<MovingHazardType> = Object.freeze({
   id: 'geyser-vent',
   name: 'Geyser vent',
   look: 'geyser-vent',
-  restFor: 2.2,
+  restFor: 1.4,
   warnFor: 1.2,
   jabFor: 0.4,
-  holdFor: 0.8,
+  holdFor: 1.6,
   liftFor: 0.6,
   from: 'floor',
-  depth: 140,
-  halfWidth: 8,
+  depth: 240,
+  halfWidth: 12,
   touchReach: 18,
   meetRange: 180,
   fact: GEYSER_FACT,

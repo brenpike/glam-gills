@@ -493,10 +493,10 @@ export const CARP: Readonly<TilapiaTuning> = Object.freeze({
 /**
  * Provisional crayfish values (issue #77, ND-5); tune in play. The crayfish walks its floor stretch
  * at patrolSpeed, stops and opens its claws wide for 0.8 s (the PRD's 0.8 s floor) when the
- * axolotl is within lungeRange of it, then pinches lungeSpeed x lungeDuration = 120 px forward and
- * rests for the 1.8 s cooldown. Its reach is the bottom only: it warns only while on its stretch
- * and its pinch stays level along the floor (the `warnOnRoute` and `levelStrike` rules on
- * CRAYFISH_SPECIES in src/logic/predators.ts), so mid-water above the reach is safe. Hit, touch
+ * axolotl is within lungeRange of it, then pinches lungeSpeed x lungeDuration = 120 px along the
+ * aim locked at the end of the warning, straight at the axolotl's place then, up off the floor
+ * included, and rests for the 1.8 s cooldown. It warns only while on its stretch (the `warnOnRoute`
+ * rule on CRAYFISH_SPECIES in src/logic/predators.ts), so mid-water above the reach is safe. Hit, touch
  * and body reach, and the gentle bump, are the tilapia's, so they match a Medium axolotl at every
  * size (PRD F4).
  */

@@ -63,8 +63,8 @@ function bakedImage(scene: Phaser.Scene, info: TexInfo, depth: number): Phaser.G
  *
  * Phases: patrol and cooldown step the leg frames (walkA, stand, walkB, stand) while the crayfish
  * moves; the warning shows the `warn` pose, claws raised and opened wide, for the whole warning
- * (0.8 s, tuning); the strike shows the `pinch` pose, carried level along the floor by the logic
- * point. Under full motion the claws open over the first CLAW_OPEN_S of the warning: the `warn`
+ * (0.8 s, tuning); the strike shows the `pinch` pose, carried by the logic point along the
+ * pinch's aim, which may lift it off the floor toward the axolotl. Under full motion the claws open over the first CLAW_OPEN_S of the warning: the `warn`
  * pose grows from CLAW_OPEN_FROM to full size about the feet, so the feet stay on the floor. Under
  * reduced motion the crayfish still walks but holds one pose (stand), and the claws snap open: the
  * `warn` pose at full size at once, with no animation. The pinch pose switches at once in both

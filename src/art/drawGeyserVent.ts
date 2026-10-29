@@ -191,17 +191,18 @@ export function paintGeyserRing(ctx: CanvasRenderingContext2D): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Column colour width in px: the logic's 2 x halfWidth 8 (GEYSER_VENT in
- * src/logic/movingHazards.ts), so the column is a 16 px column.
+ * Column colour width in px: the logic's 2 x halfWidth 12 (GEYSER_VENT in
+ * src/logic/movingHazards.ts), so the column is a 24 px column, as wide as the chimney's mouth
+ * (2 x GEYSER_MOUTH_HALF_W).
  */
-export const GEYSER_COLUMN_W = 16;
+export const GEYSER_COLUMN_W = 24;
 /** Ink added each side of the column. */
 const COLUMN_OL = 2;
 /**
- * Length of the art from the tip down, px: enough for a 180 px column plus the 16 px the scene
- * draws down inside the chimney.
+ * Length of the art from the tip down, px: enough for a 304 px column, the longest the spring
+ * cave's areas (Areas 6 and 7) may set, plus the 16 px the scene draws down inside the chimney.
  */
-export const GEYSER_COLUMN_LENGTH = 200;
+export const GEYSER_COLUMN_LENGTH = 320;
 /** The froth bubbles inside the column: every GEYSER_BUBBLE_SPACING px, alternating side to side. */
 export const GEYSER_BUBBLE_SPACING = 20;
 const FROTH_R = 2.6;
