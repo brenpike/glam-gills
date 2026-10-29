@@ -880,7 +880,7 @@ export class SwimScene extends Phaser.Scene {
     this.hyacinthMatView = this.matSweeps !== null ? new HyacinthMatView(this, this.assets, this.trip.elements) : null;
     this.fireflyView = this.look.firefliesPerScreen > 0 ? new FireflyView(this, this.assets, this.look, zone) : null;
     const dark = this.trip.darkWater;
-    this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, dark, this.trip.elements) : null;
+    this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, zone, dark, this.trip.elements) : null;
     this.glowPlantView =
       glowPlants(this.trip.elements).length > 0 ? new GlowPlantView(this, this.assets, this.trip.elements) : null;
     this.pulsingCurrentView = this.vents.length > 0 ? new PulsingCurrentView(this, this.assets, this.vents) : null;

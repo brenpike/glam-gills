@@ -1,6 +1,7 @@
 import type * as Phaser from 'phaser';
-import { SOFT_LIGHT_RADIUS, SPRING_DARK } from '../art/drawSpringCave';
+import { DARK_FADE_BAND, SOFT_LIGHT_RADIUS, SPRING_DARK, darkFadeEdges } from '../art/drawSpringCave';
 import { DEPTH } from '../art/layers';
+import type { SpringCaveTextures } from '../art/springCaveTextures';
 import type { TexInfo } from '../art/textures';
 import {
   darkLights,
@@ -11,7 +12,7 @@ import {
   type GlowMotion,
 } from '../logic/glowPlants';
 import type { ElementSpawn } from '../logic/hazards';
-import type { Point } from '../logic/zone';
+import type { Point, ZoneLayout } from '../logic/zone';
 import { cssColor, type GameAssets } from './BootScene';
 
 /** The lights before the plant lights in darkLights' result: the axolotl's glow, then the exit's faint glow. */
@@ -36,11 +37,55 @@ export interface DarkCaveLightFrame {
   time: number;
 }
 
-function softLightTexture(assets: GameAssets): TexInfo {
+/**
+ * One fading edge's erase: a fade strip anchored at its top-left corner, placed rect-local on the
+ * edge and stretched along the whole edge. A negative scale mirrors the strip about that anchor, so
+ * its ramp points inward from a right or bottom edge.
+ */
+interface EdgeFade {
+  readonly stamp: Phaser.GameObjects.Image;
+  readonly x: number;
+  readonly y: number;
+  readonly scaleX: number;
+  readonly scaleY: number;
+}
+
+function springCaveTextures(assets: GameAssets): SpringCaveTextures {
   if (assets.springCave === null) {
-    throw new Error('DarkCaveView: dark water needs the baked spring cave soft light texture');
+    throw new Error('DarkCaveView: dark water needs the baked spring cave soft light and fade strip textures');
   }
-  return assets.springCave.softLight;
+  return assets.springCave;
+}
+
+/** An off-scene image of `info`, anchored at its top-left corner, for erasing from the dark layer. */
+function makeFadeStamp(scene: Phaser.Scene, info: TexInfo): Phaser.GameObjects.Image {
+  return scene.make.image({ key: info.key }, false).setOrigin(0, 0);
+}
+
+/**
+ * The erases for each edge of `dark` that darkFadeEdges says fades, rect-local: the 'x' strip at the
+ * left edge (mirrored in x at the right), the 'y' strip at the top edge (mirrored in y at the bottom),
+ * each DARK_FADE_BAND deep and as long as its edge, corner to corner.
+ */
+function edgeFades(
+  dark: Readonly<DarkWater>,
+  area: Readonly<Pick<ZoneLayout, 'width' | 'bedTop'>>,
+  stripX: Phaser.GameObjects.Image,
+  stripY: Phaser.GameObjects.Image,
+): EdgeFade[] {
+  const edges = darkFadeEdges(dark, area);
+  const width = dark.x1 - dark.x0;
+  const height = dark.y1 - dark.y0;
+  const acrossScale = DARK_FADE_BAND / stripX.width;
+  const acrossLength = height / stripX.height;
+  const downLength = width / stripY.width;
+  const downScale = DARK_FADE_BAND / stripY.height;
+  const fades: EdgeFade[] = [];
+  if (edges.left) fades.push({ stamp: stripX, x: 0, y: 0, scaleX: acrossScale, scaleY: acrossLength });
+  if (edges.right) fades.push({ stamp: stripX, x: width, y: 0, scaleX: -acrossScale, scaleY: acrossLength });
+  if (edges.top) fades.push({ stamp: stripY, x: 0, y: 0, scaleX: downLength, scaleY: downScale });
+  if (edges.bottom) fades.push({ stamp: stripY, x: 0, y: height, scaleX: downLength, scaleY: -downScale });
+  return fades;
 }
 
 /** True when `view` and the dark water overlap (edges inclusive). */
@@ -50,19 +95,28 @@ function viewMeetsDark(view: DarkCaveViewRect, dark: Readonly<DarkWater>): boole
 
 /**
  * Draws the darkness over an area's dark part (issue #77, ND-7 and ND-18): one layer at
- * DEPTH.darkWater, the SPRING_DARK colour over the dark water rect, with a soft hole erased for each
- * light darkLights gives: the axolotl's own glow, the exit's faint glow (so the exit, drawn under the
+ * DEPTH.darkWater, the SPRING_DARK colour over the dark water rect. Each edge darkFadeEdges says
+ * fades is erased with a baked fade strip stretched along the whole edge, so the darkness fades into
+ * the water over DARK_FADE_BAND px (an edge on the world's side, at the surface or at the bed stays
+ * hard); where two fading bands meet the darkness compounds to ease(dx) x ease(dy). Then a soft hole
+ * is erased for each light darkLights gives: the axolotl's own glow, the exit's faint glow (so the exit, drawn under the
  * layer, always shows) and each lit glow-plant. A newly lit plant's light grows in over
  * `motion.lightFadeIn` (lightShare), so under reduced motion it appears at once. `lights` gives the
  * frame's lights with that growth applied, and the scene uses the same list for the dark rule
  * (shownInDark), so a hint star never shows past the edge of a light still growing in. The layer is
  * redrawn only when the camera view meets the dark water and a light has moved, grown or appeared
  * since the last draw. Per frame it allocates darkLights' result and, on a new light, one lit-time
- * entry. Visual only: nothing here changes game state. Throws when the spring cave textures are missing.
+ * entry. The fading edges are worked out once, but each redraw erases every fading edge's strip
+ * again before the light holes (two in Area 6, three in Area 7), and the layer is redrawn on most
+ * swimming frames while the view meets the dark water, so the fade adds that work to those frames
+ * (PRD open questions 524 and 543: an owner frame-time check). Visual only: nothing here changes
+ * game state. Throws when the spring cave textures are missing.
  */
 export class DarkCaveView {
   private readonly layer: Phaser.GameObjects.RenderTexture;
   private readonly stamp: Phaser.GameObjects.Image;
+  private readonly fadeStamps: readonly Phaser.GameObjects.Image[];
+  private readonly fades: readonly EdgeFade[];
   private readonly lightInfo: TexInfo;
   private readonly darkColor: number;
   private readonly plantIds: readonly string[];
@@ -71,14 +125,19 @@ export class DarkCaveView {
   /** The lights of the last draw, LIGHT_FIELDS numbers each, rounded. Null before the first draw. */
   private drawnLights: number[] | null = null;
 
-  /** `dark` is the area's dark water; `elements` holds the trip's elements, of which the glow-plants give light. */
+  /**
+   * `area` gives the area's size, for which edges of the dark fade; `dark` is the area's dark water;
+   * `elements` holds the trip's elements, of which the glow-plants give light.
+   */
   constructor(
     scene: Phaser.Scene,
     assets: GameAssets,
+    area: Readonly<Pick<ZoneLayout, 'width' | 'bedTop'>>,
     private readonly dark: Readonly<DarkWater>,
     private readonly elements: readonly Readonly<ElementSpawn>[],
   ) {
-    this.lightInfo = softLightTexture(assets);
+    const textures = springCaveTextures(assets);
+    this.lightInfo = textures.softLight;
     this.darkColor = cssColor(SPRING_DARK).color;
     this.plantIds = glowPlants(elements).map((plant) => plant.id);
     this.layer = scene.add
@@ -88,6 +147,10 @@ export class DarkCaveView {
     this.stamp = scene.make
       .image({ key: this.lightInfo.key }, false)
       .setOrigin(this.lightInfo.originNormX, this.lightInfo.originNormY);
+    const stripX = makeFadeStamp(scene, textures.darkFadeX);
+    const stripY = makeFadeStamp(scene, textures.darkFadeY);
+    this.fadeStamps = [stripX, stripY];
+    this.fades = edgeFades(dark, area, stripX, stripY);
   }
 
   /**
@@ -109,6 +172,7 @@ export class DarkCaveView {
   destroy(): void {
     this.layer.destroy();
     this.stamp.destroy();
+    for (const fadeStamp of this.fadeStamps) fadeStamp.destroy();
   }
 
   /** Records the scene time of each plant newly lit; forgets them all when the lit list starts over. */
@@ -134,9 +198,13 @@ export class DarkCaveView {
     return lights;
   }
 
-  /** Fills the layer with the darkness and erases a soft hole for each light. */
+  /** Fills the layer with the darkness, erases each fading edge, then erases a soft hole for each light. */
   private drawLayer(lights: readonly DarkLight[]): void {
     this.layer.clear().fill(this.darkColor, 1);
+    for (const fade of this.fades) {
+      fade.stamp.setScale(fade.scaleX, fade.scaleY);
+      this.layer.erase(fade.stamp, fade.x, fade.y);
+    }
     const drawn: number[] = [];
     for (const light of lights) {
       const x = Math.round(light.x);

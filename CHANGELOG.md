@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-10-29
+
+### Changed
+
+- The spring cave's dark water now fades softly into the water round it instead of ending in a hard black edge.
+- Glow-plants have a thin dark edge, so you can still spot them where the darkness fades.
+
 ## [0.54.1] - 2026-10-28
 
 ### Fixed

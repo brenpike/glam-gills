@@ -19,7 +19,26 @@
  * teal outline that is still 3:1 or better against the darkness; the lit plant is a bright fill with
  * its ink outline; the hint-bright plant is a thicker, brighter outline. In greyscale the order is
  * darkness, then the unlit outline, then the hint outline, then the lit fill.
+ *
+ * The unlit and hint outlines run on a keyline (ND-5): a dark line (GLOW_PLANT_KEYLINE, the
+ * darkness's own colour) GLOW_PLANT_KEYLINE_PAD px wider on each side, under every stalk, leaf and
+ * pod outline. Where the darkness fades into the water the plant's ground is the water, and the dim
+ * teal alone is too close to it; the keyline is 3:1 or better against every spring cave water, and
+ * each outline is 3:1 or better against the keyline, so the pair holds the edge anywhere in the
+ * band. Over full darkness the keyline is the darkness and does not show. The lit plant keeps its
+ * ink outline and has no keyline.
+ *
+ * Soft dark edges: the darkness fades into the water over DARK_FADE_BAND px at each edge that
+ * darkFadeEdges says fades (an edge on the world's side, at the surface or at the bed stays hard).
+ * The scene fills the dark layer with SPRING_DARK, erases each fading edge with the white ramp strip
+ * paintDarkEdgeFade bakes (stretched along the edge), then erases the light holes. Each erase
+ * multiplies the darkness left by (1 - a), so where two bands meet the darkness is
+ * darkFadeEase(dx) x darkFadeEase(dy), never darker than either band. The ramp is a smoothstep, flat
+ * at both ends, so no line shows at the edge or at the fully dark core. The rect stays the rule
+ * boundary: the fade is look only.
  */
+import type { DarkWater } from '../logic/glowPlants';
+import type { AreaSize } from '../logic/zone';
 import { TAU, ell, frameFromBounds, inkMany, line, seg, shape, type Seg, type TexSize } from './canvasKit';
 import { CAVE_H, CAVE_TEX, CAVE_W } from './drawFinds';
 import { INK, LW, SKY_HORIZON, SKY_TOP, SURF, VIEW_H, VIEW_W, WHITE } from './palette';
@@ -60,6 +79,10 @@ export const SPRING_DARK = '#050f1c';
 export const GLOW_PLANT_DIM = '#2c9aa0';
 /** The unlit glow-plant's faint body. */
 export const GLOW_PLANT_DIM_FILL = 'rgba(44,154,160,0.16)';
+/** The keyline under the unlit and hint outlines (ND-5): the darkness's own colour, 6.3:1 or better against every spring cave water. */
+export const GLOW_PLANT_KEYLINE = SPRING_DARK;
+/** How far the keyline reaches past its outline on each side, px: the keyline is the outline's width plus twice this. */
+export const GLOW_PLANT_KEYLINE_PAD = 1.2;
 /** The hint-bright glow-plant's outline: a bright mint, luminance 0.7675, 14.98:1 against SPRING_DARK. */
 export const GLOW_PLANT_HINT = '#8ff5e4';
 /** The hint-bright glow-plant's body. */
@@ -631,8 +654,17 @@ function podPath(pod: Pod): Path2D {
   return p;
 }
 
-/** The outline states (unlit and hint): a thin line of one colour round a faint body, no ink. */
+/**
+ * The outline states (unlit and hint): a thin line of one colour round a faint body, no ink. Every
+ * stalk, leaf and pod path is stroked first in GLOW_PLANT_KEYLINE, GLOW_PLANT_KEYLINE_PAD px wider
+ * on each side, so the outline always sits on the dark keyline (ND-5).
+ */
 function paintPlantOutline(ctx: CanvasRenderingContext2D, stroke: string, fill: string, lw: number): void {
+  ctx.lineWidth = lw + 2 * GLOW_PLANT_KEYLINE_PAD;
+  ctx.strokeStyle = GLOW_PLANT_KEYLINE;
+  for (const pod of GLOW_PLANT_PODS) ctx.stroke(stalkPath(pod));
+  for (const leaf of leafPaths()) ctx.stroke(leaf);
+  for (const pod of GLOW_PLANT_PODS) ctx.stroke(podPath(pod));
   ctx.lineWidth = lw;
   ctx.strokeStyle = stroke;
   for (const pod of GLOW_PLANT_PODS) ctx.stroke(stalkPath(pod));
@@ -656,8 +688,10 @@ function paintPlantGlow(ctx: CanvasRenderingContext2D, colour: string, radius: n
 
 /**
  * Paint one glow-plant state with its centre at local (0, 0), the centre of the touch circle.
- * - 'unlit': a dim teal outline (GLOW_PLANT_DIM) round a faint body; no ink and no fill of weight.
- * - 'hint': the same shape in a bright mint, a thicker outline and a faint ring of light round it.
+ * - 'unlit': a dim teal outline (GLOW_PLANT_DIM) on its dark keyline round a faint body; no ink and
+ *   no fill of weight.
+ * - 'hint': the same shape in a bright mint, a thicker outline on its keyline and a faint ring of
+ *   light round it.
  *   Under reduced motion the scene shows this state at once; with motion it pulses the sprite.
  * - 'lit': bright pods with their ink outline on teal stalks and leaves, inside a halo; a white
  *   core in each pod.
@@ -727,4 +761,86 @@ export function paintSoftLight(ctx: CanvasRenderingContext2D): void {
   for (const [t, a] of SOFT_LIGHT_STOPS) g.addColorStop(t, `rgba(255,255,255,${a})`);
   ctx.fillStyle = g;
   ctx.fillRect(-SOFT_LIGHT_HALF, -SOFT_LIGHT_HALF, SOFT_LIGHT_HALF * 2, SOFT_LIGHT_HALF * 2);
+}
+
+// ---------------------------------------------------------------------------
+// Soft dark edges
+// ---------------------------------------------------------------------------
+
+/** How far the darkness fades in from a fading edge, px (ND-2): past it the dark is full. */
+export const DARK_FADE_BAND = 96;
+/** The fade strip's length along its edge, px: short, because the scene stretches it along the whole edge and nothing changes along it. */
+export const DARK_FADE_STRIP_LENGTH = 4;
+/** How many samples of the ramp the strip's gradient takes, from the edge to the band depth. */
+const DARK_FADE_SAMPLES = 13;
+
+/** The axis a fade strip ramps along: 'x' for a left or right edge, 'y' for a top or bottom edge. */
+export type DarkFadeAxis = 'x' | 'y';
+
+/** Which edges of the dark rect fade into the water (ND-1). A hard edge ends the dark at the rect. */
+export interface DarkFadeEdges {
+  readonly left: boolean;
+  readonly right: boolean;
+  readonly top: boolean;
+  readonly bottom: boolean;
+}
+
+/**
+ * The darkness at a fraction `t` of the band in from a fading edge (ND-3): a smoothstep,
+ * 3t^2 - 2t^3, with `t` clamped to 0..1. 0 at the edge, 1 at the band depth and past it, and flat
+ * at both ends, so no line shows where the fade meets the water or the full dark.
+ */
+export function darkFadeEase(t: number): number {
+  const clamped = Math.min(1, Math.max(0, t));
+  return clamped * clamped * (3 - 2 * clamped);
+}
+
+/** The erase strength at ramp sample `sample` of DARK_FADE_SAMPLES: [t, 1 - darkFadeEase(t)]. */
+function darkFadeStop(sample: number): readonly [number, number] {
+  const t = sample / (DARK_FADE_SAMPLES - 1);
+  return [t, 1 - darkFadeEase(t)];
+}
+
+/**
+ * The fade strip's gradient stops, [distance as a fraction of DARK_FADE_BAND, erase alpha]: 1 at the
+ * edge (the dark fully taken away), falling along the smoothstep to 0 at the band depth.
+ */
+export const DARK_EDGE_FADE_STOPS: readonly (readonly [number, number])[] = Array.from({ length: DARK_FADE_SAMPLES }, (_, sample) => darkFadeStop(sample));
+
+/**
+ * Which edges of `dark` fade (ND-1). An edge fades unless it lies on the world's left side
+ * (x0 <= 0) or right side (x1 >= width), at the surface (y0 <= SURF) or at the bed top
+ * (y1 >= bedTop): there the darkness meets the world's own edge and stays hard, so no darkness is
+ * drawn outside the rect.
+ */
+export function darkFadeEdges(dark: Readonly<DarkWater>, area: Pick<AreaSize, 'width' | 'bedTop'>): DarkFadeEdges {
+  return {
+    left: dark.x0 > 0,
+    right: dark.x1 < area.width,
+    top: dark.y0 > SURF,
+    bottom: dark.y1 < area.bedTop,
+  };
+}
+
+/**
+ * Texture frames of the two fade strips, anchored at the top-left corner, on the edge:
+ * 'x' is DARK_FADE_BAND across and DARK_FADE_STRIP_LENGTH down, 'y' the same turned.
+ */
+export const DARK_FADE_TEX: Readonly<Record<DarkFadeAxis, TexSize>> = {
+  x: { w: DARK_FADE_BAND, h: DARK_FADE_STRIP_LENGTH, originX: 0, originY: 0 },
+  y: { w: DARK_FADE_STRIP_LENGTH, h: DARK_FADE_BAND, originX: 0, originY: 0 },
+};
+
+/**
+ * Paint a fade strip with its top-left corner at local (0, 0): white, erase strength 1 at the edge
+ * (local 0 on `axis`) falling along DARK_EDGE_FADE_STOPS to nothing at DARK_FADE_BAND. The darkness
+ * erases each fading edge with it, the 'x' strip at a left edge (flipped for a right one) and the
+ * 'y' strip at a top edge (flipped for a bottom one). Plain white, no ink and nothing sharp.
+ */
+export function paintDarkEdgeFade(ctx: CanvasRenderingContext2D, axis: DarkFadeAxis): void {
+  const tex = DARK_FADE_TEX[axis];
+  const ramp = axis === 'x' ? ctx.createLinearGradient(0, 0, DARK_FADE_BAND, 0) : ctx.createLinearGradient(0, 0, 0, DARK_FADE_BAND);
+  for (const [offset, alpha] of DARK_EDGE_FADE_STOPS) ramp.addColorStop(offset, `rgba(255,255,255,${alpha})`);
+  ctx.fillStyle = ramp;
+  ctx.fillRect(0, 0, tex.w, tex.h);
 }
