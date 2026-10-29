@@ -20,6 +20,14 @@
  * its ink outline; the hint-bright plant is a thicker, brighter outline. In greyscale the order is
  * darkness, then the unlit outline, then the hint outline, then the lit fill.
  *
+ * The unlit and hint outlines run on a keyline (ND-5): a dark line (GLOW_PLANT_KEYLINE, the
+ * darkness's own colour) GLOW_PLANT_KEYLINE_PAD px wider on each side, under every stalk, leaf and
+ * pod outline. Where the darkness fades into the water the plant's ground is the water, and the dim
+ * teal alone is too close to it; the keyline is 3:1 or better against every spring cave water, and
+ * each outline is 3:1 or better against the keyline, so the pair holds the edge anywhere in the
+ * band. Over full darkness the keyline is the darkness and does not show. The lit plant keeps its
+ * ink outline and has no keyline.
+ *
  * Soft dark edges: the darkness fades into the water over DARK_FADE_BAND px at each edge that
  * darkFadeEdges says fades (an edge on the world's side, at the surface or at the bed stays hard).
  * The scene fills the dark layer with SPRING_DARK, erases each fading edge with the white ramp strip
@@ -71,6 +79,10 @@ export const SPRING_DARK = '#050f1c';
 export const GLOW_PLANT_DIM = '#2c9aa0';
 /** The unlit glow-plant's faint body. */
 export const GLOW_PLANT_DIM_FILL = 'rgba(44,154,160,0.16)';
+/** The keyline under the unlit and hint outlines (ND-5): the darkness's own colour, 6.3:1 or better against every spring cave water. */
+export const GLOW_PLANT_KEYLINE = SPRING_DARK;
+/** How far the keyline reaches past its outline on each side, px: the keyline is the outline's width plus twice this. */
+export const GLOW_PLANT_KEYLINE_PAD = 1.2;
 /** The hint-bright glow-plant's outline: a bright mint, luminance 0.7675, 14.98:1 against SPRING_DARK. */
 export const GLOW_PLANT_HINT = '#8ff5e4';
 /** The hint-bright glow-plant's body. */
@@ -642,8 +654,17 @@ function podPath(pod: Pod): Path2D {
   return p;
 }
 
-/** The outline states (unlit and hint): a thin line of one colour round a faint body, no ink. */
+/**
+ * The outline states (unlit and hint): a thin line of one colour round a faint body, no ink. Every
+ * stalk, leaf and pod path is stroked first in GLOW_PLANT_KEYLINE, GLOW_PLANT_KEYLINE_PAD px wider
+ * on each side, so the outline always sits on the dark keyline (ND-5).
+ */
 function paintPlantOutline(ctx: CanvasRenderingContext2D, stroke: string, fill: string, lw: number): void {
+  ctx.lineWidth = lw + 2 * GLOW_PLANT_KEYLINE_PAD;
+  ctx.strokeStyle = GLOW_PLANT_KEYLINE;
+  for (const pod of GLOW_PLANT_PODS) ctx.stroke(stalkPath(pod));
+  for (const leaf of leafPaths()) ctx.stroke(leaf);
+  for (const pod of GLOW_PLANT_PODS) ctx.stroke(podPath(pod));
   ctx.lineWidth = lw;
   ctx.strokeStyle = stroke;
   for (const pod of GLOW_PLANT_PODS) ctx.stroke(stalkPath(pod));
@@ -667,8 +688,10 @@ function paintPlantGlow(ctx: CanvasRenderingContext2D, colour: string, radius: n
 
 /**
  * Paint one glow-plant state with its centre at local (0, 0), the centre of the touch circle.
- * - 'unlit': a dim teal outline (GLOW_PLANT_DIM) round a faint body; no ink and no fill of weight.
- * - 'hint': the same shape in a bright mint, a thicker outline and a faint ring of light round it.
+ * - 'unlit': a dim teal outline (GLOW_PLANT_DIM) on its dark keyline round a faint body; no ink and
+ *   no fill of weight.
+ * - 'hint': the same shape in a bright mint, a thicker outline on its keyline and a faint ring of
+ *   light round it.
  *   Under reduced motion the scene shows this state at once; with motion it pulses the sprite.
  * - 'lit': bright pods with their ink outline on teal stalks and leaves, inside a halo; a white
  *   core in each pod.

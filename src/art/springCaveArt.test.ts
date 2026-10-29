@@ -1,7 +1,8 @@
 /**
  * Spring cave art (issue #77, ND-15 and ND-18; guide 3c, 7 and 10), headless: the row details, the
  * rock ledge, the side grotto, the spring outflow marks, the glow-plant in three states, the
- * soft light, the soft dark edges (ND-1 to ND-3) and their fade strips, and the spring cave rows in
+ * soft light, the soft dark edges (ND-1 to ND-3) and their fade strips, the contrast in the fade band
+ * (the glow-plant keyline, ND-5, and the crayfish and carp), and the spring cave rows in
  * the background chunks and their bake. The painters run
  * against a recording context and a stub Path2D, and the Phaser bake runs against a fake scene whose
  * canvases record. No Phaser is loaded.
@@ -20,6 +21,8 @@ import {
   GLOW_PLANT_HINT_FILL,
   GLOW_PLANT_HINT_LW,
   GLOW_PLANT_HINT_RING,
+  GLOW_PLANT_KEYLINE,
+  GLOW_PLANT_KEYLINE_PAD,
   GLOW_PLANT_LIT,
   GLOW_PLANT_LIT_HALO,
   GLOW_PLANT_LIT_STEM,
@@ -90,7 +93,9 @@ import type { TexSize } from './canvasKit';
 import { GLOW_PLANTS } from '../logic/glowPlants';
 import { GLOW_PLANT_RADIUS } from '../logic/springCaveLayout';
 import { AREAS } from '../logic/areas';
-import { areaSize } from '../logic/zone';
+import { WORLD_H, areaSize } from '../logic/zone';
+import { CRAYFISH_SHELL } from './drawCrayfish';
+import { CARP_BODY } from './drawCarp';
 import { INK, LW, SKY_HORIZON, SKY_TOP, SUN, SURF, VIEW_H, VIEW_W, WHITE } from './palette';
 
 vi.mock('phaser', () => ({}));
@@ -859,29 +864,49 @@ describe('glow-plant (guide 3g, 10; issue #77, ND-8 and ND-18)', () => {
     expect(podCmds(draw('lit')).length).toBeGreaterThan(0);
   });
 
-  describe('unlit: a dim teal outline', () => {
+  /** The strokes of an outline state: the keylines (the first OUTLINE_PATHS) and then the outlines. */
+  const OUTLINE_PATHS = GLOW_PLANT_PODS.length * 2 + 2;
+  const keylinesOf = (painted: Painted[]): Painted[] => strokes(painted).slice(0, OUTLINE_PATHS);
+  const outlinesOf = (painted: Painted[]): Painted[] => strokes(painted).slice(OUTLINE_PATHS);
+
+  describe('unlit: a dim teal outline on a dark keyline', () => {
     const painted = draw('unlit');
 
-    it('is all outline: only the dim teal for lines, no ink, a faint body and no gradient', () => {
-      expect(styleSet(strokes(painted))).toEqual(new Set([GLOW_PLANT_DIM]));
-      for (const s of strokes(painted)) expect(s.lineWidth).toBe(GLOW_PLANT_UNLIT_LW);
+    it('is all outline: the dim teal on the keyline for lines, no ink, a faint body and no gradient', () => {
+      expect(styleSet(strokes(painted))).toEqual(new Set([GLOW_PLANT_KEYLINE, GLOW_PLANT_DIM]));
+      expect(styleSet(keylinesOf(painted))).toEqual(new Set([GLOW_PLANT_KEYLINE]));
+      for (const s of keylinesOf(painted)) expect(s.lineWidth).toBeCloseTo(GLOW_PLANT_UNLIT_LW + 2 * GLOW_PLANT_KEYLINE_PAD, 12);
+      expect(styleSet(outlinesOf(painted))).toEqual(new Set([GLOW_PLANT_DIM]));
+      for (const s of outlinesOf(painted)) expect(s.lineWidth).toBe(GLOW_PLANT_UNLIT_LW);
       expect(styleSet(fills(painted))).toEqual(new Set([GLOW_PLANT_DIM_FILL]));
       expect(painted.some((p) => p.gradient !== null)).toBe(false);
       expect(painted.some((p) => p.style === INK)).toBe(false);
     });
 
-    it('draws a stalk and a leaf outline and a pod body and outline for each pod', () => {
-      expect(strokes(painted)).toHaveLength(GLOW_PLANT_PODS.length * 2 + 2);
+    it('draws a stalk and a leaf outline and a pod body and outline for each pod, each outline over a keyline', () => {
+      expect(strokes(painted)).toHaveLength(OUTLINE_PATHS * 2);
       expect(fills(painted)).toHaveLength(GLOW_PLANT_PODS.length);
+      const pathsOf = (list: Painted[]) => list.map((p) => JSON.stringify(p.cmds)).sort();
+      expect(pathsOf(keylinesOf(painted))).toEqual(pathsOf(outlinesOf(painted)));
+    });
+
+    it('lays every keyline before any body or outline, so the outline always sits on it', () => {
+      const firstOutline = painted.findIndex((p) => p.style !== GLOW_PLANT_KEYLINE);
+      expect(firstOutline).toBe(OUTLINE_PATHS);
+      expect(painted.slice(firstOutline).some((p) => p.style === GLOW_PLANT_KEYLINE)).toBe(false);
     });
   });
 
   describe('hint: a brighter, thicker outline with a ring', () => {
     const painted = draw('hint');
 
-    it('has the unlit shapes in a bright mint at a thicker line, over a faint ring of light', () => {
-      expect(styleSet(strokes(painted))).toEqual(new Set([GLOW_PLANT_HINT]));
-      for (const s of strokes(painted)) expect(s.lineWidth).toBe(GLOW_PLANT_HINT_LW);
+    it('has the unlit shapes in a bright mint at a thicker line on its keyline, over a faint ring of light', () => {
+      expect(strokes(painted)).toHaveLength(OUTLINE_PATHS * 2);
+      expect(styleSet(strokes(painted))).toEqual(new Set([GLOW_PLANT_KEYLINE, GLOW_PLANT_HINT]));
+      expect(styleSet(keylinesOf(painted))).toEqual(new Set([GLOW_PLANT_KEYLINE]));
+      for (const s of keylinesOf(painted)) expect(s.lineWidth).toBeCloseTo(GLOW_PLANT_HINT_LW + 2 * GLOW_PLANT_KEYLINE_PAD, 12);
+      expect(styleSet(outlinesOf(painted))).toEqual(new Set([GLOW_PLANT_HINT]));
+      for (const s of outlinesOf(painted)) expect(s.lineWidth).toBe(GLOW_PLANT_HINT_LW);
       expect(GLOW_PLANT_HINT_LW).toBeGreaterThan(GLOW_PLANT_UNLIT_LW);
       expect(painted[0].gradient?.kind).toBe('radial');
       expect(painted[0].gradient?.extent).toEqual([0, 0, 0, 0, 0, GLOW_PLANT_RING_RADIUS]);
@@ -909,6 +934,10 @@ describe('glow-plant (guide 3g, 10; issue #77, ND-8 and ND-18)', () => {
       const firstStem = tubes.findIndex((s) => s.style === GLOW_PLANT_LIT_STEM);
       expect(tubes.slice(0, firstStem).every((s) => s.style === INK)).toBe(true);
       expect(strokes(painted).filter((s) => s.style === INK && s.lineWidth === 2.6)).toHaveLength(GLOW_PLANT_PODS.length);
+    });
+
+    it('has no keyline: the lit state keeps its ink outline only', () => {
+      expect(styleSet(painted).has(GLOW_PLANT_KEYLINE)).toBe(false);
     });
 
     it('keeps ink 3:1 or better on its pods, and on its stalks', () => {
@@ -1158,6 +1187,156 @@ describe('soft dark edges: the fade strips', () => {
     expect(painted[0].cmds).toEqual([['fillRect', 0, 0, DARK_FADE_TEX[axis].w, DARK_FADE_TEX[axis].h]]);
     expect(painted[0].style).not.toContain(INK);
     expectInsideFrame(painted, DARK_FADE_TEX[axis]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Contrast in the fade band (ND-5, Q1 A and Q2 A)
+// ---------------------------------------------------------------------------
+
+const SPRING_LOOK = habitatLook('spring-cave');
+
+/** Two #rrggbb colours mixed in sRGB, `t` of the way from `a` to `b`, as a canvas blends them. */
+function mixHex(a: string, b: string, t: number): string {
+  const ca = channelsOf(a);
+  const cb = channelsOf(b);
+  return toHex([0, 1, 2].map((i) => ca[i] * (1 - t) + cb[i] * t) as unknown as Rgb);
+}
+
+/** The spring cave look's water gradient at row-local `y`: shallow at SURF, mid at stopMid, deep at gradientEndY and past it. */
+function springGradientAt(y: number): string {
+  const { shallow, mid, deep, stopMid, gradientEndY } = SPRING_LOOK.water;
+  const t = Math.min(1, Math.max(0, (y - SURF) / (gradientEndY - SURF)));
+  return t <= stopMid ? mixHex(shallow, mid, t / stopMid) : mixHex(mid, deep, (t - stopMid) / (1 - stopMid));
+}
+
+/** The water behind world `y` with the haze laid over it: the gradient at the row-local y in a top row, the deep stop in any other row. */
+function springWaterAt(y: number): string {
+  const row = Math.floor(y / WORLD_H);
+  const water = row === 0 ? springGradientAt(y - row * WORLD_H) : SPRING_LOOK.water.deep;
+  return overlay(water, SPRING_LOOK.haze);
+}
+
+/** Every water a fade band shows: the water of each world row the dark rects span. */
+const BAND_WATERS: readonly string[] = [
+  ...new Set(DARK_AREAS.flatMap((entry) => Array.from({ length: entry.dark.y1 - entry.dark.y0 + 1 }, (_, i) => springWaterAt(entry.dark.y0 + i)))),
+];
+const LIGHTEST_BAND_WATER = BAND_WATERS.reduce((best, water) => (luminance(water) > luminance(best) ? water : best));
+
+/** How far the keylined plant reaches from its centre, px: its farthest point plus half the widest keyline. */
+const PLANT_REACH = (() => {
+  const painted = record((ctx) => paintGlowPlant(ctx, 'hint')).filter((p) => p.op === 'stroke');
+  return Math.max(...painted.flatMap((p) => pointsOf(p.cmds).map((pt) => Math.max(Math.abs(pt.x), Math.abs(pt.y)) + p.lineWidth / 2)));
+})();
+
+/** The distance in from each fading edge of `dark` to (`x`, `y`). */
+function fadingEdgeDistances(x: number, y: number, entry: (typeof DARK_AREAS)[number]): number[] {
+  const edges = darkFadeEdges(entry.dark, entry.size);
+  const distances: [boolean, number][] = [
+    [edges.left, x - entry.dark.x0],
+    [edges.right, entry.dark.x1 - x],
+    [edges.top, y - entry.dark.y0],
+    [edges.bottom, entry.dark.y1 - y],
+  ];
+  return distances.filter(([fades]) => fades).map(([, distance]) => distance);
+}
+
+/** Every glow-plant whose outline lies within DARK_FADE_BAND of a fading edge, from the real layouts. */
+const IN_BAND_PLANTS = DARK_AREAS.flatMap((entry) => {
+  const area = AREAS.find((candidate) => candidate.number === entry.number)!;
+  const spots = area.layout.elements.flatMap((element) => (element.glowPlant === undefined ? [] : [element.glowPlant]));
+  return spots
+    .filter((spot) => fadingEdgeDistances(spot.x, spot.y, entry).some((distance) => distance - PLANT_REACH < DARK_FADE_BAND))
+    .map((spot) => ({ number: entry.number, x: spot.x, y: spot.y }));
+});
+
+/** WCAG 2 relative luminance of 8-bit sRGB channels, unchecked, for the band sweep. */
+function channelLuminance(channels: readonly number[]): number {
+  const [r, g, b] = channels.map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG 2 contrast ratio of two luminances. */
+const luminanceContrast = (la: number, lb: number): number => (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+
+/** How many darkness steps the band sweep takes from no darkness to full. */
+const BAND_SWEEP_STEPS = 1000;
+
+/** The lowest, across every band water and every darkness through the band, of the better of `fill` and ink against the background. */
+function midBandMinimum(fill: string): number {
+  const inkLum = luminance(INK);
+  const fillLum = luminance(fill);
+  const dark = channelsOf(SPRING_DARK);
+  let lowest = Infinity;
+  for (const water of BAND_WATERS.map(channelsOf)) {
+    for (let step = 0; step <= BAND_SWEEP_STEPS; step++) {
+      const t = step / BAND_SWEEP_STEPS;
+      const background = channelLuminance(water.map((v, i) => Math.round(v * (1 - t) + dark[i] * t)));
+      lowest = Math.min(lowest, Math.max(luminanceContrast(inkLum, background), luminanceContrast(fillLum, background)));
+    }
+  }
+  return lowest;
+}
+
+describe('contrast in the fade band: the glow-plant keyline (ND-5, Q1 A)', () => {
+  it('keys the keyline to the darkness, about 1.2 px each side', () => {
+    expect(GLOW_PLANT_KEYLINE).toBe(SPRING_DARK);
+    expect(GLOW_PLANT_KEYLINE_PAD).toBeCloseTo(1.2, 12);
+    expect(PLANT_REACH).toBeGreaterThan(21);
+    expect(PLANT_REACH).toBeLessThan(26);
+  });
+
+  it('finds the in-band plants from the layouts: Area 6 three, Area 7 two', () => {
+    expect(IN_BAND_PLANTS).toEqual([
+      { number: 6, x: 1290, y: 770 },
+      { number: 6, x: 1560, y: 790 },
+      { number: 6, x: 2230, y: 780 },
+      { number: 7, x: 2460, y: 260 },
+      { number: 7, x: 2720, y: 300 },
+    ]);
+  });
+
+  it.each(IN_BAND_PLANTS)('holds the area $number plant at ($x, $y): keyline on its water, and both outlines on the keyline, 3:1 or better', (plant) => {
+    const water = springWaterAt(plant.y);
+    expect(contrast(GLOW_PLANT_KEYLINE, water), water).toBeGreaterThanOrEqual(GREY_FLOOR);
+    expect(contrast(GLOW_PLANT_DIM, GLOW_PLANT_KEYLINE)).toBeGreaterThanOrEqual(GREY_FLOOR);
+    expect(contrast(GLOW_PLANT_HINT, GLOW_PLANT_KEYLINE)).toBeGreaterThanOrEqual(GREY_FLOOR);
+  });
+
+  it('keeps the outlines at 5.71:1 and 14.98:1 against the keyline', () => {
+    expect(contrast(GLOW_PLANT_DIM, GLOW_PLANT_KEYLINE).toFixed(2)).toBe('5.71');
+    expect(contrast(GLOW_PLANT_HINT, GLOW_PLANT_KEYLINE).toFixed(2)).toBe('14.98');
+  });
+});
+
+describe('contrast in the fade band: the crayfish and the carp (Q2 A)', () => {
+  it('keeps ink 3:1 or better against every band water, the lightest included', () => {
+    expect(BAND_WATERS).toContain(LIGHTEST_BAND_WATER);
+    for (const water of BAND_WATERS) expect(contrast(INK, water), water).toBeGreaterThanOrEqual(PAIR_FLOOR);
+  });
+
+  it('keeps the shell and the body 3:1 or better against the darkness', () => {
+    expect(contrast(CRAYFISH_SHELL, SPRING_DARK)).toBeGreaterThanOrEqual(GREY_FLOOR);
+    expect(contrast(CARP_BODY, SPRING_DARK)).toBeGreaterThanOrEqual(GREY_FLOOR);
+  });
+
+  it('pins the mid-band dip, the accepted residual: 2.38 for the crayfish and 2.34 for the carp', () => {
+    expect(midBandMinimum(CRAYFISH_SHELL).toFixed(2)).toBe('2.38');
+    expect(midBandMinimum(CARP_BODY).toFixed(2)).toBe('2.34');
+  });
+});
+
+describe('contrast in the fade band: greyscale', () => {
+  it('keeps the darkness far darker than every spring cave water, the keyline 6.3:1 or better against each', () => {
+    const { shallow, mid, deep } = SPRING_LOOK.water;
+    const waters = [...BAND_WATERS, ...[shallow, mid, deep].map((stop) => overlay(stop, SPRING_LOOK.haze))];
+    for (const water of waters) {
+      expect(luminance(SPRING_DARK), water).toBeLessThan(luminance(water) / 10);
+      expect(contrast(SPRING_DARK, water), water).toBeGreaterThanOrEqual(6.3);
+    }
   });
 });
 
