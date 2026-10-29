@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.1] - 2026-10-28
+
 ### Fixed
 
 - Area 7's exit gate now stands where the exit really is, at the top right, on the pebble room's rock roof. Before, the gate was drawn on the cave floor inside the pebble room, and swimming into it did nothing (#183).
