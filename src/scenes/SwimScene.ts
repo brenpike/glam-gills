@@ -820,7 +820,6 @@ export class SwimScene extends Phaser.Scene {
     this.exitView = new ExitView(
       this,
       this.assets,
-      this.area.exit,
       exitGateBase(this.area.exit, zone),
       exitOpen(this.snackTally.left),
       exitArrowSide(this.area.exit, zone.width),

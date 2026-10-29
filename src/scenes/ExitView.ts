@@ -2,7 +2,6 @@ import * as Phaser from 'phaser';
 import { GATE_H, SIGN_SIZE } from '../art/drawArea';
 import { DEPTH } from '../art/layers';
 import type { TexInfo } from '../art/textures';
-import type { AreaExit } from '../logic/areas';
 import type { ExitArrowSide } from '../logic/exitArrow';
 import type { MotionProfile } from '../logic/motion';
 import type { Vec2 } from '../logic/vec';
@@ -41,11 +40,12 @@ function showBaked(image: Phaser.GameObjects.Image, info: TexInfo): void {
 
 /**
  * Draws the area exit: the gate standing at `base`, on the floor right under the exit centre (the
- * bed or the top of a rock wall, from `exitGateBase`), and the round sign above it, both closed (slats, padlock) or open (clear opening, arrow), and a twinkle
- * burst around the sign when it opens. The open sign's arrow points to `arrowSide`: the baked art
- * points right, so 'left' mirrors the open sign; the closed sign is never mirrored. Visual only: the burst is driven by the frame `dt`, so it freezes with the
- * scene, and nothing here changes game state. An exit already open when the view is built shows
- * open with no burst.
+ * bed or the top of a rock wall, from `exitGateBase`), and the round sign above it, both closed
+ * (slats, padlock) or open (clear opening, arrow), and a twinkle burst around the sign when it
+ * opens. The open sign's arrow points to `arrowSide`: the baked art points right, so 'left' mirrors
+ * the open sign; the closed sign is never mirrored. Visual only: the burst is driven by the frame
+ * `dt`, so it freezes with the scene, and nothing here changes game state. An exit already open
+ * when the view is built shows open with no burst.
  */
 export class ExitView {
   private readonly assets: GameAssets;
@@ -60,7 +60,6 @@ export class ExitView {
   constructor(
     scene: Phaser.Scene,
     assets: GameAssets,
-    exit: AreaExit,
     base: Point,
     open: boolean,
     arrowSide: ExitArrowSide,
