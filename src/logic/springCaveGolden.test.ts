@@ -1,7 +1,7 @@
 /**
  * Golden guard for the spring cave, Area 6 ('spring-cave-1'): its built zone, its trip placements,
  * and the encounter and trip rules, its crayfish, chasing common carp, dripping stalactites, geyser
- * vent, mobile snacks, spring outflow, dark water and glow-plants included, played along a fixed
+ * vents, mobile snacks, spring outflow, dark water and glow-plants included, played along a fixed
  * scripted swim that swims down into the dark, waits there for the glow-plant hint, lights every
  * glow-plant, then parks by every crayfish, carp, stalactite and geyser sweep (issue #77). Any change here means a shared rule changed spring-cave-1 behaviour.
  */
@@ -322,12 +322,15 @@ describe('spring-cave-1 golden', () => {
       'carp',
       'carp',
       'carp',
+      'carp',
     ]);
     expect((defaultZone.movingHazards ?? []).map((spawn) => spawn.type.id)).toEqual([
       'stalactite-drip',
       'stalactite-drip',
       'stalactite-drip',
       'stalactite-drip',
+      'stalactite-drip',
+      'geyser-vent',
       'geyser-vent',
     ]);
     const parkSpots = [...defaultZone.predatorRoutes.map(routeCentre), ...listMovingHazardCentres(defaultZone)];

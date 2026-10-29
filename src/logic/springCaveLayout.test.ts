@@ -120,7 +120,7 @@ const WAYPOINT_REACH = 8;
 /** Directions a shrimp's flick target is tried in. */
 const FLICK_DIRECTIONS = 8;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends (issue #77, ND-4). */
-const LONGEST_QUIET_SWIM = { length: 477.59, from: { x: 872, y: 102 }, to: { x: 1104, y: 430 } };
+const LONGEST_QUIET_SWIM = { length: 472.9, from: { x: 1624, y: 102 }, to: { x: 1856, y: 430 } };
 /** Longest quiet stretch of the floor lane in px, as measured (issue #77, ND-4). */
 const FLOOR_QUIET_STRETCH = 370;
 /** One-leg seconds along the main path to the exit, as measured (issue #77, ND-9). */
@@ -131,22 +131,28 @@ const AREA_5_NARROWEST = 48;
 const ROW_OPENINGS: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
   360: [
     [40, 469],
-    [961, 1219],
+    [1139, 1219],
     [1711, 1969],
   ],
   720: [
     [40, 89],
-    [551, 869],
-    [1381, 1569],
+    [551, 819],
+    [1061, 1139],
     [2181, 2360],
   ],
 };
 /** Empty treasure slots over the 200 fresh trips, as measured: 11 slots for 12 treasures leave some empty (issue #77, ND-12). */
 const EMPTY_SLOTS = { most: 4, mean: 2.4 };
 const CRAYFISH_IDS = [0, 1, 2].map((n) => `crayfish-${n}`);
-const CARP_IDS = [0, 1, 2, 3, 4, 5].map((n) => `carp-${n}`);
-const STALACTITE_IDS = [1, 2, 3, 4].map((n) => `spring-cave-1/stalactite-${n}`);
-const GEYSER_IDS = ['spring-cave-1/geyser-1'];
+const CARP_IDS = [0, 1, 2, 3, 4, 5, 6].map((n) => `carp-${n}`);
+/** The carp the whole-water test needs, as measured: carp-0 and carp-6 are over the bar, even together. */
+const NEEDED_CARP_IDS = [1, 2, 3, 4, 5].map((n) => `carp-${n}`);
+const STALACTITE_IDS = [1, 2, 3, 4, 5].map((n) => `spring-cave-1/stalactite-${n}`);
+const GEYSER_IDS = [1, 2].map((n) => `spring-cave-1/geyser-${n}`);
+/** The deepest stream a stalactite may drip: its art's longest stream (src/art/movingHazardArt.test.ts). */
+const MAX_STREAM = 250;
+/** y of the main path along the bottom row, which each geyser column bursts across. */
+const BOTTOM_PATH_Y = 830;
 const MOVING_HAZARD_IDS = [...STALACTITE_IDS, ...GEYSER_IDS];
 const PLANT_IDS = [1, 2, 3, 4, 5, 6].map((n) => `spring-cave-1/glow-plant-${n}`);
 
@@ -364,7 +370,7 @@ describe('SPRING_CAVE_LAYOUT', () => {
     }
   });
 
-  it('has 36 snacks (6 worms, 6 bugs, 13 tadpoles and 11 shrimp), 3 crayfish, 6 carp, 4 stalactites, 1 geyser, 6 glow-plants and 11 treasure slots, and no tilapia, nets, reeds, pads or punting poles (issue #77, ND-3, ND-4, ND-8, ND-10)', () => {
+  it('has 36 snacks (6 worms, 6 bugs, 13 tadpoles and 11 shrimp), 3 crayfish, 7 carp, 5 stalactites, 2 geysers, 6 glow-plants and 11 treasure slots, and no tilapia, nets, reeds, pads or punting poles (issue #77, ND-3, ND-4, ND-8, ND-10)', () => {
     for (const seed of ALL_SEEDS) {
       const layout = springCave(seed);
       expect(layout.collectibles).toHaveLength(36);
@@ -382,8 +388,8 @@ describe('SPRING_CAVE_LAYOUT', () => {
       ...CARP_IDS.map((id) => [id, SPRING_CAVE_CARP]),
     ]);
     expect(crayfishOf(zone).map((route) => route.id)).toEqual(CRAYFISH_IDS);
-    expect(carpCount(zone)).toBe(6);
-    expect(movingHazardsOf(zone).map((spawn) => spawn.type)).toEqual([...STALACTITE_IDS.map(() => STALACTITE_DRIP), GEYSER_VENT]);
+    expect(carpCount(zone)).toBe(7);
+    expect(movingHazardsOf(zone).map((spawn) => spawn.type)).toEqual([...STALACTITE_IDS.map(() => STALACTITE_DRIP), ...GEYSER_IDS.map(() => GEYSER_VENT)]);
     expect(zone.elements.map((element) => [element.id, element.type.id])).toEqual(PLANT_IDS.map((id) => [id, 'glow-plant']));
     expect(SPRING_CAVE_LAYOUT.elements.every((element) => element.type === GLOW_PLANT)).toBe(true);
     expect(SPRING_CAVE_LAYOUT.padCount).toBe(0);
@@ -404,20 +410,39 @@ describe('SPRING_CAVE_LAYOUT', () => {
     for (const route of crayfishOf(zone)) expect(route.species, route.id).toBe(SPRING_CAVE_CRAYFISH);
   });
 
-  it('plays its common carp one step up the predator ladder from Area 5, its warning over the floor, with its chase default (issue #77, ND-6)', () => {
+  it('plays its common carp stronger than Area 5: a 0.85 s warning over the floor, a 144 px sweep at 320 px/s that hits within its body half length plus the axolotl half height, and a 130 px/s chase (issue #77, ND-6)', () => {
     expect(SPRING_CAVE_CARP.id).toBe(CARP_SPECIES.id);
     expect(SPRING_CAVE_CARP.dangerPart).toBe(true);
-    expect(SPRING_CAVE_CARP.tuning).toEqual({ ...CARP, windup: 0.925, lungeSpeed: 220, lungeDuration: 0.6, lungeRange: 130, cooldown: 2.2, patrolSpeed: 40, chase: CARP_CHASE });
-    expect(SPRING_CAVE_CARP.tuning.chase).toBe(CARP_CHASE);
-    expect(SPRING_CAVE_CARP.tuning.windup).toBeGreaterThan(SPRING_CAVE_CARP.tuning.minWindup);
-    expect(SPRING_CAVE_CARP.tuning.minWindup).toBe(0.8);
-    expect(() => tunedSpecies(CARP_SPECIES, SPRING_CAVE_CARP.tuning)).not.toThrow();
+    expect(SPRING_CAVE_CARP.tuning).toEqual({
+      ...CARP,
+      windup: 0.85,
+      lungeSpeed: 320,
+      lungeDuration: 0.45,
+      lungeRange: 130,
+      hitRadius: 50,
+      contactRadius: 53,
+      cooldown: 2.0,
+      patrolSpeed: 45,
+      chase: { ...CARP_CHASE, speed: 130 },
+    });
+    const { tuning } = SPRING_CAVE_CARP;
+    expect(tuning.lungeSpeed * tuning.lungeDuration).toBeCloseTo(144, 9);
+    expect(tuning.hitRadius).toBe(tuning.bodyRadius + SAFE_PASSING_WIDTH / 2);
+    expect(tuning.contactRadius - tuning.hitRadius).toBe(CARP.contactRadius - CARP.hitRadius);
+    expect(tuning.chase).toEqual({ sight: CARP_CHASE.sight, leash: CARP_CHASE.leash, speed: 130 });
+    expect(Object.isFrozen(tuning.chase)).toBe(true);
+    expect(tuning.windup).toBeGreaterThan(tuning.minWindup);
+    expect(tuning.minWindup).toBe(0.8);
+    expect(() => tunedSpecies(CARP_SPECIES, tuning)).not.toThrow();
     const area5Carp = CHINAMPA_2_CARP.tuning;
-    expect(SPRING_CAVE_CARP.tuning.windup).toBeLessThan(area5Carp.windup);
-    expect(SPRING_CAVE_CARP.tuning.lungeSpeed).toBeGreaterThan(area5Carp.lungeSpeed);
-    expect(SPRING_CAVE_CARP.tuning.lungeRange).toBeGreaterThan(area5Carp.lungeRange);
-    expect(SPRING_CAVE_CARP.tuning.cooldown).toBeLessThan(area5Carp.cooldown);
-    expect(SPRING_CAVE_CARP.tuning.patrolSpeed).toBeGreaterThan(area5Carp.patrolSpeed);
+    expect(tuning.windup).toBeLessThan(area5Carp.windup);
+    expect(tuning.lungeSpeed).toBeGreaterThan(area5Carp.lungeSpeed);
+    expect(tuning.lungeSpeed * tuning.lungeDuration).toBeGreaterThan(area5Carp.lungeSpeed * area5Carp.lungeDuration);
+    expect(tuning.lungeRange).toBeGreaterThan(area5Carp.lungeRange);
+    expect(tuning.hitRadius).toBeGreaterThan(area5Carp.hitRadius);
+    expect(tuning.cooldown).toBeLessThan(area5Carp.cooldown);
+    expect(tuning.patrolSpeed).toBeGreaterThan(area5Carp.patrolSpeed);
+    expect(tuning.chase?.speed).toBeGreaterThan(area5Carp.chase?.speed ?? Infinity);
     for (const route of carpOf(zone)) expect(route.species, route.id).toBe(SPRING_CAVE_CARP);
   });
 
@@ -560,10 +585,10 @@ describe('Area 6 danger bar (issue #77, ND-4)', () => {
     expect([layout.width, layout.height, layout.bedTop]).toEqual([zone.width, zone.height, zone.bedTop]);
   });
 
-  it('has 14 moving threats for its 15 screens, 2 predator types and 2 moving hazard types, and every predator chases', () => {
+  it('has 17 moving threats for its 15 screens, 2 predator types and 2 moving hazard types, and every predator chases', () => {
     const screens = (zone.width / SCREEN_W) * (zone.height / WORLD_H);
     expect(screens).toBe(15);
-    expect(movingThreatCount(zone)).toBe(14);
+    expect(movingThreatCount(zone)).toBe(17);
     expect(movingThreatCount(zone)).toBeGreaterThanOrEqual(Math.ceil(0.75 * screens));
     expect(predatorTypeCount(zone)).toBe(2);
     expect(movingHazardTypeCount(zone)).toBe(2);
@@ -603,15 +628,19 @@ describe('Area 6 danger bar (issue #77, ND-4)', () => {
     expect(floorQuietStretch({ ...zone, predatorRoutes: carpOf(zone) })).toBeGreaterThan(SCREEN_W);
   });
 
-  it('has 6 carp for its 15 screens, over the carp target of 5, the crayfish on top, and needs every one of them', () => {
+  it('has 7 carp for its 15 screens, over the carp target of 5, the crayfish on top, and needs every one of carp-1 to carp-5; carp-0 and carp-6 are over the bar', () => {
     expect(carpTarget(15)).toBe(5);
-    expect(carpCount(zone)).toBe(6);
+    expect(carpCount(zone)).toBe(7);
     expect(carpCount(zone)).toBeGreaterThanOrEqual(carpTarget(15));
     expect(carpCount(zone)).toBeLessThanOrEqual(7);
     for (const id of CARP_IDS) {
       const without = { ...zone, predatorRoutes: zone.predatorRoutes.filter((route) => route.id !== id) };
-      expect(meetsWholeWaterDangerBar(without), `without ${id}`).toBe(false);
+      expect(meetsWholeWaterDangerBar(without), `without ${id}`).toBe(!NEEDED_CARP_IDS.includes(id));
     }
+    const spare = CARP_IDS.filter((id) => !NEEDED_CARP_IDS.includes(id));
+    expect(spare).toEqual(['carp-0', 'carp-6']);
+    const withoutSpare = { ...zone, predatorRoutes: zone.predatorRoutes.filter((route) => !spare.includes(route.id)) };
+    expect(meetsWholeWaterDangerBar(withoutSpare)).toBe(true);
   });
 });
 
@@ -661,21 +690,37 @@ describe('Area 6 stalactites and geyser vent (issue #77, ND-3, option B)', () =>
   const stalactites = hazards.filter((spawn) => spawn.type === STALACTITE_DRIP);
   const geysers = hazards.filter((spawn) => spawn.type === GEYSER_VENT);
 
-  it('has four stalactites in x order, at the places and offsets of the first pass\'s punting poles, 2 s out of step with the next, each stream ending where the pole\'s tip did', () => {
+  it('has five stalactites: the first four in x order at the places of the first pass\'s punting poles, and a fifth over carp-0, their offsets set so a one-leg swim of the main path can pass', () => {
     expect(stalactites.map((spawn) => spawn.id)).toEqual(STALACTITE_IDS);
     expect(stalactites.map((spawn) => [spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
-      [400, 170, 0],
-      [1150, 170, 2],
-      [1450, 42, 0],
-      [1900, 170, 2],
+      [400, 216, 1.4],
+      [1150, 216, 1.6],
+      [1450, 99, 1],
+      [1900, 216, 2],
+      [715, 42, 1],
     ]);
-    expect(stalactites.map((spawn) => movingHazardSweep(spawn).y1)).toEqual([280, 280, 152, 280]);
-    for (let i = 1; i < stalactites.length; i++) expect(stalactites[i].x, stalactites[i].id).toBeGreaterThan(stalactites[i - 1].x);
+    expect(stalactites.map((spawn) => movingHazardSweep(spawn).y1)).toEqual([326, 326, 209, 326, 152]);
+    for (let i = 1; i < 4; i++) expect(stalactites[i].x, stalactites[i].id).toBeGreaterThan(stalactites[i - 1].x);
+  });
+
+  it('drips stalactites 1, 2 and 4 at least the drip\'s own 216 px and at most a 250 px stream, and stalactite-3 as deep as the strike rule over carp-1 allows', () => {
+    for (const spawn of [stalactites[0], stalactites[1], stalactites[3]]) {
+      expect(movingHazardDepth(spawn), spawn.id).toBeGreaterThanOrEqual(STALACTITE_DRIP.depth);
+      expect(movingHazardDepth(spawn), spawn.id).toBeLessThanOrEqual(MAX_STREAM);
+    }
+    expect(STALACTITE_DRIP.depth).toBe(216);
+    const carp1 = zone.predatorRoutes.find((route) => route.id === 'carp-1');
+    if (!carp1) throw new Error('no route carp-1');
+    const third = stalactites[2];
+    const reach = shapeRouteDistance(movingHazardSweep(third), carp1.waypoints);
+    expect(reach).toBeGreaterThan(CARP_STRIKE);
+    const deeper = { ...third, depth: movingHazardDepth(third) + 1 };
+    expect(shapeRouteDistance(movingHazardSweep(deeper), carp1.waypoints)).toBeLessThanOrEqual(CARP_STRIKE);
   });
 
   it('hangs each stalactite from the underside of a rock ledge in the top row, never from the surface, its touch reaching the top of the swim water and its stream falling from the rock down into the top row only', () => {
     const ledges = zone.bankOverhangs ?? [];
-    expect(stalactites.map((spawn) => ledges.findIndex((ledge) => ledge.x0 <= spawn.x && spawn.x <= ledge.x1))).toEqual([0, 1, 2, 2]);
+    expect(stalactites.map((spawn) => ledges.findIndex((ledge) => ledge.x0 <= spawn.x && spawn.x <= ledge.x1))).toEqual([0, 2, 3, 3, 1]);
     for (const spawn of stalactites) {
       const sweep = movingHazardSweep(spawn);
       const roof = ledges.find((ledge) => ledge.x0 <= sweep.x0 && sweep.x1 <= ledge.x1 && ledge.y0 === movingHazardBaseY(spawn));
@@ -688,13 +733,20 @@ describe('Area 6 stalactites and geyser vent (issue #77, ND-3, option B)', () =>
     }
   });
 
-  it('stands one geyser vent on the bed of the bottom row, in the lit part, its column bursting 140 px up from the bed top', () => {
-    expect(geysers.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([[GEYSER_IDS[0], 910, 140, 0]]);
+  it('stands two geyser vents on the bed of the bottom row, in the lit part, each column bursting 240 px up from the bed top', () => {
+    expect(geysers.map((spawn) => [spawn.id, spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
+      [GEYSER_IDS[0], 910, 240, 1.6],
+      [GEYSER_IDS[1], 1120, 240, 4],
+    ]);
+    expect(GEYSER_VENT.depth).toBe(240);
     for (const spawn of geysers) {
+      const halfWidth = GEYSER_VENT.halfWidth;
+      expect(movingHazardDepth(spawn), spawn.id).toBeGreaterThanOrEqual(GEYSER_VENT.depth);
       expect(movingHazardBaseY(spawn), spawn.id).toBe(zone.bedTop);
       expect(movingHazardDirection(spawn), spawn.id).toBe(-1);
-      expect(movingHazardSweep(spawn), spawn.id).toEqual({ kind: 'rect', x0: 902, x1: 918, y0: zone.bedTop - 140, y1: zone.bedTop });
+      expect(movingHazardSweep(spawn), spawn.id).toEqual({ kind: 'rect', x0: spawn.x - halfWidth, x1: spawn.x + halfWidth, y0: zone.bedTop - 240, y1: zone.bedTop });
       expect(touchZone(spawn).y0, spawn.id).toBeGreaterThan(2 * WORLD_H);
+      expect(touchZone(spawn).x1, spawn.id).toBeLessThan(dark.x0);
       expect(inDarkWater({ x: spawn.x, y: zone.bedTop }, dark), spawn.id).toBe(false);
     }
   });
@@ -725,20 +777,20 @@ describe('Area 6 stalactites and geyser vent (issue #77, ND-3, option B)', () =>
     }
   });
 
-  it('drips the first two stalactites across the main path in the top row, stops the short third one just over it, out of its touch reach, and keeps the fourth past the way down', () => {
+  it('drips stalactites 1, 2 and 3 across the main path in the top row, stops the short fifth one just over it, out of its touch reach, and keeps the fourth past the way down', () => {
     const samples = pathSamples(zone.mainPath, 2).filter((point) => point.y < WORLD_H);
     const crossing = stalactites.filter((spawn) => samples.some((point) => shapeDistance(point, movingHazardSweep(spawn)) === 0));
-    expect(crossing.map((spawn) => spawn.id)).toEqual(STALACTITE_IDS.slice(0, 2));
-    const [, , short, last] = stalactites;
-    expect(samples.some((point) => point.x === short.x)).toBe(true);
+    expect(crossing.map((spawn) => spawn.id)).toEqual(STALACTITE_IDS.slice(0, 3));
+    const [, , , last, short] = stalactites;
+    expect(samples.some((point) => Math.abs(point.x - short.x) <= 1)).toBe(true);
     for (const point of samples) expect(shapeDistance(point, movingHazardSweep(short)), `path at ${point.x}, ${point.y}`).toBeGreaterThan(short.type.touchReach);
     expect(last.x).toBeGreaterThan(Math.max(...zone.mainPath.filter((point) => point.y < WORLD_H).map((point) => point.x)));
   });
 
-  it('stops the geyser column short of the main path, out of its touch reach', () => {
-    const samples = pathSamples(zone.mainPath, 2);
+  it('bursts both geyser columns across the main path along the bottom row, at y 830', () => {
+    const samples = pathSamples(zone.mainPath, 2).filter((point) => point.y === BOTTOM_PATH_Y);
     for (const spawn of geysers) {
-      for (const point of samples) expect(shapeDistance(point, movingHazardSweep(spawn)), `${spawn.id}: path at ${point.x}, ${point.y}`).toBeGreaterThan(spawn.type.touchReach);
+      expect(samples.some((point) => shapeDistance(point, movingHazardSweep(spawn)) === 0), spawn.id).toBe(true);
     }
   });
 });
@@ -831,10 +883,11 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
     }
   });
 
-  it('has four rock ledges: three in the top row, the roofs the stalactites hang from, two of them over the main path, and one in the dark below it', () => {
+  it('has five rock ledges: four in the top row, the roofs the stalactites hang from, three of them over the main path, and one in the dark below it', () => {
     expect(zone.bankChunks).toEqual([]);
     expect(zone.bankOverhangs).toEqual([
       { x0: 340, x1: 460, y0: 110, y1: 170 },
+      { x0: 680, x1: 750, y0: 110, y1: 170 },
       { x0: 860, x1: 1190, y0: 110, y1: 170 },
       { x0: 1400, x1: 1960, y0: 110, y1: 170 },
       { x0: 1330, x1: 1660, y0: 895, y1: 945 },
@@ -930,9 +983,9 @@ describe('Area 6 carp, spring outflow and stranding places', () => {
 });
 
 describe('Area 6 gaps and routes (the level layout ladder; issue #77, ND-11)', () => {
-  it('swims the main path through a gap tighter than Area 5 narrowest, between the short stalactite and carp-1, and never under the safe passing width', () => {
+  it('swims the main path through a gap tighter than Area 5 narrowest, between the short stalactite-5 and carp-0, and never under the safe passing width', () => {
     const narrowest = narrowestPathGap(zone);
-    expect(narrowest.between).toBe('spring-cave-1/stalactite-3 and carp-1');
+    expect(narrowest.between).toBe('spring-cave-1/stalactite-5 and carp-0');
     expect(narrowest.width).toBeCloseTo(40, 9);
     expect(narrowest.width).toBeGreaterThanOrEqual(SAFE_PASSING_WIDTH);
     expect(narrowest.width).toBeLessThan(AREA_5_NARROWEST);
@@ -945,6 +998,24 @@ describe('Area 6 gaps and routes (the level layout ladder; issue #77, ND-11)', (
       expect(openings.length, `line at y ${lineY}`).toBeGreaterThanOrEqual(2);
       for (const [from, to] of openings) expect(to - from, `line at y ${lineY} from ${from}`).toBeGreaterThanOrEqual(SAFE_PASSING_WIDTH);
     }
+  });
+
+  it('adds three moving threats along the main path: carp-6 in the middle row with the path through its loop, stalactite-5 just over the top-row path and geyser-2 across the bottom-row path', () => {
+    const carp6 = zone.predatorRoutes.find((route) => route.id === 'carp-6');
+    if (!carp6) throw new Error('no route carp-6');
+    expect(carp6.waypoints.map((point) => [point.x, point.y])).toEqual([
+      [1270, 500],
+      [1520, 500],
+      [1520, 735],
+      [1270, 735],
+    ]);
+    expect(areaRowKind(Math.floor(homeCentreOf(carp6.waypoints).y / WORLD_H), zone.rows)).toBe('middle');
+    const box = homeBoxOf(carp6.waypoints);
+    const middleRow = pathSamples(zone.mainPath, 2).filter((point) => point.y > WORLD_H && point.y < 2 * WORLD_H);
+    expect(middleRow.some((point) => point.x > box.x0 && point.x < box.x1 && point.y > box.y0 && point.y < box.y1)).toBe(true);
+    const ids = movingHazardsOf(zone).map((spawn) => spawn.id);
+    expect(ids).toContain('spring-cave-1/stalactite-5');
+    expect(ids).toContain('spring-cave-1/geyser-2');
   });
 
   it('has two dead ends holding treasure in the dark: the grotto and the Rare ledge, both off the main path', () => {
@@ -1123,7 +1194,7 @@ describe('Area 6 mobile snacks (issue #77, ND-10)', () => {
     expect(meetsSnackMotion({ screensWide: zone.chunks, screensTall: zone.rows, mobileSnacks: zone.mobileSnacks })).toBe(true);
   });
 
-  it('swims thirteen tadpoles on wander loops of 4 or 5 points, legs 108 to 360 px, laps of 11.1 to 12.3 s, each a thirteenth of its own lap further on than the last', () => {
+  it('swims thirteen tadpoles on wander loops of 4 or 5 points, legs 108 to 360 px, laps of 11.1 to 13.1 s, each a thirteenth of its own lap further on than the last', () => {
     const wanders = mix?.wanders ?? [];
     const speed = mix?.tadpole?.speed ?? 0;
     expect(wanders).toHaveLength(13);
@@ -1143,10 +1214,10 @@ describe('Area 6 mobile snacks (issue #77, ND-10)', () => {
       laps.push(lapSeconds);
     }
     expect(Math.min(...laps)).toBeCloseTo(11.1, 1);
-    expect(Math.max(...laps)).toBeCloseTo(12.3, 1);
+    expect(Math.max(...laps)).toBeCloseTo(13.1, 1);
   });
 
-  it('gives every tadpole a home box 320 to 480 px wide and 150 to 360 px tall, wholly in one screen row, five in the top row and four in each other, no two centres closer than 240 px', () => {
+  it('gives every tadpole a home box 320 to 480 px wide and 150 to 360 px tall, wholly in one screen row, five in the top row, three in the middle row and five in the bottom row, no two centres closer than 240 px', () => {
     const wanders = mix?.wanders ?? [];
     for (const wander of wanders) {
       const label = `loop at ${wander.points[0].x}, ${wander.points[0].y}`;
@@ -1158,7 +1229,7 @@ describe('Area 6 mobile snacks (issue #77, ND-10)', () => {
       expect(homeRowOf(wander.points), label).not.toBe(-1);
     }
     const rows = wanders.map((wander) => homeRowOf(wander.points));
-    expect([0, 1, 2].map((row) => rows.filter((each) => each === row).length)).toEqual([5, 4, 4]);
+    expect([0, 1, 2].map((row) => rows.filter((each) => each === row).length)).toEqual([5, 3, 5]);
     const centres = wanders.map((wander) => homeCentreOf(wander.points));
     for (let i = 0; i < centres.length; i++) {
       for (let j = i + 1; j < centres.length; j++) {
