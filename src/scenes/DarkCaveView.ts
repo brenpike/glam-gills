@@ -106,8 +106,11 @@ function viewMeetsDark(view: DarkCaveViewRect, dark: Readonly<DarkWater>): boole
  * (shownInDark), so a hint star never shows past the edge of a light still growing in. The layer is
  * redrawn only when the camera view meets the dark water and a light has moved, grown or appeared
  * since the last draw. Per frame it allocates darkLights' result and, on a new light, one lit-time
- * entry; the fading edges are worked out once, so the fade adds no work per frame. Visual only:
- * nothing here changes game state. Throws when the spring cave textures are missing.
+ * entry. The fading edges are worked out once, but each redraw erases every fading edge's strip
+ * again before the light holes (two in Area 6, three in Area 7), and the layer is redrawn on most
+ * swimming frames while the view meets the dark water, so the fade adds that work to those frames
+ * (PRD open questions 524 and 543: an owner frame-time check). Visual only: nothing here changes
+ * game state. Throws when the spring cave textures are missing.
  */
 export class DarkCaveView {
   private readonly layer: Phaser.GameObjects.RenderTexture;
