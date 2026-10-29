@@ -9,6 +9,11 @@ import type { Point, ZoneLayout } from './zone';
  * The gate's base-centre (issue #183). Its x is the exit's x. Its y is the top of the nearest rock
  * wall right under the exit centre: the smallest `y0` of a wall with `x0 <= exit.x <= x1` and
  * `y0 > exit.y`. With no such wall it is the bed, `floor.bedTop`.
+ *
+ * It reads only the column right under the exit centre, because the gate's size is art, which
+ * `src/logic/` never imports. That the floor it picks holds the gate across its whole drawn width,
+ * and that no gate is drawn into rock, are checks on each area's data, run for every area in
+ * `src/art/areaExitArt.test.ts`.
  */
 export function exitGateBase(
   exit: Pick<AreaExit, 'x' | 'y'>,
