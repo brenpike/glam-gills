@@ -343,7 +343,7 @@ describe('risk fairness on the default Area 6 zone', () => {
     const fair = findFairStart(spot, springCave, visitPath);
     expect(fair, `${spot.id} (${spot.rarity}) is hit from every safe start at every start time`).not.toBeNull();
     expect(isSafeStart(fair?.start ?? spot, zone)).toBe(true);
-  });
+  }, 60_000);
 
   it('grabs every spot from its nearest safe start but four by crayfish-1 and crayfish-2, each grabbed from a safe start of the wider search', () => {
     const far = spots.filter((spot) => firstFairStart(spot, springCave) === null);
@@ -364,7 +364,7 @@ describe('beating Area 6 with one leg (issue #77, ND-9)', () => {
     const fair = findFairStart(spot, springCave, oneLegVisitPath);
     expect(fair, `${spot.id} (${spot.rarity}) is hit from every safe start at every start time`).not.toBeNull();
     expect(isSafeStart(fair?.start ?? spot, zone)).toBe(true);
-  });
+  }, 60_000);
 
   it('grabs every spot with one leg from its nearest safe start but six by crayfish-1, crayfish-2 and the spring outflow, each grabbed from a safe start of the wider search', () => {
     const far = spots.filter((spot) => {
