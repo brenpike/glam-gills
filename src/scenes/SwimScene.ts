@@ -34,6 +34,7 @@ import {
 import { TURN_SQUASH, bodyPoint, drawnAxolotl, type DrawnAxolotl } from '../logic/drawnAxolotl';
 import { currentAt, reedDragAt, reedsNear } from '../logic/environment';
 import { exitArrowSide } from '../logic/exitArrow';
+import { exitGateBase } from '../logic/exitGate';
 import {
   GAME_EVENTS,
   REGISTRY_KEYS,
@@ -819,8 +820,7 @@ export class SwimScene extends Phaser.Scene {
     this.exitView = new ExitView(
       this,
       this.assets,
-      this.area.exit,
-      zone.bedTop,
+      exitGateBase(this.area.exit, zone),
       exitOpen(this.snackTally.left),
       exitArrowSide(this.area.exit, zone.width),
     );

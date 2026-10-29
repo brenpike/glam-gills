@@ -2504,11 +2504,11 @@ Never colour alone.
 
 PRD H1 to H8. Colours are in 3g. All values below are `derived (provisional)`. Every painter is a still frame, so it is also the reduced-motion version.
 
-**Area exit.** The exit is a stone gate standing on the bed with a round sign above it. Closed and open differ by shape and icon, never by colour.
+**Area exit.** The exit is a stone gate standing on the floor right under the exit centre, with a round sign above it. That floor is the bed top, or the top of the nearest solid rock wall under the exit centre (`exitGateBase` in `src/logic/exitGate.ts`, issue #183). The exit centre always lies inside the gate's clear opening. Closed and open differ by shape and icon, never by colour.
 
 | Part | Construction | Source |
 |---|---|---|
-| World position | Exit circle centre (1850,200), radius 40 (gameplay, inclusive edge; PRD H1). The gate base-centre is on the bed under it at (1850,318), the bed top. | `derived (provisional)` |
+| World position | Exit circle centre (1850,200), radius 40 (gameplay, inclusive edge; PRD H1). The gate base-centre stands on the floor right under the exit centre: the bed top, or the top of the nearest solid rock wall under it (`exitGateBase` in `src/logic/exitGate.ts`, issue #183). The exit centre always lies inside the gate's clear opening. In the canal it is on the bed at (1850,318), the bed top. In Area 7, whose exit at (3720, 200) is high above the bed, it is on the pebble room's rock lid at (3720, 340): the opening spans y 182 to 340, and the sign centre is at (3720, about 129.7), 8 px above the keystone top. | `derived (provisional)` |
 | Gate frame | One U-shaped band of two posts and a round crown, fill pebble A, `shape` ink 2.8, no line across the opening. Clear opening 96 wide x 158 tall to the inner ink edge (y 160 to 318 at the exit). Outer width to the ink edge about 114.8; height to the keystone top about 186.3. Outer crown vertical radius 70. | `derived (provisional)` |
 | Keystone | Rounded block 20 x 22, corner radius 5, pebble C, ink 2.6, at the crown top | `derived (provisional)` |
 | Crown seams, shines | Four radial soft seam lines across the crown (1.6, internal, not ink). One pebble shine on the crown and one on the left post. | `derived (provisional)` |
