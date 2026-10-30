@@ -76,6 +76,7 @@ import {
   type PulsingCurrentSpawn,
 } from './pulsingCurrents';
 import { RESCUE, areaStrandingChance } from './rescue';
+import { isShrimpFlickLandingClear } from './shrimpFlick';
 import {
   SPRING_CAVE_2_AREA_ID,
   SPRING_CAVE_2_CARP,
@@ -195,6 +196,14 @@ function carpOf(layout: Pick<ZoneLayout, 'predatorRoutes'>): PredatorRoute[] {
 /** Each predator route with its strike: 90 px for a crayfish, 135 px for a carp. */
 function strikeRoutes(layout: ZoneLayout): { route: TilapiaRoute; strike: number }[] {
   return layout.predatorRoutes.map((route) => ({ route, strike: route.species.tuning.lungeRange }));
+}
+
+/** Where a shrimp at `spot` lands flicking `distance` px in each of FLICK_DIRECTIONS evenly spaced directions. */
+function flickTargets(spot: Readonly<Point>, distance: number): Point[] {
+  return Array.from({ length: FLICK_DIRECTIONS }, (_, i) => {
+    const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
+    return { x: spot.x + distance * Math.cos(angle), y: spot.y + distance * Math.sin(angle) };
+  });
 }
 
 /** Points every `step` px along an open path. */
@@ -1217,21 +1226,27 @@ describe('Area 7 snacks', () => {
     expect(oneTimeDarts(SPRING_CAVE_2_AREA, zone)).toBeNull();
   });
 
-  it.each(ALL_SEEDS)('gives every shrimp a clear place and a clear flick target in at least one of 8 directions for seed %i', (seed) => {
-    const layout = springCave2(seed);
-    const avoid = mobileSnackAvoid(layout);
-    const rule = layout.mobileSnacks?.shrimp;
-    const spots = (layout.mobileSnacks?.homes ?? []).map((home) => home.points[0]);
-    expect(spots).toHaveLength(15);
-    for (const spot of spots) {
-      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
-      const targets = Array.from({ length: FLICK_DIRECTIONS }, (_, i) => {
-        const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
-        return { x: spot.x + (rule?.flickDistance ?? 0) * Math.cos(angle), y: spot.y + (rule?.flickDistance ?? 0) * Math.sin(angle) };
-      });
-      expect(targets.some((target) => mobileSnackClear(shrimpBox(target, drift), avoid)), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
-    }
-  });
+  it.each(ALL_SEEDS)(
+    'gives every shrimp a clear place, and every hop spot of its home a flick landing isShrimpFlickLandingClear allows in at least one of 8 directions, for seed %i',
+    (seed) => {
+      const layout = springCave2(seed);
+      const avoid = mobileSnackAvoid(layout);
+      const rule = layout.mobileSnacks?.shrimp;
+      if (!rule) throw new Error('Area 7 has no shrimp rule');
+      const homes = layout.mobileSnacks?.homes ?? [];
+      expect(homes).toHaveLength(15);
+      for (const home of homes) {
+        const place = home.points[0];
+        expect(mobileSnackClear(shrimpBox(place, drift), avoid), `shrimp at ${place.x}, ${place.y}`).toBe(true);
+        for (const spot of home.points) {
+          const lands = flickTargets(spot, rule.flickDistance).some((target) =>
+            isShrimpFlickLandingClear(spot.x, spot.y, home.points, target, drift, avoid, rule),
+          );
+          expect(lands, `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
+        }
+      }
+    },
+  );
 });
 
 describe('Area 7 mobile snacks (ND-11)', () => {

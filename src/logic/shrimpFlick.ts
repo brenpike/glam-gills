@@ -3,13 +3,15 @@
  * its home (issue #131, ND-5, ND-6). Separate from the one-time darter (snackDart.ts), which areas
  * with shrimp turn off (ND-27).
  */
-import { drawnSnackX, drawnSnackY, type Collectible, type SnackFrame } from './collectibles';
+import { drawnSnackX, drawnSnackY, type Collectible, type SnackDrift, type SnackFrame } from './collectibles';
+import type { HazardRect } from './hazards';
 import {
   mobileSnackClear,
   mobileSnackHardClear,
   shrimpBox,
   shrimpGlideClear,
   shrimpRule,
+  writeShrimpBox,
   type MobileSnackAvoid,
   type ShrimpPoseState,
   type ShrimpRule,
@@ -128,16 +130,16 @@ export function createShrimpFlicks(
 
 /** Whether the shrimp with this id has a flick under way, for its pose (mobileSnackPose). Allocates nothing. */
 export function isShrimpFlicking(state: ShrimpFlickState, id: string): boolean {
-  for (const flick of state.flicks) {
-    if (flick.id === id) return true;
+  for (let index = 0; index < state.flicks.length; index++) {
+    if (state.flicks[index].id === id) return true;
   }
   return false;
 }
 
 /** Whether the shrimp with this id is resting after a flick (issue #131, ND-10), for its pose. Allocates nothing. */
 export function isShrimpRestingAfterFlick(state: ShrimpFlickState, id: string): boolean {
-  for (const rest of state.resting) {
-    if (rest.id === id) return rest.afterFlick;
+  for (let index = 0; index < state.resting.length; index++) {
+    if (state.resting[index].id === id) return state.resting[index].afterFlick;
   }
   return false;
 }
@@ -148,14 +150,14 @@ export function isShrimpRestingAfterFlick(state: ShrimpFlickState, id: string): 
  * Allocates nothing.
  */
 export function readShrimpHopSign(state: ShrimpFlickState, id: string): -1 | 0 | 1 {
-  for (const rest of state.resting) {
-    if (rest.id === id) return rest.hopSign;
+  for (let index = 0; index < state.resting.length; index++) {
+    if (state.resting[index].id === id) return state.resting[index].hopSign;
   }
-  for (const hop of state.hops) {
-    if (hop.id === id) return hop.hopSign;
+  for (let index = 0; index < state.hops.length; index++) {
+    if (state.hops[index].id === id) return state.hops[index].hopSign;
   }
-  for (const flick of state.flicks) {
-    if (flick.id === id) return flick.hopSign;
+  for (let index = 0; index < state.flicks.length; index++) {
+    if (state.flicks[index].id === id) return state.flicks[index].hopSign;
   }
   return 0;
 }
@@ -178,7 +180,8 @@ export function createShrimpPoseLookup(): ShrimpPoseLookup {
 
 function fillById<T extends { readonly id: string }>(byId: Map<string, T>, entries: readonly T[]): void {
   byId.clear();
-  for (const entry of entries) {
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
     if (!byId.has(entry.id)) byId.set(entry.id, entry);
   }
 }
@@ -233,7 +236,8 @@ function insideGrownHome(point: Readonly<Point>, home: readonly Readonly<Point>[
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const spot of home) {
+  for (let index = 0; index < home.length; index++) {
+    const spot = home[index];
     minX = Math.min(minX, spot.x);
     maxX = Math.max(maxX, spot.x);
     minY = Math.min(minY, spot.y);
@@ -242,27 +246,43 @@ function insideGrownHome(point: Readonly<Point>, home: readonly Readonly<Point>[
   return point.x >= minX - grow && point.x <= maxX + grow && point.y >= minY - grow && point.y <= maxY + grow;
 }
 
+/** Scratch for isShrimpFlickLandingClear's glide start; never returned or kept past a call. */
+const flickFromScratch: Point = { x: 0, y: 0 };
+/** Scratch for isShrimpFlickLandingClear's landing box; never returned or kept past a call. */
+const flickBoxScratch: HazardRect = { kind: 'rect', x0: 0, x1: 0, y0: 0, y1: 0 };
+/** Scratch for flickFrom's landing; never returned or kept past a call. */
+const flickTargetScratch: Point = { x: 0, y: 0 };
+
 /**
- * Whether a flick may land at `target` (ND-26; issue #131, ND-6, ND-7): a hopping shrimp lands only
- * inside its home box grown by the flick distance, where shrimpBox passes mobileSnackHardClear; any
- * other shrimp where shrimpBox passes mobileSnackClear. Either way the whole glide there must pass
- * shrimpGlideClear.
+ * Whether a shrimp based at (`baseX`, `baseY`) with these hop spots may flick to land at `target`,
+ * as stepShrimpFlicks decides (ND-26; issue #131, ND-6, ND-7): a hopping shrimp (2 or more spots)
+ * lands only inside its home box grown by the flick distance, where shrimpBox passes
+ * mobileSnackHardClear; any other shrimp where shrimpBox passes mobileSnackClear. Either way the
+ * whole glide there must pass shrimpGlideClear. Allocates nothing.
  */
-function flickLandingClear(
-  item: Collectible,
+export function isShrimpFlickLandingClear(
+  baseX: number,
+  baseY: number,
+  home: readonly Readonly<Point>[] | undefined,
   target: Readonly<Point>,
-  frame: SnackFrame,
+  drift: Readonly<SnackDrift>,
   avoid: MobileSnackAvoid,
   rule: Readonly<ShrimpRule>,
 ): boolean {
-  const box = shrimpBox(target, frame.drift);
-  const lands = hopsAround(item.home)
-    ? insideGrownHome(target, item.home, rule.flickDistance) && mobileSnackHardClear(box, avoid)
+  const box = writeShrimpBox(target, drift, flickBoxScratch);
+  const lands = hopsAround(home)
+    ? insideGrownHome(target, home, rule.flickDistance) && mobileSnackHardClear(box, avoid)
     : mobileSnackClear(box, avoid);
-  return lands && shrimpGlideClear(item, target, frame.drift, avoid);
+  if (!lands) return false;
+  flickFromScratch.x = baseX;
+  flickFromScratch.y = baseY;
+  return shrimpGlideClear(flickFromScratch, target, drift, avoid);
 }
 
-/** The flick of `rule.flickDistance` px straight away from the head, from (dx, dy) at `distance`, or null when its landing is not clear. */
+/**
+ * The flick of `rule.flickDistance` px straight away from the head, from (dx, dy) at `distance`, or
+ * null when its landing is not clear. Allocates nothing unless it returns a flick.
+ */
 function flickFrom(
   item: Collectible,
   dx: number,
@@ -275,7 +295,9 @@ function flickFrom(
 ): ShrimpGlide | null {
   const restX = (dx / distance) * rule.flickDistance;
   const restY = (dy / distance) * rule.flickDistance;
-  if (!flickLandingClear(item, { x: item.x + restX, y: item.y + restY }, frame, avoid, rule)) return null;
+  flickTargetScratch.x = item.x + restX;
+  flickTargetScratch.y = item.y + restY;
+  if (!isShrimpFlickLandingClear(item.x, item.y, item.home, flickTargetScratch, frame.drift, avoid, rule)) return null;
   return { id: item.id, restX, restY, next: rest.next, hopSign: rest.hopSign };
 }
 
@@ -397,8 +419,8 @@ function glideMoves(items: readonly Collectible[], state: ShrimpFlickState, glid
 }
 
 function anyGlideMoves(items: readonly Collectible[], state: ShrimpFlickState, glides: readonly ShrimpGlide[]): boolean {
-  for (const glide of glides) {
-    if (glideMoves(items, state, glide)) return true;
+  for (let index = 0; index < glides.length; index++) {
+    if (glideMoves(items, state, glides[index])) return true;
   }
   return false;
 }
@@ -484,13 +506,12 @@ function glideAll(
  * stored base x/y (clamped to `avoid.bounds`); both land at once under `reduced` motion. On landing
  * the shrimp rests: `rule.restFor` after a flick, SHRIMP.hopRestShare of it after a hop. A flick or
  * hop whose shrimp is eaten stops and is dropped with the next state change; the magnet's pull adds
- * to a glide. The clear checks run only when a ready shrimp would start, except that a ready shrimp
- * whose flick landing is blocked reruns its landing check and builds two small objects each frame
- * (known gap, issue #131, ND-12). Each shrimp is found through `state.indexById`, so a step reads
- * O(S) item ids for S shrimp, not O(S x items), while `items` keep their order.
+ * to a glide. The clear checks run only when a ready shrimp would start; a ready shrimp whose flick
+ * landing is blocked stays ready (PRD H4) and reruns its landing check, allocation-free, each frame
+ * (issue #139). Each shrimp is found through `state.indexById`, so a step reads O(S) item ids for S
+ * shrimp, not O(S x items), while `items` keep their order.
  *
- * Returns null when nothing starts and nothing moves, allocating nothing except for that blocked
- * flick's two small objects. Otherwise returns a new
+ * Returns null when nothing starts and nothing moves, allocating nothing. Otherwise returns a new
  * items array (input untouched) in which unmoved items are the same objects, the new state and
  * the ids of the shrimp that start a flick in this step (issue #166, ND-15).
  */

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.55.1] - 2026-10-29
+
+### Fixed
+
+- A shrimp that cannot flick away no longer makes the game redo work every frame (#139).
+
 ## [0.55.0] - 2026-10-29
 
 ### Changed

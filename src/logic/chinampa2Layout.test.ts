@@ -3,7 +3,7 @@ import { CHINAMPA_2_AREA, CHINAMPA_AREA, CHINAMPA_HABITAT, newThingsByArea, sour
 import { CHINAMPA_2_TREASURES, RARITIES } from './catalogue';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_CARP, CHINAMPA_2_LAYOUT, CHINAMPA_2_SNAKE, CHINAMPA_2_TILAPIA, SNAKE_STRETCH_Y } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT, CHINAMPA_TILAPIA } from './chinampaLayout';
-import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
+import { createCollectibles, snackDriftMaxSpeed, snackX, snackY, type SnackDrift } from './collectibles';
 import {
   carpCount,
   carpTarget,
@@ -64,6 +64,8 @@ import {
   shrimpHomeClear,
   snackMagnetSpeed,
   tadpoleWanderClear,
+  type MobileSnackAvoid,
+  type ShrimpRule,
 } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardDepth, movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
@@ -78,6 +80,7 @@ import {
   type PredatorRoute,
 } from './predators';
 import { RESCUE } from './rescue';
+import { isShrimpFlickLandingClear } from './shrimpFlick';
 import { SNACK_DART } from './snackDart';
 import { stepSwim, type SwimState } from './swimPhysics';
 import {
@@ -212,6 +215,24 @@ function sweepsOf(layout: Pick<ZoneLayout, 'elements'>): HazardRect[] {
     const sweep = elementSweep(element);
     return sweep ? [sweep] : [];
   });
+}
+
+/**
+ * The flick targets `rule.flickDistance` px from hop spot `spot` of a shrimp with hop spots `home`,
+ * one in each of FLICK_DIRECTIONS, where the game lets a flick land (isShrimpFlickLandingClear).
+ */
+function flickLandings(
+  home: readonly Point[],
+  spot: Point,
+  drift: Readonly<SnackDrift>,
+  avoid: MobileSnackAvoid,
+  rule: Readonly<ShrimpRule>,
+): Point[] {
+  const targets = Array.from({ length: FLICK_DIRECTIONS }, (_, i): Point => {
+    const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
+    return { x: spot.x + rule.flickDistance * Math.cos(angle), y: spot.y + rule.flickDistance * Math.sin(angle) };
+  });
+  return targets.filter((target) => isShrimpFlickLandingClear(spot.x, spot.y, home, target, drift, avoid, rule));
 }
 
 /** The mat pairs: elements with a mat pair. */
@@ -1423,23 +1444,23 @@ describe('Area 5 snacks', () => {
     expect(oneTimeDarts(CHINAMPA_2_AREA, chinampa2(seed))).toBeNull();
   });
 
-  it.each(ALL_SEEDS)('gives every shrimp a clear place and a clear flick target in at least one of 8 directions, out of every mat sweep, for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('starts every shrimp in a clear place and gives every hop spot a flick the game lets land in at least one of 8 directions, out of every mat sweep, for seed %i (issue #155)', (seed) => {
     const layout = chinampa2(seed);
     const avoid = mobileSnackAvoid(layout);
     const rule = layout.mobileSnacks?.shrimp;
-    expect(rule?.flickDistance).toBe(60);
-    const spots = (layout.mobileSnacks?.homes ?? []).map((home) => home.points[0]);
-    expect(spots).toHaveLength(9);
-    for (const spot of spots) {
-      expect(mobileSnackClear(shrimpBox(spot, drift), avoid), `shrimp at ${spot.x}, ${spot.y}`).toBe(true);
-      const targets = Array.from({ length: FLICK_DIRECTIONS }, (_, i) => {
-        const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
-        return { x: spot.x + (rule?.flickDistance ?? 0) * Math.cos(angle), y: spot.y + (rule?.flickDistance ?? 0) * Math.sin(angle) };
-      });
-      const clear = targets.filter((target) => mobileSnackClear(shrimpBox(target, drift), avoid));
-      expect(clear.length, `shrimp at ${spot.x}, ${spot.y}`).toBeGreaterThan(0);
-      for (const target of clear) {
-        for (const sweep of sweepsOf(layout)) expect(rectDistance(shrimpBox(target, drift), sweep), `shrimp at ${spot.x}, ${spot.y}`).toBeGreaterThan(0);
+    if (!rule) throw new Error('Area 5 has no shrimp rule');
+    expect(rule.flickDistance).toBe(60);
+    const homes = layout.mobileSnacks?.homes ?? [];
+    expect(homes).toHaveLength(9);
+    for (const home of homes) {
+      const start = home.points[0];
+      expect(mobileSnackClear(shrimpBox(start, drift), avoid), `shrimp at ${start.x}, ${start.y}`).toBe(true);
+      for (const spot of home.points) {
+        const landings = flickLandings(home.points, spot, drift, avoid, rule);
+        expect(landings.length, `hop spot ${spot.x}, ${spot.y}`).toBeGreaterThan(0);
+        for (const target of landings) {
+          for (const sweep of sweepsOf(layout)) expect(rectDistance(shrimpBox(target, drift), sweep), `hop spot ${spot.x}, ${spot.y}`).toBeGreaterThan(0);
+        }
       }
     }
   });

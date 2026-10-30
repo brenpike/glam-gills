@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { POND_2_AREA, POND_AREA, sourceFactCards } from './areas';
 import { POND_2_TREASURES, RARITIES } from './catalogue';
-import { createCollectibles, snackDriftMaxSpeed, snackWander, snackX, snackY, wanderOffsetAlong } from './collectibles';
+import { createCollectibles, snackDriftMaxSpeed, snackWander, snackX, snackY, wanderOffsetAlong, type SnackDrift } from './collectibles';
 import {
   carpCount,
   carpTarget,
@@ -44,12 +44,14 @@ import {
   tadpoleWanderClear,
   type MobileSnackAvoid,
   type MobileSnackMix,
+  type ShrimpRule,
 } from './mobileSnacks';
 import { PERK_CAPS, SNACK_MAGNET_PULL_SPEED } from './perks';
 import { PLASTIC_WORM } from './plasticWorms';
 import { HERON_STRETCH_Y, POND_2_AREA_ID, POND_2_CARP, POND_2_LAYOUT, POND_2_TILAPIA } from './pond2Layout';
 import { POND_LAYOUT } from './pondLayout';
 import { CARP_SPECIES, HERON_SPECIES, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute } from './predators';
+import { isShrimpFlickLandingClear } from './shrimpFlick';
 import { SNACK_DART } from './snackDart';
 import { stepSwim, type SwimState } from './swimPhysics';
 import {
@@ -317,15 +319,22 @@ function pond2Mix(): Readonly<MobileSnackMix> {
   return mix;
 }
 
-/** Whether a shrimp at `spot` has a flick target `distance` px away, in some of FLICK_DIRECTIONS, whose box is clear. */
-function shrimpCanFlick(layout: ZoneLayout, spot: Point, distance: number): boolean {
-  const avoid = mobileSnackAvoid(layout);
-  for (let i = 0; i < FLICK_DIRECTIONS; i++) {
+/**
+ * The flick targets `rule.flickDistance` px from hop spot `spot` of a shrimp with hop spots `home`,
+ * one in each of FLICK_DIRECTIONS, where the game lets a flick land (isShrimpFlickLandingClear).
+ */
+function flickLandings(
+  home: readonly Point[],
+  spot: Point,
+  drift: Readonly<SnackDrift>,
+  avoid: MobileSnackAvoid,
+  rule: Readonly<ShrimpRule>,
+): Point[] {
+  const targets = Array.from({ length: FLICK_DIRECTIONS }, (_, i): Point => {
     const angle = (i * 2 * Math.PI) / FLICK_DIRECTIONS;
-    const target = { x: spot.x + distance * Math.cos(angle), y: spot.y + distance * Math.sin(angle) };
-    if (mobileSnackClear(shrimpBox(target, POND_2_AREA.snackDrift), avoid)) return true;
-  }
-  return false;
+    return { x: spot.x + rule.flickDistance * Math.cos(angle), y: spot.y + rule.flickDistance * Math.sin(angle) };
+  });
+  return targets.filter((target) => isShrimpFlickLandingClear(spot.x, spot.y, home, target, drift, avoid, rule));
 }
 
 describe('POND_2_LAYOUT', () => {
@@ -925,13 +934,16 @@ describe('Area 3 snacks', () => {
     }
   });
 
-  it.each(ALL_SEEDS)('give every shrimp hop spot a clear 44 px flick target in some direction for seed %i', (seed) => {
+  it.each(ALL_SEEDS)('give every shrimp hop spot a 44 px flick the game lets land in at least one of 8 directions for seed %i (issue #155)', (seed) => {
     const layout = pond2(seed);
-    const flick = pond2Mix().shrimp?.flickDistance ?? 0;
-    expect(flick).toBe(44);
-    for (const [index, home] of pond2Mix().homes.entries()) {
+    const avoid = mobileSnackAvoid(layout);
+    const rule = layout.mobileSnacks?.shrimp;
+    if (!rule) throw new Error('Area 3 has no shrimp rule');
+    expect(rule.flickDistance).toBe(44);
+    for (const [index, home] of (layout.mobileSnacks?.homes ?? []).entries()) {
       for (const spot of home.points) {
-        expect(shrimpCanFlick(layout, spot, flick), `shrimp ${index + 1} at ${spot.x}, ${spot.y}`).toBe(true);
+        const landings = flickLandings(home.points, spot, POND_2_AREA.snackDrift, avoid, rule);
+        expect(landings.length, `shrimp ${index + 1} at ${spot.x}, ${spot.y}`).toBeGreaterThan(0);
       }
     }
   });

@@ -604,9 +604,8 @@ export class SwimScene extends Phaser.Scene {
    * The Snack magnet's pull is worked out once per trip (snackMagnetSpeed), and is exactly the
    * perk's pull with no mobile snacks. The shrimp flick state, the meet count and the tadpole
    * `keepClear` boxes exist only in an area with shrimp or tadpoles. There, stepShrimpFlicks
-   * allocates nothing when no flick starts and none glides, except that a ready shrimp whose flick
-   * landing is blocked reruns its landing check and builds two small objects each frame (known gap,
-   * issue #131, ND-12); while one glides it builds a new items
+   * allocates nothing when no flick starts and none glides, even while a ready shrimp whose flick
+   * landing is blocked reruns its landing check each frame (issue #139, ND-12); while one glides it builds a new items
    * array, one object per moved shrimp and a new flick state, and setItems works the tally out
    * again: bounded by the shrimp count. Its avoid object is built again only when the plastic worms
    * move. metSnackTypeIds runs only while some snack type in the area is unmet, and returns a shared

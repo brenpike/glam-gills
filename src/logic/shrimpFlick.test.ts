@@ -7,10 +7,13 @@ import {
   type SnackDrift,
   type SnackFrame,
 } from './collectibles';
+import type { HazardRect, HazardShape } from './hazards';
+import type { Threat } from './hiding';
 import type { MobileSnackAvoid, ShrimpPoseState, ShrimpRule } from './mobileSnacks';
 import {
   createShrimpFlicks,
   createShrimpPoseLookup,
+  isShrimpFlickLandingClear,
   isShrimpFlicking,
   isShrimpRestingAfterFlick,
   readShrimpHopSign,
@@ -706,6 +709,147 @@ describe('shrimp look-ups scale with the shrimp count (issue #131, ND-5)', () =>
     const step = stepOrFail(reversed, HEAD, state, REDUCED, 0.016);
     expect(step.items[1].x).toBe(480 + RULE.flickDistance);
     expect(step.items[0]).toBe(items[1]);
+  });
+});
+
+/** Array methods that scan a whole list with a callback. */
+const LIST_SCANS: ReadonlySet<string> = new Set(['some', 'every', 'map', 'filter', 'forEach']);
+
+/** The key a for...of loop reads to get an array iterator, an allocation, as watchedList records it. */
+const ITERATOR_KEY = String(Symbol.iterator);
+
+/** A view of `list` that adds the name of each key read from it to `keys`, a symbol key by String(key). */
+function watchedList<L extends readonly unknown[]>(list: L, keys: string[]): L {
+  return new Proxy(list, {
+    get: (target, key, receiver) => {
+      keys.push(typeof key === 'string' ? key : String(key));
+      return Reflect.get(target, key, receiver) as unknown;
+    },
+  });
+}
+
+/** `avoid` with every list it holds watched by watchedList. */
+function watchedAvoid(avoid: MobileSnackAvoid, keys: string[]): MobileSnackAvoid {
+  return {
+    ...avoid,
+    currents: watchedList(avoid.currents, keys),
+    mats: watchedList(avoid.mats, keys),
+    worms: watchedList(avoid.worms, keys),
+    keepAway: watchedList(avoid.keepAway, keys),
+    threats: watchedList(avoid.threats, keys),
+    ...(avoid.hazards ? { hazards: watchedList(avoid.hazards, keys) } : {}),
+  };
+}
+
+describe('a ready flick whose landing is blocked (issue #139)', () => {
+  const FAR_CURRENT = { id: 'current-far', x0: 1700, x1: 1720, y0: 150, y1: 250, force: { x: 0, y: 0 } };
+  const FAR_MAT: HazardRect = { kind: 'rect', x0: 1600, x1: 1620, y0: 150, y1: 250 };
+  const FAR_SHAPE: HazardShape = { kind: 'circle', x: 1400, y: 120, r: 5 };
+  const FAR_THREAT: Threat = { kind: 'shape', shape: FAR_SHAPE, strike: 10 };
+  /** Every list holds a far entry; the 1-spot shrimp's landing at 536, 200 is inside a threat's strike range. */
+  const THREAT_BLOCKED: MobileSnackAvoid = {
+    ...AVOID,
+    currents: [FAR_CURRENT],
+    mats: [FAR_MAT],
+    worms: [{ x: 1500, y: 120 }],
+    keepAway: [FAR_SHAPE],
+    threats: [FAR_THREAT, { kind: 'shape', shape: { kind: 'circle', x: 560, y: 200, r: 5 }, strike: 20 }],
+  };
+  /** As THREAT_BLOCKED, but the hopper's landing at 540, 200 is too near a hazard. */
+  const HAZARD_BLOCKED: MobileSnackAvoid = { ...THREAT_BLOCKED, threats: [FAR_THREAT], hazards: [FAR_SHAPE, { kind: 'circle', x: 520, y: 200, r: 5 }] };
+  /** As THREAT_BLOCKED with no blocking threat, but a current crosses the 1-spot shrimp's glide. */
+  const GLIDE_BLOCKED: MobileSnackAvoid = { ...THREAT_BLOCKED, threats: [FAR_THREAT], currents: [FAR_CURRENT, { ...FAR_CURRENT, id: 'current-0', x0: 515, x1: 520 }] };
+
+  const cases = [
+    { name: 'a 1-spot shrimp blocked by a threat', start: oneShrimp, head: HEAD, avoid: THREAT_BLOCKED },
+    { name: 'a 1-spot shrimp blocked on its glide', start: oneShrimp, head: HEAD, avoid: GLIDE_BLOCKED },
+    { name: 'a hopping shrimp blocked by a hazard', start: () => oneHopper(), head: { x: 650, y: 200 }, avoid: HAZARD_BLOCKED },
+  ];
+
+  for (const { name, start, head, avoid } of cases) {
+    it(`stays ready with nothing changed, frame after frame, for ${name}`, () => {
+      const started = start();
+      const state = started.state;
+      const itemsBefore = structuredClone(started.items);
+      const stateBefore = structuredClone(state);
+      const keys: string[] = [];
+      const watched = watchedAvoid(avoid, keys);
+      const items = started.items.map((item) => (item.home ? { ...item, home: watchedList(item.home, keys) } : item));
+      for (let frame = 0; frame < 5; frame++) {
+        expect(stepShrimpFlicks(items, head, frameAt(frame), state, REDUCED, watched, 0.016)).toBeNull();
+        expect(stepShrimpFlicks(items, head, frameAt(frame), state, GLIDING, watched, 0.016)).toBeNull();
+      }
+      const read = keys.slice();
+      expect(read).toContain('length');
+      expect(read.filter((key) => LIST_SCANS.has(key))).toEqual([]);
+      expect(read).not.toContain(ITERATOR_KEY);
+      expect(state).toEqual(stateBefore);
+      expect(items).toEqual(itemsBefore);
+      const cleared = stepOrFail(items, head, state, REDUCED, 0.016, frameAt(5));
+      expect(cleared.flickStarts).toEqual(['s0']);
+    });
+  }
+});
+
+describe('isShrimpFlickLandingClear (issue #139)', () => {
+  /** Heads round `base`, `gap` px off it, one on each side. */
+  function headsRound(base: Point, gap: number): Point[] {
+    return [
+      { x: base.x - gap, y: base.y },
+      { x: base.x + gap, y: base.y },
+      { x: base.x, y: base.y - gap },
+      { x: base.x, y: base.y + gap },
+    ];
+  }
+
+  /** For each head, whether the predicate clears the flick away from it, checked against what stepShrimpFlicks does. */
+  function checkAgainstRuntime(
+    items: Collectible[],
+    state: ShrimpFlickState,
+    home: readonly Readonly<Point>[] | undefined,
+    avoid: MobileSnackAvoid,
+    rule: ShrimpRule,
+  ): boolean[] {
+    const base = placeOf(items[0]);
+    return headsRound(base, rule.triggerRadius / 2).map((head) => {
+      const away = Math.hypot(base.x - head.x, base.y - head.y);
+      const target: Point = {
+        x: base.x + ((base.x - head.x) / away) * rule.flickDistance,
+        y: base.y + ((base.y - head.y) / away) * rule.flickDistance,
+      };
+      const clear = isShrimpFlickLandingClear(base.x, base.y, home, target, STILL_DRIFT, avoid, rule);
+      const step = stepShrimpFlicks(items, head, STILL, state, REDUCED, avoid, 0.016);
+      expect(step !== null, `head at ${head.x}, ${head.y}`).toBe(clear);
+      if (step) expect(placeOf(step.items[0])).toEqual({ x: expect.closeTo(target.x, 9), y: expect.closeTo(target.y, 9) });
+      return clear;
+    });
+  }
+
+  it('agrees with stepShrimpFlicks for a 1-spot shrimp: a rejected way never flicks and a cleared one does', () => {
+    const { items, state } = oneShrimp();
+    const wormRight: MobileSnackAvoid = { ...AVOID, worms: [{ x: SHRIMP.x + RULE.flickDistance + 60, y: SHRIMP.y }] };
+    const clears = checkAgainstRuntime(items, state, undefined, wormRight, RULE);
+    expect(clears).toContain(true);
+    expect(clears).toContain(false);
+    expect(checkAgainstRuntime(items, state, undefined, AVOID, RULE)).toEqual([true, true, true, true]);
+  });
+
+  it('agrees with stepShrimpFlicks for a hopping shrimp, its home given as layout hop spots', () => {
+    const home: readonly Readonly<Point>[] = SQUARE;
+    const { items, state } = oneHopper(home);
+    const hazardLeft: MobileSnackAvoid = { ...AVOID, hazards: [{ kind: 'circle', x: 470, y: 200, r: 5 }] };
+    const clears = checkAgainstRuntime(items, state, home, hazardLeft, HOP_RULE);
+    expect(clears).toContain(true);
+    expect(clears).toContain(false);
+    expect(checkAgainstRuntime(items, state, items[0].home, AVOID, HOP_RULE)).toContain(true);
+  });
+
+  it('keeps a hopping shrimp to its grown home box, which a 1-spot shrimp ignores', () => {
+    const base = SQUARE[0];
+    const outside: Point = { x: base.x - HOP_RULE.flickDistance - 1, y: base.y };
+    expect(isShrimpFlickLandingClear(base.x, base.y, SQUARE, outside, STILL_DRIFT, AVOID, HOP_RULE)).toBe(false);
+    expect(isShrimpFlickLandingClear(base.x, base.y, [base], outside, STILL_DRIFT, AVOID, HOP_RULE)).toBe(true);
+    expect(isShrimpFlickLandingClear(base.x, base.y, undefined, outside, STILL_DRIFT, AVOID, HOP_RULE)).toBe(true);
   });
 });
 
