@@ -34,7 +34,9 @@ The Epic rule is unchanged: deep, no pot, more than S / 2 and at most S from a t
 
 **The unfound Legendary hint names depth and danger.** `UNFOUND_HINTS.legendary` in `src/logic/treasureChest.ts` reads "Look deep, right next to danger!" in place of "Break a Dash pot with Tail Dash!". Both are 32 characters, so the Treasure Chest's row fit is unchanged.
 
-**The Dash pot tip reads only its own flag.** `knowsDashPots` (`src/logic/dashPotTip.ts`) is true only when the save's `dashPotTipSeen` is true; a banked Legendary no longer counts, because it may have come from an open spot. To keep players who learned pots before the tip from seeing it, the save's load rule (`src/logic/save.ts`) reads a save with no `dashPotTipSeen` field, a save from before #149, as seen when a banked id is a Legendary, since every Legendary then hid in a Dash pot. A field that is present and not exactly true loads as not seen. There is no `SAVE_VERSION` bump: the field keeps its meaning, and a save that lacks it loads with a default under the additive rule of [ADR 0012](0012-save-on-device.md).
+**The Dash pot tip reads only its own flag.** `knowsDashPots` (`src/logic/dashPotTip.ts`) is true only when the save's `dashPotTipSeen` is true; a banked Legendary no longer counts, because it may have come from an open spot. The save's load rule (`src/logic/save.ts`) reads `dashPotTipSeen` as seen only when it is exactly true, so a missing or bad value loads as not seen, like any other new save field under the additive rule of [ADR 0012](0012-save-on-device.md). The load rule does not guess the flag from a banked Legendary when the field is missing. A missing field cannot tell a save from before #149 from a save that a build from before #149 loaded and saved again, which drops the fields it does not know. Guessing would hide the tip for good from a player who banked an open Legendary and then played on an older build. There is no `SAVE_VERSION` bump: the field keeps its meaning.
+
+The load rule was decided on 2026-10-30 by the delivery run, not by the owner, under the autonomy table's review-call rule (`decision-autonomy.md`, Review Calls), after the local review found the guess unsafe. The run's first load rule, which guessed seen from a banked Legendary, was itself a provisional run decision. The owner can still overrule this one before merge.
 
 ## Consequences
 
@@ -48,7 +50,9 @@ The Epic rule is unchanged: deep, no pot, more than S / 2 and at most S from a t
 
 Recorded residuals:
 
+- A player who banked a Legendary before #149 may see the Dash pot tip once, even though they already broke a Dash pot. Root cause: a save from before #149 has no `dashPotTipSeen` field, so it loads as not seen, and nothing else in the save records a broken pot. Bounded: the tip shows once, pauses nothing and waits while a threat is in reach (B11). Not changed: guessing the flag from a banked Legendary would hide the tip for good from a player who never learned pots, which is worse than one extra tip.
 - A save written by a build with #149 that holds a Legendary banked before #149 has `dashPotTipSeen` false, so the Dash pot tip may show once there. Root cause: that build counted the banked Legendary as knowing, so the tip never showed and the flag was never set. Bounded: the tip shows once, pauses nothing and waits while a threat is in reach (B11). Not changed: the save cannot tell a false flag written for that reason from a player who has not met a pot.
+
 ## Alternatives considered
 
 | Option | Why not |
@@ -57,4 +61,5 @@ Recorded residuals:
 | Any cover plus danger | A Legendary under reeds or a lily pad, in the Legendary risk band, would be less hidden than an Epic, which must be deep. The owner's rule asks for more hidden and/or more dangerous, never less hidden. |
 | Dark water as a new hiding kind | It would be a new hiding rule across the PRD, the code and the art guide for one habitat. The open spots already sit deep in a hollow or past a current, which the existing rule measures. |
 | Widen Area 7's current to fit a fourth Dash pot | The current's size sets the past-current strip, the snack keep-outs and the swim physics there. Moving it would move snacks and change how the area swims. Widening the grotto, a dead end, moves nothing else. |
+| Load a save with no `dashPotTipSeen` field as seen when a Legendary is banked | A build from before #149 drops the field when it saves, so a missing field does not mean the save is from before #149. A player who banked a Legendary from an open spot and then played on an older build would never see the tip. |
 | Visit open Legendary spots without a dash | Area 7's open spot fails the one-leg fairness proof without one. Tail Dash works anywhere and with any number of legs (A10), so a dash in the visit is fair, and it keeps the checks as strict as before. |
