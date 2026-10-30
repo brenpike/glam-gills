@@ -223,13 +223,15 @@ export const SPRING_CAVE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   ]),
   /**
    * Just past the spring outflow, on its far side along the main path, under `carp-5`: Legendary
-   * pots nearer it, Epic spots farther (issue #77, ND-11).
+   * spots nearer it, two in Dash pots and one open, last so the others keep their ids, Epic spots
+   * farther (issue #77, ND-11).
    */
   currentSpots: Object.freeze([
-    Object.freeze([1900, 790, 'legendary', true] as const),
-    Object.freeze([1960, 790, 'legendary', true] as const),
+    Object.freeze([1872, 790, 'legendary', true] as const),
+    Object.freeze([1932, 790, 'legendary', true] as const),
     Object.freeze([1930, 860, 'epic', false] as const),
     Object.freeze([1990, 860, 'epic', false] as const),
+    Object.freeze([1992, 790, 'legendary', false] as const),
   ]),
   /**
    * The spring outflow in the dark, a gentle, steady flow to the left, about as strong as Area 5's,

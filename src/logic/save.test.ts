@@ -85,6 +85,7 @@ const CHINAMPA_2_ID = CHINAMPA_2_AREA.id;
 const SPRING_CAVE_ID = SPRING_CAVE_AREA.id;
 const FOSSIL_AMMONITE = 'spring-cave/fossil-ammonite';
 const MOONSTONE_SHELL = 'spring-cave/paint-shell-moonstone';
+const CRYSTAL_ARCH = 'spring-cave/crystal-arch';
 
 /** A look with every field off the default, a girl. */
 const STYLED: AxolotlLook = {
@@ -833,13 +834,45 @@ describe('Dash pot tip seen (#149, B11, D2)', () => {
     expect(SAVE_VERSION).toBe(1);
   });
 
+  it('loads an older save without the field but with a Legendary banked as not seen', () => {
+    const json = savedJson();
+    const olderHub: Record<string, unknown> = { ...json.hub, banked: [...(json.hub.banked as string[]), LOTUS_THRONE] };
+    delete olderHub.dashPotTipSeen;
+    const hub = loadedHub({ version: 1, hub: olderHub });
+    expect(hub.banked).toContain(LOTUS_THRONE);
+    expect(hub.dashPotTipSeen).toBe(false);
+    expect(SAVE_VERSION).toBe(1);
+  });
+
+  it('keeps the tip not seen when a pre-#149 build drops the field from a save with an open Legendary banked', () => {
+    const session = playedSession();
+    const current = encodeSave({ ...session.hub, banked: [...session.hub.banked, CRYSTAL_ARCH] });
+    const olderBuildHub: Record<string, unknown> = { ...JSON.parse(current).hub };
+    delete olderBuildHub.dashPotTipSeen;
+    const hub = loadedHub({ version: 1, hub: olderBuildHub });
+    expect(treasureById(CRYSTAL_ARCH)?.rarity).toBe('legendary');
+    expect(hub.banked).toContain(CRYSTAL_ARCH);
+    expect(hub.dashPotTipSeen).toBe(false);
+    expect(JSON.parse(encodeSave(hub)).hub.dashPotTipSeen).toBe(false);
+  });
+
+  it('loads a save with the field false and a Legendary banked as not seen', () => {
+    const json = savedJson();
+    const hub = hubWithFields({ banked: [...(json.hub.banked as string[]), LOTUS_THRONE], dashPotTipSeen: false });
+    expect(hub.banked).toContain(LOTUS_THRONE);
+    expect(hub.dashPotTipSeen).toBe(false);
+  });
+
   it.each([
     ['a string', 'true'],
     ['a number', 1],
     ['null', null],
     ['an object', { seen: true }],
-  ])('loads a field that is %s as not seen', (_label, dashPotTipSeen) => {
+  ])('loads a field that is %s as not seen, even with a Legendary banked', (_label, dashPotTipSeen) => {
     expect(hubWith('dashPotTipSeen', dashPotTipSeen).dashPotTipSeen).toBe(false);
+    const json = savedJson();
+    const hub = hubWithFields({ banked: [...(json.hub.banked as string[]), LOTUS_THRONE], dashPotTipSeen });
+    expect(hub.dashPotTipSeen).toBe(false);
   });
 });
 

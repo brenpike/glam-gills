@@ -36,7 +36,9 @@
  *
  * The Dash pot tip (#149) came under the additive rule, with no version bump: the hub's
  * `dashPotTipSeen` loads as true only when exactly true, so a missing or bad value loads as not
- * seen. An older build drops it, so the tip may show once more there.
+ * seen. An older build drops it, so the tip may show once more there. A banked Legendary does not
+ * count as seen: a missing field cannot tell a save from before #149 from one an older build
+ * re-saved, and a Legendary may come from an open spot (ADR 0032).
  *
  * Legacy `book.tilapiaCard`: the Collection Book no longer holds the tilapia card, the hub's
  * `metHazards` does. The encoder still writes `book.tilapiaCard` (true when 'tilapia' is met), so

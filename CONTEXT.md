@@ -128,7 +128,7 @@ One of an area's set number of places for a treasure on each trip (6 in the cana
 _Avoid_: Slot alone (that means a Wearable **Slot**)
 
 **Dash pot**:
-A pot only Tail Dash can break, where Legendary treasures hide.
+A pot only Tail Dash can break, which holds only a Legendary treasure. A Legendary may also hide in the open, as long as its spot is deep and right next to danger (B6, B10).
 
 **Hint sparkle**:
 The small sparkle, readable without colour, that appears near a hidden treasure and on each of the last 3 snacks.
@@ -435,7 +435,7 @@ _Avoid_: carry sound, defeat sound
 - Area 1 is always unlocked, and beating Area N (earning its exit **Star**) unlocks Area N+1; there are no star gates, and any unlocked **Area** can be replayed from the **Area map**
 - The **Exit** opens only when every **Snack** in its **Area** is eaten
 - Each **Trip** fills its **Area**'s **Treasure slots** with unbanked **Treasures**, each slot's **Rarity** picked by chance, plus any lost **Treasures** and the unbanked **Special treasure** on top, and one **Hiding spot** per **Treasure** picked for that **Trip**, from that **Treasure**'s pool; no two **Treasures** share a spot in one **Trip**
-- A Legendary **Treasure** always hides in a **Dash pot**, which only **Tail Dash** can break
+- A Legendary **Treasure** always hides deep (in a cave or other hollow, or past a **Current**) and within half a threat's strike reach, either in a **Dash pot**, which only **Tail Dash** can break, or in the open in an **Area** with a threat; a **Dash pot** holds only a Legendary
 - A **Hint sparkle** marks a hidden **Treasure** when the axolotl is near, and each of the last 3 **Snacks**
 - A **Predator** is a **Hazard**, and a **Tilapia**, a **Heron**, a **Garter snake**, a **Common carp** and a **Crayfish** are **Predators**; a **Predator**'s **Telegraph** always comes before its **Lunge**, whether its warning starts by distance or on sight, and only one **Predator** in an **Area** warns or lunges at a time, a **Heron**, a **Garter snake**, a **Common carp**, a **Crayfish** and a **Tilapia** included
 - A **Crayfish** warns only while it is on its floor stretch, and its pinch stays level along the floor, so the water above its reach is out of its reach

@@ -314,11 +314,49 @@ describe('meetsRarity', () => {
     expect(meetsRarity({ x: 130, y: 300, container: false }, 'epic', GEO)).toBe(false);
   });
 
-  it('legendary: deep in a container', () => {
+  it('legendary with no threat: deep in a container only', () => {
     expect(meetsRarity({ x: 950, y: 250, container: true }, 'legendary', GEO)).toBe(true);
     expect(meetsRarity({ x: 650, y: 200, container: true }, 'legendary', GEO)).toBe(true);
     expect(meetsRarity({ x: 950, y: 250, container: false }, 'legendary', GEO)).toBe(false);
+    expect(meetsRarity({ x: 650, y: 200, container: false }, 'legendary', GEO)).toBe(false);
     expect(meetsRarity({ x: 130, y: 300, container: true }, 'legendary', GEO)).toBe(false);
+  });
+
+  it('legendary with only an unmeasurable threat: deep in a container only', () => {
+    const emptyRoute: HidingGeometry = { ...GEO, tilapiaRoutes: [{ id: 'empty', waypoints: [] }] };
+    expect(meetsRarity({ x: 950, y: 250, container: true }, 'legendary', emptyRoute)).toBe(true);
+    expect(meetsRarity({ x: 950, y: 250, container: false }, 'legendary', emptyRoute)).toBe(false);
+  });
+});
+
+describe('meetsRarity for an open Legendary near a threat', () => {
+  /** A long tilapia route along y = 180, so a spot at (x, y) is y - 180 px from it and far from every turn. */
+  const nearCave: HidingGeometry = { ...GEO, tilapiaRoutes: [{ id: 'over-cave', waypoints: [{ x: -1000, y: 180 }, { x: 3000, y: 180 }] }] };
+
+  it('accepts a deep Legendary with no pot within half the strike of a threat', () => {
+    expect(meetsRarity({ x: 950, y: 250, container: false }, 'legendary', nearCave)).toBe(true);
+    expect(meetsRarity({ x: 650, y: 200, container: false }, 'legendary', nearCave)).toBe(true);
+    expect(meetsRarity({ x: 950, y: 250, container: true }, 'legendary', nearCave)).toBe(true);
+  });
+
+  it('rejects a deep Legendary with no pot beyond half the strike, where an Epic is accepted', () => {
+    expect(meetsRarity({ x: 950, y: 250.001, container: false }, 'legendary', nearCave)).toBe(false);
+    expect(meetsRarity({ x: 950, y: 260, container: false }, 'legendary', nearCave)).toBe(false);
+    expect(meetsRarity({ x: 950, y: 260, container: false }, 'epic', nearCave)).toBe(true);
+  });
+
+  it('rejects a shallow Legendary, with a pot or without', () => {
+    expect(meetsRarity({ x: 130, y: 200, container: false }, 'legendary', nearCave)).toBe(false);
+    expect(meetsRarity({ x: 130, y: 200, container: true }, 'legendary', nearCave)).toBe(false);
+  });
+
+  it('still rejects an Epic in a pot', () => {
+    expect(meetsRarity({ x: 950, y: 260, container: true }, 'epic', nearCave)).toBe(false);
+  });
+
+  it('makes spotMatchesLabels accept an open cave Legendary near a threat', () => {
+    expect(spotMatchesLabels(spotAt(950, 250, { cover: 'cave', rarity: 'legendary' }), nearCave)).toBe(true);
+    expect(spotMatchesLabels(spotAt(950, 260, { cover: 'cave', rarity: 'legendary' }), nearCave)).toBe(false);
   });
 });
 
@@ -351,7 +389,7 @@ describe('spotMatchesLabels', () => {
     expect(spotMatchesLabels(spotAt(950, 250, { cover: 'cave', rarity: 'epic', container: true }), GEO)).toBe(false);
   });
 
-  it('rejects a Legendary without a container', () => {
+  it('rejects a Legendary without a container in an area with no threat', () => {
     expect(spotMatchesLabels(spotAt(950, 250, { cover: 'cave', rarity: 'legendary' }), GEO)).toBe(false);
   });
 

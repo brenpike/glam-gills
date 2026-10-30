@@ -2,6 +2,8 @@
  * Hiding rules (PRD B6): which cover a position is under and which rarity a spot may hold.
  * Every rule derives from geometry; declared spot labels are only checked against it. Rarer
  * spots also sit nearer a threat: a predator route or a leg-costing hazard (the risk ladder, issue #70).
+ * Legendaries are the rarest finds, more hidden and/or more dangerous to get: a Legendary spot is
+ * deep and in the Legendary risk band, and is in a Dash pot or in an area with a measurable threat.
  */
 import type { Rarity } from './catalogue';
 import { shapeDistance, type HazardShape, type HazardSpawn } from './hazards';
@@ -317,8 +319,10 @@ function threatTurnDistance(pos: Point, threats: readonly Threat[]): number {
 /**
  * Whether a spot's geometry suits a rarity; ignores any declared labels. Common: hidden, shallow,
  * no container, near the main path. Rare: the same but away from the path. Epic: deep, no
- * container. Legendary: deep, in a container. Containers are reserved for Legendary. Every rarity
- * must also meet the risk ladder for every threat in the geometry (zoneThreats).
+ * container. Legendary: deep, and in a container (a Dash pot) or measurably near some threat
+ * (riskDistance not Infinity), so a Legendary with no pot only sits in an area with a threat.
+ * Containers are reserved for Legendary. Every rarity must also meet the risk ladder for every
+ * threat in the geometry (zoneThreats).
  */
 export function meetsRarity(
   spot: Pick<HidingSpot, 'x' | 'y' | 'container'>,
@@ -326,10 +330,16 @@ export function meetsRarity(
   geo: HidingGeometry,
   risk: RiskTuning = RISK,
 ): boolean {
-  return meetsHidingRule(spot, rarity, geo) && meetsThreatRiskRule(spot, rarity, zoneThreats(geo), risk);
+  const threats = zoneThreats(geo);
+  return meetsHidingRule(spot, rarity, geo, threats) && meetsThreatRiskRule(spot, rarity, threats, risk);
 }
 
-function meetsHidingRule(spot: Pick<HidingSpot, 'x' | 'y' | 'container'>, rarity: Rarity, geo: HidingGeometry): boolean {
+function meetsHidingRule(
+  spot: Pick<HidingSpot, 'x' | 'y' | 'container'>,
+  rarity: Rarity,
+  geo: HidingGeometry,
+  threats: readonly Threat[],
+): boolean {
   const hidden = coversAt(spot, geo).length > 0;
   const deep = isDeep(spot, geo);
   switch (rarity) {
@@ -340,7 +350,7 @@ function meetsHidingRule(spot: Pick<HidingSpot, 'x' | 'y' | 'container'>, rarity
     case 'epic':
       return deep && !spot.container;
     case 'legendary':
-      return deep && spot.container;
+      return deep && (spot.container || riskDistance(spot, threats) !== Infinity);
   }
 }
 

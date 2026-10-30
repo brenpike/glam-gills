@@ -2,14 +2,14 @@
 
 exports[`spring-cave-2 golden > keeps the default zone placements for trip seeds 1..25 1`] = `
 [
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/gemstone-cape@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/gemstone-cape@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-current-5,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-9,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-current-3+pot",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
@@ -17,11 +17,11 @@ exports[`spring-cave-2 golden > keeps the default zone placements for trip seeds
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-3,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-current-5,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-4,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/gemstone-cape@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/gemstone-cape@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-1+pot",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-3,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/paint-shell-glowworm@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/paint-shell-glowworm@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-4,spring-cave/climbing-helmet@spring-cave-2/spot-bank-2,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-9,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-11,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-11,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-current-4,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
@@ -34,20 +34,20 @@ exports[`spring-cave-2 golden > keeps the default zone placements with three ban
 [
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/gemstone-cape@spring-cave-2/spot-current-2+pot",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
-  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-11,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1",
-  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8",
-  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/underground-waterfall@spring-cave-2/spot-current-1+pot,spring-cave/gemstone-cape@spring-cave-2/spot-current-2+pot",
-  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/paint-shell-glowworm@spring-cave-2/spot-current-2+pot",
+  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2,spring-cave/gemstone-cape@spring-cave-2/spot-current-1+pot",
+  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4,spring-cave/paint-shell-glowworm@spring-cave-2/spot-cave-2",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-9,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
-  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/underground-waterfall@spring-cave-2/spot-current-1+pot",
+  "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-current-4,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
   "spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
@@ -62,14 +62,14 @@ exports[`spring-cave-2 golden > keeps the default zone placements with three ban
 
 exports[`spring-cave-2 golden > keeps the default zone placements with two returned treasures 1`] = `
 [
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/gemstone-cape@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/gemstone-cape@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-current-5,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-9,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-1+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-6,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-9,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-current-3+pot",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-7,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
@@ -77,11 +77,11 @@ exports[`spring-cave-2 golden > keeps the default zone placements with two retur
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-1,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-4,spring-cave/bubble-stone@spring-cave-2/spot-bank-3,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-current-5,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-4",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-2,spring-cave/bubble-stone@spring-cave-2/spot-bank-4,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-8,spring-cave/bubble-machine@spring-cave-2/spot-cave-1",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/paint-shell-glowworm@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-1,spring-cave/climbing-helmet@spring-cave-2/spot-bank-6,spring-cave/pebble-necklace@spring-cave-2/spot-bank-2,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-11,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/paint-shell-glowworm@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-7,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-10,spring-cave/cave-goggles@spring-cave-2/spot-bank-8,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-5,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-10,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1,spring-cave/underground-waterfall@spring-cave-2/spot-current-1+pot",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-3,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-6,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-11,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-8,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
-  "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-current-2+pot",
+  "spring-cave/mossy-rock@spring-cave-2/spot-bank-6,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-4,spring-cave/pebble-necklace@spring-cave-2/spot-bank-3,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5,spring-cave/underground-waterfall@spring-cave-2/spot-cave-2",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-3,spring-cave/bubble-stone@spring-cave-2/spot-bank-4,spring-cave/climbing-helmet@spring-cave-2/spot-bank-2,spring-cave/pebble-necklace@spring-cave-2/spot-bank-5,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-9,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-11,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-7,spring-cave/bubble-machine@spring-cave-2/spot-cave-1,spring-cave/glow-tail-lantern@spring-cave-2/spot-current-5",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-5,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-3,spring-cave/pebble-necklace@spring-cave-2/spot-bank-1,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-11,spring-cave/cave-goggles@spring-cave-2/spot-bank-9,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-10,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
   "spring-cave/mossy-rock@spring-cave-2/spot-bank-1,spring-cave/bubble-stone@spring-cave-2/spot-bank-2,spring-cave/climbing-helmet@spring-cave-2/spot-bank-5,spring-cave/pebble-necklace@spring-cave-2/spot-bank-4,spring-cave/ancient-clay-pot@spring-cave-2/spot-bank-8,spring-cave/glowing-stalactite@spring-cave-2/spot-bank-7,spring-cave/cave-goggles@spring-cave-2/spot-bank-10,spring-cave/paint-shell-chocolate@spring-cave-2/spot-bank-11,spring-cave/bubble-machine@spring-cave-2/spot-current-4,spring-cave/glow-tail-lantern@spring-cave-2/spot-cave-1",
@@ -141,7 +141,7 @@ exports[`spring-cave-2 golden > keeps the default zone projection 1`] = `
   "bedTop": 678,
   "cave": {
     "id": "spring-cave-2/cave",
-    "x0": 3740,
+    "x0": 3680,
     "x1": 3800,
     "y0": 580,
     "y1": 678,
@@ -1138,6 +1138,7 @@ exports[`spring-cave-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "spring-cave/underground-waterfall",
       "pool": [
+        "spring-cave-2/spot-cave-2",
         "spring-cave-2/spot-current-1",
         "spring-cave-2/spot-current-2",
         "spring-cave-2/spot-current-3",
@@ -1146,6 +1147,7 @@ exports[`spring-cave-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "spring-cave/gemstone-cape",
       "pool": [
+        "spring-cave-2/spot-cave-2",
         "spring-cave-2/spot-current-1",
         "spring-cave-2/spot-current-2",
         "spring-cave-2/spot-current-3",
@@ -1154,6 +1156,7 @@ exports[`spring-cave-2 golden > keeps the default zone projection 1`] = `
     {
       "id": "spring-cave/paint-shell-glowworm",
       "pool": [
+        "spring-cave-2/spot-cave-2",
         "spring-cave-2/spot-current-1",
         "spring-cave-2/spot-current-2",
         "spring-cave-2/spot-current-3",
@@ -2509,6 +2512,14 @@ exports[`spring-cave-2 golden > keeps the default zone projection 1`] = `
       "y": 595,
     },
     {
+      "container": false,
+      "cover": "cave",
+      "id": "spring-cave-2/spot-cave-2",
+      "rarity": "legendary",
+      "x": 3700,
+      "y": 630,
+    },
+    {
       "container": true,
       "cover": "pastCurrent",
       "id": "spring-cave-2/spot-current-1",
@@ -2701,36 +2712,36 @@ exports[`spring-cave-2 golden > keeps the encounter trace along the scripted swi
 exports[`spring-cave-2 golden > keeps the placements of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "1234": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "2": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "3": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "305419896": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "3735928559": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "42": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
   "987654321": {
-    "fnv1a": 946144008,
-    "length": 13002,
+    "fnv1a": 3118501909,
+    "length": 12974,
   },
 }
 `;
@@ -2738,36 +2749,36 @@ exports[`spring-cave-2 golden > keeps the placements of every extra zone seed 1`
 exports[`spring-cave-2 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 2017073564,
-    "length": 26659,
+    "fnv1a": 2681348352,
+    "length": 26849,
   },
   "1234": {
-    "fnv1a": 2357014224,
-    "length": 26662,
+    "fnv1a": 704617540,
+    "length": 26852,
   },
   "2": {
-    "fnv1a": 2105193979,
-    "length": 26658,
+    "fnv1a": 2847984783,
+    "length": 26848,
   },
   "3": {
-    "fnv1a": 269574495,
-    "length": 26662,
+    "fnv1a": 3118551203,
+    "length": 26852,
   },
   "305419896": {
-    "fnv1a": 3620544358,
-    "length": 26666,
+    "fnv1a": 1711014022,
+    "length": 26856,
   },
   "3735928559": {
-    "fnv1a": 2391140231,
-    "length": 26657,
+    "fnv1a": 2081533259,
+    "length": 26847,
   },
   "42": {
-    "fnv1a": 1236419325,
-    "length": 26662,
+    "fnv1a": 1742648213,
+    "length": 26852,
   },
   "987654321": {
-    "fnv1a": 3349370333,
-    "length": 26661,
+    "fnv1a": 2635732213,
+    "length": 26851,
   },
 }
 `;

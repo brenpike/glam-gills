@@ -142,7 +142,7 @@ const ROW_OPENINGS: Readonly<Record<number, readonly (readonly [number, number])
     [2181, 2360],
   ],
 };
-/** Empty treasure slots over the 200 fresh trips, as measured: 11 slots for 13 treasures leave some empty (issue #77, ND-12). */
+/** Empty treasure slots over the 200 fresh trips, as measured : 11 slots for 13 treasures leave some empty (issue #77, ND-12). */
 const EMPTY_SLOTS = { most: 4, mean: 2.4 };
 const CRAYFISH_IDS = [0, 1, 2].map((n) => `crayfish-${n}`);
 const CARP_IDS = [0, 1, 2, 3, 4, 5, 6].map((n) => `carp-${n}`);
@@ -824,8 +824,8 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
     }
   });
 
-  it('has 6 Common, 6 Rare, 5 Epic and 5 Legendary spots, each pool larger than its Area 6 treasures', () => {
-    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 6, 5, 5]);
+  it('has 6 Common, 6 Rare, 5 Epic and 6 Legendary spots, each pool larger than its Area 6 treasures', () => {
+    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 6, 5, 6]);
     expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
     for (const rarity of RARITIES) {
       const treasures = SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
@@ -834,21 +834,19 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
     for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
   });
 
-  it('hides the Crystal shine Paint shell only in the five Legendary Dash pots, three in the grotto and two past the spring outflow, all in the dark (springCaveFairness.test.ts proves them fair)', () => {
-    const pots = zone.spots.filter((spot) => spot.rarity === 'legendary');
-    expect(pots.map((spot) => [spot.x, spot.y, spot.cover])).toEqual([
-      [1960, 990, 'cave'],
-      [2020, 990, 'cave'],
-      [2080, 990, 'cave'],
-      [1900, 790, 'pastCurrent'],
-      [1960, 790, 'pastCurrent'],
+  it('hides the Crystal shine Paint shell only in the six Legendary spots, five Dash pots, three in the grotto and two past the spring outflow, and one open spot past it, all in the dark (springCaveFairness.test.ts proves them fair)', () => {
+    const legendaries = zone.spots.filter((spot) => spot.rarity === 'legendary');
+    expect(legendaries.map((spot) => [spot.x, spot.y, spot.cover, spot.container])).toEqual([
+      [1960, 990, 'cave', true],
+      [2020, 990, 'cave', true],
+      [2080, 990, 'cave', true],
+      [1872, 790, 'pastCurrent', true],
+      [1932, 790, 'pastCurrent', true],
+      [1992, 790, 'pastCurrent', false],
     ]);
-    for (const spot of pots) {
-      expect(spot.container, spot.id).toBe(true);
-      expect(inDarkWater(spot, dark), spot.id).toBe(true);
-    }
+    for (const spot of legendaries) expect(inDarkWater(spot, dark), spot.id).toBe(true);
     const crystalShine = zone.finds.find((find) => find.id === `spring-cave/paint-shell-${CRYSTAL_SHINE.id}`);
-    expect(crystalShine?.pool).toEqual(pots.map((spot) => spot.id));
+    expect(crystalShine?.pool).toEqual(legendaries.map((spot) => spot.id));
   });
 
   it('hides the Common spots under the rock ledges along the main path in the top row, lit', () => {
@@ -874,14 +872,15 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
     expect(special?.pool).toEqual(rares.map((spot) => spot.id));
   });
 
-  it('puts every Epic and Legendary spot deep in the dark, in the grotto or just past the spring outflow, Legendary ones in Dash pots', () => {
+  it('puts every Epic and Legendary spot deep in the dark, in the grotto or just past the spring outflow, every Dash pot Legendary and at least one Legendary spot with no pot', () => {
     const deep = zone.spots.filter((spot) => spot.rarity === 'epic' || spot.rarity === 'legendary');
-    expect(deep.map((spot) => spot.cover)).toEqual([...Array(6).fill('cave'), ...Array(4).fill('pastCurrent')]);
+    expect(deep.map((spot) => spot.cover)).toEqual([...Array(6).fill('cave'), ...Array(5).fill('pastCurrent')]);
     for (const spot of deep) {
       expect(coversAt(spot, zone), spot.id).toEqual([spot.cover]);
-      expect(spot.container, spot.id).toBe(spot.rarity === 'legendary');
       expect(inDarkWater(spot, dark), spot.id).toBe(true);
     }
+    for (const spot of zone.spots.filter((candidate) => candidate.container)) expect(spot.rarity, spot.id).toBe('legendary');
+    expect(deep.some((spot) => spot.rarity === 'legendary' && !spot.container)).toBe(true);
   });
 
   it('sets the grotto on the bed in the dark, a dead end off the main path, holding only the cave spots (B6)', () => {
@@ -979,7 +978,7 @@ describe('Area 6 carp, spring outflow and stranding places', () => {
     const current = zone.currents[0];
     expect(pastCurrentBand(current)).toEqual({ edgeX: current.x1, farX: current.x1 + 140 });
     const past = zone.spots.filter((spot) => spot.cover === 'pastCurrent');
-    expect(past).toHaveLength(4);
+    expect(past).toHaveLength(5);
     for (const spot of past) {
       expect(spot.x, spot.id).toBeGreaterThan(current.x1);
       expect(spot.x, spot.id).toBeLessThanOrEqual(current.x1 + 140);
