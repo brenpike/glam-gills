@@ -374,14 +374,18 @@ export function mobileLegBoxes(zone: Pick<ZoneLayout, 'mobileSnacks'>): HazardRe
  * either way. The bob counts even under reduced motion, so a motion change cannot move it out.
  */
 export function shrimpBox(spot: Readonly<Point>, drift: Readonly<SnackDrift>): HazardRect {
+  return writeShrimpBox(spot, drift, { kind: 'rect', x0: 0, x1: 0, y0: 0, y1: 0 });
+}
+
+/** Writes shrimpBox(spot, drift) into `out` and returns it, for a check that runs every frame. Allocates nothing. */
+export function writeShrimpBox(spot: Readonly<Point>, drift: Readonly<SnackDrift>, out: HazardRect): HazardRect {
   const spreadY = drift.amplitudeY + SNACK_BOB_PX;
-  return {
-    kind: 'rect',
-    x0: spot.x - drift.amplitudeX,
-    x1: spot.x + drift.amplitudeX,
-    y0: spot.y - spreadY,
-    y1: spot.y + spreadY,
-  };
+  out.kind = 'rect';
+  out.x0 = spot.x - drift.amplitudeX;
+  out.x1 = spot.x + drift.amplitudeX;
+  out.y0 = spot.y - spreadY;
+  out.y1 = spot.y + spreadY;
+  return out;
 }
 
 /** The sweep of every element that has geometry (the mat pairs), in data order. */
@@ -532,7 +536,17 @@ function boxInOpenWater(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boo
   if (box.y0 <= SURFACE_PEAK_Y) return false;
   if (gapToBox(homeSpot.x, homeSpot.y, box) <= homeSpot.radius) return false;
   if (boxesOverlap(box, avoid.safeArea)) return false;
-  return !avoid.currents.some((current) => boxesOverlap(box, current)) && !avoid.mats.some((mat) => boxesOverlap(box, mat));
+  for (let index = 0; index < avoid.currents.length; index++) if (boxesOverlap(box, avoid.currents[index])) return false;
+  for (let index = 0; index < avoid.mats.length; index++) if (boxesOverlap(box, avoid.mats[index])) return false;
+  return true;
+}
+
+/** Whether every plastic worm is SNACK_HAZARD_CLEARANCE px or more from the box. Allocates nothing. */
+function boxClearOfWorms(box: Readonly<HazardRect>, worms: readonly Readonly<Point>[]): boolean {
+  for (let index = 0; index < worms.length; index++) {
+    if (gapToBox(worms[index].x, worms[index].y, box) < SNACK_HAZARD_CLEARANCE) return false;
+  }
+  return true;
 }
 
 /**
@@ -543,10 +557,15 @@ function boxInOpenWater(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boo
  * B10 threat, a route measured from its patrol loop.
  */
 export function mobileSnackClear(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boolean {
-  if (!boxInOpenWater(box, avoid)) return false;
-  if (avoid.worms.some((worm) => gapToBox(worm.x, worm.y, box) < SNACK_HAZARD_CLEARANCE)) return false;
-  if (avoid.keepAway.some((shape) => boxShapeDistance(box, shape) < SNACK_HAZARD_CLEARANCE)) return false;
-  return avoid.threats.every((threat) => boxThreatDistance(box, threat) > threat.strike);
+  if (!boxInOpenWater(box, avoid) || !boxClearOfWorms(box, avoid.worms)) return false;
+  for (let index = 0; index < avoid.keepAway.length; index++) {
+    if (boxShapeDistance(box, avoid.keepAway[index]) < SNACK_HAZARD_CLEARANCE) return false;
+  }
+  for (let index = 0; index < avoid.threats.length; index++) {
+    const threat = avoid.threats[index];
+    if (!(boxThreatDistance(box, threat) > threat.strike)) return false;
+  }
+  return true;
 }
 
 /**
@@ -557,9 +576,12 @@ export function mobileSnackClear(box: Readonly<HazardRect>, avoid: MobileSnackAv
  * are left to the threat rules of tadpoleWanderClear() and shrimpHomeClear().
  */
 export function mobileSnackHardClear(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boolean {
-  if (!boxInOpenWater(box, avoid)) return false;
-  if (avoid.worms.some((worm) => gapToBox(worm.x, worm.y, box) < SNACK_HAZARD_CLEARANCE)) return false;
-  return (avoid.hazards ?? avoid.keepAway).every((shape) => boxShapeDistance(box, shape) >= SNACK_HAZARD_CLEARANCE);
+  if (!boxInOpenWater(box, avoid) || !boxClearOfWorms(box, avoid.worms)) return false;
+  const shapes = avoid.hazards ?? avoid.keepAway;
+  for (let index = 0; index < shapes.length; index++) {
+    if (!(boxShapeDistance(box, shapes[index]) >= SNACK_HAZARD_CLEARANCE)) return false;
+  }
+  return true;
 }
 
 /**

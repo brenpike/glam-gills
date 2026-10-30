@@ -11,7 +11,7 @@ import {
   type SnackFrame,
 } from './collectibles';
 import { netDrift } from './ghostNets';
-import { hazardSweep, type ElementSpawn, type HazardSpawn, type HazardType } from './hazards';
+import { hazardSweep, type ElementSpawn, type HazardRect, type HazardSpawn, type HazardType } from './hazards';
 import { zoneThreats } from './hiding';
 import { legSwimTuning } from './legs';
 import {
@@ -45,6 +45,7 @@ import {
   tadpoleRule,
   tadpoleWander,
   tadpoleWanderClear,
+  writeShrimpBox,
   type MobileSnackAvoid,
   type MobileSnackMix,
   type MobileSnackPose,
@@ -320,6 +321,26 @@ describe('leg and shrimp boxes (ND-26; issue #131, ND-7)', () => {
   it('boxes a shrimp by its drift and the snack bob', () => {
     const drift: SnackDrift = { amplitudeX: 16, amplitudeY: 8, periodX: 10, periodY: 8 };
     expect(shrimpBox({ x: 500, y: 200 }, drift)).toEqual({ kind: 'rect', x0: 484, x1: 516, y0: 189.5, y1: 210.5 });
+  });
+
+  it('writes the same box as shrimpBox into the box it is given, over whatever it held (issue #139)', () => {
+    const drifts: SnackDrift[] = [
+      { amplitudeX: 16, amplitudeY: 8, periodX: 10, periodY: 8 },
+      { amplitudeX: 0, amplitudeY: 0, periodX: 10, periodY: 8 },
+      { amplitudeX: 3.5, amplitudeY: 12.25, periodX: 6, periodY: 9 },
+    ];
+    const spots: Point[] = [
+      { x: 500, y: 200 },
+      { x: -40.5, y: 1234.75 },
+      { x: 0, y: 0 },
+    ];
+    const out: HazardRect = { kind: 'rect', x0: NaN, x1: Infinity, y0: -Infinity, y1: 7 };
+    for (const drift of drifts) {
+      for (const spot of spots) {
+        expect(writeShrimpBox(spot, drift, out)).toBe(out);
+        expect(out).toEqual(shrimpBox(spot, drift));
+      }
+    }
   });
 
   it('gives one box per tadpole leg and per shrimp hop leg, tadpoles first, and none for a 1-spot home', () => {
