@@ -1,5 +1,9 @@
 name: CI
 
+# Pull requests that change only docs skip CI (the `paths` filter below).
+# Every push to main runs CI, so every head of main gets a `dist` artifact and
+# the deploy workflow's stale-head check always has a newer run to hand off to.
+# A push that changes only docs skips lint and tests but still builds.
 on:
   pull_request:
     branches: [main]
@@ -17,18 +21,6 @@ on:
       - .github/workflows/ci.yml
   push:
     branches: [main]
-    paths:
-      - src/**
-      - public/**
-      - index.html
-      - package.json
-      - package-lock.json
-      - tsconfig.json
-      - vite.config.ts
-      - vitest.config.ts
-      - eslint.config.js
-      - .nvmrc
-      - .github/workflows/ci.yml
   workflow_dispatch:
 
 permissions:
@@ -40,13 +32,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: scope
+        name: Check whether this push changes only docs
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # Fail safe: lint and tests run unless every changed path is docs.
+          docs_only=false
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && changed=$(git diff --no-renames --name-only "$BEFORE" "$GITHUB_SHA"); then
+            if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -Ev '^docs/|\.md$' > /dev/null; then
+              docs_only=true
+            fi
+          fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm test
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm run lint
+      - if: steps.scope.outputs.docs_only != 'true'
+        run: npm test
       - run: npm run build
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
