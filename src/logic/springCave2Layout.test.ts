@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SPRING_CAVE_2_AREA, SPRING_CAVE_AREA, SPRING_CAVE_HABITAT, newThingsByArea, sourceFactCards, threatFactCards, threatIds } from './areas';
-import { RARITIES, SPRING_CAVE_2_TREASURES } from './catalogue';
+import { GLOWWORM, RARITIES, SPRING_CAVE_2_TREASURES } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
 import {
   carpCount,
@@ -130,7 +130,7 @@ const FLOOR_QUIET_STRETCH = 204;
 const ONE_LEG_EXIT_SECONDS = 52.12;
 /** Area 6's narrowest main-path gap, which Area 7's must be under (the level layout ladder). */
 const AREA_6_NARROWEST = 40;
-/** Empty treasure slots over the 200 fresh trips, as measured: 12 slots for 12 treasures (ND-12). */
+/** Empty treasure slots over the 200 fresh trips, as measured: 12 slots for 13 treasures (ND-12). */
 const EMPTY_SLOTS = { most: 5, mean: 3.18 };
 const CRAYFISH_IDS = [0, 1, 2].map((n) => `crayfish-${n}`);
 const CARP_IDS = [0, 1, 2, 3, 4, 5].map((n) => `carp-${n}`);
@@ -991,12 +991,30 @@ describe('Area 7 hiding spots (B5, B6, B10; ND-12)', () => {
     }
   });
 
-  it('has 6 Common, 5 Rare, 3 Epic and 3 Legendary spots, each pool larger than its Area 7 treasures', () => {
+  it('has 6 Common, 5 Rare, 3 Epic and 3 Legendary spots, the Common, Rare and Epic pools larger than their Area 7 treasures and the Legendary pool exactly its 3 Legendaries', () => {
     expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 5, 3, 3]);
-    for (const rarity of RARITIES) {
+    expect(RARITIES.map((rarity) => SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
+    for (const rarity of RARITIES.filter((candidate) => candidate !== 'legendary')) {
       const treasures = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(zone.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);
     }
+    // INVARIANT: the Legendary pool equals its treasures, not more. The strip past the outflow, x 2200 to 2340, between crayfish-1's
+    // S / 2 reach above its 656 floor lane and the current's foot at y 640, fits no 4th Dash pot at SPOT_MIN_SPACING.
+    const legendaries = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === 'legendary').length;
+    expect(zone.spots.filter((spot) => spot.rarity === 'legendary')).toHaveLength(legendaries);
+    for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
+  });
+
+  it('hides the Glowworm Paint shell only in the three Legendary Dash pots past the steady outflow (springCave2Fairness.test.ts proves them fair)', () => {
+    const pots = zone.spots.filter((spot) => spot.rarity === 'legendary');
+    expect(pots.map((spot) => [spot.x, spot.y, spot.cover])).toEqual([
+      [2215, 620, 'pastCurrent'],
+      [2275, 625, 'pastCurrent'],
+      [2335, 620, 'pastCurrent'],
+    ]);
+    for (const spot of pots) expect(spot.container, spot.id).toBe(true);
+    const glowworm = zone.finds.find((find) => find.id === `spring-cave/paint-shell-${GLOWWORM.id}`);
+    expect(glowworm?.pool).toEqual(pots.map((spot) => spot.id));
   });
 
   it('hides the Common spots under the rock ledges along the main path in the top row, lit', () => {
@@ -1063,6 +1081,18 @@ describe('Area 7 placing treasure (B4; ND-12)', () => {
       const lost = placeTreasures(zone.finds, zone.spots, [], tripSeed, { ...options, mustPlace: all });
       expect(lost).toHaveLength(all.length);
       expect(new Set(lost.map((find) => find.spotId)).size).toBe(all.length);
+    }
+  });
+
+  it('puts the 3 Legendaries in the 3 Dash pots, one each, when all 13 treasures must be placed', () => {
+    const all = SPRING_CAVE_2_TREASURES.map((treasure) => treasure.id);
+    const legendaryIds = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
+    const potIds = zone.spots.filter((spot) => spot.rarity === 'legendary').map((spot) => spot.id);
+    expect(all).toHaveLength(13);
+    for (const tripSeed of TRIP_SEEDS) {
+      const lost = placeTreasures(zone.finds, zone.spots, [], tripSeed, { ...options, mustPlace: all });
+      const legendarySpots = lost.filter((find) => legendaryIds.includes(find.id)).map((find) => find.spotId);
+      expect([...legendarySpots].sort(), `trip seed ${tripSeed}`).toEqual([...potIds].sort());
     }
   });
 

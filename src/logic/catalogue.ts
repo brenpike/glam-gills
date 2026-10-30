@@ -89,7 +89,9 @@ export type DreamColourId =
   | 'poppy-red'
   | 'plum'
   | 'moonstone'
-  | 'chocolate';
+  | 'crystal-shine'
+  | 'chocolate'
+  | 'glowworm';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -179,7 +181,15 @@ export const MOONSTONE: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
-/** The spring cave's Area 7 Dream colour, a solid brown held by that area's one Paint shell (issue #105). */
+/** The spring cave's Area 6 Legendary Dream colour, a crystal sheen held by that area's second Paint shell. */
+export const CRYSTAL_SHINE: DreamColour = Object.freeze({
+  id: 'crystal-shine',
+  name: 'Crystal shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
+/** The spring cave's Area 7 Dream colour, a solid brown held by that area's first Paint shell (issue #105). */
 export const CHOCOLATE: DreamColour = Object.freeze({
   id: 'chocolate',
   name: 'Chocolate',
@@ -187,10 +197,18 @@ export const CHOCOLATE: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
+/** The spring cave's Area 7 Legendary Dream colour, a glowworm pattern held by that area's second Paint shell. */
+export const GLOWWORM: DreamColour = Object.freeze({
+  id: 'glowworm',
+  name: 'Glowworm',
+  rarity: 'legendary',
+  kind: 'patterned',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
- * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone (Area 6),
- * then Chocolate (Area 7).
+ * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
+ * shine (Area 6), then Chocolate and Glowworm (Area 7).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -202,7 +220,9 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   PLUM,
   TIE_DYE_GALAXY,
   MOONSTONE,
+  CRYSTAL_SHINE,
   CHOCOLATE,
+  GLOWWORM,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -654,9 +674,11 @@ export const CHINAMPA_2_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
- * The spring cave Area 6 treasures, all new, in rarity order (issue #77): 6 Decorations, 5 Wearables
- * and the Moonstone Paint shell. The Fossil ammonite is the area's special treasure. Every perk comes
- * from PERK_VALUES for its type and rarity, and no two Wearables share a perk type.
+ * The spring cave Area 6 treasures, all new (issue #77): 6 Decorations, 5 Wearables and the
+ * Moonstone Paint shell in rarity order, then the Crystal shine Paint shell. The Fossil ammonite is
+ * the area's special treasure. Every perk comes from PERK_VALUES for its type and rarity, and no two
+ * Wearables share a perk type. The newest entry comes last so placement by seed stays the same for
+ * every earlier treasure.
  */
 export const SPRING_CAVE_TREASURES: readonly Treasure[] = Object.freeze([
   { id: 'spring-cave/pebble-stack', name: 'Pebble stack', rarity: 'common', category: 'decoration' },
@@ -718,13 +740,15 @@ export const SPRING_CAVE_TREASURES: readonly Treasure[] = Object.freeze([
     slot: 'head',
     perk: createPerk('speed', 'legendary'),
   },
+  createPaintShell(CRYSTAL_SHINE, 'spring-cave'),
 ]);
 
 /**
- * The spring cave Area 7 treasures, all new, in rarity order (issue #105, the owner's 12): 6
- * Decorations, 5 Wearables and the Chocolate Paint shell. The Ancient clay pot is the area's special
- * treasure. Every perk comes from PERK_VALUES for its type and rarity, and no two Wearables share a
- * perk type (ND-13).
+ * The spring cave Area 7 treasures, all new (issue #105): the owner's 12 in rarity order, 6
+ * Decorations, 5 Wearables and the Chocolate Paint shell, then the Glowworm Paint shell. The Ancient
+ * clay pot is the area's special treasure. Every perk comes from PERK_VALUES for its type and rarity,
+ * and no two Wearables share a perk type (ND-13). The newest entry comes last so placement by seed
+ * stays the same for every earlier treasure.
  */
 export const SPRING_CAVE_2_TREASURES: readonly Treasure[] = Object.freeze([
   { id: 'spring-cave/mossy-rock', name: 'Mossy rock', rarity: 'common', category: 'decoration' },
@@ -780,6 +804,7 @@ export const SPRING_CAVE_2_TREASURES: readonly Treasure[] = Object.freeze([
     slot: 'back',
     perk: createPerk('shell', 'legendary'),
   },
+  createPaintShell(GLOWWORM, 'spring-cave'),
 ]);
 
 /**
@@ -833,10 +858,19 @@ export function dreamColourById(id: string): DreamColour | undefined {
   return DREAM_COLOURS.find((colour) => colour.id === id);
 }
 
-/** PRD B3 rule: patterned and sheen are Epic or Legendary only; solid is Common or Rare only. */
-export function dreamKindAllowed(kind: DreamKind, rarity: Rarity): boolean {
-  const rareTier = rarity === 'epic' || rarity === 'legendary';
-  return kind === 'solid' ? !rareTier : rareTier;
+/** The patterned and sheen Dream colours that stay Epic; every other patterned or sheen colour is Legendary. */
+export const GRANDFATHERED_EPIC_DREAM_IDS: readonly DreamColourId[] = Object.freeze(['hearts', 'tie-dye', 'iridescent']);
+
+/**
+ * PRD B3 rule: solid is Common or Rare only; patterned and sheen are Legendary only, except the
+ * grandfathered colours in GRANDFATHERED_EPIC_DREAM_IDS, which are Epic only.
+ */
+export function dreamRarityAllowed(colour: Pick<DreamColour, 'id' | 'kind' | 'rarity'>): boolean {
+  if (colour.kind === 'solid') {
+    return colour.rarity === 'common' || colour.rarity === 'rare';
+  }
+  const allowedRarity: Rarity = GRANDFATHERED_EPIC_DREAM_IDS.includes(colour.id) ? 'epic' : 'legendary';
+  return colour.rarity === allowedRarity;
 }
 
 /**

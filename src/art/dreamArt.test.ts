@@ -25,6 +25,7 @@ import {
   dreamPatternShapes,
   dreamSheenAt,
   iridescentStripeX,
+  isSheenDream,
   type DreamPolygon,
   type DreamShape,
 } from './drawDreamOverlay';
@@ -59,8 +60,16 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'moonstone',
   'chocolate',
 ];
-const DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
-const RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
+const DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate', 'glowworm'];
+const RIM_IDS: readonly DreamLookId[] = [
+  'midnight-blue',
+  'rainbow',
+  'galaxy',
+  'tie-dye-galaxy',
+  'plum',
+  'chocolate',
+  'glowworm',
+];
 const SWIM_SAMPLES = Array.from({ length: 13 }, (_, i) => (i / 12) * TAU);
 const TAIL_AMPS = [1, 1.6] as const;
 /** Guide 10 cue floor. */
@@ -89,6 +98,18 @@ function contrastRatio(a: string, b: string): number {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** An rgba(r,g,b,a) mark laid over an opaque #rrggbb body, as #rrggbb. */
+function laidOverBody(rgba: string, under: string): string {
+  const match = /^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/.exec(rgba);
+  expect(match, rgba).not.toBeNull();
+  const [r, g, b, a] = match!.slice(1).map(Number);
+  const channel = (top: number, offset: number): string =>
+    Math.round(a * top + (1 - a) * parseInt(under.slice(offset, offset + 2), 16))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${channel(r, 1)}${channel(g, 3)}${channel(b, 5)}`;
 }
 
 /** Channels of `from` mixed `t` of the way toward `to` in sRGB (guide 3f). */
@@ -137,9 +158,18 @@ function everyPair(): [string, DreamLookId, MorphPalette][] {
 }
 
 describe('Dream colour slots (guide 3f)', () => {
-  it('has the eighteen Dream colours with the swatch body colours', () => {
-    expect(DREAM_IDS).toHaveLength(18);
-    expect(DREAM_IDS.slice(-6)).toEqual(['lily-green', 'firefly-gold', 'poppy-red', 'plum', 'moonstone', 'chocolate']);
+  it('has the twenty Dream colours with the swatch body colours', () => {
+    expect(DREAM_IDS).toHaveLength(20);
+    expect(DREAM_IDS.slice(-8)).toEqual([
+      'lily-green',
+      'firefly-gold',
+      'poppy-red',
+      'plum',
+      'moonstone',
+      'chocolate',
+      'crystal-shine',
+      'glowworm',
+    ]);
     expect(DREAM_IDS).toEqual(Object.keys(DREAM_SWATCH));
     for (const id of DREAM_IDS) expect(DREAM_SLOTS[id].body, id).toBe(DREAM_SWATCH[id].body);
   });
@@ -216,6 +246,8 @@ describe('Dream colour slots (guide 3f)', () => {
       plum: [4.39, 0.473],
       moonstone: [1.32, 0.202],
       chocolate: [6.61, 0.498],
+      'crystal-shine': [2.38, 0.333],
+      glowworm: [11.3, 0.684],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -272,14 +304,16 @@ describe('Dream colour slots (guide 3f)', () => {
       plum: [1.54, 0.221],
       moonstone: [3.76, 0.415],
       chocolate: [2.32, 0.252],
+      'crystal-shine': [1.19, 0.299],
+      glowworm: [3.97, 0.454],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
       expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
     }
-    // Rainbow is the closest pair, and Rainbow also carries its bands and rim light.
-    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
-    expect(closest).toBe('rainbow');
+    // Crystal shine (Area 6) is now the closest pair, and it also carries its sheen stripes; Rainbow is next, with its bands and rim light.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['crystal-shine', 'rainbow']);
   });
 
   it('gives Plum the 3f mixes of its two picks, a dark body under the 0.2 spot line, the white edge over 3:1 and a dark plain swatch (issue #118, ND-11)', () => {
@@ -336,6 +370,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'poppy-red': [1.54, 0.221],
       moonstone: [5.81, 0.489],
       chocolate: [1.51, 0.195],
+      'crystal-shine': [1.84, 0.257],
+      glowworm: [2.57, 0.289],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -400,6 +436,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'poppy-red': [3.76, 0.415],
       plum: [5.81, 0.489],
       chocolate: [8.74, 0.579],
+      'crystal-shine': [3.16, 0.36],
+      glowworm: [14.96, 0.726],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -467,6 +505,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'poppy-red': [2.32, 0.252],
       plum: [1.51, 0.195],
       moonstone: [8.74, 0.579],
+      'crystal-shine': [2.77, 0.281],
+      glowworm: [1.71, 0.226],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -476,6 +516,168 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(separation.plum[0]).toBeGreaterThanOrEqual(1.5);
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
     expect(closest).toBe('midnight-blue');
+  });
+
+  it('gives Crystal shine the 3f mixes of its two picks, a teal body over the 0.2 spot line, both 3:1 cue edges, a sheen swatch and no rim light (Area 6 Legendary)', () => {
+    const s = DREAM_SLOTS['crystal-shine'];
+    expect([s.body, s.gillNearStem]).toEqual(['#2f9a9a', '#6a3fd8']);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // A mid body: the ink and the white edge both reach the 3:1 cue floor, as on Poppy red.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(4.26, 2);
+    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(CUE_RATIO);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(3.38, 2);
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(5.15, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(1.87, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.26, 3);
+    expect(DREAM_SWATCH['crystal-shine']).toEqual({
+      body: '#2f9a9a',
+      pattern: 'stripes',
+      marks: ['rgba(255,255,255,0.7)', 'rgba(150,250,245,0.75)'],
+      dark: false,
+    });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'crystal-shine').extras).toEqual({ spot: 'rgba(43,35,80,0.30)' });
+  });
+
+  it('keeps Crystal shine apart from every other Dream colour, Iridescent (shared stripe cue) by 1.5:1 and Poppy red and Rainbow most closely in value (PRD F15)', () => {
+    const body = DREAM_SLOTS['crystal-shine'].body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'crystal-shine').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [2.58, 0.275],
+      'sky-blue': [2.21, 0.238],
+      lavender: [2.14, 0.267],
+      'sunset-orange': [2.14, 0.288],
+      bubblegum: [2.14, 0.297],
+      'midnight-blue': [2.93, 0.279],
+      hearts: [2.96, 0.351],
+      'tie-dye': [2.81, 0.34],
+      iridescent: [2.25, 0.274],
+      rainbow: [1.22, 0.287],
+      galaxy: [3.47, 0.313],
+      'tie-dye-galaxy': [3.33, 0.307],
+      'lily-green': [2.74, 0.334],
+      'firefly-gold': [2.38, 0.333],
+      'poppy-red': [1.19, 0.299],
+      plum: [1.84, 0.257],
+      moonstone: [3.16, 0.36],
+      chocolate: [2.77, 0.281],
+      glowworm: [4.74, 0.39],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    // Iridescent also glides a stripe pair, so Crystal shine is held 1.5:1 from it in value.
+    expect(separation.iridescent[0]).toBeGreaterThanOrEqual(1.5);
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['poppy-red', 'rainbow']);
+  });
+
+  it('keeps the Crystal shine stripes lighter than the body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p, 10)', () => {
+    const [light, tint] = DREAM_SWATCH['crystal-shine'].marks;
+    const body = DREAM_SWATCH['crystal-shine'].body;
+    const bodyInk = contrastRatio(body, INK);
+    for (const mark of [light, tint]) {
+      const laid = laidOverBody(mark, body);
+      expect(contrastRatio(laid, INK), mark).toBeGreaterThanOrEqual(bodyInk);
+      expect(contrastRatio(laid, INK), mark).toBeGreaterThanOrEqual(CUE_RATIO);
+    }
+    expect(DREAM_INSET_IDS).not.toContain('crystal-shine');
+  });
+
+  it('gives Glowworm the 3f mixes of its two picks, a night-blue body under the 0.2 spot line, the white edge over 3:1 and a dark glow-dots swatch (Area 7 Legendary)', () => {
+    const s = DREAM_SLOTS.glowworm;
+    expect([s.body, s.gillNearStem]).toEqual(['#101c52', '#4fe3c1']);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // Guide 10 cue floor: a dark body, so the white edge reaches 3:1 or more and the ink does not (the rim light carries the outline).
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(1.11, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(16.03, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeGreaterThanOrEqual(CUE_RATIO);
+    // The morph eye bead is under 3:1 on the body, so the Dream eye ring carries it.
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(1.09, 2);
+    expect(contrastRatio(s.body, DREAM_EYE_RING.colour)).toBeCloseTo(10.11, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(9.99, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.0155, 4);
+    // Darker than every other Dream colour.
+    for (const id of DREAM_IDS.filter((other) => other !== 'glowworm')) {
+      expect(relativeLuminance(s.body), id).toBeLessThan(relativeLuminance(DREAM_SLOTS[id].body));
+    }
+    expect(DREAM_SWATCH.glowworm).toEqual({
+      body: '#101c52',
+      pattern: 'glow-dots',
+      marks: ['#5ff2d2', 'rgba(95,242,210,0.3)'],
+      dark: true,
+    });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'glowworm').extras).toEqual({
+      spot: 'rgba(255,255,255,0.45)',
+      rim: DREAM_RIM_LIGHT,
+      eyeRing: DREAM_EYE_RING,
+    });
+  });
+
+  it('keeps Glowworm apart from every other Dream colour in greyscale and in colour, Galaxy most closely (PRD F15)', () => {
+    const body = DREAM_SLOTS.glowworm.body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'glowworm').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [12.24, 0.659],
+      'sky-blue': [10.49, 0.603],
+      lavender: [10.15, 0.603],
+      'sunset-orange': [10.13, 0.63],
+      bubblegum: [10.15, 0.618],
+      'midnight-blue': [1.62, 0.143],
+      hearts: [14.02, 0.719],
+      'tie-dye': [13.34, 0.706],
+      iridescent: [10.66, 0.617],
+      rainbow: [5.78, 0.515],
+      galaxy: [1.37, 0.099],
+      'tie-dye-galaxy': [1.43, 0.114],
+      'lily-green': [13, 0.708],
+      'firefly-gold': [11.3, 0.684],
+      'poppy-red': [3.97, 0.454],
+      plum: [2.57, 0.289],
+      moonstone: [14.96, 0.726],
+      chocolate: [1.71, 0.226],
+      'crystal-shine': [4.74, 0.39],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    // Galaxy is the closest body; Glowworm's own cue is round glow dots, Galaxy's is stars.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
+    expect(closest).toBe('galaxy');
+    const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
+    const tail = tailSamples(geo.tail, 0, 1);
+    const kinds = (id: DreamLookId): string[] => [
+      ...new Set(dreamPatternShapes(id, geo.torso, tail, undefined).map((shape) => shape.kind)),
+    ];
+    expect(kinds('glowworm')).toEqual(['dot']);
+    expect(kinds('galaxy')).toContain('star');
   });
 });
 
@@ -499,7 +701,7 @@ describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
     }
   });
 
-  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum and Chocolate', () => {
+  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate and Glowworm', () => {
     for (const [name, id, palette] of everyPair()) {
       if (RIM_IDS.includes(id)) expect(palette.extras?.rim, name).toEqual(DREAM_RIM_LIGHT);
       else expect(palette.extras?.rim, name).toBeUndefined();
@@ -802,6 +1004,30 @@ describe('Dream pattern clip (guide 6p)', () => {
     expect(failures.slice(0, 20)).toEqual([]);
   }, ENUMERATION_TIMEOUT_MS);
 
+  it('puts every Glowworm glow dot and its halo inside the silhouette, on every look and swim pose', () => {
+    const failures: string[] = [];
+    for (const pose of EVERY_POSE) {
+      const polys = dreamClipPolygons(pose.torso, pose.tail, 0);
+      const sil = silhouetteTail(pose.tail);
+      const depth = (x: number, y: number): number => Math.max(polygonDepth(x, y, sil), ellipseDepth(x, y, pose.torso));
+      const shapes = dreamPatternShapes('glowworm', pose.torso, pose.tail, undefined);
+      expect(shapes, pose.name).toHaveLength(32);
+      for (const s of shapes) {
+        if (s.kind !== 'dot') {
+          failures.push(`${s.kind} on ${pose.name}`);
+          continue;
+        }
+        if (!polys.some((poly) => isInPolygon(s.x, s.y, poly))) {
+          failures.push(`dot (${s.x.toFixed(2)}, ${s.y.toFixed(2)}) outside the clip on ${pose.name}`);
+        }
+        // Every dot, halo included, sits wholly inside the silhouette.
+        const d = depth(s.x, s.y);
+        if (d < s.r - EPS) failures.push(`dot r ${s.r.toFixed(2)} at (${s.x.toFixed(2)}, ${s.y.toFixed(2)}) depth ${d.toFixed(2)} on ${pose.name}`);
+      }
+    }
+    expect(failures.slice(0, 20)).toEqual([]);
+  }, ENUMERATION_TIMEOUT_MS);
+
   it('draws the guide 6p counts: 7 hearts; Galaxy 2 nebulae, 10 stars, 4 dots; Tie-dye galaxy 6 stars', () => {
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
@@ -814,6 +1040,10 @@ describe('Dream pattern clip (guide 6p)', () => {
     expect(count('tie-dye-galaxy', 'star')).toBe(6);
     expect(count('rainbow', 'polygon')).toBe(5);
     expect(count('iridescent', 'polygon')).toBe(2);
+    expect(count('crystal-shine', 'polygon')).toBe(2);
+    // Glowworm: sixteen round glow dots (nine on the body, seven on the tail), each a halo under a core, and no stars.
+    expect(count('glowworm', 'dot')).toBe(32);
+    expect(count('glowworm', 'star')).toBe(0);
   });
 });
 
@@ -836,16 +1066,40 @@ describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
     expect(plain).toEqual(SOLID_IDS);
   });
 
-  it('gives the six patterned and sheen colours pairwise distinct cues, each with a pattern', () => {
+  it('gives the eight patterned and sheen colours seven distinct cues (the two sheens share stripes), each with a pattern', () => {
     const patterned = DREAM_IDS.filter((id) => !SOLID_IDS.includes(id));
+    expect(patterned).toHaveLength(8);
     const cues = patterned.map((id) => DREAM_SWATCH[id].pattern);
-    expect(new Set(cues).size).toBe(6);
+    expect(new Set(cues).size).toBe(7);
+    expect(patterned.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual(['iridescent', 'crystal-shine']);
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
     for (const id of DREAM_IDS) {
       const shapes = dreamPatternShapes(id, geo.torso, tail, undefined);
       expect(shapes.length > 0, id).toBe(!SOLID_IDS.includes(id));
     }
+  });
+});
+
+describe('Sheen Dream colours (guide 6p, 9)', () => {
+  it('flag exactly the stripes swatches, Iridescent and Crystal shine', () => {
+    expect(DREAM_IDS.filter(isSheenDream)).toEqual(['iridescent', 'crystal-shine']);
+    expect(DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual(DREAM_IDS.filter(isSheenDream));
+  });
+
+  it('glide the stripe pair of either sheen colour with the sheen phase, in the colour own marks', () => {
+    const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
+    const tail = tailSamples(geo.tail, 0, 1);
+    for (const id of ['iridescent', 'crystal-shine'] as const) {
+      const still = dreamPatternShapes(id, geo.torso, tail, undefined);
+      const moved = dreamPatternShapes(id, geo.torso, tail, 0.5);
+      expect(still, id).toHaveLength(2);
+      expect(still.map((s) => (s.kind === 'polygon' ? s.fill : '')), id).toEqual(DREAM_SWATCH[id].marks);
+      expect(moved, id).not.toEqual(still);
+    }
+    expect(dreamPatternShapes('iridescent', geo.torso, tail, 0.5)).not.toEqual(
+      dreamPatternShapes('crystal-shine', geo.torso, tail, 0.5),
+    );
   });
 });
 

@@ -16,8 +16,9 @@
  * tail's posed copy (still bake, rope or strip) and never the body's straight
  * one: tail marks that reach past the root (a Patches spot) bend with the tail.
  *
- * An Iridescent tail that moves shows in three layers, so its stripe pair is
- * never bent: the tail part baked 'under' (layers 4 to 6.2), then the stripe
+ * A sheen Dream tail (isSheenDream: Iridescent, Crystal shine) that moves
+ * shows in three layers, so its stripe pair is never bent: the tail part
+ * baked 'under' (layers 4 to 6.2), then the stripe
  * pair drawn live from rigPlacement's `stripe` polygons (tailStripe at the
  * shown tail), then the 'tail-over' part (6.5 to 8, the BodyLayers 'over'
  * split). The still tail shows its full bake (the still stripe at x -10). The
@@ -91,7 +92,8 @@ import {
 } from './drawAxolotlParts';
 import { outfitKey, paintBodyWearable, paintLegWearables, wearsOnLegs, wornSlug, type ArtOutfit } from './drawWearables';
 import { tailStripe, type TailStripe } from './axolotlRigStripe';
-import { LW, T_STATIC, type MorphPalette } from './palette';
+import { isSheenDream } from './drawDreamOverlay';
+import { LW, T_STATIC, type DreamLookId, type MorphPalette } from './palette';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -122,7 +124,7 @@ export const TAIL_STRIP_AMPS: readonly number[] = [1, 1.2, AXO_MAX_TAIL_AMP];
 export const EYE_FRAME_BLINKS: readonly number[] = [1, 0.56, 0.12];
 /** Gill flutter frames over one gill cycle, from the still phase. */
 export const GILL_FLUTTER_FRAMES = 10;
-/** Iridescent sheen steps over one glide (AxolotlPose.sheen is a phase in [0, 1)). */
+/** Sheen steps over one glide (AxolotlPose.sheen is a phase in [0, 1)). */
 export const SHEEN_STEPS = 16;
 /** Twinkle arm radii, 0.6 to 4.2 by 0.3 (13 frames). */
 export const TWINKLE_RADII: readonly number[] = Array.from({ length: 13 }, (_, i) => (6 + 3 * i) / 10);
@@ -168,7 +170,7 @@ export type RigPartId =
 /**
  * One baked part: where it joins the axolotl and the box its texture covers.
  * Parts draw in rigParts order; the body and the tail share layers 4 to 8,
- * the body first, so the tail covers the seam overlap. An Iridescent tail adds
+ * the body first, so the tail covers the seam overlap. A sheen Dream tail adds
  * 'tail-over' (6.5 to 8) over the live stripe pair.
  */
 export interface RigPartSpec {
@@ -206,9 +208,9 @@ export interface RigPartVariant {
   readonly leg?: LegLook;
   /** Tail pose for 'tail' and 'tail-over'. Undefined is the straight tail (tail amplitude 0). */
   readonly tailPose?: RigTailPose;
-  /** Layers of 'tail': 'all' (4 to 8, the default), or 'under' (4 to 6.2) below the live Iridescent stripe. */
+  /** Layers of 'tail': 'all' (4 to 8, the default), or 'under' (4 to 6.2) below the live sheen stripe. */
   readonly tailLayers?: 'all' | 'under';
-  /** Iridescent sheen phase in [0, 1) for 'body'. Undefined is the still stripe at x -10. */
+  /** Sheen phase in [0, 1) for a sheen Dream 'body'. Undefined is the still stripe at x -10. */
   readonly sheen?: number;
 }
 
@@ -272,12 +274,12 @@ export interface RigPlacement {
   readonly shownTail: RigShownTail;
   readonly tailItem: RigTailItemPlacement;
   eyesFrame: number;
-  /** sheenFrame(pose.sheen) on an Iridescent axolotl, else null. */
+  /** sheenFrame(pose.sheen) on a sheen Dream axolotl, else null. */
   sheenFrame: number | null;
   /**
-   * The Iridescent stripe pair to draw live between 'tail' ('under') and
-   * 'tail-over': tailStripe at the shown tail and sheen step, to x
-   * rootX + RIG_SEAM_OVERLAP. Both bands hold no polygons on a still tail or a non-Iridescent axolotl.
+   * The sheen stripe pair to draw live between 'tail' ('under') and
+   * 'tail-over': tailStripe at the sheen colour, the shown tail and sheen step, to x
+   * rootX + RIG_SEAM_OVERLAP. Both bands hold no polygons on a still tail or an axolotl with no sheen colour.
    */
   readonly stripe: TailStripe;
   /** Regeneration glints along the shown tail, then the glints beside each regrowing leg. */
@@ -439,7 +441,7 @@ export function isStillTail(swimPhase: number, tailAmp: number): boolean {
 // Sheen
 // ---------------------------------------------------------------------------
 
-/** Iridescent sheen step (0..15) for a sheen phase in [0, 1); null for the still stripe (undefined). */
+/** Sheen step (0..15) for a sheen phase in [0, 1); null for the still stripe (undefined). */
 export function sheenFrame(sheen: number | undefined): number | null {
   if (sheen === undefined) return null;
   if (!Number.isFinite(sheen)) throw new RangeError(`sheen must be finite, got ${sheen}`);
@@ -639,8 +641,8 @@ function facePartInk(look: AxolotlArtLook, outfit: ArtOutfit): Bounds {
  * The parts of an appearance in draw order (guide 6a): far gills (1), far legs
  * (2), their Socks and Feet (2.5, only when the outfit wears on the legs), near
  * legs (3) and theirs (3.5), the body then the tail (both 4 to 8: the tail
- * draws over the seam overlap), 'tail-over' (6.5 to 8, only on an Iridescent
- * palette; the tail's pivot, box and maxDy), near gills (9), the Tail item
+ * draws over the seam overlap), 'tail-over' (6.5 to 8, only on a sheen Dream
+ * palette (isSheenDream); the tail's pivot, box and maxDy), near gills (9), the Tail item
  * (9.2, only when one is worn), the face (9.3 to 11.5, the Shirt item first)
  * and the eyes (12).
  */
@@ -672,7 +674,7 @@ export function rigParts(appearance: RigAppearance): RigPartSpec[] {
   const tailInk = tailPartInk(g);
   const tailDy = tailMaxDy(look);
   parts.push(makeSpec('tail', [4, 8], tailRoot, tailInk, 1, tailDy));
-  if (palette.dream?.id === 'iridescent') parts.push(makeSpec('tail-over', [6.5, 8], tailRoot, tailInk, 1, tailDy));
+  if (palette.dream && isSheenDream(palette.dream.id)) parts.push(makeSpec('tail-over', [6.5, 8], tailRoot, tailInk, 1, tailDy));
   pushGills(GILL_NEAR_IDS, 3, 9);
   if (wornSlug(outfit, 'tail') !== undefined) {
     const frame = g.stillTailFrame;
@@ -888,11 +890,11 @@ function placeTail(
   look: AxolotlArtLook,
   pose: AxolotlPose,
   renderer: RigRenderer,
-  iridescent: boolean,
+  sheenDream: DreamLookId | null,
   out: RigPlacement,
 ): void {
   const strip = nearestTailStrip(pose.swimPhase, pose.tailAmp);
-  const sheenStill = pose.sheen === undefined || !iridescent;
+  const sheenStill = pose.sheen === undefined || sheenDream === null;
   const shown = out.shownTail;
   if (isStillTail(pose.swimPhase, pose.tailAmp) && sheenStill) {
     out.tail.mode = 'still';
@@ -913,6 +915,7 @@ function placeTail(
 
 /** The tailStripe inputs a placement's `stripe` was last filled for. */
 interface StripeInputs {
+  sheenDream: DreamLookId;
   look: AxolotlArtLook;
   swimPhase: number;
   tailAmp: number;
@@ -922,11 +925,11 @@ interface StripeInputs {
 const stripeInputs = new WeakMap<RigPlacement, StripeInputs>();
 
 /**
- * Fill `out.stripe` for the shown tail on a moving Iridescent tail, else empty both bands.
- * Runs tailStripe only when the look, the shown tail or the sheen step changed since `out` was last filled.
+ * Fill `out.stripe` for the shown tail on a moving sheen Dream tail, else empty both bands.
+ * Runs tailStripe only when the sheen colour, the look, the shown tail or the sheen step changed since `out` was last filled.
  */
-function placeStripe(g: RigLookGeometry, look: AxolotlArtLook, iridescent: boolean, out: RigPlacement): void {
-  if (!iridescent || out.tail.mode === 'still') {
+function placeStripe(g: RigLookGeometry, look: AxolotlArtLook, sheenDream: DreamLookId | null, out: RigPlacement): void {
+  if (sheenDream === null || out.tail.mode === 'still') {
     for (const band of out.stripe) band.polygons.length = 0;
     stripeInputs.delete(out);
     return;
@@ -934,12 +937,12 @@ function placeStripe(g: RigLookGeometry, look: AxolotlArtLook, iridescent: boole
   const sheen = out.sheenFrame === null ? undefined : sheenStepValue(out.sheenFrame);
   const { swimPhase, tailAmp } = out.shownTail;
   const last = stripeInputs.get(out);
-  if (last && last.look === look && last.swimPhase === swimPhase && last.tailAmp === tailAmp && last.sheen === sheen) {
+  if (last && last.sheenDream === sheenDream && last.look === look && last.swimPhase === swimPhase && last.tailAmp === tailAmp && last.sheen === sheen) {
     return;
   }
   stripeInputs.delete(out);
-  tailStripe(look, swimPhase, tailAmp, sheen, g.geo.tail.rootX + RIG_SEAM_OVERLAP, out.stripe);
-  stripeInputs.set(out, { look, swimPhase, tailAmp, sheen });
+  tailStripe(sheenDream, look, swimPhase, tailAmp, sheen, g.geo.tail.rootX + RIG_SEAM_OVERLAP, out.stripe);
+  stripeInputs.set(out, { sheenDream, look, swimPhase, tailAmp, sheen });
 }
 
 function placeTwinkles(g: RigLookGeometry, pose: AxolotlPose, shown: RigShownTail, out: RigTwinkle[]): void {
@@ -967,10 +970,10 @@ function placeTwinkles(g: RigLookGeometry, pose: AxolotlPose, shown: RigShownTai
  * Where every part shows for a live pose. Gills: the nearest flutter frame,
  * turned by the live stem chord angle less the frame's. Legs: turned by the
  * live leg angle less the still one. Tail: 'still' at the still tail (and a
- * still sheen, or no Iridescent), else 'rope' on WebGL and 'strip' on Canvas.
+ * still sheen, or no sheen colour), else 'rope' on WebGL and 'strip' on Canvas.
  * The Tail item rides the shown tail's Tail frame. Eyes: the nearest
- * EYE_FRAME_BLINKS. Stripe: on an Iridescent tail that is not 'still', the
- * stripe pair at the shown tail and the shown sheen step (the still stripe
+ * EYE_FRAME_BLINKS. Stripe: on a sheen Dream tail (`sheenDream`, null for
+ * none) that is not 'still', that colour's stripe pair at the shown tail and the shown sheen step (the still stripe
  * when the sheen is undefined), else empty. Twinkles: the regeneration glints
  * along the shown tail and the glints beside each regrowing leg, sized as
  * drawAxolotl sizes them, each at the nearest TWINKLE_RADII frame. Reuses `out` (allocation-light); the
@@ -980,20 +983,20 @@ export function rigPlacement(
   look: AxolotlArtLook,
   pose: AxolotlPose,
   renderer: RigRenderer,
-  iridescent: boolean,
+  sheenDream: DreamLookId | null,
   out: RigPlacement = createRigPlacement(),
 ): RigPlacement {
   const g = rigLookGeometry(look);
   placeGills(g, pose, out.gills);
   placeLegs(g, pose, out.legs);
-  placeTail(look, pose, renderer, iridescent, out);
+  placeTail(look, pose, renderer, sheenDream, out);
   const frame = tailSlotFrame(g.geo.tail, out.shownTail.swimPhase, out.shownTail.tailAmp);
   out.tailItem.x = frame.x;
   out.tailItem.y = frame.y;
   out.tailItem.rotation = frame.angle - g.stillTailFrame.angle;
   out.eyesFrame = nearestIndex(EYE_FRAME_BLINKS, pose.blink);
-  out.sheenFrame = iridescent ? sheenFrame(pose.sheen) : null;
-  placeStripe(g, look, iridescent, out);
+  out.sheenFrame = sheenDream === null ? null : sheenFrame(pose.sheen);
+  placeStripe(g, look, sheenDream, out);
   placeTwinkles(g, pose, out.shownTail, out.twinkles);
   return out;
 }

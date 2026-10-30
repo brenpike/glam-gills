@@ -55,7 +55,7 @@ import {
   type WearableSlot,
   type ZoneCircle,
 } from './drawAxolotlParts';
-import { DREAM_FACE_LIMIT_X, IRIDESCENT_STILL_X } from './drawDreamOverlay';
+import { DREAM_FACE_LIMIT_X, IRIDESCENT_STILL_X, isSheenDream } from './drawDreamOverlay';
 import {
   NO_OUTFIT,
   paintBodyWearable,
@@ -587,11 +587,13 @@ function bandedPart(id: RigPartId, paints: readonly Paint[], f: PointMap): Shown
 const sheenOf = (placement: RigPlacement): number | undefined =>
   placement.sheenFrame === null ? undefined : sheenStepValue(placement.sheenFrame);
 
-const isIridescent = (palette: MorphPalette): boolean => palette.dream?.id === 'iridescent';
+/** The palette's sheen Dream colour (isSheenDream), else null. */
+const sheenDreamOf = (palette: MorphPalette): DreamLookId | null =>
+  palette.dream !== undefined && isSheenDream(palette.dream.id) ? palette.dream.id : null;
 
-/** Whether the tail shows split round the live stripe: an Iridescent tail that is not 'still'. */
+/** Whether the tail shows split round the live stripe: a sheen Dream tail that is not 'still'. */
 const splitsTail = (appearance: RigAppearance, placement: RigPlacement): boolean =>
-  isIridescent(appearance.palette) && placement.tail.mode !== 'still';
+  sheenDreamOf(appearance.palette) !== null && placement.tail.mode !== 'still';
 
 /** How the tail parts show: the pose they are baked at (none: straight, for the rope) and the map onto the live drawing. */
 function tailView(appearance: RigAppearance, placement: RigPlacement): { variant: RigPartVariant; f: PointMap } {
@@ -683,7 +685,7 @@ function composeRig(
   renderer: RigRenderer,
   only?: readonly RigPartId[],
 ): Composition {
-  const placement = rigPlacement(appearance.look, live, renderer, isIridescent(appearance.palette));
+  const placement = rigPlacement(appearance.look, live, renderer, sheenDreamOf(appearance.palette));
   const parts = rigParts(appearance)
     .filter((spec) => !only || only.includes(spec.id))
     .flatMap((spec) => showPart(spec, appearance, live, placement));
@@ -1292,6 +1294,39 @@ function insideComposedSilhouette(composition: Composition, x: number, y: number
   });
 }
 
+/** Distance from (x, y) to the nearest silhouette edge of the composed tail and body parts. */
+function composedSilhouetteDistance(composition: Composition, x: number, y: number): number {
+  let best = Infinity;
+  for (const id of ['tail', 'body'] as const) {
+    for (const sub of silhouetteOf(partOf(composition, id).paints, id).subs) {
+      for (let i = 0; i < sub.pts.length; i++) best = Math.min(best, segmentDistance(sub.pts[i], sub.pts[(i + 1) % sub.pts.length], x, y));
+    }
+  }
+  return best;
+}
+
+/** Distance from (x, y) to the segment a-b. */
+function segmentDistance(a: Pt, b: Pt, x: number, y: number): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length2 = dx * dx + dy * dy;
+  const t = length2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / length2));
+  return Math.hypot(a.x + dx * t - x, a.y + dy * t - y);
+}
+
+/**
+ * Whether a shown pattern sample leaks: outside the composed silhouette, and
+ * for the live stripe also more than STRIPE_TOL from its edge. The live stripe
+ * of a sheen colour with no inset (Crystal shine) is cut on the Dream clip
+ * polygon itself, whose tail edges are chords between tail samples where
+ * drawAxolotl's silhouette curves, so its corners sit on or just past the edge
+ * (measured: at most 0.0023 units past it, on both renderers).
+ */
+function leaksAt(composition: Composition, part: ShownPart, q: Pt): boolean {
+  if (insideComposedSilhouette(composition, q.x, q.y)) return false;
+  return part.id !== 'tail-stripe' || composedSilhouetteDistance(composition, q.x, q.y) > STRIPE_TOL;
+}
+
 /** Sample points of a pattern paint: its points and each subpath's centroid. */
 const patternSamples = (p: Paint): Pt[] => p.subs.flatMap((s) => [...s.pts, centroid(s.pts)]);
 
@@ -1311,7 +1346,7 @@ function patternLeaks(composition: Composition): { shown: number; leaks: number 
       for (const q of patternSamples(paint)) {
         if (!inBand(band, q.x) || !paint.clips.every((clip) => winding(clip, q.x, q.y) !== 0)) continue;
         shown++;
-        if (!insideComposedSilhouette(composition, q.x, q.y)) leaks++;
+        if (leaksAt(composition, part, q)) leaks++;
       }
     }
   }
@@ -1424,12 +1459,13 @@ const STILL_STRIPE_OFFSETS: readonly Interval[] = [
   [-7.5, -4.5],
 ];
 /** Dream patterns the rope bends with the tail bake, measured for ADR 0013. */
-const ROPE_PATTERN_DREAMS = ['hearts', 'tie-dye', 'tie-dye-galaxy'] as const satisfies readonly DreamLookId[];
-/** Measured per-column bound of each rope-bent tail pattern, rounded up (ADR 0013; measured 4.88, 12.38, 2.37). */
+const ROPE_PATTERN_DREAMS = ['hearts', 'tie-dye', 'tie-dye-galaxy', 'glowworm'] as const satisfies readonly DreamLookId[];
+/** Measured per-column bound of each rope-bent tail pattern, rounded up (ADR 0013; measured 4.88, 12.38, 2.37, 3.68). */
 const ROPE_PATTERN_BOUND: Readonly<Record<(typeof ROPE_PATTERN_DREAMS)[number], number>> = {
   hearts: 5,
   'tie-dye': 12.5,
   'tie-dye-galaxy': 2.5,
+  glowworm: 4,
 };
 
 /** Iridescent cases: every look at one sheen step on one renderer, and the default look at every step on both. */
@@ -1438,18 +1474,23 @@ const IRIDESCENT_CASES: readonly [AxolotlArtLook, number, RigRenderer][] = [
   ...Array.from({ length: SHEEN_STEPS }, (_, m) => RENDERERS.map((r): [AxolotlArtLook, number, RigRenderer] => [DEFAULT_ART_LOOK, m, r])).flat(),
 ];
 
-const iridescentPalette = (n: number): MorphPalette => axolotlPalette(MORPHS[n % MORPHS.length], 'iridescent');
+/** The sheen Dream colours (isSheenDream) and the names their checks carry. */
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine'] as const satisfies readonly DreamLookId[];
+const SHEEN_NAME: Readonly<Record<(typeof SHEEN_DREAMS)[number], string>> = { iridescent: 'Iridescent', 'crystal-shine': 'Crystal shine' };
+
+const sheenPalette = (dream: DreamLookId, n: number): MorphPalette => axolotlPalette(MORPHS[n % MORPHS.length], dream);
 const iridescentPose = (n: number, m: number): AxolotlPose =>
   pose({ swimPhase: SWIMS[n % SWIMS.length] + 0.3, tailAmp: AXO_MAX_TAIL_AMP, sheen: m / SHEEN_STEPS });
 
-/** The rig composed at Iridescent case `n` (sheen step `m`), and drawAxolotl's runs and stripe pair at the shown pose. */
-function iridescentAt(
+/** The rig composed in sheen colour `dream` at case `n` (sheen step `m`), and drawAxolotl's runs and stripe pair at the shown pose. */
+function sheenAt(
+  dream: DreamLookId,
   look: AxolotlArtLook,
   n: number,
   m: number,
   renderer: RigRenderer,
 ): { composed: Composition; runs: Map<DrawnRunId, Paint[]>; drawnBody: Paint[] } {
-  const palette = iridescentPalette(n);
+  const palette = sheenPalette(dream, n);
   const live = iridescentPose(n, m);
   const composed = composeRig({ look, palette, outfit: NO_OUTFIT }, live, renderer, TAIL_AND_BODY);
   expect(composed.placement.sheenFrame).toBe(m);
@@ -1500,93 +1541,98 @@ describe('Dream colours on the composed rig', { timeout: TIMEOUT_MS }, () => {
     expect(worst.canvas).toBeLessThanOrEqual(EXACT);
   });
 
-  it('shows the Iridescent stripe exactly on the body piece at every sheen step', () => {
-    let bodyMismatches = 0;
-    let bodyGap = 0;
-    const envelope: Record<RigRenderer, number> = { webgl: 0, canvas: 0 };
-    for (let n = 0; n < IRIDESCENT_CASES.length; n++) {
-      const [look, m, renderer] = IRIDESCENT_CASES[n];
-      const { composed, runs, drawnBody } = iridescentAt(look, n, m, renderer);
-      const body = partOf(composed, 'body');
-      const stripes = patternPaints(body.paints);
-      expect(stripes).toHaveLength(2);
-      expect(drawnBody).toHaveLength(2);
-      for (let k = 0; k < 2; k++) bodyGap = Math.max(bodyGap, subsGap(stripes[k].subs, drawnBody[k].subs));
-      bodyMismatches += bodyStripeMismatches(body, drawnBody, DREAM_FACE_LIMIT_X);
-      envelope[renderer] = Math.max(envelope[renderer], envelopeGap(composedSilhouette(composed), drawnSilhouette(runOf(runs, 'body-layers'))));
-    }
-    // Measured: body stripe 0 with no cover mismatch; tail silhouette envelope 0.654 on WebGL, 0 on Canvas.
-    expect(bodyGap).toBeLessThanOrEqual(EXACT);
-    expect(bodyMismatches).toBe(0);
-    expect(envelope.webgl).toBeLessThanOrEqual(ENVELOPE_TOL);
-    expect(envelope.canvas).toBeLessThanOrEqual(EXACT);
-  });
-
-  // FINDING (#46, fixed): the WebGL rope once bent the whole tail bake, Iridescent stripe included, but
-  // drawAxolotl's stripe pair is two straight 45 degree bands the waving tail swims through: the rope
-  // moved the stripe by the tail's own bend, up to 10.4 units per column off drawAxolotl's (amplitude
-  // 1.6). And the Canvas strip frames baked the tail without the sheen, so their stripe sat at the
-  // still x -10 whatever the sheen. A moving Iridescent tail now shows 'under', the live stripe pair
-  // (rigPlacement's stripe: tailStripe at the shown tail and sheen step) and 'tail-over', on both renderers.
-  it('draws the live Iridescent tail stripe within 0.1 of drawAxolotl on WebGL and Canvas', () => {
-    const worst: Record<RigRenderer, { gap: number; at: string }> = {
-      webgl: { gap: 0, at: '' },
-      canvas: { gap: 0, at: '' },
-    };
-    IRIDESCENT_CASES.forEach(([look, m], n) => {
-      for (const renderer of RENDERERS) {
-        const { composed, drawnBody } = iridescentAt(look, n, m, renderer);
-        expect(composed.parts.map((p) => p.id)).toEqual(['body', 'tail', 'tail-stripe', 'tail-over']);
-        expect(patternPaints(partOf(composed, 'tail').paints)).toEqual([]);
-        expect(patternPaints(partOf(composed, 'tail-over').paints)).toEqual([]);
-        const gap = tailCoverGap(partOf(composed, 'tail-stripe').paints, null, drawnBody, look);
-        if (gap > worst[renderer].gap) worst[renderer] = { gap, at: `${lookId(look)} sheen step ${m}` };
+  for (const dream of SHEEN_DREAMS) {
+    it(`shows the ${SHEEN_NAME[dream]} stripe exactly on the body piece at every sheen step`, () => {
+      let bodyMismatches = 0;
+      let bodyGap = 0;
+      const envelope: Record<RigRenderer, number> = { webgl: 0, canvas: 0 };
+      for (let n = 0; n < IRIDESCENT_CASES.length; n++) {
+        const [look, m, renderer] = IRIDESCENT_CASES[n];
+        const { composed, runs, drawnBody } = sheenAt(dream, look, n, m, renderer);
+        const body = partOf(composed, 'body');
+        const stripes = patternPaints(body.paints);
+        expect(stripes).toHaveLength(2);
+        expect(drawnBody).toHaveLength(2);
+        for (let k = 0; k < 2; k++) bodyGap = Math.max(bodyGap, subsGap(stripes[k].subs, drawnBody[k].subs));
+        bodyMismatches += bodyStripeMismatches(body, drawnBody, DREAM_FACE_LIMIT_X);
+        envelope[renderer] = Math.max(envelope[renderer], envelopeGap(composedSilhouette(composed), drawnSilhouette(runOf(runs, 'body-layers'))));
       }
+      // Measured: body stripe 0 with no cover mismatch; tail silhouette envelope 0.654 on WebGL, 0 on Canvas.
+      expect(bodyGap).toBeLessThanOrEqual(EXACT);
+      expect(bodyMismatches).toBe(0);
+      expect(envelope.webgl).toBeLessThanOrEqual(ENVELOPE_TOL);
+      expect(envelope.canvas).toBeLessThanOrEqual(EXACT);
     });
-    // Measured: 3.6e-14 units on WebGL, 4.3e-14 on Canvas (float noise): the live polygons are
-    // drawAxolotl's stripe quads cut by its own inset Dream clip, at the shown tail and sheen step.
-    expect(worst.webgl.gap, worst.webgl.at).toBeLessThanOrEqual(STRIPE_TOL);
-    expect(worst.canvas.gap, worst.canvas.at).toBeLessThanOrEqual(STRIPE_TOL);
-  });
 
-  it('holds the still Iridescent stripe at x -10 when the sheen is undefined', () => {
-    const bandsShown = [0, 0];
-    for (let n = 0; n < EVERY_BODY_LOOK.length; n++) {
-      const look = EVERY_BODY_LOOK[n];
-      const palette = iridescentPalette(n);
-      const renderer = RENDERERS[n % 2];
-      const live = pose({ swimPhase: 2.2, tailAmp: 1.2 });
-      const composed = composeRig({ look, palette, outfit: NO_OUTFIT }, live, renderer, TAIL_AND_BODY);
-      expect(composed.placement.sheenFrame).toBeNull();
-      const torsoCy = axolotlBodyGeometry(look).torso.cy;
-      const stripe = partOf(composed, 'tail-stripe').paints;
-      STILL_STRIPE_OFFSETS.forEach(([from, to], k) => {
-        const pts = stripe[k].subs.flatMap((s) => s.pts);
-        if (pts.length > 0) bandsShown[k]++;
-        for (const p of pts) {
-          const across = (p.x - IRIDESCENT_STILL_X + (p.y - torsoCy)) * Math.SQRT1_2;
-          expect(across).toBeGreaterThanOrEqual(from - EXACT);
-          expect(across).toBeLessThanOrEqual(to + EXACT);
+    // FINDING (#46, fixed): the WebGL rope once bent the whole tail bake, Iridescent stripe included, but
+    // drawAxolotl's stripe pair is two straight 45 degree bands the waving tail swims through: the rope
+    // moved the stripe by the tail's own bend, up to 10.4 units per column off drawAxolotl's (amplitude
+    // 1.6). And the Canvas strip frames baked the tail without the sheen, so their stripe sat at the
+    // still x -10 whatever the sheen. A moving Iridescent tail now shows 'under', the live stripe pair
+    // (rigPlacement's stripe: tailStripe at the shown tail and sheen step) and 'tail-over', on both renderers.
+    it(`draws the live ${SHEEN_NAME[dream]} tail stripe within 0.1 of drawAxolotl on WebGL and Canvas`, () => {
+      const worst: Record<RigRenderer, { gap: number; at: string }> = {
+        webgl: { gap: 0, at: '' },
+        canvas: { gap: 0, at: '' },
+      };
+      IRIDESCENT_CASES.forEach(([look, m], n) => {
+        for (const renderer of RENDERERS) {
+          const { composed, drawnBody } = sheenAt(dream, look, n, m, renderer);
+          expect(composed.parts.map((p) => p.id)).toEqual(['body', 'tail', 'tail-stripe', 'tail-over']);
+          expect(patternPaints(partOf(composed, 'tail').paints)).toEqual([]);
+          expect(patternPaints(partOf(composed, 'tail-over').paints)).toEqual([]);
+          const gap = tailCoverGap(partOf(composed, 'tail-stripe').paints, null, drawnBody, look);
+          if (gap > worst[renderer].gap) worst[renderer] = { gap, at: `${lookId(look)} sheen step ${m}` };
         }
       });
-      const white = patternPaints(partOf(composed, 'body').paints)[0];
-      const centre = centroid(white.subs[0].pts);
-      expect(centre.x).toBeCloseTo(IRIDESCENT_STILL_X, 9);
-      expect(centre.y).toBeCloseTo(torsoCy, 9);
-      const drawn = patternPaints(runOf(drawnRuns(shownPose(live, composed), palette, look, NO_OUTFIT), 'body-layers'));
-      expect(bodyStripeMismatches(partOf(composed, 'body'), drawn, DREAM_FACE_LIMIT_X)).toBe(0);
-      expect(tailCoverGap(stripe, null, drawn, look)).toBeLessThanOrEqual(STRIPE_TOL);
-    }
-    expect(bandsShown.every((count) => count > 0)).toBe(true);
-  });
+      // Measured: Iridescent 3.6e-14 units on WebGL, 4.3e-14 on Canvas (float noise): the live polygons are
+      // drawAxolotl's stripe quads cut by its own inset Dream clip, at the shown tail and sheen step.
+      // Crystal shine (no inset) 0.0018 on both: its clip's tail edges are chords where drawAxolotl's
+      // silhouette, its other clip, curves.
+      expect(worst.webgl.gap, worst.webgl.at).toBeLessThanOrEqual(STRIPE_TOL);
+      expect(worst.canvas.gap, worst.canvas.at).toBeLessThanOrEqual(STRIPE_TOL);
+    });
 
-  // FINDING (#46, for ADR 0013; measured only, no fix): the Hearts, Tie-dye and Tie-dye galaxy tail
-  // patterns ride the rope's bend with the tail bake, while drawAxolotl places them on the live tail.
+    it(`holds the still ${SHEEN_NAME[dream]} stripe at x -10 when the sheen is undefined`, () => {
+      const bandsShown = [0, 0];
+      for (let n = 0; n < EVERY_BODY_LOOK.length; n++) {
+        const look = EVERY_BODY_LOOK[n];
+        const palette = sheenPalette(dream, n);
+        const renderer = RENDERERS[n % 2];
+        const live = pose({ swimPhase: 2.2, tailAmp: 1.2 });
+        const composed = composeRig({ look, palette, outfit: NO_OUTFIT }, live, renderer, TAIL_AND_BODY);
+        expect(composed.placement.sheenFrame).toBeNull();
+        const torsoCy = axolotlBodyGeometry(look).torso.cy;
+        const stripe = partOf(composed, 'tail-stripe').paints;
+        STILL_STRIPE_OFFSETS.forEach(([from, to], k) => {
+          const pts = stripe[k].subs.flatMap((s) => s.pts);
+          if (pts.length > 0) bandsShown[k]++;
+          for (const p of pts) {
+            const across = (p.x - IRIDESCENT_STILL_X + (p.y - torsoCy)) * Math.SQRT1_2;
+            expect(across).toBeGreaterThanOrEqual(from - EXACT);
+            expect(across).toBeLessThanOrEqual(to + EXACT);
+          }
+        });
+        const white = patternPaints(partOf(composed, 'body').paints)[0];
+        const centre = centroid(white.subs[0].pts);
+        expect(centre.x).toBeCloseTo(IRIDESCENT_STILL_X, 9);
+        expect(centre.y).toBeCloseTo(torsoCy, 9);
+        const drawn = patternPaints(runOf(drawnRuns(shownPose(live, composed), palette, look, NO_OUTFIT), 'body-layers'));
+        expect(bodyStripeMismatches(partOf(composed, 'body'), drawn, DREAM_FACE_LIMIT_X)).toBe(0);
+        expect(tailCoverGap(stripe, null, drawn, look)).toBeLessThanOrEqual(STRIPE_TOL);
+      }
+      expect(bandsShown.every((count) => count > 0)).toBe(true);
+    });
+  }
+
+  // FINDING (#46, for ADR 0013; measured only, no fix): the Hearts, Tie-dye, Tie-dye galaxy and Glowworm
+  // tail patterns ride the rope's bend with the tail bake, while drawAxolotl places them on the live tail.
   // Per-column covered span (every 0.25 units, tip to root) at amplitude 1.6 over every look, measured
   // against drawAxolotl: Hearts 4.88 units (Girl Short Slim Baby, swim 3.442), Tie-dye 12.38 (Boy
-  // Medium Chubby Baby, swim 0.300), Tie-dye galaxy 2.37 (Girl Medium Regular Baby, swim 5.536).
+  // Medium Chubby Baby, swim 0.300), Tie-dye galaxy 2.37 (Girl Medium Regular Baby, swim 5.536),
+  // Glowworm 3.68 (Girl Short Chubby Baby, swim 5.012).
   // The bounds below hold these on record; they are not a fidelity claim.
-  it('measures the rope tail\'s Hearts, Tie-dye and Tie-dye galaxy patterns against drawAxolotl', () => {
+  it('measures the rope tail\'s Hearts, Tie-dye, Tie-dye galaxy and Glowworm patterns against drawAxolotl', () => {
     const worst = new Map<DreamLookId, { gap: number; at: string }>();
     for (const dream of ROPE_PATTERN_DREAMS) {
       worst.set(dream, { gap: 0, at: '' });

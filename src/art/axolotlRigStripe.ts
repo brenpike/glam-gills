@@ -1,5 +1,6 @@
 /**
- * The Iridescent Dream stripe on the tail as flat-colour polygons (issue #46).
+ * The sheen Dream stripe (isSheenDream: Iridescent, Crystal shine) on the tail
+ * as flat-colour polygons (issue #46).
  * On WebGL the rig bends its straight tail bake with a Rope, so the tail is
  * baked 'under' and 'over' (paintBodyLayers) and the stripe pair is drawn live
  * between them from these polygons, exact at every pose. Each band is the
@@ -14,11 +15,13 @@ import {
   DREAM_PATTERN_INSET,
   dreamClipPolygons,
   dreamPatternShapes,
+  isSheenDream,
   type DreamPolygon,
 } from './drawDreamOverlay';
+import type { DreamLookId } from './palette';
 import { DREAM_SWATCH } from './treasurePalette';
 
-/** One Iridescent band: its flat fill and the run polygons that cover it. */
+/** One sheen band: its flat fill and the run polygons that cover it. */
 export interface TailStripeBand {
   /** Fill colour, 0xRRGGBB. */
   colour: number;
@@ -28,7 +31,7 @@ export interface TailStripeBand {
   polygons: number[][];
 }
 
-/** The two Iridescent bands, white first, then the tint (DREAM_SWATCH.iridescent.marks order). */
+/** The two sheen bands, light first, then the tint (the colour's DREAM_SWATCH marks order). */
 export type TailStripe = readonly [TailStripeBand, TailStripeBand];
 
 /** Slack when two trapezoid sides are the same side, local units. */
@@ -42,13 +45,17 @@ function parseFill(css: string): { colour: number; alpha: number } {
   const hex = HEX_RE.exec(css);
   if (hex) return { colour: parseInt(hex[1], 16), alpha: 1 };
   const rgba = RGBA_RE.exec(css);
-  if (!rgba) throw new Error(`tailStripe: cannot parse the Iridescent mark colour ${css}`);
+  if (!rgba) throw new Error(`tailStripe: cannot parse the sheen mark colour ${css}`);
   const [red, green, blue] = [rgba[1], rgba[2], rgba[3]].map(Number);
   return { colour: (red << 16) | (green << 8) | blue, alpha: Number(rgba[4]) };
 }
 
-const STRIPE_FILLS = DREAM_SWATCH.iridescent.marks.map(parseFill);
-const STRIPE_INSET = DREAM_INSET_IDS.includes('iridescent') ? DREAM_PATTERN_INSET : 0;
+/** Each sheen colour's band fills (its parsed DREAM_SWATCH marks) and clip inset (DREAM_PATTERN_INSET on DREAM_INSET_IDS). */
+const SHEEN_STRIPES: ReadonlyMap<DreamLookId, { fills: { colour: number; alpha: number }[]; inset: number }> = new Map(
+  (Object.keys(DREAM_SWATCH) as DreamLookId[])
+    .filter(isSheenDream)
+    .map((id) => [id, { fills: DREAM_SWATCH[id].marks.map(parseFill), inset: DREAM_INSET_IDS.includes(id) ? DREAM_PATTERN_INSET : 0 }]),
+);
 
 /** A non-vertical polygon edge, left end first, with its winding direction. */
 interface Edge {
@@ -296,13 +303,15 @@ function emptyStripe(): TailStripe {
 }
 
 /**
- * The Iridescent stripe pair drawAxolotl paints for `look` at this swim phase,
- * tail amplitude and sheen (undefined: the reduced-motion still stripe), on
- * the part of the body at x <= toX, as flat-fill polygons in local units:
- * white band first, then the tint. `out` (a previous result) is filled in
- * place and returned, reusing its polygon arrays.
+ * The stripe pair drawAxolotl paints for sheen Dream colour `id` on `look` at
+ * this swim phase, tail amplitude and sheen (undefined: the reduced-motion
+ * still stripe), on the part of the body at x <= toX, as flat-fill polygons in
+ * local units: light band first, then the tint, in that colour's marks and
+ * clip inset. Throws when `id` is not a sheen colour. `out` (a previous
+ * result) is filled in place and returned, reusing its polygon arrays.
  */
 export function tailStripe(
+  id: DreamLookId,
   look: AxolotlArtLook,
   swimPhase: number,
   tailAmp: number,
@@ -310,17 +319,19 @@ export function tailStripe(
   toX: number,
   out: TailStripe = emptyStripe(),
 ): TailStripe {
+  const sheenStripe = SHEEN_STRIPES.get(id);
+  if (!sheenStripe) throw new Error(`tailStripe: ${id} is not a sheen Dream colour`);
   const geo = axolotlBodyGeometry(look);
   const tail = tailSamples(geo.tail, swimPhase, tailAmp);
-  const clip = dreamClipPolygons(geo.torso, tail, STRIPE_INSET);
+  const clip = dreamClipPolygons(geo.torso, tail, sheenStripe.inset);
   const clipEdges: Edge[] = [];
   addPolygonEdges(clipEdges, clip, false);
-  const shapes = dreamPatternShapes('iridescent', geo.torso, tail, sheen);
+  const shapes = dreamPatternShapes(id, geo.torso, tail, sheen);
   for (let k = 0; k < out.length; k++) {
     const shape = shapes[k];
-    if (shape?.kind !== 'polygon') throw new Error(`tailStripe: Iridescent shape ${k} is not a band quad`);
-    out[k].colour = STRIPE_FILLS[k].colour;
-    out[k].alpha = STRIPE_FILLS[k].alpha;
+    if (shape?.kind !== 'polygon') throw new Error(`tailStripe: ${id} shape ${k} is not a band quad`);
+    out[k].colour = sheenStripe.fills[k].colour;
+    out[k].alpha = sheenStripe.fills[k].alpha;
     bandPolygons(clip, clipEdges, shape.points, toX, out[k].polygons);
   }
   return out;

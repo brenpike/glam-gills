@@ -21,7 +21,7 @@ exports[`spring-cave-1 golden > keeps the default zone placements for trip seeds
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-1,spring-cave/miners-headlamp@spring-cave-1/spot-bank-3,spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-7,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-3,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-5,spring-cave/miners-headlamp@spring-cave-1/spot-bank-2,spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-11,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-9,spring-cave/explorer-vest@spring-cave-1/spot-bank-10,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-7,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-arch@spring-cave-1/spot-cave-2+pot",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-1,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-3,spring-cave/miners-headlamp@spring-cave-1/spot-bank-5,spring-cave/crystal-pendant@spring-cave-1/spot-bank-6,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-12,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-8,spring-cave/explorer-vest@spring-cave-1/spot-bank-10,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-9,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-current-3",
-  "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-4,spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-current-4,spring-cave/crystal-crown@spring-cave-1/spot-cave-1+pot",
+  "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-4,spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-current-4,spring-cave/paint-shell-crystal-shine@spring-cave-1/spot-cave-1+pot",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-3,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-4,spring-cave/miners-headlamp@spring-cave-1/spot-bank-2,spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-12,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-8,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-1,spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-12,spring-cave/explorer-vest@spring-cave-1/spot-bank-8,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-1,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-5,spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-9,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/geode-lamp@spring-cave-1/spot-cave-6,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4",
@@ -42,7 +42,7 @@ exports[`spring-cave-1 golden > keeps the default zone placements with three ban
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-10,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-8,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-9,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-current-3,spring-cave/crystal-arch@spring-cave-1/spot-cave-1+pot",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-12,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-12,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-8,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4,spring-cave/crystal-arch@spring-cave-1/spot-cave-1+pot,spring-cave/crystal-crown@spring-cave-1/spot-cave-2+pot",
-  "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-10,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4,spring-cave/crystal-crown@spring-cave-1/spot-cave-2+pot",
+  "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-10,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4,spring-cave/paint-shell-crystal-shine@spring-cave-1/spot-cave-2+pot",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-7,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-12,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-8,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4,spring-cave/crystal-arch@spring-cave-1/spot-cave-3+pot",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-4,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-8,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-8,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-7,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
@@ -51,7 +51,7 @@ exports[`spring-cave-1 golden > keeps the default zone placements with three ban
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-7,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-9,spring-cave/geode-lamp@spring-cave-1/spot-cave-6,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-10,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-9,spring-cave/explorer-vest@spring-cave-1/spot-bank-7,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-12,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-5,spring-cave/crystal-arch@spring-cave-1/spot-cave-3+pot",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-12,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
-  "spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-8,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6,spring-cave/crystal-arch@spring-cave-1/spot-cave-3+pot",
+  "spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-8,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6,spring-cave/crystal-crown@spring-cave-1/spot-cave-3+pot",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-8,spring-cave/explorer-vest@spring-cave-1/spot-bank-10,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/geode-lamp@spring-cave-1/spot-current-3,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-9,spring-cave/explorer-vest@spring-cave-1/spot-bank-7,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11,spring-cave/geode-lamp@spring-cave-1/spot-current-3,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-5",
   "spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-7,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-8,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
@@ -77,7 +77,7 @@ exports[`spring-cave-1 golden > keeps the default zone placements with two retur
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-4,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-1,spring-cave/crystal-pendant@spring-cave-1/spot-bank-3,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-7,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-8,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-11",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-3,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-2,spring-cave/miners-headlamp@spring-cave-1/spot-bank-5,spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-10,spring-cave/explorer-vest@spring-cave-1/spot-bank-11,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-7,spring-cave/geode-lamp@spring-cave-1/spot-current-3,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-2,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-4,spring-cave/miners-headlamp@spring-cave-1/spot-bank-3,spring-cave/crystal-pendant@spring-cave-1/spot-bank-5,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-8,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-12,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-7,spring-cave/geode-lamp@spring-cave-1/spot-cave-4",
-  "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-1,spring-cave/miners-headlamp@spring-cave-1/spot-bank-6,spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-12,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10,spring-cave/crystal-crown@spring-cave-1/spot-cave-1+pot",
+  "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-1,spring-cave/miners-headlamp@spring-cave-1/spot-bank-6,spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-9,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-7,spring-cave/explorer-vest@spring-cave-1/spot-bank-12,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10,spring-cave/paint-shell-crystal-shine@spring-cave-1/spot-cave-1+pot",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-5,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-1,spring-cave/miners-headlamp@spring-cave-1/spot-bank-3,spring-cave/crystal-pendant@spring-cave-1/spot-bank-2,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-7,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-11,spring-cave/explorer-vest@spring-cave-1/spot-bank-9,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-10,spring-cave/geode-lamp@spring-cave-1/spot-cave-4,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-6",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-3,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-5,spring-cave/miners-headlamp@spring-cave-1/spot-bank-2,spring-cave/crystal-pendant@spring-cave-1/spot-bank-1,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-11,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-9,spring-cave/explorer-vest@spring-cave-1/spot-bank-10,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-7,spring-cave/crystal-tail-cuff@spring-cave-1/spot-cave-4,spring-cave/crystal-arch@spring-cave-1/spot-cave-2+pot",
   "spring-cave/pebble-stack@spring-cave-1/spot-bank-1,spring-cave/glow-moss-ball@spring-cave-1/spot-bank-3,spring-cave/miners-headlamp@spring-cave-1/spot-bank-5,spring-cave/crystal-pendant@spring-cave-1/spot-bank-6,spring-cave/fossil-ammonite@spring-cave-1/spot-bank-12,spring-cave/crystal-wind-chime@spring-cave-1/spot-bank-8,spring-cave/explorer-vest@spring-cave-1/spot-bank-10,spring-cave/paint-shell-moonstone@spring-cave-1/spot-bank-9,spring-cave/geode-lamp@spring-cave-1/spot-cave-5,spring-cave/crystal-tail-cuff@spring-cave-1/spot-current-3",
@@ -1132,6 +1132,16 @@ exports[`spring-cave-1 golden > keeps the default zone projection 1`] = `
     },
     {
       "id": "spring-cave/crystal-crown",
+      "pool": [
+        "spring-cave-1/spot-cave-1",
+        "spring-cave-1/spot-cave-2",
+        "spring-cave-1/spot-cave-3",
+        "spring-cave-1/spot-current-1",
+        "spring-cave-1/spot-current-2",
+      ],
+    },
+    {
+      "id": "spring-cave/paint-shell-crystal-shine",
       "pool": [
         "spring-cave-1/spot-cave-1",
         "spring-cave-1/spot-cave-2",
@@ -2615,36 +2625,36 @@ exports[`spring-cave-1 golden > keeps the encounter trace along the scripted swi
 exports[`spring-cave-1 golden > keeps the placements of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "1234": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "2": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "3": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "305419896": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "3735928559": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "42": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
   "987654321": {
-    "fnv1a": 160244692,
-    "length": 12856,
+    "fnv1a": 3252785690,
+    "length": 12868,
   },
 }
 `;
@@ -2652,36 +2662,36 @@ exports[`spring-cave-1 golden > keeps the placements of every extra zone seed 1`
 exports[`spring-cave-1 golden > keeps the projection of every extra zone seed 1`] = `
 {
   "1": {
-    "fnv1a": 3970345470,
-    "length": 25678,
+    "fnv1a": 4096137873,
+    "length": 25880,
   },
   "1234": {
-    "fnv1a": 4113717054,
-    "length": 25675,
+    "fnv1a": 1494978769,
+    "length": 25877,
   },
   "2": {
-    "fnv1a": 991707275,
-    "length": 25678,
+    "fnv1a": 1284958992,
+    "length": 25880,
   },
   "3": {
-    "fnv1a": 716599825,
-    "length": 25677,
+    "fnv1a": 792388350,
+    "length": 25879,
   },
   "305419896": {
-    "fnv1a": 1816604363,
-    "length": 25679,
+    "fnv1a": 3549202768,
+    "length": 25881,
   },
   "3735928559": {
-    "fnv1a": 2371940233,
-    "length": 25676,
+    "fnv1a": 2056019910,
+    "length": 25878,
   },
   "42": {
-    "fnv1a": 521985746,
-    "length": 25681,
+    "fnv1a": 2085651117,
+    "length": 25883,
   },
   "987654321": {
-    "fnv1a": 3116217256,
-    "length": 25676,
+    "fnv1a": 2431767971,
+    "length": 25878,
   },
 }
 `;

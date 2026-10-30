@@ -308,7 +308,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The eighteen Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -327,16 +327,18 @@ export type DreamSwatchId =
   | 'poppy-red'
   | 'plum'
   | 'moonstone'
-  | 'chocolate';
+  | 'chocolate'
+  | 'crystal-shine'
+  | 'glowworm';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
-export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars';
+export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
 
 export interface DreamSwatchLook {
   /** Body colour from the 3f table. */
   readonly body: string;
   readonly pattern: DreamPattern;
-  /** Pattern colours: heart, spiral bands, stripe pair, rainbow bands or the nebula wash. */
+  /** Pattern colours: heart, spiral bands, stripe pair, rainbow bands, the nebula wash, or glow dot core then halo. */
   readonly marks: readonly string[];
   /** True on the dark bodies, which get the DREAM_RIM along the top. */
   readonly dark: boolean;
@@ -377,4 +379,18 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
   plum: { body: '#933f93', pattern: 'plain', marks: [], dark: true },
   moonstone: { body: '#f5f7fc', pattern: 'plain', marks: [], dark: false },
   chocolate: { body: '#6c391d', pattern: 'plain', marks: [], dark: true },
+  // Sheen: a white and an aqua stripe, both lighter than the teal body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'crystal-shine': {
+    body: '#2f9a9a',
+    pattern: 'stripes',
+    marks: ['rgba(255,255,255,0.7)', 'rgba(150,250,245,0.75)'],
+    dark: false,
+  },
+  // Glow dots: marks[0] is the dot core, marks[1] its soft halo. Dark body, so the rim light carries the outline.
+  glowworm: {
+    body: '#101c52',
+    pattern: 'glow-dots',
+    marks: ['#5ff2d2', 'rgba(95,242,210,0.3)'],
+    dark: true,
+  },
 };

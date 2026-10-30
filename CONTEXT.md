@@ -262,7 +262,7 @@ _Avoid_: loot
 A hidden treasure that holds one Dream colour.
 
 **Dream colour**:
-A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Epic or Legendary. There are 16: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, and Plum and Tie-dye galaxy from Area 5.
+A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Legendary, except Hearts, Tie-dye, and Iridescent, which came first and stay Epic. Each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour; Areas 1 to 5 came before this rule. There are 20: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, Plum and Tie-dye galaxy from Area 5, Moonstone and Crystal shine from Area 6, and Chocolate and Glowworm from Area 7.
 _Avoid_: skin
 
 **Treasure Chest**:

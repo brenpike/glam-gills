@@ -145,9 +145,10 @@ export interface AxolotlPose {
    */
   legs?: readonly LegLook[];
   /**
-   * Iridescent sheen phase in [0, 1) (dreamSheenAt), read only by the
-   * Iridescent Dream colour: its stripe pair glides from x 14 to the tail tip
-   * (guide 6p, 9). Undefined holds the reduced-motion still stripe at x -10.
+   * Sheen phase in [0, 1) (dreamSheenAt), read only by the sheen Dream
+   * colours (isSheenDream: Iridescent, Crystal shine): each one's stripe pair
+   * glides from x 14 to the tail tip (guide 6p, 9). Undefined holds the
+   * reduced-motion still stripe at x -10.
    */
   sheen?: number;
 }

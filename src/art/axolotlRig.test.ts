@@ -44,8 +44,9 @@ import {
   type GillStyleId,
   type WearableSlot,
 } from './drawAxolotlParts';
+import { isSheenDream } from './drawDreamOverlay';
 import { NO_OUTFIT, type ArtOutfit, type WearableArtSlug } from './drawWearables';
-import { LEUCISTIC, LW, MORPH_PALETTES, WILD, axolotlPalette, type MorphPalette } from './palette';
+import { LEUCISTIC, LW, MORPH_PALETTES, WILD, axolotlPalette, type DreamLookId, type MorphPalette } from './palette';
 import {
   EYE_FRAME_BLINKS,
   GILL_FLUTTER_FRAMES,
@@ -524,7 +525,10 @@ const PALETTES: readonly MorphPalette[] = [
   axolotlPalette('axanthic', 'tie-dye-galaxy'),
 ];
 const IRIDESCENT = axolotlPalette('leucistic', 'iridescent');
-const isIridescent = (palette: MorphPalette): boolean => palette.dream?.id === 'iridescent';
+const CRYSTAL_SHINE = axolotlPalette('copper', 'crystal-shine');
+/** The sheen Dream colours (isSheenDream), which split the tail round a live stripe. */
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine'] as const satisfies readonly DreamLookId[];
+const isSheen = (palette: MorphPalette): boolean => palette.dream !== undefined && isSheenDream(palette.dream.id);
 
 /**
  * Every Boy or girl, Tail, Body and Age (54 looks; size only scales the bake),
@@ -579,7 +583,7 @@ function variantsOf(spec: RigPartSpec, palette: MorphPalette): RigPartVariant[] 
   if (spec.id === 'tail') return [{}, { tailLayers: 'under' }];
   if (spec.id === 'tail-over') return [{}];
   if (spec.id === 'body') {
-    const sheens = isIridescent(palette) ? [0, 0.5, sheenStepValue(SHEEN_STEPS - 1)] : [];
+    const sheens = isSheen(palette) ? [0, 0.5, sheenStepValue(SHEEN_STEPS - 1)] : [];
     return [{}, ...sheens.map((sheen) => ({ sheen }))];
   }
   return Array.from({ length: spec.frames }, (_, frame) => ({ frame }));
@@ -772,13 +776,13 @@ describe('part order and pivots', () => {
     expect(specOf(parts, 'face').topLayer).toBe(11.5);
   });
 
-  it('adds the tail-over part (6.5 to 8) right after the tail on an Iridescent palette only', () => {
-    for (const palette of PALETTES) {
+  it('adds the tail-over part (6.5 to 8) right after the tail on a sheen palette only', () => {
+    for (const palette of [...PALETTES, CRYSTAL_SHINE]) {
       const parts = rigParts({ look: DEFAULT_ART_LOOK, palette, outfit: FULL });
       const ids = parts.map((p) => p.id);
       const tail = ids.indexOf('tail');
       expect(specOf(parts, 'tail')).toMatchObject({ layer: 4, topLayer: 8 });
-      if (!isIridescent(palette)) {
+      if (!isSheen(palette)) {
         expect(ids, palette.dream?.id ?? 'plain').not.toContain('tail-over');
         continue;
       }
@@ -787,7 +791,8 @@ describe('part order and pivots', () => {
       const layers = parts.map((p) => p.layer);
       expect([...layers].sort((a, b) => a - b)).toEqual(layers);
     }
-    expect(PALETTES.some(isIridescent)).toBe(true);
+    expect(PALETTES.some(isSheen)).toBe(true);
+    expect(isSheen(CRYSTAL_SHINE)).toBe(true);
   });
 
   it('puts every pivot on the joint drawAxolotl uses, and records it from the box corner', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
@@ -867,17 +872,19 @@ describe('tail and body seam', () => {
     }
   });
 
-  it('splits the Iridescent tail: under then tail-over paint the full tail less its stripe pair, never the sheen', () => {
-    const appearance: RigAppearance = { look: DEFAULT_ART_LOOK, palette: IRIDESCENT, outfit: FULL };
-    for (const tailPose of [undefined, ...BENT_TAIL_POSES]) {
-      const at = tailPose ? { tailPose } : {};
-      const all = partPaints('tail', appearance, at);
-      const under = partPaints('tail', appearance, { ...at, tailLayers: 'under' });
-      const over = partPaints('tail-over', appearance, at);
-      expect(under.length).toBeGreaterThan(0);
-      expect(over.length).toBeGreaterThan(0);
-      expect(under.length + 2 + over.length).toBe(all.length);
-      expect(partPaints('tail', appearance, { ...at, sheen: 0.5 })).toEqual(all);
+  it('splits a sheen Dream tail: under then tail-over paint the full tail less its stripe pair, never the sheen', () => {
+    for (const palette of [IRIDESCENT, CRYSTAL_SHINE]) {
+      const appearance: RigAppearance = { look: DEFAULT_ART_LOOK, palette, outfit: FULL };
+      for (const tailPose of [undefined, ...BENT_TAIL_POSES]) {
+        const at = tailPose ? { tailPose } : {};
+        const all = partPaints('tail', appearance, at);
+        const under = partPaints('tail', appearance, { ...at, tailLayers: 'under' });
+        const over = partPaints('tail-over', appearance, at);
+        expect(under.length).toBeGreaterThan(0);
+        expect(over.length).toBeGreaterThan(0);
+        expect(under.length + 2 + over.length).toBe(all.length);
+        expect(partPaints('tail', appearance, { ...at, sheen: 0.5 })).toEqual(all);
+      }
     }
   });
 });
@@ -1067,8 +1074,8 @@ describe('canvas tail strip', () => {
 describe('placement', () => {
   it('at the still pose turns nothing and shows frame 0 and the still tail', () => {
     for (const renderer of ['webgl', 'canvas'] as const) {
-      for (const iridescent of [false, true]) {
-        const placed = rigPlacement(DEFAULT_ART_LOOK, RIG_STILL_POSE, renderer, iridescent);
+      for (const sheenDream of [null, ...SHEEN_DREAMS]) {
+        const placed = rigPlacement(DEFAULT_ART_LOOK, RIG_STILL_POSE, renderer, sheenDream);
         for (const gill of placed.gills) expect(gill).toEqual({ frame: 0, rotation: 0 });
         for (const leg of placed.legs) expect(leg).toEqual({ rotation: 0, stateKey: 'present', wears: true });
         expect(placed.tail.mode).toBe('still');
@@ -1084,30 +1091,32 @@ describe('placement', () => {
     }
   });
 
-  it('fills the stripe with tailStripe at the shown tail on a moving Iridescent tail, else leaves it empty', () => {
+  it('fills the stripe with tailStripe at the shown tail on a moving sheen Dream tail, else leaves it empty', () => {
     const out = createRigPlacement();
     expect(out.stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
-    let filled = 0;
-    for (const look of [DEFAULT_ART_LOOK, EVERY_BODY_LOOK[EVERY_BODY_LOOK.length - 1]]) {
-      const toX = axolotlBodyGeometry(look).tail.rootX + RIG_SEAM_OVERLAP;
-      for (const renderer of ['webgl', 'canvas'] as const) {
-        for (const live of [pose({ swimPhase: 1.3, tailAmp: 1.4 }), pose({ swimPhase: 4, tailAmp: AXO_MAX_TAIL_AMP, sheen: 0.3 }), pose({ sheen: 0.7 })]) {
-          const plain = rigPlacement(look, live, renderer, false, out);
-          expect(plain.stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
-          const placed = rigPlacement(look, live, renderer, true, out);
-          expect(placed.tail.mode).not.toBe('still');
-          const sheen = placed.sheenFrame === null ? undefined : sheenStepValue(placed.sheenFrame);
-          const { swimPhase, tailAmp } = placed.shownTail;
-          expect(placed.stripe).toEqual(tailStripe(look, swimPhase, tailAmp, sheen, toX));
-          filled += placed.stripe[0].polygons.length > 0 ? 1 : 0;
-          expect(rigPlacement(look, RIG_STILL_POSE, renderer, true, out).stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
+    const filled = new Map<DreamLookId, number>();
+    for (const dream of SHEEN_DREAMS) {
+      for (const look of [DEFAULT_ART_LOOK, EVERY_BODY_LOOK[EVERY_BODY_LOOK.length - 1]]) {
+        const toX = axolotlBodyGeometry(look).tail.rootX + RIG_SEAM_OVERLAP;
+        for (const renderer of ['webgl', 'canvas'] as const) {
+          for (const live of [pose({ swimPhase: 1.3, tailAmp: 1.4 }), pose({ swimPhase: 4, tailAmp: AXO_MAX_TAIL_AMP, sheen: 0.3 }), pose({ sheen: 0.7 })]) {
+            const plain = rigPlacement(look, live, renderer, null, out);
+            expect(plain.stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
+            const placed = rigPlacement(look, live, renderer, dream, out);
+            expect(placed.tail.mode).not.toBe('still');
+            const sheen = placed.sheenFrame === null ? undefined : sheenStepValue(placed.sheenFrame);
+            const { swimPhase, tailAmp } = placed.shownTail;
+            expect(placed.stripe).toEqual(tailStripe(dream, look, swimPhase, tailAmp, sheen, toX));
+            filled.set(dream, (filled.get(dream) ?? 0) + (placed.stripe[0].polygons.length > 0 ? 1 : 0));
+            expect(rigPlacement(look, RIG_STILL_POSE, renderer, dream, out).stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
+          }
         }
       }
     }
-    expect(filled).toBeGreaterThan(0);
+    for (const dream of SHEEN_DREAMS) expect(filled.get(dream) ?? 0, dream).toBeGreaterThan(0);
   });
 
-  it('runs tailStripe only when the look, the shown tail or the sheen step changes', () => {
+  it('runs tailStripe only when the sheen colour, the look, the shown tail or the sheen step changes', () => {
     const calls = vi.mocked(tailStripe);
     const toX = axolotlBodyGeometry(DEFAULT_ART_LOOK).tail.rootX + RIG_SEAM_OVERLAP;
     const live = pose({ swimPhase: 1.3, tailAmp: 1.4, sheen: 0.3 });
@@ -1117,58 +1126,70 @@ describe('placement', () => {
     // Canvas: a nudge inside one strip frame shows the same tail, so the stripe is kept as filled.
     const canvas = createRigPlacement();
     calls.mockClear();
-    rigPlacement(DEFAULT_ART_LOOK, live, 'canvas', true, canvas);
+    rigPlacement(DEFAULT_ART_LOOK, live, 'canvas', 'iridescent', canvas);
     const shown = { ...canvas.shownTail };
-    rigPlacement(DEFAULT_ART_LOOK, nudged, 'canvas', true, canvas);
+    rigPlacement(DEFAULT_ART_LOOK, nudged, 'canvas', 'iridescent', canvas);
     expect(canvas.shownTail).toEqual(shown);
     expect(calls).toHaveBeenCalledTimes(1);
-    rigPlacement(DEFAULT_ART_LOOK, reSheened, 'canvas', true, canvas);
+    rigPlacement(DEFAULT_ART_LOOK, reSheened, 'canvas', 'iridescent', canvas);
     expect(calls).toHaveBeenCalledTimes(2);
     const sheen = sheenStepValue(canvas.sheenFrame ?? 0);
-    expect(canvas.stripe).toEqual(tailStripe(DEFAULT_ART_LOOK, shown.swimPhase, shown.tailAmp, sheen, toX));
+    expect(canvas.stripe).toEqual(tailStripe('iridescent', DEFAULT_ART_LOOK, shown.swimPhase, shown.tailAmp, sheen, toX));
 
     // WebGL shows the live tail: a new swim phase re-runs it, an unchanged tail and sheen step do not.
     const webgl = createRigPlacement();
     calls.mockClear();
-    rigPlacement(DEFAULT_ART_LOOK, live, 'webgl', true, webgl);
-    rigPlacement(DEFAULT_ART_LOOK, pose({ swimPhase: 1.3, tailAmp: 1.4, sheen: 0.3, gillPhase: 2 }), 'webgl', true, webgl);
+    rigPlacement(DEFAULT_ART_LOOK, live, 'webgl', 'iridescent', webgl);
+    rigPlacement(DEFAULT_ART_LOOK, pose({ swimPhase: 1.3, tailAmp: 1.4, sheen: 0.3, gillPhase: 2 }), 'webgl', 'iridescent', webgl);
     expect(calls).toHaveBeenCalledTimes(1);
-    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', true, webgl);
+    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', 'iridescent', webgl);
     expect(calls).toHaveBeenCalledTimes(2);
 
     // A still tail empties the stripe and forgets it; another look re-runs it.
-    rigPlacement(DEFAULT_ART_LOOK, RIG_STILL_POSE, 'webgl', true, webgl);
+    rigPlacement(DEFAULT_ART_LOOK, RIG_STILL_POSE, 'webgl', 'iridescent', webgl);
     expect(webgl.stripe.map((band) => band.polygons.length)).toEqual([0, 0]);
-    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', true, webgl);
+    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', 'iridescent', webgl);
     expect(calls).toHaveBeenCalledTimes(3);
-    rigPlacement({ ...DEFAULT_ART_LOOK }, nudged, 'webgl', true, webgl);
+    rigPlacement({ ...DEFAULT_ART_LOOK }, nudged, 'webgl', 'iridescent', webgl);
     expect(calls).toHaveBeenCalledTimes(4);
+
+    // Another sheen colour on the same look, tail and sheen step re-runs it in that colour.
+    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', 'iridescent', webgl);
+    expect(calls).toHaveBeenCalledTimes(5);
+    rigPlacement(DEFAULT_ART_LOOK, nudged, 'webgl', 'crystal-shine', webgl);
+    expect(calls).toHaveBeenCalledTimes(6);
+    const { swimPhase, tailAmp } = webgl.shownTail;
+    const step = sheenStepValue(webgl.sheenFrame ?? 0);
+    expect(webgl.stripe).toEqual(tailStripe('crystal-shine', DEFAULT_ART_LOOK, swimPhase, tailAmp, step, toX));
   });
 
-  it('bends the tail by renderer, and moves a still Iridescent sheen off the still tail', () => {
+  it('bends the tail by renderer, and moves a still sheen Dream sheen off the still tail', () => {
     const live = pose({ swimPhase: 1.3, tailAmp: 1.4 });
-    const rope = rigPlacement(DEFAULT_ART_LOOK, live, 'webgl', false);
+    const rope = rigPlacement(DEFAULT_ART_LOOK, live, 'webgl', null);
     expect(rope.tail.mode).toBe('rope');
     expect(rope.shownTail).toEqual({ swimPhase: 1.3, tailAmp: 1.4 });
     expect(rope.tail.dy).toEqual(tailShear(DEFAULT_ART_LOOK, 1.3, 1.4));
-    const strip = rigPlacement(DEFAULT_ART_LOOK, live, 'canvas', false);
+    const strip = rigPlacement(DEFAULT_ART_LOOK, live, 'canvas', null);
     const near = nearestTailStrip(1.3, 1.4);
     expect(strip.tail.mode).toBe('strip');
     expect(strip.tail.frame).toBe(near.frame);
     expect(strip.shownTail).toEqual(tailStripPose(near.phaseIndex, near.ampIndex));
     const shimmering = pose({ sheen: 0.3 });
-    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', false).tail.mode).toBe('still');
-    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', true).tail.mode).toBe('rope');
-    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'canvas', true).tail).toMatchObject({ mode: 'strip', frame: 0 });
-    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', true).sheenFrame).toBe(sheenFrame(0.3));
-    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', false).sheenFrame).toBeNull();
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', null).tail.mode).toBe('still');
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', 'iridescent').tail.mode).toBe('rope');
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'canvas', 'iridescent').tail).toMatchObject({ mode: 'strip', frame: 0 });
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', 'iridescent').sheenFrame).toBe(sheenFrame(0.3));
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', null).sheenFrame).toBeNull();
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', 'crystal-shine').tail.mode).toBe('rope');
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'canvas', 'crystal-shine').tail).toMatchObject({ mode: 'strip', frame: 0 });
+    expect(rigPlacement(DEFAULT_ART_LOOK, shimmering, 'webgl', 'crystal-shine').sheenFrame).toBe(sheenFrame(0.3));
   });
 
   it('picks the nearest eye frame and keys and dresses each leg', () => {
     const blinks: [number, number][] = [[1, 0], [0.8, 0], [0.7, 1], [0.56, 1], [0.3, 2], [0.12, 2]];
-    for (const [blink, frame] of blinks) expect(rigPlacement(DEFAULT_ART_LOOK, pose({ blink }), 'webgl', false).eyesFrame).toBe(frame);
+    for (const [blink, frame] of blinks) expect(rigPlacement(DEFAULT_ART_LOOK, pose({ blink }), 'webgl', null).eyesFrame).toBe(frame);
     const legs = [present, lost, regrowing(0.5), regrowing(1)];
-    const placed = rigPlacement(DEFAULT_ART_LOOK, pose({ legs }), 'webgl', false);
+    const placed = rigPlacement(DEFAULT_ART_LOOK, pose({ legs }), 'webgl', null);
     expect(placed.legs.map((l) => l.stateKey)).toEqual(['present', 'lost', 'regrowing:0.5', 'regrowing:1']);
     expect(placed.legs.map((l) => l.wears)).toEqual([true, false, false, false]);
   });
@@ -1182,7 +1203,7 @@ describe('placement', () => {
       for (const swimPhase of SWIMS) {
         for (const tailAmp of [1, AXO_MAX_TAIL_AMP]) {
           for (const renderer of ['webgl', 'canvas'] as const) {
-            const placed = rigPlacement(look, pose({ swimPhase, tailAmp }), renderer, false, out);
+            const placed = rigPlacement(look, pose({ swimPhase, tailAmp }), renderer, null, out);
             expect(placed).toBe(out);
             for (let i = 0; i < 4; i++) worst = Math.max(worst, legResidual(look, i, placed.legs[i].rotation, swimPhase));
             const shown = renderer === 'webgl' ? { swimPhase, tailAmp } : placed.shownTail;
@@ -1210,7 +1231,7 @@ describe('placement', () => {
         const specs = [...gillSpecs(gills, 'far', geo.gillLength), ...gillSpecs(gills, 'near', geo.gillLength)];
         for (let p = 0; p < 24; p++) {
           const gillPhase = RIG_STILL_POSE.gillPhase + (p / 24) * TAU;
-          const placed = rigPlacement(look, pose({ gillPhase }), 'webgl', false);
+          const placed = rigPlacement(look, pose({ gillPhase }), 'webgl', null);
           for (let i = 0; i < specs.length; i++) {
             const residual = gillResidual(specs[i], gills, placed.gills[i], gillPhase);
             worst.stem = Math.max(worst.stem, residual.stem);
@@ -1231,7 +1252,7 @@ describe('placement', () => {
         for (const sparkle of [0, 0.05, 0.1, 0.3, 0.6, 1]) {
           for (const progress of [0, 0.3, 1]) {
             const live = pose({ swimPhase, tailAmp: 1.3, sparkle, legs: [regrowing(progress), present, lost, regrowing(1 - progress)] });
-            const placed = rigPlacement(look, live, 'webgl', false, out);
+            const placed = rigPlacement(look, live, 'webgl', null, out);
             const shown = expectedTwinkles(look, live);
             expect(placed.twinkles).toHaveLength(shown.length);
             for (let k = 0; k < shown.length; k++) worst = Math.max(worst, twinkleError(placed.twinkles[k], shown[k]));

@@ -12,7 +12,7 @@
  *
  * Textures are painted and refreshed only while baking and never repaint after
  * a bake: setPose moves, turns, swaps frames and writes the tail ropes. The
- * only thing drawn live is the Iridescent tail stripe, a flat-colour vector
+ * only thing drawn live is the sheen Dream tail stripe (isSheenDream), a flat-colour vector
  * overlay (a Graphics between the 'under' tail and 'tail-over') with no
  * texture upload, redrawn only when the shown tail or the sheen step changes.
  * Legs are baked lazily, one texture per leg state. Destroy views before their bake.
@@ -53,8 +53,9 @@ import type { TailStripe } from './axolotlRigStripe';
 import { beginDraw, type TexSize } from './canvasKit';
 import { AXO_SCENE_SCALE, AXO_TEX, type AxolotlPose, type LegLook } from './drawAxolotl';
 import { AXO_SIZE_SCALE, DEFAULT_ART_LOOK, type AxolotlArtLook } from './drawAxolotlParts';
+import { isSheenDream } from './drawDreamOverlay';
 import { NO_OUTFIT, type ArtOutfit } from './drawWearables';
-import { LEUCISTIC, type MorphPalette } from './palette';
+import { LEUCISTIC, type DreamLookId, type MorphPalette } from './palette';
 import { makeInfo, type TexInfo } from './textures';
 
 // ---------------------------------------------------------------------------
@@ -211,8 +212,9 @@ export function rigRendererOf(scene: Phaser.Scene): RigRenderer {
   return scene.sys.game.renderer.type === Phaser.CANVAS ? 'canvas' : 'webgl';
 }
 
-function isIridescent(palette: MorphPalette): boolean {
-  return palette.dream?.id === 'iridescent';
+/** The palette's Dream colour when it is a sheen colour (isSheenDream), else null. */
+function sheenDreamOf(palette: MorphPalette): DreamLookId | null {
+  return palette.dream && isSheenDream(palette.dream.id) ? palette.dream.id : null;
 }
 
 function scaleFor(bakeScale: number, look: AxolotlArtLook): number {
@@ -309,23 +311,23 @@ function isTailPart(id: RigPartId): boolean {
 /**
  * The variant painted as frame `frame` of a part's main texture. The tail
  * parts: Canvas strip frame `frame` (tailStripPose), WebGL the straight tail;
- * an Iridescent 'tail' bakes only its 'under' layers. Never a tail sheen.
+ * a sheen Dream 'tail' bakes only its 'under' layers. Never a tail sheen.
  */
-function partVariant(spec: RigPartSpec, frame: number, renderer: RigRenderer, iridescent: boolean): RigPartVariant {
+function partVariant(spec: RigPartSpec, frame: number, renderer: RigRenderer, sheenPalette: boolean): RigPartVariant {
   if (isTailPart(spec.id)) {
-    const tailLayers = spec.id === 'tail' && iridescent ? 'under' : 'all';
+    const tailLayers = spec.id === 'tail' && sheenPalette ? 'under' : 'all';
     if (renderer === 'webgl') return spec.id === 'tail' ? { tailLayers } : {};
     const tailPose = tailStripPose(frame % TAIL_STRIP_PHASES, Math.floor(frame / TAIL_STRIP_PHASES));
     return spec.id === 'tail' ? { tailPose, tailLayers } : { tailPose };
   }
-  if (spec.id === 'body') return iridescent && frame < SHEEN_STEPS ? { sheen: sheenStepValue(frame) } : {};
+  if (spec.id === 'body') return sheenPalette && frame < SHEEN_STEPS ? { sheen: sheenStepValue(frame) } : {};
   return { frame };
 }
 
 /** How many frames a part's main texture holds. */
-function partFrames(spec: RigPartSpec, renderer: RigRenderer, iridescent: boolean): number {
+function partFrames(spec: RigPartSpec, renderer: RigRenderer, sheenPalette: boolean): number {
   if (isTailPart(spec.id)) return renderer === 'canvas' ? TAIL_STRIP_FRAMES : 1;
-  if (spec.id === 'body') return iridescent ? SHEEN_STEPS + 1 : 1;
+  if (spec.id === 'body') return sheenPalette ? SHEEN_STEPS + 1 : 1;
   return spec.frames;
 }
 
@@ -393,7 +395,7 @@ class RigBake implements AxolotlRigBake {
   private partOrder: RigPartSpec[] = [];
   private stillTail: TexInfo | null = null;
   private twinkles: TexInfo | null = null;
-  private iridescentPalette = false;
+  private sheenDreamId: DreamLookId | null = null;
   private readonly owned = new Set<string>();
   private readonly views = new Set<RigView>();
   private destroyed = false;
@@ -449,13 +451,14 @@ class RigBake implements AxolotlRigBake {
     return this.partOrder;
   }
 
-  get iridescent(): boolean {
+  /** The baked palette's sheen Dream colour (isSheenDream), else null. */
+  get sheenDream(): DreamLookId | null {
     this.flush();
-    return this.iridescentPalette;
+    return this.sheenDreamId;
   }
 
   /**
-   * The full still tail frame: on WebGL, and on Canvas for an Iridescent tail
+   * The full still tail frame: on WebGL, and on Canvas for a sheen Dream tail
    * (whose strip bakes only 'under'); else null, and Canvas shows strip frame 0, the same pose.
    */
   get tailStill(): TexInfo | null {
@@ -582,7 +585,7 @@ class RigBake implements AxolotlRigBake {
       this.removeOwned();
       const scale = this.scale;
       this.partOrder = rigParts(this.appearance);
-      this.iridescentPalette = isIridescent(this.appearance.palette);
+      this.sheenDreamId = sheenDreamOf(this.appearance.palette);
       this.sheetsById = new Map();
       this.stillTail = null;
       for (const spec of this.partOrder) this.sheetsById.set(spec.id, { spec, info: this.bakePart(spec) });
@@ -609,11 +612,11 @@ class RigBake implements AxolotlRigBake {
     const size = partSize(spec, grow);
     if (isLegPart(spec.id)) return makeInfo(texKey, scale, size);
     const { renderer, appearance } = this;
-    const iridescent = this.iridescentPalette;
-    if (spec.id === 'tail' && (renderer === 'webgl' || iridescent)) this.stillTail = this.bakeStillTail(spec);
+    const sheenPalette = this.sheenDreamId !== null;
+    if (spec.id === 'tail' && (renderer === 'webgl' || sheenPalette)) this.stillTail = this.bakeStillTail(spec);
     const local = { x: -spec.box.minX, y: -spec.box.minY + grow };
-    const info = bakeSheet(this.scene, texKey, size, scale, local, partFrames(spec, renderer, iridescent), (ctx, f) =>
-      paintRigPart(ctx, spec.id, appearance, partVariant(spec, f, renderer, iridescent)),
+    const info = bakeSheet(this.scene, texKey, size, scale, local, partFrames(spec, renderer, sheenPalette), (ctx, f) =>
+      paintRigPart(ctx, spec.id, appearance, partVariant(spec, f, renderer, sheenPalette)),
     );
     this.owned.add(texKey);
     return info;
@@ -752,16 +755,16 @@ class RigView implements AxolotlRigView {
   private lastPose: AxolotlPose = RIG_STILL_POSE;
   private syncedVersion = -1;
   private parts: RigViewPart[] = [];
-  /** WebGL: the straight tail ('under' when Iridescent) and 'tail-over' bent along tailColumnXs. */
+  /** WebGL: the straight tail ('under' when sheen) and 'tail-over' bent along tailColumnXs. */
   private rope: Phaser.GameObjects.Rope | null = null;
   private overRope: Phaser.GameObjects.Rope | null = null;
-  /** Canvas: the tail strip ('under' when Iridescent) and the 'tail-over' strip, both at stripFrame. */
+  /** Canvas: the tail strip ('under' when sheen) and the 'tail-over' strip, both at stripFrame. */
   private stripImage: Phaser.GameObjects.Image | null = null;
   private overStripImage: Phaser.GameObjects.Image | null = null;
   private stripFrame = 0;
-  /** The full still tail (bake.tailStill): WebGL always, Canvas when Iridescent. */
+  /** The full still tail (bake.tailStill): WebGL always, Canvas when sheen. */
   private stillImage: Phaser.GameObjects.Image | null = null;
-  /** The live Iridescent stripe pair between the tail and 'tail-over'. */
+  /** The live sheen stripe pair between the tail and 'tail-over'. */
   private stripe: Phaser.GameObjects.Graphics | null = null;
   private twinkleImages: Phaser.GameObjects.Image[] = [];
   private twinkleFrames: number[] = [];
@@ -874,7 +877,7 @@ class RigView implements AxolotlRigView {
     return sheet.info.key;
   }
 
-  /** The tail children: WebGL a Rope on the straight tail, then the still Image; Canvas the strip Image, then the still Image when Iridescent. */
+  /** The tail children: WebGL a Rope on the straight tail, then the still Image; Canvas the strip Image, then the still Image when sheen. */
   private addTail(sheet: RigSheet): void {
     if (this.owner.renderer === 'canvas') {
       this.stripImage = this.addStripImage(sheet);
@@ -892,7 +895,7 @@ class RigView implements AxolotlRigView {
     this.root.add(this.stillImage);
   }
 
-  /** The Iridescent children over the tail: the stripe Graphics, then 'tail-over' as a Rope (WebGL) or strip Image (Canvas). */
+  /** The sheen Dream children over the tail: the stripe Graphics, then 'tail-over' as a Rope (WebGL) or strip Image (Canvas). */
   private addTailOver(sheet: RigSheet): void {
     const stripe = new Phaser.GameObjects.Graphics(this.scene);
     stripe.setVisible(false);
@@ -923,7 +926,7 @@ class RigView implements AxolotlRigView {
 
   private apply(pose: AxolotlPose): void {
     const owner = this.owner;
-    const placement = rigPlacement(owner.look, pose, owner.renderer, owner.iridescent, this.placement);
+    const placement = rigPlacement(owner.look, pose, owner.renderer, owner.sheenDream, this.placement);
     for (const part of this.parts) this.placePart(part, placement, pose);
     this.placeTail(placement);
     this.placeStripe(placement);
@@ -947,7 +950,7 @@ class RigView implements AxolotlRigView {
         image.rotation = placement.legs[index].rotation;
         return;
       case 'body':
-        showFrame(part, this.owner.iridescent ? (placement.sheenFrame ?? SHEEN_STEPS) : 0);
+        showFrame(part, this.owner.sheenDream !== null ? (placement.sheenFrame ?? SHEEN_STEPS) : 0);
         return;
       case 'tail-item': {
         const scale = this.owner.scale;
@@ -999,7 +1002,7 @@ class RigView implements AxolotlRigView {
     if (this.overRope) this.writeRopeVertices(this.overRope, spec, tail.dy);
   }
 
-  /** Show the stripe on a moving Iridescent tail; redraw it only when the bake, the shown tail or the sheen step changed. */
+  /** Show the stripe on a moving sheen Dream tail; redraw it only when the bake, the shown tail or the sheen step changed. */
   private placeStripe(placement: RigPlacement): void {
     const stripe = this.stripe;
     if (!stripe) return;
