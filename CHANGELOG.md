@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-10-30
+
+### Changed
+
+- Legendary treasures no longer have to sit in a Dash pot. They hide deep (in a cave or other hollow, or past the current) and right next to danger, and some are still in Dash pots.
+- Area 6 has a new Legendary spot in the open past the spring's outflow.
+- Area 7's grotto is wider, with a Legendary spot just above a crayfish's path, so its 3 Legendaries now have 4 places to hide.
+- The Treasure Chest's hint for an unfound Legendary now says "Look deep, right next to danger!".
+- The Dash pot tip now shows to a player who has only found Legendaries outside pots. Older saves that already banked a Legendary still count the tip as seen.
+
 ## [0.56.0] - 2026-10-30
 
 ### Added
