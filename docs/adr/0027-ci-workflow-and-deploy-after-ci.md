@@ -1,6 +1,6 @@
 # ADR 0027: A CI workflow checks every PR and push, and Pages deploys only after CI passes on main
 
-- Status: Accepted
+- Status: Accepted. Partly superseded by [ADR 0033](0033-deploy-job-in-ci-and-docs-only-changes-skip-ci.md): the deploy is now a job in `ci.yml`, with no `deploy-pages.yml`, no `workflow_run` hand-off and no head check.
 - Date: 2026-10-26
 - Related: [ADR 0005](0005-hosting-github-pages.md) (hosting on GitHub Pages), [ADR 0009](0009-update-check.md) (build ID)
 
