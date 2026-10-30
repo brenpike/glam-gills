@@ -221,8 +221,11 @@ export const SPRING_CAVE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   safeArea: Object.freeze({ x0: 40, x1: 300, y0: WORLD_H, y1: WORLD_H * 2 }),
   homeSpotRadius: 72,
   reedBeds: Object.freeze([]),
-  /** The grotto at the back of the pebble room: one Epic spot (B6; ND-9). */
-  caveSpots: Object.freeze([Object.freeze([3750, 595, 'epic', false] as const)]),
+  /**
+   * The grotto at the back of the pebble room (B6; ND-9): one Epic spot, then one open Legendary spot
+   * just over `crayfish-2`'s floor lane, within its S / 2 and past the turn clearance from its west end.
+   */
+  caveSpots: Object.freeze([Object.freeze([3750, 595, 'epic', false] as const), Object.freeze([3700, 630, 'legendary', false] as const)]),
   /** Just past the steady spring outflow, on its upstream side, over `crayfish-1`: Legendary pots and Epic spots. */
   currentSpots: Object.freeze([
     Object.freeze([2215, 620, 'legendary', true] as const),
@@ -236,7 +239,7 @@ export const SPRING_CAVE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: 'current-0', x0: 2040, x1: 2200, y0: 500, y1: 640, force: Object.freeze({ x: -73, y: 0 }) }),
   ]),
   /** The grotto at the back of the pebble room, a dead end behind the pebble (B6; ND-9). */
-  cave: Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/cave`, x0: 3740, x1: 3800, y0: 580, y1: BED_TOP }),
+  cave: Object.freeze({ id: `${SPRING_CAVE_2_AREA_ID}/cave`, x0: 3680, x1: 3800, y0: 580, y1: BED_TOP }),
   /** No tilapia: the spring cave is cold, clear water. */
   tilapiaRoutes: Object.freeze([]),
   /**

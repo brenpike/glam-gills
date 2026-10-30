@@ -274,16 +274,22 @@ describe('fairness harness with the relaxed safe start (issue #130, ND-11)', () 
 describe('visitPath', () => {
   const start = { x: 500, y: 200 };
 
-  it('dashes on the way in to a Dash pot only', () => {
+  it('dashes on the way in to a Dash pot', () => {
     const pot: HidingSpot = { ...spotAt('test/pot', 900, 200), rarity: 'legendary', container: true };
     const path = visitPath(start, pot, 3);
     expect(path).toEqual([...swimPositions(start, pot, true), ...swimPositions(pot, start, false), ...waitAt(start, 3 * DT)]);
     expect(swimPositions(start, pot, true).length).toBeLessThan(swimPositions(start, pot, false).length);
   });
 
-  it('does not dash to an open Legendary with no pot', () => {
+  it('dashes on the way in to an open Legendary with no pot, like a pot', () => {
     const open: HidingSpot = { ...spotAt('test/open-legendary', 900, 200), cover: 'cave', rarity: 'legendary' };
     const path = visitPath(start, open, 3);
-    expect(path).toEqual([...swimPositions(start, open, false), ...swimPositions(open, start, false), ...waitAt(start, 3 * DT)]);
+    expect(path).toEqual([...swimPositions(start, open, true), ...swimPositions(open, start, false), ...waitAt(start, 3 * DT)]);
+  });
+
+  it('does not dash to a spot that is not Legendary', () => {
+    const epic: HidingSpot = { ...spotAt('test/epic', 900, 200), cover: 'cave', rarity: 'epic' };
+    const path = visitPath(start, epic, 3);
+    expect(path).toEqual([...swimPositions(start, epic, false), ...swimPositions(epic, start, false), ...waitAt(start, 3 * DT)]);
   });
 });

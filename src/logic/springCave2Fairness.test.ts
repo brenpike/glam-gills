@@ -50,6 +50,8 @@ const FAIR_START_RING_STEP = 20;
 const FAIR_START_RING_POINTS = 24;
 /** The Legendary pots right over `crayfish-1`'s stretch, as measured: its aimed pinch reaches up to each of them. */
 const POTS_OVER_CRAYFISH_1 = ['spring-cave-2/spot-current-1', 'spring-cave-2/spot-current-2', 'spring-cave-2/spot-current-3'];
+/** The open Legendary spot in the grotto right over `crayfish-2`'s stretch, as measured: its aimed pinch reaches up to it. */
+const SPOTS_OVER_CRAYFISH_2 = ['spring-cave-2/spot-cave-2'];
 /** Spots whose nearest safe start is not fair with one leg, as measured: each is grabbed from a safe start of the wider search instead. */
 const ONE_LEG_FAR_START_SPOTS = ['spring-cave-2/spot-current-1'];
 /** First start time in seconds, as measured, for a one-leg swim of the main path to the exit without a hit (ND-5). */
@@ -90,7 +92,7 @@ function oneLegSwimPositions(from: Point, to: Point, dash: boolean): Point[] {
   return positions;
 }
 
-/** A one-leg visit: start to spot (one Tail Dash for a Legendary pot) and back, then waiting at the start for `parkSteps`. */
+/** A one-leg visit: start to spot (one Tail Dash for a Legendary, pot or open) and back, then waiting at the start for `parkSteps`. */
 function oneLegVisitPath(start: Point, spot: HidingSpot, parkSteps: number): Point[] {
   const parked = Array.from({ length: parkSteps }, () => ({ x: start.x, y: start.y }));
   return [...oneLegSwimPositions(start, spot, spot.rarity === 'legendary'), ...oneLegSwimPositions(spot, start, false), ...parked];
@@ -288,6 +290,16 @@ function listEncounterEvents(path: readonly Point[]): EncounterEvent[] {
   return events;
 }
 
+/** Checks that waiting at `spot` is hit first by `routeId`, a crayfish whose pinch is aimed up at it from its floor lane. */
+function expectAimedPinchHit(spot: HidingSpot, routeId: string, startWindow: number): void {
+  expect(spot.y, spot.id).toBeLessThan(CRAYFISH_FLOOR_Y);
+  const events = listEncounterEvents(waitAt(spot, startWindow));
+  const hit = events.find((event) => event.type === 'hit');
+  expect(hit?.type === 'hit' && hit.sourceId, spot.id).toBe(routeId);
+  const pinch = events.find((event) => event.type === 'lunge' && event.sourceId === routeId);
+  expect(pinch?.type === 'lunge' && pinch.aim.y, spot.id).toBeLessThan(0);
+}
+
 /** Checks that a spot whose nearest safe start is not fair has a fair start, a safe start other than the nearest. */
 function expectWiderFairStart(spot: HidingSpot, fair: FairStart | null): void {
   const { zone } = springCave2;
@@ -318,19 +330,18 @@ describe('risk fairness on the default Area 7 zone', () => {
     expect(ctx.bounds).toEqual(swimBounds(zone));
   });
 
-  it('catches a hit when the axolotl waits at each Legendary pot, the aimed pinch of crayfish-1 reaching up to the pots over its stretch', () => {
-    const pots = spots.filter((spot) => spot.rarity === 'legendary');
-    expect(pots).toHaveLength(3);
-    for (const pot of pots) expect(pathHits(createEncounter(zone), waitAt(pot, startWindow), ctx), pot.id).toBe(true);
-    const overCrayfish1 = pots.filter((pot) => routeLoopDistance(pot, crayfish[1].waypoints) <= CRAYFISH_REACH);
-    expect(overCrayfish1.map((pot) => pot.id)).toEqual(POTS_OVER_CRAYFISH_1);
-    for (const pot of overCrayfish1) {
-      expect(pot.y, pot.id).toBeLessThan(CRAYFISH_FLOOR_Y);
-      const events = listEncounterEvents(waitAt(pot, startWindow));
-      const hit = events.find((event) => event.type === 'hit');
-      expect(hit?.type === 'hit' && hit.sourceId, pot.id).toBe('crayfish-1');
-      const pinch = events.find((event) => event.type === 'lunge' && event.sourceId === 'crayfish-1');
-      expect(pinch?.type === 'lunge' && pinch.aim.y, pot.id).toBeLessThan(0);
+  it('catches a hit when the axolotl waits at each Legendary spot, the aimed pinch of crayfish-1 reaching up to the pots over its stretch and that of crayfish-2 up to the open grotto spot', () => {
+    const legendaries = spots.filter((spot) => spot.rarity === 'legendary');
+    expect(legendaries).toHaveLength(4);
+    for (const spot of legendaries) expect(pathHits(createEncounter(zone), waitAt(spot, startWindow), ctx), spot.id).toBe(true);
+    const pinches: [PredatorRoute, string[]][] = [
+      [crayfish[1], POTS_OVER_CRAYFISH_1],
+      [crayfish[2], SPOTS_OVER_CRAYFISH_2],
+    ];
+    for (const [route, ids] of pinches) {
+      const over = legendaries.filter((spot) => routeLoopDistance(spot, route.waypoints) <= CRAYFISH_REACH);
+      expect(over.map((spot) => spot.id), route.id).toEqual(ids);
+      for (const spot of over) expectAimedPinchHit(spot, route.id, startWindow);
     }
   });
 

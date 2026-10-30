@@ -99,7 +99,7 @@ function oneLegSwimPositions(from: Point, to: Point, dash: boolean): Point[] {
   return positions;
 }
 
-/** A one-leg visit: start to spot (one Tail Dash for a Legendary pot) and back, then waiting at the start for `parkSteps`. */
+/** A one-leg visit: start to spot (one Tail Dash for a Legendary, pot or open) and back, then waiting at the start for `parkSteps`. */
 function oneLegVisitPath(start: Point, spot: HidingSpot, parkSteps: number): Point[] {
   const parked = Array.from({ length: parkSteps }, () => ({ x: start.x, y: start.y }));
   return [...oneLegSwimPositions(start, spot, spot.rarity === 'legendary'), ...oneLegSwimPositions(spot, start, false), ...parked];
@@ -305,10 +305,18 @@ describe('risk fairness on the default Area 6 zone', () => {
     expect(ctx.bounds).toEqual(swimBounds(zone));
   });
 
-  it('catches a hit when the axolotl waits at each Legendary pot, the aimed pinch of crayfish-2 reaching up to the pots over its stretch', () => {
-    const pots = spots.filter((spot) => spot.rarity === 'legendary');
-    expect(pots).toHaveLength(5);
-    for (const pot of pots) expect(pathHits(createEncounter(zone), waitAt(pot, startWindow), ctx), pot.id).toBe(true);
+  it('catches a hit when the axolotl waits at each Legendary spot, the open one past the spring outflow too, the aimed pinch of crayfish-2 reaching up to the pots over its stretch', () => {
+    const legendaries = spots.filter((spot) => spot.rarity === 'legendary');
+    expect(legendaries.map((spot) => [spot.id, spot.container])).toEqual([
+      ['spring-cave-1/spot-cave-1', true],
+      ['spring-cave-1/spot-cave-2', true],
+      ['spring-cave-1/spot-cave-3', true],
+      ['spring-cave-1/spot-current-1', true],
+      ['spring-cave-1/spot-current-2', true],
+      ['spring-cave-1/spot-current-5', false],
+    ]);
+    for (const spot of legendaries) expect(pathHits(createEncounter(zone), waitAt(spot, startWindow), ctx), spot.id).toBe(true);
+    const pots = legendaries.filter((spot) => spot.container);
     const overCrayfish2 = pots.filter((pot) => routeLoopDistance(pot, crayfish[2].waypoints) <= CRAYFISH_REACH);
     expect(overCrayfish2.map((pot) => pot.id)).toEqual(['spring-cave-1/spot-cave-1', 'spring-cave-1/spot-cave-2', 'spring-cave-1/spot-cave-3']);
     for (const pot of overCrayfish2) {

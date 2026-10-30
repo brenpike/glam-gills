@@ -991,30 +991,26 @@ describe('Area 7 hiding spots (B5, B6, B10; ND-12)', () => {
     }
   });
 
-  it('has 6 Common, 5 Rare, 3 Epic and 3 Legendary spots, the Common, Rare and Epic pools larger than their Area 7 treasures and the Legendary pool exactly its 3 Legendaries', () => {
-    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 5, 3, 3]);
+  it('has 6 Common, 5 Rare, 3 Epic and 4 Legendary spots, every pool larger than its Area 7 treasures', () => {
+    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 5, 3, 4]);
     expect(RARITIES.map((rarity) => SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
-    for (const rarity of RARITIES.filter((candidate) => candidate !== 'legendary')) {
+    for (const rarity of RARITIES) {
       const treasures = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(zone.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);
     }
-    // INVARIANT: the Legendary pool equals its treasures, not more. The strip past the outflow, x 2200 to 2340, between crayfish-1's
-    // S / 2 reach above its 656 floor lane and the current's foot at y 640, fits no 4th Dash pot at SPOT_MIN_SPACING.
-    const legendaries = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === 'legendary').length;
-    expect(zone.spots.filter((spot) => spot.rarity === 'legendary')).toHaveLength(legendaries);
     for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
   });
 
-  it('hides the Glowworm Paint shell only in the three Legendary Dash pots past the steady outflow (springCave2Fairness.test.ts proves them fair)', () => {
-    const pots = zone.spots.filter((spot) => spot.rarity === 'legendary');
-    expect(pots.map((spot) => [spot.x, spot.y, spot.cover])).toEqual([
-      [2215, 620, 'pastCurrent'],
-      [2275, 625, 'pastCurrent'],
-      [2335, 620, 'pastCurrent'],
+  it('hides the Glowworm Paint shell in the three Legendary Dash pots past the steady outflow and the open Legendary spot in the grotto (springCave2Fairness.test.ts proves them fair)', () => {
+    const legendaries = zone.spots.filter((spot) => spot.rarity === 'legendary');
+    expect(legendaries.map((spot) => [spot.x, spot.y, spot.cover, spot.container])).toEqual([
+      [3700, 630, 'cave', false],
+      [2215, 620, 'pastCurrent', true],
+      [2275, 625, 'pastCurrent', true],
+      [2335, 620, 'pastCurrent', true],
     ]);
-    for (const spot of pots) expect(spot.container, spot.id).toBe(true);
     const glowworm = zone.finds.find((find) => find.id === `spring-cave/paint-shell-${GLOWWORM.id}`);
-    expect(glowworm?.pool).toEqual(pots.map((spot) => spot.id));
+    expect(glowworm?.pool).toEqual(legendaries.map((spot) => spot.id));
   });
 
   it('hides the Common spots under the rock ledges along the main path in the top row, lit', () => {
@@ -1027,10 +1023,11 @@ describe('Area 7 hiding spots (B5, B6, B10; ND-12)', () => {
     }
   });
 
-  it('puts the Legendary pots and two Epic spots just past the steady outflow, and the third Epic in the room grotto', () => {
+  it('puts the Legendary pots and two Epic spots just past the steady outflow, and the third Epic and the open Legendary spot in the room grotto', () => {
     const deep = zone.spots.filter((spot) => spot.rarity === 'epic' || spot.rarity === 'legendary');
     expect(deep.map((spot) => [spot.cover, spot.rarity])).toEqual([
       ['cave', 'epic'],
+      ['cave', 'legendary'],
       ['pastCurrent', 'legendary'],
       ['pastCurrent', 'legendary'],
       ['pastCurrent', 'legendary'],
@@ -1039,7 +1036,7 @@ describe('Area 7 hiding spots (B5, B6, B10; ND-12)', () => {
     ]);
     for (const spot of deep) {
       expect(coversAt(spot, zone), spot.id).toEqual([spot.cover]);
-      expect(spot.container, spot.id).toBe(spot.rarity === 'legendary');
+      expect(spot.container, spot.id).toBe(spot.cover === 'pastCurrent' && spot.rarity === 'legendary');
     }
   });
 
@@ -1084,16 +1081,23 @@ describe('Area 7 placing treasure (B4; ND-12)', () => {
     }
   });
 
-  it('puts the 3 Legendaries in the 3 Dash pots, one each, when all 13 treasures must be placed', () => {
+  it('puts the 3 Legendaries in 3 distinct Legendary spots when all 13 treasures must be placed, the open grotto spot on some trips', () => {
     const all = SPRING_CAVE_2_TREASURES.map((treasure) => treasure.id);
     const legendaryIds = SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
-    const potIds = zone.spots.filter((spot) => spot.rarity === 'legendary').map((spot) => spot.id);
+    const legendarySpotIds = zone.spots.filter((spot) => spot.rarity === 'legendary').map((spot) => spot.id);
+    const grottoId = zone.spots.find((spot) => spot.rarity === 'legendary' && spot.cover === 'cave')?.id;
     expect(all).toHaveLength(13);
+    const used = new Set<string>();
     for (const tripSeed of TRIP_SEEDS) {
       const lost = placeTreasures(zone.finds, zone.spots, [], tripSeed, { ...options, mustPlace: all });
       const legendarySpots = lost.filter((find) => legendaryIds.includes(find.id)).map((find) => find.spotId);
-      expect([...legendarySpots].sort(), `trip seed ${tripSeed}`).toEqual([...potIds].sort());
+      expect(legendarySpots, `trip seed ${tripSeed}`).toHaveLength(legendaryIds.length);
+      expect(new Set(legendarySpots).size, `trip seed ${tripSeed}`).toBe(legendaryIds.length);
+      for (const spotId of legendarySpots) expect(legendarySpotIds, `trip seed ${tripSeed}`).toContain(spotId);
+      for (const spotId of legendarySpots) used.add(spotId);
     }
+    expect(grottoId).toBeDefined();
+    expect(used.has(grottoId ?? '')).toBe(true);
   });
 
   it('leaves few of the 12 slots empty over 200 fresh trips', () => {
@@ -1163,7 +1167,7 @@ describe('Area 7 gaps and routes (the level layout ladder)', () => {
   it('has two dead ends holding treasure off the main path: the pebble room and the water past the steady outflow', () => {
     const roomSpots = zone.spots.filter((spot) => inRoom(spot));
     const pastSpots = zone.spots.filter((spot) => spot.cover === 'pastCurrent');
-    expect([roomSpots.length, pastSpots.length]).toEqual([6, 5]);
+    expect([roomSpots.length, pastSpots.length]).toEqual([7, 5]);
     for (const spot of [...roomSpots, ...pastSpots]) expect(distanceToPath(spot, zone.mainPath), spot.id).toBeGreaterThan(MAIN_PATH_REACH);
   });
 });
