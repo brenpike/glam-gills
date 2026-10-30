@@ -269,7 +269,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The eighteen Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, then Chocolate, issue #105, last). */
+/** The twenty Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, then Crystal shine and Glowworm last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -289,6 +289,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'plum',
   'moonstone',
   'chocolate',
+  'crystal-shine',
+  'glowworm',
 ];
 
 /**
@@ -461,10 +463,10 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All ninety-six icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All ninety-eight icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
- * items, the eleven spring cave Area 7 items, then the eighteen Paint shells in Dream order (the last two,
- * Moonstone and Chocolate, are the spring cave's).
+ * items, the eleven spring cave Area 7 items, then the twenty Paint shells in Dream order (the last four,
+ * Moonstone, Chocolate, Crystal shine and Glowworm, are the spring cave's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -3415,6 +3417,17 @@ function dreamStar(pen: Pen, x: number, y: number, r: number): void {
   pen.ctx.fill(star4Path(x * pen.k, y * pen.k, r * pen.k));
 }
 
+/** Glow dots in the paint blob, as offsets from its centre: x, y, core radius. Round dots only, no stars. */
+const GLOW_DOT_BLOB: readonly (readonly [number, number, number])[] = [
+  [-2.4, -2.2, 0.9],
+  [1.9, -2.6, 0.7],
+  [0.2, 0.1, 1.1],
+  [-2.7, 2.1, 0.7],
+  [2.6, 1.9, 0.9],
+];
+/** Glow dot halo radius over core radius. */
+const GLOW_HALO_SCALE = 2.2;
+
 /** The pattern inside the blob, centred on (cx, cy), clipped by the caller. */
 function paintDreamPattern(pen: Pen, id: DreamSwatchId, cx: number, cy: number): void {
   const { ctx, k } = pen;
@@ -3464,6 +3477,15 @@ function paintDreamPattern(pen: Pen, id: DreamSwatchId, cx: number, cy: number):
       strokeSpiral(ctx, k, cx, cy, 3.4, 2, m, 1.5 * (pen.markScale ?? 1));
       dreamStar(pen, cx - 2.9, cy - 2.3, 1.4);
       dreamStar(pen, cx + 2.8, cy + 2.6, 1.2);
+      break;
+    case 'glow-dots':
+      // Round glowing dots with soft halos (no stars): halo first, then the core.
+      for (const [dx, dy, r] of GLOW_DOT_BLOB) {
+        ctx.fillStyle = m[1];
+        ctx.fill(place(ellipse(dx, dy, r * GLOW_HALO_SCALE, r * GLOW_HALO_SCALE), k, cx, cy));
+        ctx.fillStyle = m[0];
+        ctx.fill(place(ellipse(dx, dy, r, r), k, cx, cy));
+      }
       break;
   }
 }
@@ -3552,7 +3574,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;

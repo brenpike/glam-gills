@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the eighteen Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the twenty Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -477,7 +477,9 @@ export type DreamLookId =
   | 'poppy-red'
   | 'plum'
   | 'moonstone'
-  | 'chocolate';
+  | 'chocolate'
+  | 'crystal-shine'
+  | 'glowworm';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -551,6 +553,15 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // default #7b4a2c (0.093) sat 1.18:1 from Plum in greyscale, under Plum's 1.5:1 margin; #6c391d is the nearest brown
   // that keeps 1.5:1 from Plum and 1.05:1 from Midnight blue.
   chocolate: dreamSlots('#6c391d', '#643623', '#a78877', '#bda699', ['#ffa6c9', '#ffbad5'], ['#ea99bd', '#eeaeca']),
+  // Spring cave Area 6 Legendary Dream colour (Crystal shine, a sheen). Body #2f9a9a is a teal (relative luminance 0.260):
+  // 4.26:1 with ink and 3.38:1 with white, so ink spots and no rim light. It sits in the window between Poppy red (1.19:1)
+  // and Rainbow (1.22:1), 2.25:1 from Iridescent (the shared stripe cue needs 1.5:1), and keeps the girl cheek heart
+  // fill further from the body than the blush. The violet gill #6a3fd8 is 1.87:1 against it.
+  'crystal-shine': dreamSlots('#2f9a9a', '#2f8c91', '#82c2c2', '#a1d2d2', ['#6a3fd8', '#8b69e1'], ['#643cca', '#8363d5']),
+  // Spring cave Area 7 Legendary Dream colour (Glowworm). Body #101c52 is a night blue (relative luminance 0.0155), darker
+  // than Galaxy (1.37:1) and Midnight blue (1.62:1): 16.03:1 with white and 1.11:1 with ink, so it follows the dark-body
+  // rules (white spots, eye ring, rim light). The glow gill #4fe3c1 is 9.99:1 against it.
+  glowworm: dreamSlots('#101c52', '#131d52', '#707797', '#9399b1', ['#4fe3c1', '#76e9cf'], ['#4bd0b6', '#70d9c5']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -568,9 +579,17 @@ export const DREAM_RIM_LIGHT: MorphRim = { colour: '#cec9f0', width: 2, fin: tru
 export const DREAM_EYE_RING: MorphEyeRing = { colour: '#cec9f0', width: 1.5 };
 
 /** The dark Dream bodies (guide 3f): the morph eye is under 3:1 on them, so they get the eye ring and white spots. */
-const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
+const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate', 'glowworm'];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
-const DREAM_RIM_IDS: readonly DreamLookId[] = ['midnight-blue', 'rainbow', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate'];
+const DREAM_RIM_IDS: readonly DreamLookId[] = [
+  'midnight-blue',
+  'rainbow',
+  'galaxy',
+  'tie-dye-galaxy',
+  'plum',
+  'chocolate',
+  'glowworm',
+];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';
 /** Guide 3b spot table: ink at 0.30 on Dream bodies of relative luminance 0.2 or more. */

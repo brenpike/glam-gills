@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-10-30
+
+### Added
+
+- The Crystal shine Dream colour, a Legendary shimmery colour hidden in a Dash pot in Area 6.
+- The Glowworm Dream colour, a Legendary patterned colour with glowing dots, hidden in a Dash pot in Area 7, past the spring's flow.
+
+### Changed
+
+- New patterned and shimmery Dream colours are Legendary. Hearts, Tie-dye and Iridescent stay Epic.
+- Each new area adds at least 2 Dream colours, and at least one of them is a Legendary patterned or shimmery colour.
+
 ## [0.55.1] - 2026-10-29
 
 ### Fixed

@@ -19,9 +19,9 @@ import {
 import { WHITE, type DreamLookId } from './palette';
 import { DREAM_DIVIDER, DREAM_STAR, DREAM_SWATCH } from './treasurePalette';
 
-/** Iridescent sheen glide period, seconds (guide 6p, 9). */
+/** Sheen glide period, seconds (guide 6p, 9): Iridescent and Crystal shine glide on the same beat. */
 export const IRIDESCENT_GLIDE_S = 4;
-/** Iridescent stripe x under reduced motion (guide 6p, 9). */
+/** Sheen stripe x under reduced motion (guide 6p, 9). */
 export const IRIDESCENT_STILL_X = -10;
 /** The pattern paints only where x <= this, so the face keeps the plain Dream body colour (guide 6p). */
 export const DREAM_FACE_LIMIT_X = 14;
@@ -84,7 +84,7 @@ const STRIPE_STEP = 0.12;
 /** How far along s each tail stripe's top end leans toward the tip. Derived (provisional). */
 const STRIPE_SLANT = 0.04;
 
-/** Iridescent stripe pair (guide 6p): white 5 wide, a 2-unit gap, then #8f7fe0 3 wide, slanted 45 degrees. */
+/** Sheen stripe pair (guide 6p): a light stripe 5 wide, a 2-unit gap, then a tint stripe 3 wide, slanted 45 degrees (Iridescent: white, then #8f7fe0). */
 const IRIDESCENT_WHITE_W = 5;
 const IRIDESCENT_GAP = 2;
 const IRIDESCENT_TINT_W = 3;
@@ -121,6 +121,34 @@ const GALAXY_DOTS_TAIL: readonly TailPlace[] = [
   { s: 0.27, v: 0 },
   { s: 0.72, v: 0.1 },
 ];
+/**
+ * Glowworm (glow dots): a glowworm cave roof of round glowing dots with soft halos, no stars. Derived (provisional):
+ * body points are prototype torso points moved by torsoPoint, tail points ride the painted tail (s, v) like Galaxy's.
+ * Core radii 0.8 to 1.9; every dot sits at least its halo radius inside the silhouette on every look.
+ */
+const GLOW_DOTS_BODY: readonly (LocalPoint & { readonly r: number })[] = [
+  { x: -30, y: 0, r: 1.3 },
+  { x: -22, y: -7, r: 1.6 },
+  { x: -20, y: 8, r: 1.1 },
+  { x: -12, y: -2, r: 1.9 },
+  { x: -9, y: 10, r: 1.4 },
+  { x: -1, y: -8, r: 1.2 },
+  { x: 1, y: 3, r: 1.6 },
+  { x: 8, y: 9, r: 1.3 },
+  { x: 9, y: -5, r: 1.5 },
+];
+const GLOW_DOTS_TAIL: readonly (TailPlace & { readonly r: number })[] = [
+  { s: 0.12, v: -0.35, r: 1.3 },
+  { s: 0.24, v: 0.4, r: 1.1 },
+  { s: 0.36, v: -0.2, r: 1.5 },
+  { s: 0.48, v: 0.35, r: 1 },
+  { s: 0.6, v: -0.3, r: 1.2 },
+  { s: 0.72, v: 0.15, r: 0.9 },
+  { s: 0.84, v: -0.1, r: 0.8 },
+];
+/** Glow dot halo radius over core radius. */
+export const GLOW_HALO_SCALE = 2.2;
+
 /**
  * Derived (provisional): guide 6p asks for six stars, R 1.6 to 2.6, in the
  * Tie-dye galaxy spiral gaps but gives no positions. Prototype torso points
@@ -163,22 +191,30 @@ export type DreamShape =
   | { readonly kind: 'polygon'; readonly points: DreamPolygon; readonly fill: string }
   | { readonly kind: 'line'; readonly points: DreamPolygon; readonly width: number; readonly stroke: string };
 
+/**
+ * True for the sheen Dream colours (Iridescent, Crystal shine): exactly the ones whose swatch pattern is 'stripes'.
+ * A sheen glides its stripe pair along the body (dreamSheenAt, iridescentStripeX) instead of holding a static pattern.
+ */
+export function isSheenDream(id: DreamLookId): boolean {
+  return DREAM_SWATCH[id].pattern === 'stripes';
+}
+
 /** What paintDreamPattern needs: the Dream colour, the look's torso, the painted tail samples and the sheen phase. */
 export interface DreamPatternArgs {
   readonly id: DreamLookId;
   readonly torso: BodyEllipse;
   readonly tail: readonly TailSample[];
-  /** Iridescent sheen phase in [0, 1) (dreamSheenAt); undefined holds the reduced-motion still stripe. */
+  /** Sheen phase in [0, 1) (dreamSheenAt), read by the sheen colours (isSheenDream); undefined holds the reduced-motion still stripe. */
   readonly sheen?: number;
 }
 
-/** Iridescent sheen phase in [0, 1) at `seconds`; one glide every IRIDESCENT_GLIDE_S. */
+/** Sheen phase in [0, 1) at `seconds`; one glide every IRIDESCENT_GLIDE_S. */
 export function dreamSheenAt(seconds: number): number {
   const turns = seconds / IRIDESCENT_GLIDE_S;
   return turns - Math.floor(turns);
 }
 
-/** Iridescent stripe x: x 14 at sheen 0, gliding to the tail tip; IRIDESCENT_STILL_X when sheen is undefined. */
+/** Sheen stripe x (any sheen colour): x 14 at sheen 0, gliding to the tail tip; IRIDESCENT_STILL_X when sheen is undefined. */
 export function iridescentStripeX(sheen: number | undefined, tailTipX: number): number {
   if (sheen === undefined) return IRIDESCENT_STILL_X;
   return DREAM_FACE_LIMIT_X + sheen * (tailTipX - DREAM_FACE_LIMIT_X);
@@ -426,8 +462,8 @@ function slantedBand(x: number, y: number, from: number, to: number, fill: strin
   };
 }
 
-/** The Iridescent stripe pair: the white stripe centred on the sheen x on the body axis, the tint stripe behind it. */
-function iridescentShapes(
+/** The sheen stripe pair: the light stripe centred on the sheen x on the body axis, the tint stripe behind it. */
+function sheenShapes(
   torso: BodyEllipse,
   tail: readonly TailSample[],
   sheen: number | undefined,
@@ -514,6 +550,18 @@ function galaxyShapes(torso: BodyEllipse, tail: readonly TailSample[], nebula: s
   ];
 }
 
+/** Glowworm: each glow dot as a soft halo then its bright core, back to front, so halos never cover a core. */
+function glowDotShapes(torso: BodyEllipse, tail: readonly TailSample[], core: string, halo: string): DreamShape[] {
+  const dots = [
+    ...GLOW_DOTS_BODY.map((p) => ({ ...bodyPoint(torso, p), r: p.r })),
+    ...GLOW_DOTS_TAIL.map((p) => ({ ...tailPlacePoint(tail, p), r: p.r })),
+  ];
+  return [
+    ...dots.map((d): DreamShape => ({ kind: 'dot', x: d.x, y: d.y, r: d.r * GLOW_HALO_SCALE, fill: halo })),
+    ...dots.map((d): DreamShape => ({ kind: 'dot', x: d.x, y: d.y, r: d.r, fill: core })),
+  ];
+}
+
 /**
  * The guide 6p pattern of Dream colour `id` as shapes in local units, back to
  * front, before clipping. Body positions move onto the look's torso
@@ -534,7 +582,7 @@ export function dreamPatternShapes(
     case 'spiral':
       return [...tailStripeShapes(tail, marks), ...spiralShapes(torso, marks)];
     case 'stripes':
-      return iridescentShapes(torso, tail, sheen, marks);
+      return sheenShapes(torso, tail, sheen, marks);
     case 'bands':
       return rainbowShapes(tail, marks);
     case 'stars':
@@ -545,6 +593,8 @@ export function dreamPatternShapes(
         ...spiralShapes(torso, marks),
         ...TIE_DYE_GALAXY_STARS.map((p) => starShape(bodyPoint(torso, p), p.r)),
       ];
+    case 'glow-dots':
+      return glowDotShapes(torso, tail, marks[0], marks[1]);
   }
 }
 
