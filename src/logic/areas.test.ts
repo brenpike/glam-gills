@@ -42,6 +42,7 @@ import {
   POND_2_TREASURES,
   POND_TREASURES,
   SPRING_CAVE_TREASURES,
+  dreamColourById,
   treasureById,
 } from './catalogue';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
@@ -1124,7 +1125,7 @@ describe('Legendary treasures by area (issue #146)', () => {
   const legendaryIds = (area: Readonly<AreaData>): string[] =>
     area.layout.treasures.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
 
-  it('keeps exactly 1 Legendary in the canal, the Sun pyramid, 3 in each of Areas 2 to 5, and the owner\'s 2 in Area 6', () => {
+  it('keeps exactly 1 Legendary in the canal, the Sun pyramid, 3 in each of Areas 2 to 7, the last of Areas 6 and 7 a Paint shell', () => {
     expect(legendaryIds(CANAL_AREA)).toEqual(['canal/sun-pyramid']);
     expect(legendaryIds(POND_AREA)).toEqual(['pond/rainbow-dragonfly-wings', 'pond/froggy-boots', 'canal/golden-bow']);
     expect(legendaryIds(POND_2_AREA)).toEqual(['pond/golden-lotus-throne', 'pond/firefly-cape', 'canal/paint-shell-galaxy']);
@@ -1134,7 +1135,30 @@ describe('Legendary treasures by area (issue #146)', () => {
       'chinampa/rainbow-serape-cape',
       'canal/paint-shell-tie-dye-galaxy',
     ]);
-    expect(legendaryIds(SPRING_CAVE_AREA)).toEqual(['spring-cave/crystal-arch', 'spring-cave/crystal-crown']);
+    expect(legendaryIds(SPRING_CAVE_AREA)).toEqual([
+      'spring-cave/crystal-arch',
+      'spring-cave/crystal-crown',
+      'spring-cave/paint-shell-crystal-shine',
+    ]);
+    expect(legendaryIds(SPRING_CAVE_2_AREA)).toEqual([
+      'spring-cave/underground-waterfall',
+      'spring-cave/gemstone-cape',
+      'spring-cave/paint-shell-glowworm',
+    ]);
+  });
+
+  it('gives every area from Area 6 on at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour', () => {
+    const laterAreas = AREAS.filter((area) => area.number >= 6);
+    expect(laterAreas.length).toBeGreaterThan(0);
+    for (const area of laterAreas) {
+      const shells = area.layout.treasures.filter((treasure) => treasure.category === 'paintShell');
+      expect(shells.length, area.id).toBeGreaterThanOrEqual(2);
+      const legendaryFancy = shells.filter((shell) => {
+        const kind = dreamColourById(shell.dreamColour)?.kind;
+        return shell.rarity === 'legendary' && (kind === 'patterned' || kind === 'sheen');
+      });
+      expect(legendaryFancy.length, area.id).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it('puts each catalogue treasure in exactly one area', () => {

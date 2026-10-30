@@ -6,9 +6,12 @@ import {
   CHINAMPA_2_TREASURES,
   CHOCOLATE,
   CHINAMPA_TREASURES,
+  CRYSTAL_SHINE,
   DREAM_COLOURS,
   FIREFLY_GOLD,
   GALAXY,
+  GLOWWORM,
+  GRANDFATHERED_EPIC_DREAM_IDS,
   LILY_GREEN,
   MOONSTONE,
   PERK_VALUES,
@@ -25,7 +28,7 @@ import {
   WEARABLE_SLOTS,
   categoryName,
   dreamColourById,
-  dreamKindAllowed,
+  dreamRarityAllowed,
   isDecoration,
   ownedDreamColours,
   placementKind,
@@ -607,7 +610,7 @@ describe('CHINAMPA_2_TREASURES', () => {
 });
 
 describe('SPRING_CAVE_TREASURES', () => {
-  it('holds exactly the spring cave Area 6 treasures, in rarity order (issue #77)', () => {
+  it('holds exactly the spring cave Area 6 treasures, in rarity order, then the Crystal shine Paint shell (issue #77)', () => {
     expect(SPRING_CAVE_TREASURES).toEqual([
       { id: 'spring-cave/pebble-stack', name: 'Pebble stack', rarity: 'common', category: 'decoration' },
       {
@@ -674,6 +677,13 @@ describe('SPRING_CAVE_TREASURES', () => {
         slot: 'head',
         perk: { type: 'speed', value: 10 },
       },
+      {
+        id: 'spring-cave/paint-shell-crystal-shine',
+        name: 'Crystal shine Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'crystal-shine',
+      },
     ]);
     expect(Object.isFrozen(SPRING_CAVE_TREASURES)).toBe(true);
   });
@@ -687,14 +697,17 @@ describe('SPRING_CAVE_TREASURES', () => {
     expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBeGreaterThan(1);
   });
 
-  it('has 6 Decorations, 5 Wearables and the Moonstone Paint shell, in rarity order', () => {
-    expect(SPRING_CAVE_TREASURES).toHaveLength(12);
+  it('has 6 Decorations, 5 Wearables and the Moonstone and Crystal shine Paint shells, in rarity order', () => {
+    expect(SPRING_CAVE_TREASURES).toHaveLength(13);
     expect(SPRING_CAVE_TREASURES.filter(isDecoration)).toHaveLength(6);
     expect(SPRING_CAVE_TREASURES.filter(isWearable)).toHaveLength(5);
-    expect(SPRING_CAVE_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['spring-cave/paint-shell-moonstone']);
+    expect(SPRING_CAVE_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'spring-cave/paint-shell-moonstone',
+      'spring-cave/paint-shell-crystal-shine',
+    ]);
     const rarityIndexes = SPRING_CAVE_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
     expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
-    expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
   });
 
   it('keeps the canal, pond, pond Area 3, chinampa Area 4 and chinampa Area 5 lists unchanged ahead of it', () => {
@@ -708,7 +721,7 @@ describe('SPRING_CAVE_TREASURES', () => {
 });
 
 describe('SPRING_CAVE_2_TREASURES', () => {
-  it("holds exactly the spring cave Area 7 treasures, the owner's 12, in rarity order (issue #105)", () => {
+  it("holds exactly the spring cave Area 7 treasures, the owner's 12 in rarity order, then the Glowworm Paint shell (issue #105)", () => {
     expect(SPRING_CAVE_2_TREASURES).toEqual([
       { id: 'spring-cave/mossy-rock', name: 'Mossy rock', rarity: 'common', category: 'decoration' },
       { id: 'spring-cave/bubble-stone', name: 'Bubble stone', rarity: 'common', category: 'decoration' },
@@ -769,6 +782,13 @@ describe('SPRING_CAVE_2_TREASURES', () => {
         slot: 'back',
         perk: { type: 'shell', value: 1 },
       },
+      {
+        id: 'spring-cave/paint-shell-glowworm',
+        name: 'Glowworm Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'glowworm',
+      },
     ]);
     expect(Object.isFrozen(SPRING_CAVE_2_TREASURES)).toBe(true);
   });
@@ -782,14 +802,17 @@ describe('SPRING_CAVE_2_TREASURES', () => {
     expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBe(wearables.length);
   });
 
-  it('has 6 Decorations, 5 Wearables and the Chocolate Paint shell, in rarity order, with the Ancient clay pot Rare', () => {
-    expect(SPRING_CAVE_2_TREASURES).toHaveLength(12);
+  it('has 6 Decorations, 5 Wearables and the Chocolate and Glowworm Paint shells, in rarity order, with the Ancient clay pot Rare', () => {
+    expect(SPRING_CAVE_2_TREASURES).toHaveLength(13);
     expect(SPRING_CAVE_2_TREASURES.filter(isDecoration)).toHaveLength(6);
     expect(SPRING_CAVE_2_TREASURES.filter(isWearable)).toHaveLength(5);
-    expect(SPRING_CAVE_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual(['spring-cave/paint-shell-chocolate']);
+    expect(SPRING_CAVE_2_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'spring-cave/paint-shell-chocolate',
+      'spring-cave/paint-shell-glowworm',
+    ]);
     const rarityIndexes = SPRING_CAVE_2_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
     expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
-    expect(RARITIES.map((rarity) => SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => SPRING_CAVE_2_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
     expect(treasureById('spring-cave/ancient-clay-pot')?.rarity).toBe('rare');
   });
 
@@ -799,8 +822,8 @@ describe('SPRING_CAVE_2_TREASURES', () => {
     expect(POND_2_TREASURES).toHaveLength(13);
     expect(CHINAMPA_TREASURES).toHaveLength(13);
     expect(CHINAMPA_2_TREASURES).toHaveLength(13);
-    expect(SPRING_CAVE_TREASURES).toHaveLength(12);
-    expect(SPRING_CAVE_TREASURES.at(-1)?.id).toBe('spring-cave/crystal-crown');
+    expect(SPRING_CAVE_TREASURES).toHaveLength(13);
+    expect(SPRING_CAVE_TREASURES.at(-1)?.id).toBe('spring-cave/paint-shell-crystal-shine');
   });
 });
 
@@ -819,11 +842,11 @@ describe('ALL_TREASURES', () => {
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 96 treasures: 37 Decorations, 41 Wearables and 18 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(96);
+  it('has 98 treasures: 37 Decorations, 41 Wearables and 20 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(98);
     expect(ALL_DECORATIONS).toHaveLength(37);
     expect(ALL_WEARABLES).toHaveLength(41);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(18);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(20);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -888,7 +911,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Chocolate', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -900,9 +923,11 @@ describe('Dream colours', () => {
       PLUM,
       TIE_DYE_GALAXY,
       MOONSTONE,
+      CRYSTAL_SHINE,
       CHOCOLATE,
+      GLOWWORM,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(18);
+    expect(DREAM_COLOURS).toHaveLength(20);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -958,11 +983,29 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Chocolate a rare solid, the eighteenth and last Dream colour, with a name no other Dream colour has (issue #105)', () => {
+  it('makes Chocolate a rare solid, the nineteenth Dream colour, with a name no other Dream colour has (issue #105)', () => {
     expect(CHOCOLATE).toEqual({ id: 'chocolate', name: 'Chocolate', rarity: 'rare', kind: 'solid' });
     expect(Object.isFrozen(CHOCOLATE)).toBe(true);
     expect(dreamColourById('chocolate')).toBe(CHOCOLATE);
-    expect(DREAM_COLOURS.at(-1)).toBe(CHOCOLATE);
+    expect(DREAM_COLOURS.at(18)).toBe(CHOCOLATE);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Crystal shine a Legendary sheen, the eighteenth Dream colour, with a name no other Dream colour has', () => {
+    expect(CRYSTAL_SHINE).toEqual({ id: 'crystal-shine', name: 'Crystal shine', rarity: 'legendary', kind: 'sheen' });
+    expect(Object.isFrozen(CRYSTAL_SHINE)).toBe(true);
+    expect(dreamColourById('crystal-shine')).toBe(CRYSTAL_SHINE);
+    expect(DREAM_COLOURS.at(17)).toBe(CRYSTAL_SHINE);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Glowworm a Legendary patterned colour, the twentieth and last Dream colour, with a name no other Dream colour has', () => {
+    expect(GLOWWORM).toEqual({ id: 'glowworm', name: 'Glowworm', rarity: 'legendary', kind: 'patterned' });
+    expect(Object.isFrozen(GLOWWORM)).toBe(true);
+    expect(dreamColourById('glowworm')).toBe(GLOWWORM);
+    expect(DREAM_COLOURS.at(-1)).toBe(GLOWWORM);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -983,27 +1026,42 @@ describe('Dream colours', () => {
   });
 });
 
-describe('dreamKindAllowed', () => {
+describe('dreamRarityAllowed', () => {
   it('holds for every Dream colour and every Paint shell', () => {
     for (const colour of DREAM_COLOURS) {
-      expect(dreamKindAllowed(colour.kind, colour.rarity)).toBe(true);
+      expect(dreamRarityAllowed(colour), colour.id).toBe(true);
     }
     for (const shell of ALL_TREASURES.filter(isPaintShell)) {
       const colour = dreamColourById(shell.dreamColour);
-      expect(colour).toBeDefined();
-      expect(dreamKindAllowed(colour!.kind, shell.rarity)).toBe(true);
+      expect(colour, shell.id).toBeDefined();
+      expect(dreamRarityAllowed({ ...colour!, rarity: shell.rarity }), shell.id).toBe(true);
     }
+  });
+
+  it('grandfathers exactly Hearts, Tie-dye and Iridescent as the Epic patterned and sheen colours', () => {
+    expect(GRANDFATHERED_EPIC_DREAM_IDS).toEqual(['hearts', 'tie-dye', 'iridescent']);
+    expect(Object.isFrozen(GRANDFATHERED_EPIC_DREAM_IDS)).toBe(true);
+    const epicIds = DREAM_COLOURS.filter((colour) => colour.rarity === 'epic').map((colour) => colour.id);
+    expect(epicIds).toEqual(GRANDFATHERED_EPIC_DREAM_IDS);
   });
 
   it.each<[DreamKind, Rarity]>([
     ['patterned', 'common'],
     ['patterned', 'rare'],
+    ['patterned', 'epic'],
     ['sheen', 'common'],
     ['sheen', 'rare'],
-    ['solid', 'epic'],
-    ['solid', 'legendary'],
-  ])('rejects %s at %s', (kind, rarity) => {
-    expect(dreamKindAllowed(kind, rarity)).toBe(false);
+    ['sheen', 'epic'],
+  ])('rejects a new %s colour at %s', (kind, rarity) => {
+    expect(dreamRarityAllowed({ id: 'glowworm', kind, rarity })).toBe(false);
+  });
+
+  it.each<Rarity>(['epic', 'legendary'])('rejects a solid colour at %s', (rarity) => {
+    expect(dreamRarityAllowed({ id: 'chocolate', kind: 'solid', rarity })).toBe(false);
+  });
+
+  it.each<Rarity>(['common', 'rare', 'legendary'])('rejects a grandfathered colour at %s', (rarity) => {
+    expect(dreamRarityAllowed({ id: 'hearts', kind: 'patterned', rarity })).toBe(false);
   });
 });
 

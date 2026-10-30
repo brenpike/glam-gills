@@ -1,5 +1,5 @@
 /**
- * Iridescent tail stripe polygons (issue #46), headless: tailStripe's run
+ * Sheen Dream tail stripe polygons (Iridescent, Crystal shine; issue #46), headless: tailStripe's run
  * polygons against the stripe drawAxolotl paints, recorded with every clip it
  * paints under (silhouette, inset Dream clip, face limit). The recording
  * context is the stub-Path2D one of axolotlRigFidelity.test.ts, copied here
@@ -403,8 +403,9 @@ const inBox = (box: Box, x: number, y: number): boolean =>
 // What to check
 // ---------------------------------------------------------------------------
 
-const IRIDESCENT = axolotlPalette('leucistic', 'iridescent');
 const MARKS = DREAM_SWATCH.iridescent.marks;
+/** The sheen Dream colours (isSheenDream), whose stripe tailStripe draws. */
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine'] as const satisfies readonly DreamLookId[];
 /** The pattern paints of drawAxolotl carry three clips: silhouette, inset Dream clip, face limit. */
 const PATTERN_CLIPS = 3;
 const EXACT = 1e-6;
@@ -483,21 +484,21 @@ function tallyBand(paint: Paint, polys: readonly (readonly number[])[], toX: num
   }
 }
 
-/** drawAxolotl's two Iridescent stripe paints (white, then tint) at this pose. */
-function drawnStripe(look: AxolotlArtLook, pose: AxolotlPose): Paint[] {
-  const paints = recordPaints((ctx) => drawAxolotl(ctx, pose, IRIDESCENT, look));
+/** drawAxolotl's two stripe paints (light, then tint) of sheen colour `dream` at this pose. */
+function drawnStripe(dream: DreamLookId, look: AxolotlArtLook, pose: AxolotlPose): Paint[] {
+  const paints = recordPaints((ctx) => drawAxolotl(ctx, pose, axolotlPalette('leucistic', dream), look));
   return paints.filter((p) => p.clips.length === PATTERN_CLIPS);
 }
 
-function tallyLook(look: AxolotlArtLook, tally: CoverageTally): void {
+function tallyLook(dream: DreamLookId, look: AxolotlArtLook, tally: CoverageTally): void {
   let k = 0;
   for (const { swimPhase, tailAmp } of POSES) {
     for (const sheen of SHEENS) {
       const toX = toXFor(look, k++);
-      const drawn = drawnStripe(look, { ...RIG_STILL_POSE, swimPhase, tailAmp, sheen });
-      expect(drawn.map((p) => [p.kind, p.style])).toEqual(MARKS.map((m) => ['fill', m]));
-      const stripe = tailStripe(look, swimPhase, tailAmp, sheen, toX);
-      const label = `${lookId(look)} swim ${swimPhase.toFixed(3)} amp ${tailAmp} sheen ${sheen} toX ${toX}`;
+      const drawn = drawnStripe(dream, look, { ...RIG_STILL_POSE, swimPhase, tailAmp, sheen });
+      expect(drawn.map((p) => [p.kind, p.style])).toEqual(DREAM_SWATCH[dream].marks.map((m) => ['fill', m]));
+      const stripe = tailStripe(dream, look, swimPhase, tailAmp, sheen, toX);
+      const label = `${dream} ${lookId(look)} swim ${swimPhase.toFixed(3)} amp ${tailAmp} sheen ${sheen} toX ${toX}`;
       stripe.forEach((band, b) => tallyBand(drawn[b], band.polygons, toX, `${label} band ${b}`, tally));
     }
   }
@@ -507,7 +508,19 @@ describe('tailStripe', () => {
   for (const look of LOOKS) {
     it(`covers exactly the stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
       const tally = newTally();
-      tallyLook(look, tally);
+      tallyLook('iridescent', look, tally);
+      expect(tally.first).toBeNull();
+      expect(tally.mismatches).toBe(0);
+      expect(tally.overlaps).toBe(0);
+      expect(tally.strays).toBe(0);
+      expect(tally.covered).toBeGreaterThan(1000);
+    });
+  }
+
+  for (const look of LOOKS) {
+    it(`covers exactly the Crystal shine stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
+      const tally = newTally();
+      tallyLook('crystal-shine', look, tally);
       expect(tally.first).toBeNull();
       expect(tally.mismatches).toBe(0);
       expect(tally.overlaps).toBe(0);
@@ -522,7 +535,7 @@ describe('tailStripe', () => {
       if (!m) throw new Error(`unexpected mark ${css}`);
       return [(Number(m[1]) << 16) | (Number(m[2]) << 8) | Number(m[3]), Number(m[4])];
     };
-    const stripe = tailStripe(DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
+    const stripe = tailStripe('iridescent', DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
     expect(stripe.map((band) => [band.colour, band.alpha])).toEqual(MARKS.map(parse));
     expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
       [0xffffff, 0.7],
@@ -530,13 +543,29 @@ describe('tailStripe', () => {
     ]);
   });
 
+  it('fills each band with its parsed Crystal shine mark, white first', () => {
+    const stripe = tailStripe('crystal-shine', DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
+    expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
+      [0xffffff, 0.7],
+      [0x96faf5, 0.75],
+    ]);
+  });
+
+  it('throws on a Dream colour with no sheen', () => {
+    const plain = (Object.keys(DREAM_SLOTS) as DreamLookId[]).filter((id) => !(SHEEN_DREAMS as readonly DreamLookId[]).includes(id));
+    expect(plain.length).toBeGreaterThan(0);
+    for (const id of plain) expect(() => tailStripe(id, DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity), id).toThrow(`tailStripe: ${id} is not a sheen Dream colour`);
+  });
+
   it('is empty when toX is left of the band', () => {
     for (const look of LOOKS) {
       const tipX = tailSamples(axolotlBodyGeometry(look).tail, 0, 1)[TAIL_SEGMENTS].x;
       for (const sheen of SHEENS) {
         for (const toX of [tipX - 20, -1000]) {
-          const stripe = tailStripe(look, 0, 1, sheen, toX);
-          expect(stripe.map((band) => band.polygons)).toEqual([[], []]);
+          for (const dream of SHEEN_DREAMS) {
+            const stripe = tailStripe(dream, look, 0, 1, sheen, toX);
+            expect(stripe.map((band) => band.polygons)).toEqual([[], []]);
+          }
         }
       }
     }
@@ -545,30 +574,32 @@ describe('tailStripe', () => {
   it('is empty when the band misses the tail band', () => {
     for (const look of LOOKS) {
       // Sheen 0 holds the stripe at x 14: across the body axis it is far right of x -40.
-      expect(tailStripe(look, 0, 1, 0, Infinity).map((band) => band.polygons.length > 0)).toEqual([true, true]);
-      expect(tailStripe(look, 0, 1, 0, -40).map((band) => band.polygons)).toEqual([[], []]);
+      for (const dream of SHEEN_DREAMS) {
+        expect(tailStripe(dream, look, 0, 1, 0, Infinity).map((band) => band.polygons.length > 0)).toEqual([true, true]);
+        expect(tailStripe(dream, look, 0, 1, 0, -40).map((band) => band.polygons)).toEqual([[], []]);
+      }
     }
   });
 
   it('fills `out` in place, reusing its polygon arrays', () => {
-    const out: TailStripe = tailStripe(DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
+    const out: TailStripe = tailStripe('iridescent', DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
     const firstPolygon = out[0].polygons[0];
     expect(firstPolygon).toBeDefined();
-    const again = tailStripe(DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, Infinity, out);
+    const again = tailStripe('iridescent', DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, Infinity, out);
     expect(again).toBe(out);
     expect(again[0].polygons[0]).toBe(firstPolygon);
-    expect(again).toEqual(tailStripe(DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, Infinity));
-    tailStripe(DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, -1000, out);
+    expect(again).toEqual(tailStripe('iridescent', DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, Infinity));
+    tailStripe('iridescent', DEFAULT_ART_LOOK, 1, AXO_MAX_TAIL_AMP, 0.25, -1000, out);
     expect(out.map((band) => band.polygons)).toEqual([[], []]);
   });
 
   it('reports its per-call cost (log only)', () => {
     const look = LOOKS[1];
     const seam = seamX(look);
-    let out = tailStripe(look, 0, 1, 0, seam);
+    let out = tailStripe('iridescent', look, 0, 1, 0, seam);
     const run = (calls: number): void => {
       for (let i = 0; i < calls; i++) {
-        out = tailStripe(look, i * 0.07, AXO_MAX_TAIL_AMP, sheenStepValue(i % SHEEN_STEPS), seam, out);
+        out = tailStripe('iridescent', look, i * 0.07, AXO_MAX_TAIL_AMP, sheenStepValue(i % SHEEN_STEPS), seam, out);
       }
     };
     run(300);
