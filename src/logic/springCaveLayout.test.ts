@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_2_AREA, SPRING_CAVE_AREA, SPRING_CAVE_HABITAT, newThingsByArea, sourceFactCards, threatFactCards, threatIds } from './areas';
-import { RARITIES, SPRING_CAVE_TREASURES } from './catalogue';
+import { CRYSTAL_SHINE, RARITIES, SPRING_CAVE_TREASURES } from './catalogue';
 import { CHINAMPA_2_CARP, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
 import {
@@ -142,7 +142,7 @@ const ROW_OPENINGS: Readonly<Record<number, readonly (readonly [number, number])
     [2181, 2360],
   ],
 };
-/** Empty treasure slots over the 200 fresh trips, as measured: 11 slots for 12 treasures leave some empty (issue #77, ND-12). */
+/** Empty treasure slots over the 200 fresh trips, as measured: 11 slots for 13 treasures leave some empty (issue #77, ND-12). */
 const EMPTY_SLOTS = { most: 4, mean: 2.4 };
 const CRAYFISH_IDS = [0, 1, 2].map((n) => `crayfish-${n}`);
 const CARP_IDS = [0, 1, 2, 3, 4, 5, 6].map((n) => `carp-${n}`);
@@ -826,12 +826,29 @@ describe('Area 6 hiding spots (B5, B6, B10; issue #77, ND-11)', () => {
 
   it('has 6 Common, 6 Rare, 5 Epic and 5 Legendary spots, each pool larger than its Area 6 treasures', () => {
     expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([6, 6, 5, 5]);
-    expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
     for (const rarity of RARITIES) {
       const treasures = SPRING_CAVE_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(zone.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);
     }
     for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
+  });
+
+  it('hides the Crystal shine Paint shell only in the five Legendary Dash pots, three in the grotto and two past the spring outflow, all in the dark (springCaveFairness.test.ts proves them fair)', () => {
+    const pots = zone.spots.filter((spot) => spot.rarity === 'legendary');
+    expect(pots.map((spot) => [spot.x, spot.y, spot.cover])).toEqual([
+      [1960, 990, 'cave'],
+      [2020, 990, 'cave'],
+      [2080, 990, 'cave'],
+      [1900, 790, 'pastCurrent'],
+      [1960, 790, 'pastCurrent'],
+    ]);
+    for (const spot of pots) {
+      expect(spot.container, spot.id).toBe(true);
+      expect(inDarkWater(spot, dark), spot.id).toBe(true);
+    }
+    const crystalShine = zone.finds.find((find) => find.id === `spring-cave/paint-shell-${CRYSTAL_SHINE.id}`);
+    expect(crystalShine?.pool).toEqual(pots.map((spot) => spot.id));
   });
 
   it('hides the Common spots under the rock ledges along the main path in the top row, lit', () => {
@@ -923,7 +940,7 @@ describe('Area 6 placing treasure (B4; issue #77, ND-12)', () => {
     }
   });
 
-  it('leaves at most 4 of the 11 slots empty on a fresh trip, 2.4 on average over 200 fresh trips, as 12 treasures fill 11 slots', () => {
+  it('leaves at most 4 of the 11 slots empty on a fresh trip, 2.4 on average over 200 fresh trips, as 13 treasures fill 11 slots', () => {
     const empty = TRIP_SEEDS.map((tripSeed) => tuning.slots + 1 - placeTreasures(zone.finds, zone.spots, [], tripSeed, options).length);
     const mean = empty.reduce((sum, count) => sum + count, 0) / empty.length;
     expect(Math.min(...empty)).toBeGreaterThanOrEqual(0);

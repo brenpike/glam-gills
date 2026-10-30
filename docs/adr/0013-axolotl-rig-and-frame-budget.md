@@ -1,6 +1,6 @@
 # ADR 0013: Live axolotls are a rig of baked parts, with a frame-time budget
 
-- Status: Accepted
+- Status: Accepted. Amended in part by ADR 0031 (every sheen Dream colour takes the Iridescent path)
 - Date: 2026-10-20
 - Updated: 2026-10-21. The area framework ([ADR 0014](0014-area-framework.md), issue #73) adds a fourth measured case, the dev test area taller than one screen, and the `?area` dev flag. The decision is unchanged.
 - Updated: 2026-10-21. Issues #87 and #88 change the parts table: the Tail and Shirt items move over the near gills, and a Girl's cheek heart joins the `face` part. The decision is unchanged.
@@ -176,7 +176,7 @@ Headless tests in `src/art/axolotlRig.test.ts`, `src/art/axolotlRigFidelity.test
 
 Accepted approximations, each bounded by an asserted test, to confirm by eye in `?compare`:
 
-- On the WebGL rope, the interior Dream patterns of the tail bend with the tail bake rather than sitting on the live tail. At a full dash, the worst per-column spans are Hearts 4.88, Tie-dye 12.38 and Tie-dye galaxy 2.37.
+- On the WebGL rope, the interior Dream patterns of the tail bend with the tail bake rather than sitting on the live tail. At a full dash, the worst per-column spans are Hearts 4.88, Tie-dye 12.38, Tie-dye galaxy 2.37 and Glowworm 3.68 (Glowworm since ADR 0031).
 - The ink outline thins a little on the steepest bends of the rope tail.
 - Gill flutter is quantized to 10 frames, with a small live turn.
 - The Iridescent sheen steps every 0.25 s.
