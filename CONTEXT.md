@@ -377,6 +377,10 @@ Trying on Wearables and posing in a spotlight, started from the Home Tank (N1); 
 **Wearable set**:
 A themed group of Wearables, named by a Wearable's optional set ID, that unlocks a small bonus when worn together (N5).
 
+**Cormorant**:
+The Neotropic cormorant, a dark diving water bird planned as a **Predator** for the deep canal, designed but not built (N3). It floats on the surface and drifts along a short stretch toward the axolotl, and it warns with its dive crouch (neck arched down to the water, tail up). Then it dives in a U-shaped arc under the water at the axolotl, comes back up, and dries its wings. Its dive goes only so deep, so swimming deep or away dodges it, and it cannot see an axolotl in cover. It is surface danger for the **Danger bar**, so its area also has predators on the floor. It never grabs, holds, lifts or carries the axolotl, and a hit shows only the **Leg loss** poof.
+_Avoid_: shag, diving duck, monster
+
 ### Music
 
 **Cue**:
