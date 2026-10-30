@@ -1168,15 +1168,30 @@ describe('Legendary treasures by area (issue #146)', () => {
   });
 
   it.each(AREAS.map((area) => [area.id, area] as const))(
-    'hides every %s Legendary only in Dash pots, with a pot free for each one',
+    'gives every %s Legendary a pool with a spot free for each Legendary, and keeps every Dash pot a Legendary spot',
     (_id, area) => {
       for (const seed of [DEFAULT_ZONE_SEED, 1, 2, 3]) {
         const zone = buildZone(area.layout, seed);
-        const spots = new Map(zone.spots.map((spot) => [spot.id, spot]));
         const ids = legendaryIds(area);
         for (const id of ids) {
           const pool = zone.finds.find((find) => find.id === id)?.pool ?? [];
           expect(pool.length, id).toBeGreaterThanOrEqual(ids.length);
+        }
+        for (const spot of zone.spots.filter((candidate) => candidate.container)) {
+          expect(spot.rarity, spot.id).toBe('legendary');
+        }
+      }
+    },
+  );
+
+  it.each(AREAS.filter((area) => area.number <= 5).map((area) => [area.id, area] as const))(
+    'hides every %s Legendary only in Dash pots',
+    (_id, area) => {
+      for (const seed of [DEFAULT_ZONE_SEED, 1, 2, 3]) {
+        const zone = buildZone(area.layout, seed);
+        const spots = new Map(zone.spots.map((spot) => [spot.id, spot]));
+        for (const id of legendaryIds(area)) {
+          const pool = zone.finds.find((find) => find.id === id)?.pool ?? [];
           for (const spotId of pool) {
             expect(spots.get(spotId)?.container, `${id} at ${spotId}`).toBe(true);
           }

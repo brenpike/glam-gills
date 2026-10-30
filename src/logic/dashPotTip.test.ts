@@ -70,20 +70,21 @@ describe('dashPotTipText', () => {
 
 describe('knowsDashPots and createDashPotTip', () => {
   it('a new save does not know, so the tip starts unseen', () => {
-    const save = { banked: [], dashPotTipSeen: false };
+    const save = { dashPotTipSeen: false };
     expect(knowsDashPots(save)).toBe(false);
     expect(createDashPotTip(save)).toEqual(UNSEEN);
   });
 
   it('a save with the tip seen knows, so the tip starts done', () => {
-    const save = { banked: [], dashPotTipSeen: true };
+    const save = { dashPotTipSeen: true };
     expect(knowsDashPots(save)).toBe(true);
     expect(createDashPotTip(save)).toEqual(DONE);
   });
 
-  it('a banked Legendary counts as knowing; other banked treasures do not', () => {
-    expect(knowsDashPots({ banked: [COMMON_ID, LEGENDARY_ID], dashPotTipSeen: false })).toBe(true);
-    expect(knowsDashPots({ banked: [COMMON_ID, 'unknown-id'], dashPotTipSeen: false })).toBe(false);
+  it('a banked Legendary alone does not count as knowing, so the tip starts unseen', () => {
+    const hub = { banked: [COMMON_ID, LEGENDARY_ID], dashPotTipSeen: false };
+    expect(knowsDashPots(hub)).toBe(false);
+    expect(createDashPotTip(hub)).toEqual(UNSEEN);
   });
 });
 

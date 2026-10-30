@@ -35,7 +35,7 @@ export const UNFOUND_HINTS: Readonly<Record<Rarity, string>> = Object.freeze({
   common: 'Look near the main swim path!',
   rare: 'Look off the main path!',
   epic: 'Look in a cave or log, or past the current!',
-  legendary: 'Break a Dash pot with Tail Dash!',
+  legendary: 'Look deep, right next to danger!',
 });
 
 /** Treasure Chest section kind, in display order. */

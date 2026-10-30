@@ -117,7 +117,8 @@ interface PlacedFacts {
   at: { x: number; y: number; container: boolean };
   sealed: boolean;
   meetsRarity: boolean;
-  legendaryInDeepPot: boolean;
+  legendaryIsDeep: boolean;
+  potHoldsLegendary: boolean;
 }
 
 function placedFacts(zone: ZoneLayout, placed: PlacedFind): PlacedFacts {
@@ -128,7 +129,8 @@ function placedFacts(zone: ZoneLayout, placed: PlacedFind): PlacedFacts {
     at: { x: placed.x, y: placed.y, container: placed.container },
     sealed: placed.sealed,
     meetsRarity: meetsRarity(placed, rarity, zone),
-    legendaryInDeepPot: rarity !== 'legendary' || (placed.container && deep),
+    legendaryIsDeep: rarity !== 'legendary' || deep,
+    potHoldsLegendary: !placed.container || rarity === 'legendary',
   };
 }
 
@@ -139,7 +141,8 @@ function expectedFacts(zone: ZoneLayout, placed: PlacedFind): PlacedFacts {
     at: { x: spot.x, y: spot.y, container: spot.container },
     sealed: spot.container,
     meetsRarity: true,
-    legendaryInDeepPot: true,
+    legendaryIsDeep: true,
+    potHoldsLegendary: true,
   };
 }
 

@@ -833,13 +833,33 @@ describe('Dash pot tip seen (#149, B11, D2)', () => {
     expect(SAVE_VERSION).toBe(1);
   });
 
+  it('loads an older save without the field but with a Legendary banked as seen', () => {
+    const json = savedJson();
+    const olderHub: Record<string, unknown> = { ...json.hub, banked: [...(json.hub.banked as string[]), LOTUS_THRONE] };
+    delete olderHub.dashPotTipSeen;
+    const hub = loadedHub({ version: 1, hub: olderHub });
+    expect(hub.banked).toContain(LOTUS_THRONE);
+    expect(hub.dashPotTipSeen).toBe(true);
+    expect(SAVE_VERSION).toBe(1);
+  });
+
+  it('loads a save with the field false and a Legendary banked as not seen', () => {
+    const json = savedJson();
+    const hub = hubWithFields({ banked: [...(json.hub.banked as string[]), LOTUS_THRONE], dashPotTipSeen: false });
+    expect(hub.banked).toContain(LOTUS_THRONE);
+    expect(hub.dashPotTipSeen).toBe(false);
+  });
+
   it.each([
     ['a string', 'true'],
     ['a number', 1],
     ['null', null],
     ['an object', { seen: true }],
-  ])('loads a field that is %s as not seen', (_label, dashPotTipSeen) => {
+  ])('loads a field that is %s as not seen, even with a Legendary banked', (_label, dashPotTipSeen) => {
     expect(hubWith('dashPotTipSeen', dashPotTipSeen).dashPotTipSeen).toBe(false);
+    const json = savedJson();
+    const hub = hubWithFields({ banked: [...(json.hub.banked as string[]), LOTUS_THRONE], dashPotTipSeen });
+    expect(hub.dashPotTipSeen).toBe(false);
   });
 });
 

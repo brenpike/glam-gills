@@ -5,13 +5,12 @@
  *
  * It shows once per save, for the first Dash pot ever met: the first time the axolotl bumps a
  * sealed pot without dashing (`dashNeeded`) or comes within DASH_POT_TIP.nearPx of one, whichever
- * comes first. A player who already knows never sees it: one whose save has the tip seen, or who
- * has a Legendary banked (Legendaries always hide in Dash pots). Breaking a pot before the tip
- * shows counts as knowing too. It waits while the axolotl is in any threat's reach, and a threat
+ * comes first. A player who already knows never sees it: one whose save has the tip seen (a save
+ * from before #149 with a Legendary banked loads as seen; see `save.ts`). Breaking a pot before the
+ * tip shows counts as knowing too. It waits while the axolotl is in any threat's reach, and a threat
  * reaching the axolotl while it shows closes it. It pauses and slows nothing. Its time runs, and it
  * counts as seen, only while it is on screen: not while the HUD holds it for want of room (X10).
  */
-import { treasureById } from './catalogue';
 import { predatorSpecies, type EncounterContext } from './encounter';
 import { shapeDistance } from './hazards';
 import { movingHazardPhase, movingHazardSweep } from './movingHazards';
@@ -51,9 +50,8 @@ export interface DashPotTipStep {
   cue: DashPotTipCue;
 }
 
-/** The saved parts the tip reads: the banked ids and whether the tip was seen. */
+/** The saved part the tip reads: whether the tip was seen. */
 export interface DashPotTipSave {
-  readonly banked: readonly string[];
   readonly dashPotTipSeen: boolean;
 }
 
@@ -66,9 +64,9 @@ export function dashPotTipText(input: TipInput): string {
   return DASH_POT_TIP_TEXT[input];
 }
 
-/** Whether the player already knows how to break a Dash pot: the tip was seen on this save, or a Legendary is banked. */
+/** Whether the player already knows how to break a Dash pot: the tip was seen on this save. */
 export function knowsDashPots(save: DashPotTipSave): boolean {
-  return save.dashPotTipSeen || save.banked.some((id) => treasureById(id)?.rarity === 'legendary');
+  return save.dashPotTipSeen;
 }
 
 /** The tip state a trip starts with: 'done' when the player already knows, else 'unseen'. */

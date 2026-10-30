@@ -178,10 +178,10 @@ export function swimPositions(from: Point, to: Point, dash: boolean): Point[] {
   return positions;
 }
 
-/** Start to spot (one Tail Dash for a Legendary pot) and back, then waiting at the start for `parkSteps` until any strike is over. */
+/** Start to spot (one Tail Dash for a Dash pot) and back, then waiting at the start for `parkSteps` until any strike is over. */
 export function visitPath(start: Point, spot: HidingSpot, parkSteps: number): Point[] {
   const parked = Array.from({ length: parkSteps }, () => ({ x: start.x, y: start.y }));
-  return [...swimPositions(start, spot, spot.rarity === 'legendary'), ...swimPositions(spot, start, false), ...parked];
+  return [...swimPositions(start, spot, spot.container), ...swimPositions(spot, start, false), ...parked];
 }
 
 /** Whether following `path` from `state` takes a hit, from a predator, a still hazard or a moving hazard. */

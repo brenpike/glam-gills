@@ -35,8 +35,10 @@
  * An older save has none, so they load as not found; an older build drops them as unknown ids.
  *
  * The Dash pot tip (#149) came under the additive rule, with no version bump: the hub's
- * `dashPotTipSeen` loads as true only when exactly true, so a missing or bad value loads as not
- * seen. An older build drops it, so the tip may show once more there.
+ * `dashPotTipSeen` loads as true when exactly true. A save from before #149 lacks the field; it
+ * loads as seen when a banked id is a Legendary (every Legendary then hid in a Dash pot), else as
+ * not seen. A present but bad value loads as not seen. An older build drops it, so the tip may show
+ * once more there.
  *
  * Legacy `book.tilapiaCard`: the Collection Book no longer holds the tilapia card, the hub's
  * `metHazards` does. The encoder still writes `book.tilapiaCard` (true when 'tilapia' is met), so
@@ -245,8 +247,19 @@ function repairedHub(saved: Record<string, unknown>): HubState {
     firstFindsSeen: repairedFirstFindsSeen(saved.firstFindsSeen),
     lastAreaId: resolveAreaId(saved.lastAreaId, stars),
     metHazards: repairedMetHazards(saved.metHazards, saved.book),
-    dashPotTipSeen: saved.dashPotTipSeen === true,
+    dashPotTipSeen: repairedDashPotTipSeen(saved, banked),
   };
+}
+
+/**
+ * Whether the Dash pot tip was seen: exactly true. A save without the field is from before #149,
+ * when every Legendary hid in a Dash pot, so a banked Legendary counts as seen there.
+ */
+function repairedDashPotTipSeen(saved: Record<string, unknown>, banked: readonly string[]): boolean {
+  if (!Object.hasOwn(saved, 'dashPotTipSeen')) {
+    return banked.some((id) => treasureById(id)?.rarity === 'legendary');
+  }
+  return saved.dashPotTipSeen === true;
 }
 
 /** Whether `value` is a treasure id that can be banked: a catalogue id that is not an axolotl find id. */
