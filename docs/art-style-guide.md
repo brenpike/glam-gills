@@ -2835,7 +2835,7 @@ A touch is a gentle bump (the tilapia's bump speed and cooldown) and costs no le
 
 ### 7n. Cormorant (deep canal predator)
 
-PRD N3 and A11; ADR 0007 and ADR 0008; issue #112; PRD open questions 543 to 549. The cormorant is a diving predator for the deep canal: a small, friendly, dark water bird that floats at the top of the swim water, drifts along its stretch, and, when the explorer is below it and in reach, arches into a crouch, then dives down in a U arc to where the explorer was and rises back up. It is designed only and is built with the deep canal; the build names its painters, textures, scene glue and ADR. Colours are in 3g. All values below are `derived (provisional)`.
+PRD N3 and A11; ADR 0007 and ADR 0008; issue #112; PRD open questions 544 to 550. The cormorant is a diving predator for the deep canal: a small, friendly, dark water bird that floats at the top of the swim water, drifts along its stretch, and, when the explorer is below it and in reach, arches into a crouch, then dives down in a U arc to where the explorer was and rises back up. It is designed only and is built with the deep canal; the build names its painters, textures, scene glue and ADR. Colours are in 3g. All values below are `derived (provisional)`.
 
 **Character rules**
 
@@ -2859,7 +2859,7 @@ PRD N3 and A11; ADR 0007 and ADR 0008; issue #112; PRD open questions 543 to 549
 
 **Placement.** The logic point is on its stretch at the top of the swim water (y 94), and the body floats on the art water line. Floating, it draws behind every cue object, like the heron's body (23). Diving, it draws in front of the tilapia and behind the axolotl, like the heron's stab (37). The painters, texture keys and exact depths are set at build.
 
-**Phases and poses.** Times and speeds are provisional (PRD open questions 543 to 549).
+**Phases and poses.** Times and speeds are provisional (PRD open questions 544 to 550).
 
 | Phase | What shows | Source |
 |---|---|---|
