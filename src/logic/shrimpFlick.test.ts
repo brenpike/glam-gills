@@ -715,11 +715,14 @@ describe('shrimp look-ups scale with the shrimp count (issue #131, ND-5)', () =>
 /** Array methods that scan a whole list with a callback. */
 const LIST_SCANS: ReadonlySet<string> = new Set(['some', 'every', 'map', 'filter', 'forEach']);
 
-/** A view of `list` that adds the name of each string key read from it to `keys`. */
-function watchedList<T>(list: readonly T[], keys: string[]): readonly T[] {
+/** The key a for...of loop reads to get an array iterator, an allocation, as watchedList records it. */
+const ITERATOR_KEY = String(Symbol.iterator);
+
+/** A view of `list` that adds the name of each key read from it to `keys`, a symbol key by String(key). */
+function watchedList<L extends readonly unknown[]>(list: L, keys: string[]): L {
   return new Proxy(list, {
     get: (target, key, receiver) => {
-      if (typeof key === 'string') keys.push(key);
+      keys.push(typeof key === 'string' ? key : String(key));
       return Reflect.get(target, key, receiver) as unknown;
     },
   });
@@ -765,19 +768,23 @@ describe('a ready flick whose landing is blocked (issue #139)', () => {
 
   for (const { name, start, head, avoid } of cases) {
     it(`stays ready with nothing changed, frame after frame, for ${name}`, () => {
-      const { items, state } = start();
-      const itemsBefore = structuredClone(items);
+      const started = start();
+      const state = started.state;
+      const itemsBefore = structuredClone(started.items);
       const stateBefore = structuredClone(state);
       const keys: string[] = [];
       const watched = watchedAvoid(avoid, keys);
+      const items = started.items.map((item) => (item.home ? { ...item, home: watchedList(item.home, keys) } : item));
       for (let frame = 0; frame < 5; frame++) {
         expect(stepShrimpFlicks(items, head, frameAt(frame), state, REDUCED, watched, 0.016)).toBeNull();
         expect(stepShrimpFlicks(items, head, frameAt(frame), state, GLIDING, watched, 0.016)).toBeNull();
       }
+      const read = keys.slice();
+      expect(read).toContain('length');
+      expect(read.filter((key) => LIST_SCANS.has(key))).toEqual([]);
+      expect(read).not.toContain(ITERATOR_KEY);
       expect(state).toEqual(stateBefore);
       expect(items).toEqual(itemsBefore);
-      expect(keys).toContain('length');
-      expect(keys.filter((key) => LIST_SCANS.has(key))).toEqual([]);
       const cleared = stepOrFail(items, head, state, REDUCED, 0.016, frameAt(5));
       expect(cleared.flickStarts).toEqual(['s0']);
     });

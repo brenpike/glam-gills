@@ -610,10 +610,11 @@ export function shrimpGlideClear(
   const ringGap = rectSegmentGap(homeSpot.x - halfX, homeSpot.x + halfX, homeSpot.y - halfY, homeSpot.y + halfY, from, to);
   if (ringGap <= homeSpot.radius) return false;
   if (glideMeetsRect(from, to, safeArea, halfX, halfY)) return false;
-  for (const current of avoid.currents) if (glideMeetsRect(from, to, current, halfX, halfY)) return false;
-  for (const mat of avoid.mats) if (glideMeetsRect(from, to, mat, halfX, halfY)) return false;
-  for (const shape of avoid.hazards ?? avoid.keepAway) {
-    if (glideShapeGap(from, to, shape, halfX, halfY) < SNACK_HAZARD_CLEARANCE) return false;
+  for (let index = 0; index < avoid.currents.length; index++) if (glideMeetsRect(from, to, avoid.currents[index], halfX, halfY)) return false;
+  for (let index = 0; index < avoid.mats.length; index++) if (glideMeetsRect(from, to, avoid.mats[index], halfX, halfY)) return false;
+  const shapes = avoid.hazards ?? avoid.keepAway;
+  for (let index = 0; index < shapes.length; index++) {
+    if (glideShapeGap(from, to, shapes[index], halfX, halfY) < SNACK_HAZARD_CLEARANCE) return false;
   }
   return true;
 }

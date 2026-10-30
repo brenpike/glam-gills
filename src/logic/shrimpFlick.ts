@@ -130,16 +130,16 @@ export function createShrimpFlicks(
 
 /** Whether the shrimp with this id has a flick under way, for its pose (mobileSnackPose). Allocates nothing. */
 export function isShrimpFlicking(state: ShrimpFlickState, id: string): boolean {
-  for (const flick of state.flicks) {
-    if (flick.id === id) return true;
+  for (let index = 0; index < state.flicks.length; index++) {
+    if (state.flicks[index].id === id) return true;
   }
   return false;
 }
 
 /** Whether the shrimp with this id is resting after a flick (issue #131, ND-10), for its pose. Allocates nothing. */
 export function isShrimpRestingAfterFlick(state: ShrimpFlickState, id: string): boolean {
-  for (const rest of state.resting) {
-    if (rest.id === id) return rest.afterFlick;
+  for (let index = 0; index < state.resting.length; index++) {
+    if (state.resting[index].id === id) return state.resting[index].afterFlick;
   }
   return false;
 }
@@ -150,14 +150,14 @@ export function isShrimpRestingAfterFlick(state: ShrimpFlickState, id: string): 
  * Allocates nothing.
  */
 export function readShrimpHopSign(state: ShrimpFlickState, id: string): -1 | 0 | 1 {
-  for (const rest of state.resting) {
-    if (rest.id === id) return rest.hopSign;
+  for (let index = 0; index < state.resting.length; index++) {
+    if (state.resting[index].id === id) return state.resting[index].hopSign;
   }
-  for (const hop of state.hops) {
-    if (hop.id === id) return hop.hopSign;
+  for (let index = 0; index < state.hops.length; index++) {
+    if (state.hops[index].id === id) return state.hops[index].hopSign;
   }
-  for (const flick of state.flicks) {
-    if (flick.id === id) return flick.hopSign;
+  for (let index = 0; index < state.flicks.length; index++) {
+    if (state.flicks[index].id === id) return state.flicks[index].hopSign;
   }
   return 0;
 }
@@ -180,7 +180,8 @@ export function createShrimpPoseLookup(): ShrimpPoseLookup {
 
 function fillById<T extends { readonly id: string }>(byId: Map<string, T>, entries: readonly T[]): void {
   byId.clear();
-  for (const entry of entries) {
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
     if (!byId.has(entry.id)) byId.set(entry.id, entry);
   }
 }
@@ -235,7 +236,8 @@ function insideGrownHome(point: Readonly<Point>, home: readonly Readonly<Point>[
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const spot of home) {
+  for (let index = 0; index < home.length; index++) {
+    const spot = home[index];
     minX = Math.min(minX, spot.x);
     maxX = Math.max(maxX, spot.x);
     minY = Math.min(minY, spot.y);
@@ -417,8 +419,8 @@ function glideMoves(items: readonly Collectible[], state: ShrimpFlickState, glid
 }
 
 function anyGlideMoves(items: readonly Collectible[], state: ShrimpFlickState, glides: readonly ShrimpGlide[]): boolean {
-  for (const glide of glides) {
-    if (glideMoves(items, state, glide)) return true;
+  for (let index = 0; index < glides.length; index++) {
+    if (glideMoves(items, state, glides[index])) return true;
   }
   return false;
 }
