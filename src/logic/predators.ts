@@ -785,15 +785,32 @@ function swimRoute(state: PredatorState, dt: number, ctx: PredatorContext): Pred
  * whose grown box already holds the centre does not stop it, so a predator inside one can leave.
  */
 function moveClamped(from: Point, delta: Point, ctx: PredatorContext): Point {
-  const keepOut = growSafeArea(ctx.safeArea, ctx.tuning.bodyRadius);
-  const rock = (ctx.rockWalls ?? []).map((wall) => growSafeArea(wall, ctx.tuning.bodyRadius));
-  const { bounds } = ctx;
+  // Grown boxes are compared through `margin` rather than built, so a move allocates no box (hot path).
+  const margin = ctx.tuning.bodyRadius;
+  const { bounds, safeArea } = ctx;
+  const rock = ctx.rockWalls;
   let x = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
-  if (strictlyInside(x, from.y, keepOut)) x = from.x <= keepOut.x0 ? keepOut.x0 : keepOut.x1;
-  x = rock.reduce((reached, box) => (between(from.y, box.y0, box.y1) ? stopAtFace(from.x, reached, box.x0, box.x1) : reached), x);
+  if (strictlyInsideGrown(x, from.y, safeArea, margin)) {
+    x = from.x <= safeArea.x0 - margin ? safeArea.x0 - margin : safeArea.x1 + margin;
+  }
+  if (rock) {
+    for (const wall of rock) {
+      if (between(from.y, wall.y0 - margin, wall.y1 + margin)) {
+        x = stopAtFace(from.x, x, wall.x0 - margin, wall.x1 + margin);
+      }
+    }
+  }
   let y = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
-  if (strictlyInside(x, y, keepOut)) y = from.y <= keepOut.y0 ? keepOut.y0 : keepOut.y1;
-  y = rock.reduce((reached, box) => (between(x, box.x0, box.x1) ? stopAtFace(from.y, reached, box.y0, box.y1) : reached), y);
+  if (strictlyInsideGrown(x, y, safeArea, margin)) {
+    y = from.y <= safeArea.y0 - margin ? safeArea.y0 - margin : safeArea.y1 + margin;
+  }
+  if (rock) {
+    for (const wall of rock) {
+      if (between(x, wall.x0 - margin, wall.x1 + margin)) {
+        y = stopAtFace(from.y, y, wall.y0 - margin, wall.y1 + margin);
+      }
+    }
+  }
   return { x, y };
 }
 
@@ -813,17 +830,9 @@ function between(value: number, lo: number, hi: number): boolean {
   return value > lo && value < hi;
 }
 
-function growSafeArea(safeArea: SafeArea, margin: number): SafeArea {
-  return {
-    x0: safeArea.x0 - margin,
-    x1: safeArea.x1 + margin,
-    y0: safeArea.y0 - margin,
-    y1: safeArea.y1 + margin,
-  };
-}
-
-function strictlyInside(x: number, y: number, box: SafeArea): boolean {
-  return x > box.x0 && x < box.x1 && y > box.y0 && y < box.y1;
+/** Whether (x, y) is strictly inside `box` grown by `margin` on every side. */
+function strictlyInsideGrown(x: number, y: number, box: SafeArea, margin: number): boolean {
+  return x > box.x0 - margin && x < box.x1 + margin && y > box.y0 - margin && y < box.y1 + margin;
 }
 
 function faceToward(facing: -1 | 1, dx: number): -1 | 1 {
