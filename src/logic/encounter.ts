@@ -2,10 +2,12 @@ import { hazardCentre, legHazardAt, type HazardSpawn } from './hazards';
 import { inSightCover, type SightCoverGeometry } from './hiding';
 import { createLegs, isProtected, speedUpRegrowth, tryHit, updateLegs, type LegsState } from './legs';
 import { movingHazardTip, movingHazardTouches, type MovingHazardSpawn } from './movingHazards';
+import type { RockWall } from './pebble';
 import {
   TILAPIA_SPECIES,
   bumpImpulse,
   createPredator,
+  crossesRock,
   stepPredator,
   touching,
   type PredatorContext,
@@ -32,6 +34,7 @@ import {
  * Absent `predatorRoutes`, `hazards` or `movingHazards` mean none. Absent `tilapia` means the
  * context's tilapia tuning. The optional sight cover geometry (`reedPatches`, `pads`, `cave`) is
  * what a species with the `sightCover` rule cannot see into; absent parts mean no such cover.
+ * Absent `rockWalls` means no rock.
  */
 export type EncounterSource = Pick<ZoneLayout, 'safeArea' | 'tilapiaRoutes' | 'tilapia'> &
   SightCoverGeometry & {
@@ -39,6 +42,8 @@ export type EncounterSource = Pick<ZoneLayout, 'safeArea' | 'tilapiaRoutes' | 't
     hazards?: readonly HazardSpawn[];
     /** Moving hazards (ND-8, PRD open question 255); absent or empty means none. */
     movingHazards?: readonly MovingHazardSpawn[];
+    /** Solid rock walls (ND-12) no predator senses, chases, strikes or moves through. */
+    rockWalls?: readonly Readonly<RockWall>[];
   };
 
 /**
@@ -49,7 +54,7 @@ export type EncounterSource = Pick<ZoneLayout, 'safeArea' | 'tilapiaRoutes' | 't
  * tilapia tuning, played in place of the context's. `reedPatches`, `pads` and `cave` are the
  * source's sight cover geometry, each present only when the source has it. `movingHazards` and
  * `hazardTime`, their clock in seconds, are present only when the source has one or more moving
- * hazards (ND-8, PRD open question 255).
+ * hazards (ND-8, PRD open question 255). `rockWalls` is present only when the source has it (ND-12).
  */
 export interface EncounterState {
   safeArea: SafeArea;
@@ -63,6 +68,7 @@ export interface EncounterState {
   reedPatches?: ReedPatch[];
   pads?: PadSpec[];
   cave?: CaveArea;
+  rockWalls?: RockWall[];
   legs: LegsState;
   predators: PredatorState[];
   /** Seconds left before another bump can happen; 0 when a bump is ready. */
@@ -145,8 +151,8 @@ function tilapiaSpeciesFor(tuning: Readonly<TilapiaTuning>): Readonly<PredatorSp
 
 /**
  * Starts a trip: every leg present, no protection, Shell unused, each predator at the start of
- * its route. Routes, hazards (with their drift, when set), moving hazards, sight cover geometry
- * and the source's own tilapia tuning (only when set) are copied; species and hazard types are
+ * its route. Routes, hazards (with their drift, when set), moving hazards, sight cover geometry,
+ * rock walls and the source's own tilapia tuning (only when set) are copied; species and hazard types are
  * shared. The moving hazard clock starts at 0, and only when the source has a moving hazard.
  */
 export function createEncounter(
@@ -167,6 +173,7 @@ export function createEncounter(
     hazards,
     ...copyMovingHazards(source),
     ...copySightCover(source),
+    ...(source.rockWalls ? { rockWalls: source.rockWalls.map((wall) => ({ ...wall })) } : {}),
     legs: createLegs(legTuning),
     predators: [
       ...tilapiaRoutes.map((route) => createPredator(route, TILAPIA_SPECIES.id)),
@@ -221,6 +228,10 @@ export function resetEncounter(
  * other species uses its own tuning, rule hook and shared rules (see `predatorSpecies`). A species
  * with the `sightCover` rule is told whether the axolotl is in the encounter's sight cover
  * (`inSightCover`); the tilapia ignores cover.
+ *
+ * Rock (ND-12): with `rockWalls`, every predator gets the walls and is told whether the segment from
+ * its centre at the step start to the axolotl touches one (`crossesRock`, edges and corners
+ * included). A target behind rock is never warned at, chased or hit, and no predator moves into rock.
  *
  * Stagger (PRD A1): only one predator attacks at a time, whatever its species. A predator may
  * start a telegraph only while no other predator is telegraphing or lunging (judged on the
@@ -361,6 +372,10 @@ function stepPredators(
     if (species.rules) {
       predatorCtx.rules = species.rules;
       predatorCtx.targetInCover = species.rules.sightCover === true && inSightCover(axolotlPos, current);
+    }
+    if (current.rockWalls) {
+      predatorCtx.rockWalls = current.rockWalls;
+      predatorCtx.targetBehindRock = crossesRock(current.predators[i].pos, axolotlPos, current.rockWalls);
     }
     const result = stepPredator(current.predators[i], axolotlPos, dt, predatorCtx);
     current.predators[i] = result.state;

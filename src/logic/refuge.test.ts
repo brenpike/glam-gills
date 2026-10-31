@@ -6,6 +6,8 @@ import {
   CHINAMPA_2_AREA,
   CHINAMPA_AREA,
   CHINAMPA_HABITAT,
+  DEEP_CANAL_AREA,
+  DEEP_CANAL_HABITAT,
   HABITATS,
   POND_2_AREA,
   POND_AREA,
@@ -82,9 +84,9 @@ function specialOnly(...areaIds: string[]): AreaStarsRecord {
 /** A test-only habitat no real table holds, so its ids never clash with a real habitat or area. */
 const MARSH_HABITAT: Readonly<Habitat> = { id: 'reed-marsh', name: 'Reed marsh', look: 'reed-marsh' };
 
-const MARSH_AREA: Readonly<AreaData> = { ...CHINAMPA_AREA, id: 'reed-marsh-1', number: 7, habitatId: MARSH_HABITAT.id };
+const MARSH_AREA: Readonly<AreaData> = { ...CHINAMPA_AREA, id: 'reed-marsh-1', number: 9, habitatId: MARSH_HABITAT.id };
 
-const MARSH_AREA_2: Readonly<AreaData> = { ...CHINAMPA_AREA, id: 'reed-marsh-2', number: 8, habitatId: MARSH_HABITAT.id };
+const MARSH_AREA_2: Readonly<AreaData> = { ...CHINAMPA_AREA, id: 'reed-marsh-2', number: 10, habitatId: MARSH_HABITAT.id };
 
 const FUTURE_AREAS: readonly Readonly<AreaData>[] = [...AREAS, MARSH_AREA, MARSH_AREA_2];
 
@@ -98,17 +100,19 @@ describe('refugeSections', () => {
       POND_HABITAT.id,
       CHINAMPA_HABITAT.id,
       SPRING_CAVE_HABITAT.id,
+      DEEP_CANAL_HABITAT.id,
     ]);
-    expect(sections.map((section) => section.firstAreaNumber)).toEqual([1, 2, 4, 6]);
+    expect(sections.map((section) => section.firstAreaNumber)).toEqual([1, 2, 4, 6, 8]);
   });
 
   it('orders sections by area table, not habitat table', () => {
-    const sections = refugeSections({}, AREAS, [SPRING_CAVE_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, CANAL_HABITAT]);
+    const sections = refugeSections({}, AREAS, [DEEP_CANAL_HABITAT, SPRING_CAVE_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, CANAL_HABITAT]);
     expect(sections.map((section) => section.habitatId)).toEqual([
       CANAL_HABITAT.id,
       POND_HABITAT.id,
       CHINAMPA_HABITAT.id,
       SPRING_CAVE_HABITAT.id,
+      DEEP_CANAL_HABITAT.id,
     ]);
   });
 
@@ -119,19 +123,21 @@ describe('refugeSections', () => {
       POND_HABITAT.id,
       CHINAMPA_HABITAT.id,
       SPRING_CAVE_HABITAT.id,
+      DEEP_CANAL_HABITAT.id,
     ]);
   });
 
   it('copies the habitat name and look', () => {
-    const [canal, pond, chinampa, springCave] = refugeSections({});
+    const [canal, pond, chinampa, springCave, deepCanal] = refugeSections({});
     expect(canal).toMatchObject({ habitatName: 'Canal', look: 'canal' });
     expect(pond).toMatchObject({ habitatName: 'Lily pad pond', look: 'pond' });
     expect(chinampa).toMatchObject({ habitatName: 'Chinampa gardens', look: 'chinampa' });
     expect(springCave).toMatchObject({ habitatName: 'Spring cave', look: 'spring-cave' });
+    expect(deepCanal).toMatchObject({ habitatName: 'Deep canal', look: 'deep-canal' });
   });
 
   it('has a batch per area of the habitat, in area order', () => {
-    const [canal, pond, chinampa, springCave] = refugeSections({});
+    const [canal, pond, chinampa, springCave, deepCanal] = refugeSections({});
     expect(canal.batches).toEqual([{ areaId: CANAL_AREA.id, areaNumber: 1, cleared: false }]);
     expect(pond.batches).toEqual([
       { areaId: POND_AREA.id, areaNumber: 2, cleared: false },
@@ -145,10 +151,11 @@ describe('refugeSections', () => {
       { areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: false },
       { areaId: SPRING_CAVE_2_AREA.id, areaNumber: 7, cleared: false },
     ]);
+    expect(deepCanal.batches).toEqual([{ areaId: DEEP_CANAL_AREA.id, areaNumber: 8, cleared: false }]);
   });
 
   it('hides every section on a fresh save', () => {
-    expect(refugeSections({}).map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden']);
+    expect(refugeSections({}).map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden', 'hidden']);
   });
 
   it('keeps a section hidden when its areas have stars but no exit star', () => {
@@ -196,7 +203,7 @@ describe('refugeSections', () => {
 
   it('keeps the spring cave section dirty until both Area 6 and Area 7 are beaten (issues #77 and #105)', () => {
     const area6Only = refugeSections(beaten(SPRING_CAVE_AREA.id));
-    expect(area6Only.map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'dirty']);
+    expect(area6Only.map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'dirty', 'hidden']);
     expect(area6Only[3].batches).toEqual([
       { areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: true },
       { areaId: SPRING_CAVE_2_AREA.id, areaNumber: 7, cleared: false },
@@ -208,22 +215,22 @@ describe('refugeSections', () => {
 
   it('never counts a dev area', () => {
     const devIds = DEV_AREAS.map((area) => area.id);
-    expect(refugeSections(beaten(...devIds)).map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden']);
+    expect(refugeSections(beaten(...devIds)).map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden', 'hidden']);
     expect(newlyBeatenAreaIds({}, beaten(...devIds))).toEqual([]);
   });
 
   it('adds a section for a future habitat with no code change', () => {
     const sections = refugeSections(beaten(MARSH_AREA.id), FUTURE_AREAS, FUTURE_HABITATS);
-    expect(sections.map((section) => section.habitatId)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'reed-marsh']);
-    expect(sections[4]).toEqual({
+    expect(sections.map((section) => section.habitatId)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'reed-marsh']);
+    expect(sections[5]).toEqual({
       habitatId: 'reed-marsh',
       habitatName: 'Reed marsh',
       look: 'reed-marsh',
-      firstAreaNumber: 7,
+      firstAreaNumber: 9,
       state: 'dirty',
       batches: [
-        { areaId: 'reed-marsh-1', areaNumber: 7, cleared: true },
-        { areaId: 'reed-marsh-2', areaNumber: 8, cleared: false },
+        { areaId: 'reed-marsh-1', areaNumber: 9, cleared: true },
+        { areaId: 'reed-marsh-2', areaNumber: 10, cleared: false },
       ],
     });
   });
@@ -231,20 +238,20 @@ describe('refugeSections', () => {
 
 describe('refugeAreaLine (issue #113, ND-8)', () => {
   it('shows no area line on a hidden section', () => {
-    expect(refugeSections({}).map(refugeAreaLine)).toEqual([null, null, null, null]);
-    expect(refugeSections(specialOnly(CANAL_AREA.id, POND_AREA.id)).map(refugeAreaLine)).toEqual([null, null, null, null]);
+    expect(refugeSections({}).map(refugeAreaLine)).toEqual([null, null, null, null, null]);
+    expect(refugeSections(specialOnly(CANAL_AREA.id, POND_AREA.id)).map(refugeAreaLine)).toEqual([null, null, null, null, null]);
   });
 
   it('names the areas of a dirty section', () => {
     const sections = refugeSections(beaten(POND_AREA.id, CHINAMPA_2_AREA.id));
-    expect(sections.map((section) => section.state)).toEqual(['hidden', 'dirty', 'dirty', 'hidden']);
-    expect(sections.map(refugeAreaLine)).toEqual([null, 'Areas 2 and 3', 'Areas 4 and 5', null]);
+    expect(sections.map((section) => section.state)).toEqual(['hidden', 'dirty', 'dirty', 'hidden', 'hidden']);
+    expect(sections.map(refugeAreaLine)).toEqual([null, 'Areas 2 and 3', 'Areas 4 and 5', null, null]);
   });
 
   it('names the areas of a clean section', () => {
     const sections = refugeSections(beaten(...AREAS.map((area) => area.id)));
-    expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean', 'clean']);
-    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7']);
+    expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean', 'clean', 'clean']);
+    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7', 'Area 8']);
   });
 
   it('takes the area numbers from the area data', () => {
@@ -252,6 +259,7 @@ describe('refugeAreaLine (issue #113, ND-8)', () => {
     expect(refugeSections(beaten(CANAL_AREA.id, POND_AREA.id), renumbered).map(refugeAreaLine)).toEqual([
       'Area 11',
       'Areas 12 and 13',
+      null,
       null,
       null,
     ]);
@@ -476,6 +484,7 @@ describe('refuge copy', () => {
       'Beat Area 2',
       'Beat Area 4',
       'Beat Area 6',
+      'Beat Area 8',
     ]);
   });
 

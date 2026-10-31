@@ -13,6 +13,7 @@ import {
   TILAPIA_MEET_RANGE,
   type FactCard,
 } from './factCards';
+import type { RockWall } from './pebble';
 import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
@@ -125,7 +126,10 @@ export type PredatorEvent =
   | { type: 'lungeEnd'; connected: boolean }
   | { type: 'cooldownEnd' };
 
-/** World context a predator step needs. `bounds` limits the predator centre. */
+/**
+ * World context a predator step needs. `bounds` limits the predator centre. `rockWalls`, when set,
+ * are solid rock (ND-12): no move carries the centre into a wall grown by bodyRadius.
+ */
 export interface PredatorContext {
   safeArea: SafeArea;
   bounds: SwimBounds;
@@ -141,6 +145,13 @@ export interface PredatorContext {
   rules?: Readonly<PredatorRules>;
   /** Whether the target is in sight cover this step; read only with the `sightCover` rule. Absent means false. */
   targetInCover?: boolean;
+  /** Solid rock walls (ND-12); absent means none. */
+  rockWalls?: readonly Readonly<RockWall>[];
+  /**
+   * Whether rock lies between the predator centre and the target this step (`crossesRock`), for every
+   * species. Absent means false.
+   */
+  targetBehindRock?: boolean;
 }
 
 export interface PredatorStepResult {
@@ -438,6 +449,13 @@ export function phaseProgress(state: PredatorState): number {
  *
  * Chase (PRD open question 249, ND-2): only with `ctx.tuning.chase`, and only on patrol when no
  * warning starts. See `chaseStep`. Without a chase, patrol is unchanged.
+ *
+ * Rock (ND-12), for every species: a target behind rock (`ctx.targetBehindRock`) counts as not
+ * exposed, so it starts no warning, cancels a warning at its end, is not chased and is never hit. A
+ * strike also never connects while rock lies between its striking point and the target after the
+ * move (`crossesRock` with `ctx.rockWalls`). Every move (patrol, chase, strike, cooldown, glide)
+ * stops at the face of each rock wall grown by bodyRadius, sliding along it as along the safe area.
+ * With no rock walls nothing changes.
  */
 export function stepPredator(
   state: PredatorState,
@@ -600,7 +618,10 @@ function stepLunge(state: PredatorState, target: Point, dt: number, ctx: Predato
   const used = Math.min(dt, state.duration - state.elapsed);
   const pos = state.strikeSpot ? state.pos : lungePosition(state, used, ctx);
   const moved: PredatorState = { ...state, pos, elapsed: state.elapsed + used };
-  const connected = lungeConnects(moved, target, ctx.tuning) && targetExposed(target, ctx);
+  const connected =
+    lungeConnects(moved, target, ctx.tuning) &&
+    targetExposed(target, ctx) &&
+    !crossesRock(stabTip(moved), target, ctx.rockWalls ?? []);
   if (connected || moved.elapsed >= moved.duration) {
     return { state: enterCooldown(moved, ctx), used, event: { type: 'lungeEnd', connected } };
   }
@@ -682,12 +703,46 @@ function onRouteToWarn(state: PredatorState, ctx: PredatorContext): boolean {
 }
 
 /**
- * Whether the target can be attacked: outside the safe area, whose edges count as inside, and,
- * for a species with the `sightCover` rule, not in cover.
+ * Whether the target can be attacked: outside the safe area, whose edges count as inside, not behind
+ * rock (`ctx.targetBehindRock`) and, for a species with the `sightCover` rule, not in cover.
  */
 function targetExposed(target: Point, ctx: PredatorContext): boolean {
-  const hidden = ctx.rules?.sightCover === true && ctx.targetInCover === true;
+  const hidden = (ctx.rules?.sightCover === true && ctx.targetInCover === true) || ctx.targetBehindRock === true;
   return !hidden && !inSafeArea(target, ctx.safeArea);
+}
+
+/**
+ * Whether the segment from `from` to `to` touches any rock wall (ND-12). Edges and corners count as
+ * rock, as `inRock` in dangerBar.ts counts them, so a segment that only grazes a corner is blocked.
+ */
+export function crossesRock(from: Point, to: Point, walls: readonly Readonly<RockWall>[]): boolean {
+  return walls.some((wall) => segmentTouchesBox(from, to, wall));
+}
+
+/** Whether the segment from `from` to `to` touches the box, edges included (slab clipping). */
+function segmentTouchesBox(from: Point, to: Point, box: Readonly<RockWall>): boolean {
+  const alongX = clipSlab(from.x, to.x - from.x, box.x0, box.x1, { enter: 0, exit: 1 });
+  if (!alongX) return false;
+  return clipSlab(from.y, to.y - from.y, box.y0, box.y1, alongX) !== null;
+}
+
+/**
+ * Narrows the segment share `span` to the part where `start + share * delta` lies in [lo, hi],
+ * edges included; null when no part does.
+ */
+function clipSlab(
+  start: number,
+  delta: number,
+  lo: number,
+  hi: number,
+  span: { enter: number; exit: number },
+): { enter: number; exit: number } | null {
+  if (delta === 0) return start >= lo && start <= hi ? span : null;
+  const atLo = (lo - start) / delta;
+  const atHi = (hi - start) / delta;
+  const enter = Math.max(span.enter, Math.min(atLo, atHi));
+  const exit = Math.min(span.exit, Math.max(atLo, atHi));
+  return enter <= exit ? { enter, exit } : null;
 }
 
 /** A level aim: straight toward the target's side, along `facing` when the target is straight above or below. */
@@ -725,15 +780,37 @@ function swimRoute(state: PredatorState, dt: number, ctx: PredatorContext): Pred
  * Moves `from` by `delta`, clamping the result to `ctx.bounds` and keeping it out of the
  * safe area grown by `bodyRadius`. Resolves one axis at a time, stopping on the face of the
  * keep-out box the mover approached from, so it slides along the box instead of crossing it.
+ * Each rock wall in `ctx.rockWalls`, grown by `bodyRadius`, stops the move the same way at the face
+ * it is approached from, judged along the whole move so a long move never passes through it. A wall
+ * whose grown box already holds the centre does not stop it, so a predator inside one can leave.
  */
 function moveClamped(from: Point, delta: Point, ctx: PredatorContext): Point {
   const keepOut = growSafeArea(ctx.safeArea, ctx.tuning.bodyRadius);
+  const rock = (ctx.rockWalls ?? []).map((wall) => growSafeArea(wall, ctx.tuning.bodyRadius));
   const { bounds } = ctx;
   let x = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
   if (strictlyInside(x, from.y, keepOut)) x = from.x <= keepOut.x0 ? keepOut.x0 : keepOut.x1;
+  x = rock.reduce((reached, box) => (between(from.y, box.y0, box.y1) ? stopAtFace(from.x, reached, box.x0, box.x1) : reached), x);
   let y = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
   if (strictlyInside(x, y, keepOut)) y = from.y <= keepOut.y0 ? keepOut.y0 : keepOut.y1;
+  y = rock.reduce((reached, box) => (between(x, box.x0, box.x1) ? stopAtFace(from.y, reached, box.y0, box.y1) : reached), y);
   return { x, y };
+}
+
+/**
+ * Where a one-axis move from `from` to `to` ends against the span (lo, hi): at `lo` or `hi` when it
+ * starts on or outside that face and would pass it, else at `to`. A start strictly inside the span
+ * is not stopped.
+ */
+function stopAtFace(from: number, to: number, lo: number, hi: number): number {
+  if (from <= lo && to > lo) return lo;
+  if (from >= hi && to < hi) return hi;
+  return to;
+}
+
+/** Whether `value` is strictly between `lo` and `hi`. */
+function between(value: number, lo: number, hi: number): boolean {
+  return value > lo && value < hi;
 }
 
 function growSafeArea(safeArea: SafeArea, margin: number): SafeArea {

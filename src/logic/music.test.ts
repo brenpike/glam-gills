@@ -47,13 +47,13 @@ import { SOUNDS, inSoundKey, soundKeyFor, soundNotes, type SoundId } from './sou
 
 const HOME_SCREENS: readonly MusicScreen[] = ['title', 'homeTank', 'creator', 'areaMap', 'refuge'];
 const SEED = 7;
-const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW];
+const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW, TRAJINERA_WALTZ];
 /** Pitch classes of E dorian, which uses D major's notes, above C. */
 const E_DORIAN_PITCHES: readonly number[] = ['E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'].map((name) => noteMidi(name) % 12);
 const DUSK_HABITAT_CUES: readonly Readonly<MusicCue>[] = DAY_HABITAT_CUES.map((cue) => tripCueFor({ habitatId: habitatOf(cue), look: 'pond-dusk' }));
 const ALL_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES, ...DUSK_HABITAT_CUES];
-/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: the deep canal's. */
-const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [TRAJINERA_WALTZ];
+/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: none today. */
+const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [];
 const UNREGISTERED_CUES: readonly Readonly<MusicCue>[] = [...UNREGISTERED_DAY_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
 /** Every day habitat cue the shared habitat cue checks cover, registered or not. */
 const CHECKED_DAY_CUES: readonly Readonly<MusicCue>[] = [...DAY_HABITAT_CUES, ...UNREGISTERED_DAY_CUES];
@@ -177,8 +177,8 @@ describe('the dusk rule (M4)', () => {
     for (const dusk of CHECKED_DUSK_CUES) expect(() => duskVersion(dusk)).toThrow();
   });
 
-  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52', () => {
-    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52]);
+  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52, Trajinera Waltz 84', () => {
+    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52, 84]);
     expect(CENOTE_GLOW.dusk).toEqual({ bpm: 52, swing: 0 });
     CHECKED_DAY_CUES.forEach((day, i) => {
       const dusk = CHECKED_DUSK_CUES[i];
@@ -348,7 +348,7 @@ describe('the key of Cenote Glow (S12)', () => {
 describe("Trajinera Waltz, the deep canal's cue (M3; docs/music-guide.md, section 4)", () => {
   const PER_LOOP = stepsPerLoop(TRAJINERA_WALTZ);
   const PER_BAR = stepsPerBar(TRAJINERA_WALTZ);
-  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES];
+  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES.filter((cue) => cue !== TRAJINERA_WALTZ)];
 
   /** The tune notes of pass `pass` (from 0) of `cue`, step by step. */
   function tuneNotesOf(cue: Readonly<MusicCue>, steps: readonly MusicNote[][], pass: number): MusicNote[][] {

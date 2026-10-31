@@ -4,7 +4,7 @@
  * the music switch's stored value and labels, and the music levels. The synth that plays the notes is
  * browser glue in src/platform/musicPlayer.ts. Nothing here reads danger, legs or trip state (M5).
  */
-import { CANAL_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
+import { CANAL_HABITAT, CHINAMPA_HABITAT, DEEP_CANAL_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
 import { mulberry32 } from './rng';
 
 /** A part of a cue, which the synth can mix on its own. */
@@ -361,7 +361,7 @@ const BM = chord('Bm', 'F#3 B3 D4', 'B2');
  * Trajinera Waltz, the deep canal's cue (M3; provisional name): gliding and cozy, like a boat band
  * heard from under the water, D major at 108 bpm in a straight 3/4 waltz, 2 steps a beat, a nylon
  * guitar tune over a deep bass on beat 1, plucked strings on beats 2 and 3, and a soft pad, with no
- * echo (prototypes/music/sketches.html). It joins HABITAT_CUES once the deep canal habitat exists.
+ * echo (prototypes/music/sketches.html).
  */
 export const TRAJINERA_WALTZ: Readonly<MusicCue> = Object.freeze({
   id: TRAJINERA_WALTZ_ID,
@@ -422,6 +422,7 @@ export const HABITAT_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object
   [POND_HABITAT.id]: LILY_PAD_HOP,
   [CHINAMPA_HABITAT.id]: GARDEN_BOATS,
   [SPRING_CAVE_HABITAT.id]: CENOTE_GLOW,
+  [DEEP_CANAL_HABITAT.id]: TRAJINERA_WALTZ,
 });
 
 /** Each habitat cue's dusk version, by the day cue's id, made once so the same version is reused. */

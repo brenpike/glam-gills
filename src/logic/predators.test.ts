@@ -21,6 +21,7 @@ import {
   TILAPIA_SPECIES,
   bumpImpulse,
   createPredator,
+  crossesRock,
   lungeConnects,
   phaseProgress,
   routeLoopDistance,
@@ -1218,5 +1219,224 @@ describe('shared rule: slow turn (issue #78, ND-5)', () => {
     const run = runStalker(start, BEHIND_BASS, BLACK_BASS.cooldown / 2, both);
     for (const pos of run.positions) expect(pos).toEqual(start.pos);
     expect(run.state.facing).toBe(-1);
+  });
+});
+
+/** Where every species starts in the rock tests: its route runs 300 px right of here. */
+const ROCK_START: Point = { x: 1000, y: 400 };
+const ROCK_SAFE: PredatorContext['safeArea'] = { x0: 0, x1: 100, y0: 100, y1: 200 };
+const ROCK_BOUNDS: PredatorContext['bounds'] = { minX: 0, maxX: 3000, minY: 100, maxY: 800 };
+/** A 40 px rock wall, like Area 8's lane divider, standing 80 px right of ROCK_START. */
+const DIVIDER = { x0: 1080, x1: 1120, y0: 200, y1: 600 };
+
+function rockRoute(species: Readonly<PredatorSpecies>): PredatorRoute {
+  return { id: `${species.id}-rock`, waypoints: [ROCK_START, { x: ROCK_START.x + 300, y: ROCK_START.y }], species };
+}
+
+function rockCtx(species: Readonly<PredatorSpecies>, extra: Partial<PredatorContext> = {}): PredatorContext {
+  return { safeArea: ROCK_SAFE, bounds: ROCK_BOUNDS, tuning: species.tuning, rules: species.rules, hook: species.hook, ...extra };
+}
+
+/** Half the species' lungeRange right of ROCK_START: in range of every species. */
+function rockPrey(species: Readonly<PredatorSpecies>): Point {
+  return { x: ROCK_START.x + species.tuning.lungeRange / 2, y: ROCK_START.y };
+}
+
+/** A predator of `species` at ROCK_START whose warning at `target` is about to end. */
+function rockWarningEnding(species: Readonly<PredatorSpecies>, target: Point): PredatorState {
+  const duration = Math.max(species.tuning.windup, species.tuning.minWindup);
+  const state: PredatorState = { ...createPredator(rockRoute(species), species.id), phase: 'telegraph', elapsed: duration - STALKER_DT, duration };
+  if (species.rules?.fixedStrikeSpot) state.strikeSpot = { ...target };
+  return state;
+}
+
+/**
+ * A predator of `species` at ROCK_START mid-strike, aimed right, with the target exactly where its
+ * striking point is after one STALKER_DT step.
+ */
+function rockStrikeAtTarget(species: Readonly<PredatorSpecies>): { state: PredatorState; target: Point } {
+  const base = createPredator(rockRoute(species), species.id);
+  const state: PredatorState = { ...base, phase: 'lunge', elapsed: 0, duration: species.tuning.lungeDuration, aim: { x: 1, y: 0 } };
+  if (species.rules?.fixedStrikeSpot) {
+    state.strikeSpot = { ...ROCK_START };
+    return { state, target: { ...ROCK_START } };
+  }
+  return { state, target: { x: ROCK_START.x + species.tuning.lungeSpeed * STALKER_DT, y: ROCK_START.y } };
+}
+
+/** Whether `pos` is strictly inside `wall` grown by `margin`. */
+function insideGrown(pos: Point, wall: typeof DIVIDER, margin: number): boolean {
+  return pos.x > wall.x0 - margin && pos.x < wall.x1 + margin && pos.y > wall.y0 - margin && pos.y < wall.y1 + margin;
+}
+
+describe('rock walls block sight (ND-12)', () => {
+  const wall = { x0: 100, x1: 140, y0: 100, y1: 200 };
+
+  it('finds rock on a segment through a wall, along an edge or touching a corner', () => {
+    expect(crossesRock({ x: 50, y: 150 }, { x: 200, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 120, y: 50 }, { x: 120, y: 250 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 50, y: 100 }, { x: 200, y: 100 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 50, y: 50 }, { x: 150, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 90, y: 90 }, { x: 100, y: 100 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 160, y: 80 }, { x: 120, y: 120 }, [wall])).toBe(true);
+  });
+
+  it('finds rock at either end and for a point in rock', () => {
+    expect(crossesRock({ x: 120, y: 150 }, { x: 300, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 300, y: 150 }, { x: 140, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 120, y: 150 }, { x: 120, y: 150 }, [wall])).toBe(true);
+  });
+
+  it('finds no rock on a segment that passes or stops short of every wall', () => {
+    expect(crossesRock({ x: 50, y: 99.9 }, { x: 200, y: 99.9 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 99.9, y: 150 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 89, y: 90 }, { x: 99, y: 100 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 150, y: 50 }, { x: 160, y: 250 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 50, y: 150 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 200, y: 150 }, [])).toBe(false);
+  });
+
+  it('checks every wall', () => {
+    const far = { x0: 400, x1: 440, y0: 100, y1: 200 };
+    expect(crossesRock({ x: 300, y: 150 }, { x: 500, y: 150 }, [wall, far])).toBe(true);
+    expect(crossesRock({ x: 300, y: 150 }, { x: 350, y: 150 }, [wall, far])).toBe(false);
+  });
+});
+
+describe('a target behind rock (ND-12)', () => {
+  it('starts no warning for any species, which warns at the same target in sight', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const target = rockPrey(species);
+      const spawned = createPredator(rockRoute(species), species.id);
+      const seen = stepPredator(spawned, target, STALKER_DT, rockCtx(species));
+      expect(eventTypes(seen.events), species.id).toEqual(['telegraphStart']);
+      const hidden = stepPredator(spawned, target, STALKER_DT, rockCtx(species, { targetBehindRock: true }));
+      expect(hidden.events, species.id).toEqual([]);
+      expect(hidden.state.phase, species.id).toBe('patrol');
+    }
+  });
+
+  it('cancels a warning at its end for any species', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const target = rockPrey(species);
+      const ending = rockWarningEnding(species, target);
+      expect(eventTypes(stepPredator(ending, target, STALKER_DT, rockCtx(species)).events), species.id).toEqual(['lungeStart']);
+      const hidden = stepPredator(ending, target, STALKER_DT, rockCtx(species, { targetBehindRock: true }));
+      expect(eventTypes(hidden.events), species.id).toEqual(['telegraphCancel']);
+      expect(hidden.state.phase, species.id).toBe('cooldown');
+    }
+  });
+
+  it('is never hit by a strike of any species', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const { state, target } = rockStrikeAtTarget(species);
+      expect(stepPredator(state, target, STALKER_DT, rockCtx(species)).events, species.id).toEqual([{ type: 'lungeEnd', connected: true }]);
+      const hidden = rockCtx(species, { targetBehindRock: true });
+      let current = state;
+      const events: PredatorEvent[] = [];
+      while (current.phase === 'lunge') {
+        const result = stepPredator(current, target, STALKER_DT, hidden);
+        current = result.state;
+        events.push(...result.events);
+      }
+      expect(events, species.id).toEqual([{ type: 'lungeEnd', connected: false }]);
+    }
+  });
+
+  it('is never hit when rock lies between the striking point and the target after the move', () => {
+    const thin = { x0: 1030, x1: 1032, y0: 200, y1: 600 };
+    const target: Point = { x: 1036, y: ROCK_START.y };
+    const bass = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge' as const, elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const open = stepPredator(bass, target, STALKER_DT, rockCtx(BLACK_BASS_SPECIES));
+    expect(open.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    const walled = stepPredator(bass, target, STALKER_DT, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [thin] }));
+    expect(walled.events).toEqual([]);
+    expect(walled.state.pos.x).toBe(thin.x0 - BLACK_BASS.bodyRadius);
+    expect(Math.hypot(walled.state.pos.x - target.x, walled.state.pos.y - target.y)).toBeLessThanOrEqual(BLACK_BASS.hitRadius);
+  });
+
+  it('is not chased by any species that can chase: it swims its route instead', () => {
+    for (const species of PREDATOR_SPECIES.filter((candidate) => !candidate.rules?.fixedStrikeSpot && !candidate.rules?.stillCooldown)) {
+      const chase = { sight: species.tuning.lungeRange + 100, leash: 160, speed: 130 };
+      const chaser = tunedSpecies(species, { ...species.tuning, chase });
+      const target: Point = { x: ROCK_START.x - species.tuning.lungeRange - 50, y: ROCK_START.y };
+      const spawned = createPredator(rockRoute(chaser), chaser.id);
+      const seen = stepPredator(spawned, target, STALKER_DT, rockCtx(chaser));
+      const hidden = stepPredator(spawned, target, STALKER_DT, rockCtx(chaser, { targetBehindRock: true }));
+      const patrolling = stepPredator(spawned, target, STALKER_DT, rockCtx(species));
+      expect(hidden.state, species.id).toEqual(patrolling.state);
+      expect(hidden.state.pos.x, species.id).toBeGreaterThan(ROCK_START.x);
+      if (!species.rules?.warnOnRoute) expect(seen.state.pos.x, species.id).toBeLessThan(ROCK_START.x);
+    }
+  });
+});
+
+describe('rock walls stop every move (ND-12)', () => {
+  const bassCtx = rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] });
+  const face = DIVIDER.x0 - BLACK_BASS.bodyRadius;
+
+  it('stops a patrol at the rock face, then turns it back along its route', () => {
+    let state = createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id);
+    let farthest = state.pos.x;
+    for (let i = 0; i < 64 * 4; i++) {
+      state = stepPredator(state, { x: 2000, y: 100 }, STALKER_DT, bassCtx).state;
+      expect(insideGrown(state.pos, DIVIDER, BLACK_BASS.bodyRadius)).toBe(false);
+      farthest = Math.max(farthest, state.pos.x);
+    }
+    expect(farthest).toBe(face);
+    expect(state.pos.x).toBeLessThan(face);
+  });
+
+  it('stops a strike at the rock face, and a strike that misses ends with no hit', () => {
+    const bass: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const run = runStalker(bass, { x: 1200, y: ROCK_START.y }, 1, { ...bassCtx, targetBehindRock: true }, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    for (const pos of run.positions) expect(pos.x).toBeLessThanOrEqual(face);
+    expect(run.state.pos).toEqual({ x: face, y: ROCK_START.y });
+  });
+
+  it('stops the slow turn glide at the rock face', () => {
+    const cooling: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: face - 10, y: ROCK_START.y }, phase: 'cooldown', elapsed: 0, duration: BLACK_BASS.cooldown, glide: { x: 1, y: 0 } };
+    const run = runStalker(cooling, { x: 500, y: ROCK_START.y }, BLACK_BASS.cooldown, bassCtx, 'cooldownEnd');
+    for (const pos of run.positions) expect(pos.x).toBeLessThanOrEqual(face);
+    expect(run.state.pos.x).toBe(face);
+  });
+
+  it('stops a chase at the rock face', () => {
+    const chaser = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    const ctx = rockCtx(chaser, { rockWalls: [DIVIDER], targetBehindRock: false });
+    const target: Point = { x: ROCK_START.x + 250, y: ROCK_START.y };
+    const run = runStalker(createPredator(rockRoute(chaser), chaser.id), target, 2, ctx);
+    for (const pos of run.positions) expect(insideGrown(pos, DIVIDER, BLACK_BASS.bodyRadius)).toBe(false);
+    expect(run.positions.some((pos) => pos.x === face)).toBe(true);
+  });
+
+  it('stops a diagonal move on the face it reaches, sliding along it', () => {
+    const top = DIVIDER.y0 - BLACK_BASS.bodyRadius;
+    const above: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: 1100, y: top - 5 }, phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 0.6, y: 0.8 } };
+    const result = stepPredator(above, { x: 0, y: 800 }, STALKER_DT, bassCtx);
+    expect(result.state.pos.y).toBe(top);
+    expect(result.state.pos.x).toBeCloseTo(1100 + 0.6 * BLACK_BASS.lungeSpeed * STALKER_DT, 9);
+  });
+
+  it('stops even a move long enough to pass right over the wall', () => {
+    const fast = rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER], tuning: { ...BLACK_BASS, lungeSpeed: 100 / STALKER_DT } });
+    const bass: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const result = stepPredator(bass, { x: 0, y: 800 }, STALKER_DT, fast);
+    expect(result.state.pos.x).toBe(face);
+  });
+
+  it('lets a predator already inside a grown wall move out', () => {
+    const stuck: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: face + 5, y: ROCK_START.y }, waypointIndex: 0 };
+    const result = stepPredator(stuck, { x: 2000, y: 100 }, 0.5, bassCtx);
+    expect(result.state.pos.x).toBeLessThan(face);
+  });
+
+  it('moves exactly as before with no rock walls or an empty list', () => {
+    const route = rockRoute(BLACK_BASS_SPECIES);
+    const target = rockPrey(BLACK_BASS_SPECIES);
+    const plain = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES));
+    const empty = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [], targetBehindRock: false }));
+    expect(empty).toEqual(plain);
   });
 });
