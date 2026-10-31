@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-10-30
+
+### Added
+
+- Area 8, the deep canal: a new habitat with two lanes split by an old-stone wall.
+- The black bass, a predator with its own "Meet the black bass" fact card.
+- Gliding trajineras: boats that push you but never cost a leg.
+- Punting poles in the deep canal.
+- 13 new treasures, including the Jade and Fiesta shine Dream colours and 5 new Wearables with perks.
+- The trajinera waltz, a music cue for the deep canal.
+- A deep canal section in the refuge, and a deep canal marker on the area map.
+
+### Changed
+
+- Predators no longer sense, chase or strike through rock.
+
 ## [0.58.0] - 2026-10-30
 
 ### Changed

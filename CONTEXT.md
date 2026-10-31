@@ -39,11 +39,11 @@ _Avoid_: death, die, game over, wipe, fail
 ### Areas and exploring
 
 **Area**:
-A level that belongs to one **Habitat**, such as the canal (Area 1), the Lily pad pond (Area 2 and Area 3), or the Chinampa gardens (Area 4 and Area 5), W x H screens in size and built from area data; it is beaten by reaching its open exit. Area 3 (`'pond-2'` in code) is the second area of the Lily pad pond, the pond at dusk where the **Heron** hunts, about 6 x 1 screens, unlocked by beating Area 2. Area 4 (`'chinampa-1'` in code) is the first area of the Chinampa gardens, where the **Ghost nets** are, about 6 x 2 screens, unlocked by beating Area 3; it is the first area that scrolls up and down, with the Home Spot top left and the exit deep bottom right. Area 5 (`'chinampa-2'` in code) is the second area of the Chinampa gardens, where the **Garter snakes** and the **Water hyacinth mats** are, 7 x 2 screens, unlocked by beating Area 4; it is the first U-turn area: the way runs right along the top row from the Home Spot top left, down in the rightmost screen column, and back left along the bottom row to the exit straight under the Home Spot.
+A level that belongs to one **Habitat**, such as the canal (Area 1), the Lily pad pond (Area 2 and Area 3), or the Chinampa gardens (Area 4 and Area 5), W x H screens in size and built from area data; it is beaten by reaching its open exit. Area 3 (`'pond-2'` in code) is the second area of the Lily pad pond, the pond at dusk where the **Heron** hunts, about 6 x 1 screens, unlocked by beating Area 2. Area 4 (`'chinampa-1'` in code) is the first area of the Chinampa gardens, where the **Ghost nets** are, about 6 x 2 screens, unlocked by beating Area 3; it is the first area that scrolls up and down, with the Home Spot top left and the exit deep bottom right. Area 5 (`'chinampa-2'` in code) is the second area of the Chinampa gardens, where the **Garter snakes** and the **Water hyacinth mats** are, 7 x 2 screens, unlocked by beating Area 4; it is the first U-turn area: the way runs right along the top row from the Home Spot top left, down in the rightmost screen column, and back left along the bottom row to the exit straight under the Home Spot. Area 8 (`'deep-canal-1'` in code) is the first area of the **Deep canal**, where the **Black bass** and the **Gliding trajineras** are, about 8 x 2 screens, unlocked by beating Area 7; it is the first **Two-lane area**.
 _Avoid_: map; "level" in UI text (say "Area 1")
 
 **Habitat**:
-A group of areas that share a look: the canal, which holds Area 1, the Lily pad pond, which holds Area 2 and Area 3, and the Chinampa gardens (`'chinampa'` in code), which holds Area 4 and Area 5: clear green-teal water by garden plots, with crops above the surface and ahuejote willow roots in the water. An area may use its own variant of its habitat's look: Area 3 uses the pond at dusk (`'pond-dusk'`), warmer and dimmer, with fireflies over the water. Besides colours, a look says what its area needs: a stream, its cave's kind and anchor, the pond props, fireflies, how its banks are drawn (willows or garden plots), the gap between two chinampas, and the chinampa props.
+A group of areas that share a look: the **Deep canal** (`'deep-canal'` in code), which holds Area 8, the canal, which holds Area 1, the Lily pad pond, which holds Area 2 and Area 3, and the Chinampa gardens (`'chinampa'` in code), which holds Area 4 and Area 5: clear green-teal water by garden plots, with crops above the surface and ahuejote willow roots in the water. An area may use its own variant of its habitat's look: Area 3 uses the pond at dusk (`'pond-dusk'`), warmer and dimmer, with fireflies over the water. Besides colours, a look says what its area needs: a stream, its cave's kind and anchor, the pond props, fireflies, how its banks are drawn (willows or garden plots), the gap between two chinampas, and the chinampa props.
 _Avoid_: using it as another name for one area
 
 **Area map**:
@@ -87,11 +87,15 @@ The PRD's rule (H4, N2) for how many of an area's **Snacks** are **Mobile snacks
 A stretch of flowing water in an area that pushes the axolotl, and that rarer treasures hide past. In Area 4 and Area 5 it is the water flowing sideways through the gap between two chinampas in the bottom row; Area 4's flows left and Area 5's flows right. A **Pulsing current**'s whole band counts as a current for **Snack** homes, but it is not a current for hiding spots: no treasure hides past one.
 
 **Timing element**:
-Something in an area that runs on a clock, and may carry a **Fun-fact card** of its own. Area 5's **Water hyacinth mats** are the only one now, and the first that blocks the **Explorer**. Area 3's was the **Heron**'s shadow cycle, and #111 removed it when the **Heron** became a sight-based wading stalker.
+Something in an area that runs on a clock, and may carry a **Fun-fact card** of its own. Area 5's **Water hyacinth mats** were the first, and the first that blocks the **Explorer**; Area 8's **Gliding trajineras** are the other, and push the **Explorer** aside. Area 3's was the **Heron**'s shadow cycle, and #111 removed it when the **Heron** became a sight-based wading stalker.
 
 **Water hyacinth mat**:
 A floating mat of water hyacinth in the Chinampa gardens, Area 5's **Timing element** (`'water-hyacinth'` in code). The mats come in pairs, one above and one below a narrow channel; each pair spans its row, and Area 5 has two, one in each row, out of step. On an 8 s cycle the mats drift apart over the first 1 s of a 3 s open window, drift together over 1 s (the warning), and stay closed for 4 s. A closed channel blocks the **Explorer**, who waits or goes round through the other row; a mat that closes on the **Explorer** pushes it out along the channel, never into a **Ghost net**, a **Current** or out of the swim bounds. A mat never costs a leg, is never a **Hit** and never traps. Only the **Explorer** is blocked: a following rescued axolotl, the **Predators** and the **Snacks** are not.
 _Avoid_: wall, terrain
+
+**Gliding trajinera**:
+A painted trajinera boat that glides across a span of the surface lane of a **Two-lane area**, Area 8's **Timing element** (`'gliding-trajinera'` in code). A new crossing starts every 6 s; the boat glides at 70 px/s, its hull is 120 px long and blocks the top 60 px of water, and its shadow leads the hull by 1 s as the warning. A hull that touches the **Explorer** pushes it out the shortest way, down or sideways, at 120 px/s, with a 0.5 s cooldown per boat. A push is gentle: it never costs a leg, is never a **Hit**, drops no find and starts no **Protected time**, so the Shell **Perk** plays no part. It is reported as a trip result (`pushed`), not a trip event. Only the boat's bright painted bow shows, with no people and no fishing. It is not a **Moving hazard** and not a **Danger part**, so the **Danger bar** never counts it. Snacks keep clear of its hull band.
+_Avoid_: moving hazard, barge, punting pole (the pole is a **Moving hazard**), moored trajinera
 
 **Puzzle element**:
 Something in an area that the player works out how to use, always active and never on a clock (the `'puzzle'` element kind in code). It is not a **Hazard** and not a **Timing element**: it never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part. It counts as an area's one new timing or puzzle element. A stuck player gets a gentle hint, and the **Exit** is never locked behind a puzzle the player cannot see how to solve (N3). The first is the **Glow-plant**; the **Pebble** is the second, and the first that blocks the **Explorer**, by its own shape, never as a **Hit**.
@@ -110,12 +114,32 @@ A big round pebble in the doorway of a **Side room**, a **Puzzle element** (`'pe
 _Avoid_: boulder, rock (rock is a **Rock wall**), door, key
 
 **Rock wall**:
-Solid rock in an area (`rockWalls` in area data): a fixed rectangle, never placed by chance, that the **Explorer**'s body never enters. A swim step into rock stops at its face, one axis at a time, so the axolotl slides along it. It is not a **Hazard**: it never costs a leg and is never a **Hit**. Rock is not water, so no quiet swim of the **Danger bar** runs through it, and no **Snack** starts in or near it, and no **Mobile snack** home reaches it. Predators are not blocked by it; an area keeps each patrol route clear of the rock instead.
+Solid rock in an area (`rockWalls` in area data): a fixed rectangle, never placed by chance, that the **Explorer**'s body never enters. A swim step into rock stops at its face, one axis at a time, so the axolotl slides along it. It is not a **Hazard**: it never costs a leg and is never a **Hit**. Rock is not water, so no quiet swim of the **Danger bar** runs through it, and no **Snack** starts in or near it, and no **Mobile snack** home reaches it. Every **Predator** is blocked by it too: its moves stop at the rock's face, and it never senses, chases or strikes an axolotl through rock. A rock wall may be a **Lane divider**.
 _Avoid_: terrain, cliff, mat (a **Water hyacinth mat** is not a wall)
 
 **Side room**:
 The water walled in by **Rock walls** behind a **Pebble** (`sideRooms` in area data), reached only once the pebble rolls. It is optional: the main path, the **Exit**, the **Home Spot** and every stranding place stay out of it, and no **Snack** starts in it or near it, so an area can always be finished without it. Treasure may hide in it.
 _Avoid_: secret room, vault
+
+**Deep canal**:
+The **Habitat** of Area 8 (`'deep-canal'` in code): a deeper, darker stretch of the Xochimilco canal, with painted boats gliding and moored along its surface and a **Black bass** hunting below. It is a **Two-lane area**. It has its own look (`'deep-canal'`) and its own music **Cue**.
+_Avoid_: ocean, sea
+
+**Two-lane area**:
+An **Area** whose water a **Lane divider** splits into a surface lane over it and a deep lane under it, joined again at a shared pocket at the Home Spot and in the exit pocket (Area 8 is the first). The surface lane holds the **Punting poles**, the moored boats and the **Gliding trajineras**; the deep lane holds the **Black bass** and the sunken trajinera. Each lane has its own **Tilapia** and its share of the **Common carp**. The main path runs along the surface lane to the **Exit**.
+_Avoid_: split level, floor (a floor is the bed of the water)
+
+**Lane divider**:
+The solid line of **Rock walls** that splits a **Two-lane area** into its lanes (the owner's Q3): stones that each touch the next, so no body passes between the lanes. It is `rockWalls` area data, so it blocks the **Explorer**'s body and every **Predator**, and no **Predator** senses, chases or strikes through it. It is not a **Hazard**.
+_Avoid_: wall alone, floor, ceiling
+
+**Moored trajinera**:
+A painted trajinera tied up at the bank of the surface lane (`bankOverhangs` in area data), scenery that gives the water under it bank cover for **Hiding spots**. It never moves, never pushes and is not a **Timing element**.
+_Avoid_: gliding trajinera (that is the moving boat)
+
+**Sunken trajinera**:
+An old trajinera hull on the bed of the deep lane, a dead end that holds an open Legendary spot and an Epic spot. It is scenery and hiding cover: it never moves, never pushes and is not a **Hazard**.
+_Avoid_: wreck, shipwreck
 
 **Tail Dash**:
 The axolotl's first power, a short burst of speed that works with any number of legs and is the only way to break a Dash pot.
@@ -140,7 +164,7 @@ _Avoid_: hint star
 Something in an area, defined as data with its own rules, that may cost the axolotl a leg or only slow it, such as a predator. A slow-only hazard, such as the **Plastic worm**, never costs a leg, never starts **Protected time**, and is not a threat for hiding spots (B10). A hazard may stay still or move: a **Moving hazard** moves on its own cycle and costs a leg on touch, and a **Drifting ghost net** moves and only slows. A **Pulsing current** only pushes: it never costs a leg and never slows.
 
 **Predator**:
-A kind of **Hazard**: an animal that hunts, with a visible warning before every strike; every predator follows the same shared rules, and each species is data. A species' warning starts by distance, when the axolotl comes near (the **Tilapia**, the **Garter snake**, the **Common carp** and the **Crayfish**), or on sight, when the axolotl is within the predator's reach and not in cover (the **Heron**). A species may warn only while it is on its route (the **Garter snake** and the **Crayfish**), so after a strike it swims back to its route before it can warn again. A species may strike level (`levelStrike` in code; the **Crayfish**): its strike never moves it up or down, so it reaches only along its own height. A predator whose area gives it a chase follows the **Chase rule** on patrol, within its **Leash**, before it warns; the **Heron** never chases. Any species may be tuned per area in its area's own data, and stays the same species.
+A kind of **Hazard**: an animal that hunts, with a visible warning before every strike; every predator follows the same shared rules, and each species is data. A species' warning starts by distance, when the axolotl comes near (the **Tilapia**, the **Garter snake**, the **Common carp** and the **Crayfish**), or on sight, when the axolotl is within the predator's reach and not in cover (the **Heron**). A species may warn only while it is on its route (the **Garter snake** and the **Crayfish**), so after a strike it swims back to its route before it can warn again. A species may strike level (`levelStrike` in code; the **Crayfish**): its strike never moves it up or down, so it reaches only along its own height. A species may glide after a strike (**Slow turn**; the **Black bass**). No predator senses, chases or strikes through a **Rock wall**. A predator whose area gives it a chase follows the **Chase rule** on patrol, within its **Leash**, before it warns; the **Heron** never chases. Any species may be tuned per area in its area's own data, and stays the same species.
 _Avoid_: monster
 
 **Chase rule**:
@@ -180,6 +204,13 @@ _Avoid_: monster, koi
 A small freshwater cousin of the lobster that walks along the bed (`'crayfish'` in code), a **Predator** on the shared rules. Each crayfish walks its own short straight floor stretch. With its first tuning, when the axolotl comes within 90 px of it while it is on its stretch, it stops and opens its claws wide for 0.8 seconds (under reduced motion they snap open), then pinches forward, level along the floor and never up, so swimming up out of its reach dodges every pinch, and the water above its reach is safe. A pinch that connects costs a leg; a touch outside a pinch is a gentle bump that costs no leg. It warns only while on its stretch, and its **Leash** is 0, so it chases along its stretch only. Cover does not hide the axolotl from it. Its mouth is always closed, and it is never shown holding, pinching down on or hurting the axolotl. Its fact card is "Meet the crayfish".
 _Avoid_: crawfish, crawdad, lobster, monster
 
+**Black bass**:
+A big, fast dark fish that people brought to Xochimilco (`'black-bass'` in code), a **Predator** on the shared rules, and the **Deep canal**'s signature predator. It warns by distance, within 180 px, flaring its fins for 0.8 seconds, then lunges straight along the aim locked at strike start, with no homing. It follows the **Slow turn** rule. A touch outside a lunge is a gentle bump that costs no leg. Its mouth is closed and it never bites or holds the axolotl. It is not a **Danger part**: it is Area 8's one new **Predator**. Its fact card is "Meet the black bass".
+_Avoid_: monster, largemouth
+
+**Slow turn**:
+The shared rule option (`slowTurn` in code) that the **Black bass** plays: after a strike it keeps its facing and glides along the strike's aim, slowing evenly to a stop by the end of its cooldown, instead of turning away. After a cancelled warning it holds still, keeping its facing. Dodging sideways beats it.
+
 **Plastic worm**:
 A bit of plastic in the Lily pad pond that looks like a worm, the first slow-only **Hazard**. Touching it with the head eats it, which makes the **Explorer** **Queasy**, and the axolotl spits it out a little way ahead. It is never a **Snack**, never counts toward opening the **Exit**, and the worms start over each **Trip**.
 _Avoid_: worm alone (a worm is a **Snack**)
@@ -205,7 +236,7 @@ A **Hazard** that moves on a fixed cycle of its own and costs a leg on touch, wi
 _Avoid_: trap, obstacle
 
 **Punting pole**:
-The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". Which areas have one is in each area's danger pass paragraph in the PRD (N2).
+The first **Moving hazard** (`'punting-pole'` in code): a trajinera boat's long pole that jabs straight down from the surface on a 4 s cycle, 180 px deep. Before each jab the boat's shadow darkens on the water and the pole's tip dips to the surface with a ripple ring. Touching the jabbed pole costs a leg; the water below its tip is safe. Only the boat's bright painted bow shows, with no people, and the pole is never shown hitting or pinning the axolotl. Its fact card is "Trajineras". Area 8 reuses it, at least 3 poles in its surface lane (the owner's Q2), to meet the **Danger bar**. Which areas have one is in each area's danger pass paragraph in the PRD (N2).
 _Avoid_: oar, stick
 
 **Stalactite drip**:
@@ -262,8 +293,14 @@ _Avoid_: loot
 A hidden treasure that holds one Dream colour.
 
 **Dream colour**:
-A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Legendary, except Hearts, Tie-dye, and Iridescent, which came first and stay Epic. Each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour; Areas 1 to 5 came before this rule. There are 20: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, Plum and Tie-dye galaxy from Area 5, Moonstone and Crystal shine from Area 6, and Chocolate and Glowworm from Area 7.
+A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Legendary, except Hearts, Tie-dye, and Iridescent, which came first and stay Epic. Each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour; Areas 1 to 5 came before this rule. There are 22: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, Plum and Tie-dye galaxy from Area 5, Moonstone and Crystal shine from Area 6, and Chocolate and Glowworm from Area 7, and **Jade** and **Fiesta shine** from Area 8, which makes 22.
 _Avoid_: skin
+
+**Jade**:
+Area 8's solid **Dream colour** (`'jade'` in code), a deep blue-green, Rare, held by the **Deep canal**'s first Paint shell.
+
+**Fiesta shine**:
+Area 8's Legendary sheen **Dream colour** (`'fiesta-shine'` in code), a fiesta pink with a stripe that glides along the body, held by the **Deep canal**'s second Paint shell. It shares the live stripe with Iridescent and Crystal shine ([ADR 0031](docs/adr/0031-sheen-dream-colours-share-the-live-stripe.md)).
 
 **Treasure Chest**:
 The list of every catalogue Decoration, Wearable, and Dream colour: owned ones in full, with their rarity glow, and unfound ones as silhouettes with "???" and an area and rarity hint, with a line per section saying what its items are for.
@@ -342,7 +379,7 @@ _Avoid_: slot (a Slot is where a Wearable goes)
 The in-game book of morphs and fact cards, nicknamed the Axolotl-dex in game.
 
 **Fun-fact card**:
-A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 17 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Meet the crayfish" (the **Crayfish**), "Stalactites" (the **Stalactite drip**), "Geysers" (the **Geyser vent**), "Underwater springs" (the **Pulsing current**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
+A short, true fact about axolotls or their world. Besides the morph facts, the **Collection Book** lists 18 fact cards, in this order: the tilapia card, "Meet the carp" (the **Common carp**), "Plastic is not food" (the **Plastic worm**), the tadpole card, "Freshwater shrimp" (the **Freshwater shrimp**), the heron card, "Lost fishing nets" (the **Ghost net**), "Trajineras" (the **Punting pole**), "Meet garter snakes" (the **Garter snake**), "Water hyacinth" (the **Water hyacinth mats**), "Meet the crayfish" (the **Crayfish**), "Stalactites" (the **Stalactite drip**), "Geysers" (the **Geyser vent**), "Underwater springs" (the **Pulsing current**), "Meet the black bass" (the **Black bass**), "Axolotl refuges", "Canal clean-ups", and "Boy or girl?".
 
 **Save**:
 Progress kept in device storage by itself: banked treasures, the axolotls, the tank, the Collection Book, stars, the last chosen area, and the fact cards found (`metHazards`: the hazards, predators and timing elements met, then the refuge fact cards found); never anything from a trip in progress, and never the refuge's pending clean-ups and milestones.
@@ -437,7 +474,7 @@ _Avoid_: carry sound, defeat sound
 - Each **Trip** fills its **Area**'s **Treasure slots** with unbanked **Treasures**, each slot's **Rarity** picked by chance, plus any lost **Treasures** and the unbanked **Special treasure** on top, and one **Hiding spot** per **Treasure** picked for that **Trip**, from that **Treasure**'s pool; no two **Treasures** share a spot in one **Trip**
 - A Legendary **Treasure** always hides deep (in a cave or other hollow, or past a **Current**) and within half a threat's strike reach, either in a **Dash pot**, which only **Tail Dash** can break, or in the open in an **Area** with a threat; a **Dash pot** holds only a Legendary
 - A **Hint sparkle** marks a hidden **Treasure** when the axolotl is near, and each of the last 3 **Snacks**
-- A **Predator** is a **Hazard**, and a **Tilapia**, a **Heron**, a **Garter snake**, a **Common carp** and a **Crayfish** are **Predators**; a **Predator**'s **Telegraph** always comes before its **Lunge**, whether its warning starts by distance or on sight, and only one **Predator** in an **Area** warns or lunges at a time, a **Heron**, a **Garter snake**, a **Common carp**, a **Crayfish** and a **Tilapia** included
+- A **Predator** is a **Hazard**, and a **Tilapia**, a **Heron**, a **Garter snake**, a **Common carp**, a **Crayfish** and a **Black bass** are **Predators**; a **Predator**'s **Telegraph** always comes before its **Lunge**, whether its warning starts by distance or on sight, and only one **Predator** in an **Area** warns or lunges at a time, a **Heron**, a **Garter snake**, a **Common carp**, a **Crayfish** and a **Tilapia** included
 - A **Crayfish** warns only while it is on its floor stretch, and its pinch stays level along the floor, so the water above its reach is out of its reach
 - A **Garter snake** warns only while its head is on its stretch, so the water below y 260, the whole bottom row included, is out of its reach
 - A **Predator** with the **Chase rule** chases only on patrol and within its **Leash**; chasing is not warning or lunging, so any number of **Predators** may chase at once, and a **Garter snake** chases along its stretch only
@@ -448,7 +485,9 @@ _Avoid_: carry sound, defeat sound
 - A **Glow-plant** is a **Puzzle element**, not a **Hazard** and not a **Timing element**: it never blocks, never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part
 - A **Pebble** is a **Puzzle element** that blocks only the **Explorer**: it rolls one way only, never costs a leg and is never a **Hit**, and every **Pebble** starts each **Trip** at the start of its groove
 - A **Side room** sits behind **Rock walls** and a **Pebble**; the **Exit** never needs it, and no **Snack** starts in it
-- A **Rock wall** blocks the **Explorer**'s body, is never a **Hit**, and is not water for the **Danger bar**
+- A **Rock wall** blocks the **Explorer**'s body and every **Predator**'s moves, is never a **Hit**, and is not water for the **Danger bar**; a **Predator** never senses, chases or strikes through one
+- A **Lane divider** is made of **Rock walls** and splits a **Two-lane area** into a surface lane and a deep lane that join at the Home Spot's pocket and the exit pocket; the **Exit** is reached along the surface lane
+- A **Gliding trajinera** is a **Timing element**, not a **Hazard**: it pushes the **Explorer** aside at 120 px/s, never costs a leg and is never a **Hit**, so the Shell **Perk** plays no part; a **Moored trajinera** and a **Sunken trajinera** are scenery that never move or push
 - A **Pulsing current** is a **Hazard** that never costs a leg: a surge is never a **Hit**, it is not a threat for **Hiding spots** (B10) or for the **Danger bar**, and its whole band counts as a **Current** for **Snack** homes
 - An **Area** has at most one **Dark water**; each **Glow-plant** sits in it, and a lit **Glow-plant** stays lit until the **Trip** ends, then every plant starts the next **Trip** unlit
 - **Dark water** may hide a **Snack**, a treasure spot, its **Hint sparkle** and a find outside every light, but never anything that warns or costs a leg; a **Snack** in it shows in the axolotl's own glow before it is in reach, the **Exit** keeps its faint glow, and every **Glow-plant** shows, so the **Area** can always be finished with no plant lit
