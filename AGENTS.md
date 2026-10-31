@@ -73,7 +73,7 @@ No-bump paths:
 
 ## Deploy
 
-CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint, tests and build on every PR and every push to `main`. GitHub Pages deploys from [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) after CI passes on `main`.
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint, tests and build on PRs and pushes to `main`, unless every changed file is under `docs/` or is a root `*.md` file. Such changes start no run and deploy nothing. On a push to `main`, or a manual CI run (`workflow_dispatch`) on `main`, the same run's deploy job deploys that run's build after the checks pass. Runs on `main` go one at a time. See [ADR 0033](docs/adr/0033-deploy-job-in-ci-and-docs-only-changes-skip-ci.md).
 Live URL: <https://brenpike.github.io/glam-gills/>. Vite builds with base path `/glam-gills/`.
 
 ## Decisions
