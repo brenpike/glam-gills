@@ -27,7 +27,7 @@ Both come from one root cause. A commit identity shared across runs was the key 
 - `pull_request` and `push` to `main` share one `paths-ignore` list, written once with a YAML anchor: `docs/**` and `*.md` (root `.md` files only).
 - `workflow_dispatch` has no filter.
 
-**Concurrency.** The workflow group is `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: false`. Runs on `main` go one at a time. A newer pending run replaces an older pending one, so the newest code deploys last.
+**Concurrency.** The workflow group is `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: false`. Runs on `main` go one at a time, and a newer pending run replaces an older pending one. GitHub does not guarantee the order of runs within a group (see Consequences).
 
 **Job `check`, "Lint, test and build".** It runs `npm ci`, lint, tests and build on every run, with no condition. On a non-PR run on `main` it also runs `actions/configure-pages` and `actions/upload-pages-artifact` on `dist`.
 
@@ -49,9 +49,11 @@ Both come from one root cause. A commit identity shared across runs was the key 
 | Key the head check on the non-docs tree, with a second path list in git pathspec syntax | The two lists can drift apart, and drift brings back both failures. |
 | `queue: max` on the deploy group | Every waiting build deploys, though only the newest matters. |
 | An 11-entry "run" `paths` list instead of the 2-entry `paths-ignore` | A build input missing from the list would not deploy. With `paths-ignore`, a new file is checked and deployed by default. |
+| A newest-code-commit check before the deploy | It closes the ordering gap, but it needs a second copy of the docs list, in git pathspec form, in `ci.yml`. The owner rejected it as not worth it. |
 
 ## Consequences
 
+- Recorded trade-off (owner decision, 2026-10-30, PR #192 review thread [r4429269599](https://github.com/brenpike/glam-gills/pull/192#discussion_r4429269599)): GitHub does not guarantee run order within a concurrency group, so two code pushes to `main` seconds apart can deploy out of order. An older checked build can then stay live until the next code push to `main` or a manual CI run on `main`. It is never unchecked code, and no deploy is lost.
 - Re-running a superseded run on `main` by hand redeploys an older but checked build. Fix it by re-running the newest run, or by a manual CI run on `main`.
 - Pages can lag `main` when the newest run fails. It never ships unchecked code.
 - A docs push to `main` starts no run, so the build ID stays on the last code commit ([ADR 0009](0009-update-check.md)). Players get no false update prompt.
