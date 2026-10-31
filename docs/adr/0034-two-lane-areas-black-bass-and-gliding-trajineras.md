@@ -36,8 +36,9 @@ Its new rule option is `slowTurn`. Through the cooldown after a strike the bass 
 
 **Gliding trajineras: a timing element that is not a threat (ND-8, ND-9).** The gliding trajinera (`'gliding-trajinera'` in code) is a painted boat that glides across a span of the surface lane on a 6 s crossing clock, at 70 px/s. Its hull is 120 px long and blocks the top 60 px of water. Its shadow leads the hull by 1 s of travel as the warning. It is a timing element, so it never costs a leg and is never a hit, and the danger bar does not count it.
 
-- A hull that touches the axolotl pushes it out the shortest way, down or sideways, at 120 px/s, gentler than the tilapia's bump. Each boat has a 0.5 s push cooldown. A push never costs a leg, never drops a find and never starts protected time.
-- A push is reported as a trip result, not a trip event. `stepTrip` returns `pushed` and the `impulse` on the step result, and emits no `TripEvent`, so nothing downstream treats a push as a hit, a leg loss or a moment that needs a card or a sound of its own. A step that ends the trip never pushes.
+- The hull is solid. Each swimming step, the trip holds the axolotl out of every hull at the element time that is drawn, the shortest way: down or sideways, never up, never out of the swim bounds and never into rock. It does this during the cooldown and on a bump step too, so the axolotl cannot swim back into a hull. A hull that touches the axolotl also pushes it at 120 px/s, gentler than the tilapia's bump, with a ripple. Each boat has a 0.5 s push cooldown for the push and the ripple, not for the hold. A push never costs a leg, never drops a find and never starts protected time.
+- The hold and the push are reported as a trip result, not a trip event. `stepTrip` returns `outOfHull` alongside `pushed` and the `impulse` on the step result, and emits no `TripEvent`, so nothing downstream treats a push as a hit, a leg loss or a moment that needs a card or a sound of its own. A scene applies `outOfHull`. A step that ends the trip never pushes.
+- A lane is valid only when the water a body reach under each hull band is open and the spans are at least 2 body reaches apart, so a way out of a hull always exists. `createTrajineraLane` refuses any other lane. A lane covers only the swim bounds and rock, so an area that adds mats or pebbles beside gliding trajineras must add them to the lane's ways first.
 - Snacks keep clear of each hull's band. Boats are painted bow only, with no people, and no fishing: the lures are Area 10's.
 - The moored boats along the surface lane's bank, and a sunken trajinera hull on the deep-lane bed, are scenery and hiding cover. They are not timing elements: they never move or push. The moored boats give bank cover to Common and Rare treasure spots (B5), and the sunken hull is a dead end on the deep-lane bed with an open Legendary spot and an Epic spot, which follow [ADR 0032](0032-legendary-spots-deep-and-dangerous-dash-pot-optional.md).
 
@@ -51,7 +52,8 @@ Its new rule option is `slowTurn`. Through the cooldown after a strike the bass 
 - A layout can put rock between a predator and the axolotl and trust it to hold. The danger bar's grid already treated rock as not quiet, so the two agree.
 - A second species can use `slowTurn` as area data. Nothing else needs to change.
 - Area 8's fairness proofs are measured against the divider: the surface lane's spots and the deep lane's spots each meet their rarity's band against the threats that can reach them, and a hit cannot come through the divider.
-- The trip result `pushed` is the one signal for a boat's push. A scene that wants a sound or a cue for it reads the result, as it reads `impulse` for a bump.
+- The trip result `pushed` is the one signal for a boat's push. A scene that wants a sound or a cue for it reads the result, as it reads `impulse` for a bump. A scene applies `outOfHull` to hold the axolotl out of the hull.
+- The fairness harness steps the same lane function as the trip, so what it proves is what the trip does.
 - The deep canal's look, bass and boat art, refuge and map entries are in the art style guide and the PRD.
 
 ## Alternatives considered
@@ -64,3 +66,5 @@ Its new rule option is `slowTurn`. Through the cooldown after a strike the bass 
 | Make the gliding trajinera a moving hazard that costs a leg | It would be a second new hazard in one area, against the one-new-thing rule, and a boat is a timing element, not a threat. A push keeps it gentle (ADR 0008). |
 | Report a push as a trip event | A trip event would add a case to every place that reads events, and a push is not a hit, a find or an ending. A step result carries it with nothing else to change. |
 | Add a new moving hazard for Area 8 | Reusing the punting pole (Q2) keeps the surface lane true to the trajineras and adds no new hazard, art or fact card. |
+| Push only, with the cooldown | The axolotl could swim back into the hull during the cooldown, so the hull did not block what it drew (PR #195 review). |
+| Hold only, no push | The owner chose hold plus push on 2026-10-31. The push and its ripple are the gentle feel on top of the hold. |
