@@ -63,6 +63,16 @@
  * still marks locked. The flat sides and the crystals on top are the shape cue apart from the
  * disc, the notched pad and the garden plot (greyscale, guide 10).
  *
+ * The Deep canal marker (issue #78) is a trajinera: a salmon hull, a crescent with a raised prow and
+ * stern and a keel, under a small yellow flower arch, same frame, anchor and ink (3.5) for the hull.
+ * It reaches 52 wide to the ink edge, the keel about 25 below the centre and the arch about 30 above
+ * it, so it stays inside the 64 px frame and clear of the focus ring. The hull is
+ * {@link MAP_DEEP_CANAL_HULL_FILL} (7.32:1 with ink, and 3.09:1 against the backdrop, so the edge
+ * passes 3:1 by its fill); locked it is white, as the disc, the pad and the plot. The arch is
+ * {@link UI_PRIMARY} unlocked (4.66:1 against the backdrop) and white locked. The raised ends and the
+ * arch are the shape cue apart from the disc, the pad, the plot and the stone (greyscale, guide 10);
+ * the padlock badge still marks locked.
+ *
  * Sizes are to the outer ink edge, as the guide gives them. Every value is
  * `derived (provisional)`. Presentational only: no Phaser, and no import from
  * src/logic.
@@ -380,6 +390,58 @@ function crystalPath(crystal: (typeof MAP_SPRING_CAVE_STONE.crystals)[number]): 
   return p;
 }
 
+/**
+ * Unlocked Deep canal marker hull fill: salmon, the trajinera's painted hull. Ink 2b2350 on it is
+ * 7.32:1, and against the #0c6a8c backdrop it is 3.09:1, so the marker edge passes 3:1 by its fill as
+ * the other markers do. Locked it is white. Derived (provisional).
+ */
+export const MAP_DEEP_CANAL_HULL_FILL = '#ffa08f';
+/** Deep canal marker arch fill when unlocked: the disc's yellow (4.66:1 against the backdrop). Locked it is white. */
+export const MAP_DEEP_CANAL_ARCH_FILL = UI_PRIMARY;
+/** Colour width of the flower arch tube and the ink added each side: thinner than the hull's ink so the small arch keeps its fill. */
+const ARCH_W = 4;
+const ARCH_OL = 2;
+
+/**
+ * The trajinera, in marker units (derived, provisional). The hull is a closed crescent to the ink
+ * centreline: raised prow and stern at (+-endX, endY), a deck line that dips to `deckY` at the
+ * middle (its inner ink edge stays 0.25 clear of the number box, a two-digit number 34 x 28), and a
+ * keel at `keelY`; `belly` is the horizontal pull of the two keel curves. The arch is a tube from
+ * (+-archFootX, archFootY), tucked behind the hull, up to its apex `archTopY`.
+ */
+export const MAP_DEEP_CANAL_BOAT = {
+  endX: 24,
+  endY: -19,
+  deckY: -16,
+  keelY: 23,
+  belly: { c1: [28, 6], c2: [20, 23] },
+  archFootX: 12,
+  archFootY: -16,
+  archTopY: -26,
+} as const;
+
+/** The hull outline (centreline) as a closed path: the dipping deck line, down the right curve to the keel, up the left. */
+function trajineraHullPath(): Path2D {
+  const { endX, endY, deckY, keelY, belly } = MAP_DEEP_CANAL_BOAT;
+  const p = new Path2D();
+  p.moveTo(-endX, endY);
+  // a quadratic's middle is halfway between its ends and the control, so this control dips the deck to deckY
+  p.quadraticCurveTo(0, 2 * deckY - endY, endX, endY);
+  p.bezierCurveTo(belly.c1[0], belly.c1[1], belly.c2[0], belly.c2[1], 0, keelY);
+  p.bezierCurveTo(-belly.c2[0], belly.c2[1], -belly.c1[0], belly.c1[1], -endX, endY);
+  p.closePath();
+  return p;
+}
+
+/** The flower arch (centreline): a quadratic from foot to foot whose middle reaches archTopY. */
+function trajineraArchPath(): Path2D {
+  const { archFootX, archFootY, archTopY } = MAP_DEEP_CANAL_BOAT;
+  const p = new Path2D();
+  p.moveTo(-archFootX, archFootY);
+  p.quadraticCurveTo(0, 2 * archTopY - archFootY, archFootX, archFootY);
+  return p;
+}
+
 type MarkerPainter = (ctx: CanvasRenderingContext2D, locked: boolean) => void;
 
 /** Every look's marker painter. A new `HabitatLookId` fails to compile until it has its own marker, so no look falls back to the canal's. */
@@ -398,6 +460,11 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
       shape(ctx, crystalPath(crystal), locked ? WHITE : MAP_SPRING_CAVE_CRYSTAL_FILL, CRYSTAL_LW);
     }
   },
+  // The arch tube first, so its feet tuck behind the deck; then the hull, whose fill is the marker's own fill.
+  'deep-canal': (ctx, locked) => {
+    inkMany(ctx, [seg(trajineraArchPath(), ARCH_W, locked ? WHITE : MAP_DEEP_CANAL_ARCH_FILL, ARCH_OL)]);
+    shape(ctx, trajineraHullPath(), locked ? WHITE : MAP_DEEP_CANAL_HULL_FILL, MARKER_LW);
+  },
 };
 
 /**
@@ -407,7 +474,9 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
  * locked. The chinampa look is the garden plot with hanging roots: {@link MAP_CHINAMPA_PLOT_FILL}
  * unlocked, #ffffff locked. The spring cave look is the grey-blue stone with a crystal cluster:
  * {@link MAP_SPRING_CAVE_STONE_FILL} stone, {@link MAP_SPRING_CAVE_CRYSTAL_FILL} crystals
- * unlocked, #ffffff crystals locked. The number is scene text; the locked cue is the padlock badge, not
+ * unlocked, #ffffff crystals locked. The deep canal look is the trajinera, a crescent hull under a flower
+ * arch: {@link MAP_DEEP_CANAL_HULL_FILL} hull and {@link MAP_DEEP_CANAL_ARCH_FILL} arch unlocked, #ffffff
+ * both locked. The number is scene text; the locked cue is the padlock badge, not
  * the fill. An unknown look throws a RangeError, so none falls back to the canal.
  */
 export function paintMapMarker(ctx: CanvasRenderingContext2D, locked: boolean, look: HabitatLookId = 'canal'): void {
@@ -580,13 +649,15 @@ export function paintMapPanel(ctx: CanvasRenderingContext2D, w: number, h: numbe
  * each tint is a light shade of its marker's hue. A new `HabitatLookId` fails to compile until it
  * has its tint. Ink on each is 4.5:1 or more and each is 3:1 or more against the #0c6a8c backdrop:
  * canal #fff6c9 (ink 13.21:1, backdrop 5.58:1), pond #caf2d0 (11.74:1, 4.95:1), chinampa #ffe7c6
- * (11.99:1, 5.06:1), spring cave #e5ebf2 (11.99:1, 5.06:1). Derived (provisional).
+ * (11.99:1, 5.06:1), spring cave #e5ebf2 (11.99:1, 5.06:1), deep canal #ffe3dd (11.85:1, 5.00:1).
+ * Derived (provisional).
  */
 export const MAP_HABITAT_TINTS: Readonly<Record<HabitatLookId, string>> = {
   canal: '#fff6c9',
   pond: '#caf2d0',
   chinampa: '#ffe7c6',
   'spring-cave': '#e5ebf2',
+  'deep-canal': '#ffe3dd',
 };
 
 /** The habitat tint of `look`. An unknown look throws a RangeError, so none falls back to the canal's. */

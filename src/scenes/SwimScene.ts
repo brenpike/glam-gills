@@ -83,7 +83,7 @@ import {
 } from '../logic/pebble';
 import { outfitPerks, perkTripContext, perkTuning, type PerkTuning } from '../logic/perks';
 import { isQueasy, queasySwimTuning, type SpitAvoid } from '../logic/plasticWorms';
-import { CARP_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
+import { BLACK_BASS_SPECIES, CARP_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, HERON_SPECIES } from '../logic/predators';
 import { addPulseCurrent, pulseMotion, pulsingCurrents, type PulseMotion, type PulsingCurrentSpawn } from '../logic/pulsingCurrents';
 import { mulberry32 } from '../logic/rng';
 import { areaStrandingChance, tripStranding } from '../logic/rescue';
@@ -130,6 +130,7 @@ import {
   type SceneView,
   type SwimStart,
 } from './BootScene';
+import { BlackBassView } from './BlackBassView';
 import { CarpView } from './CarpView';
 import { CrayfishView } from './CrayfishView';
 import { DarkCaveView } from './DarkCaveView';
@@ -152,6 +153,7 @@ import { PulsingCurrentView } from './PulsingCurrentView';
 import { readSession, returnToHomeTank, writeSession } from './sceneFlow';
 import { faceSprite } from './spriteFacing';
 import { StrandedView } from './StrandedView';
+import { TrajineraView } from './TrajineraView';
 import { TreasureView, type DarkShows } from './TreasureView';
 import { TripSoundRouter } from './TripSoundRouter';
 
@@ -339,6 +341,10 @@ export class SwimScene extends Phaser.Scene {
   private movingHazardView: MovingHazardView | null = null;
   /** The crayfish, or null in an area with no crayfish. */
   private crayfishView: CrayfishView | null = null;
+  /** The black bass, or null in an area with no black bass. */
+  private blackBassView: BlackBassView | null = null;
+  /** The gliding trajineras, their shadows and push ripples, or null in an area with no gliding trajineras. */
+  private trajineraView: TrajineraView | null = null;
   /** The dark layer over the area's dark water, or null in an area with no dark water. */
   private darkCaveView: DarkCaveView | null = null;
   /** The glow-plants and their hint, or null in an area with no glow-plants. */
@@ -455,6 +461,8 @@ export class SwimScene extends Phaser.Scene {
     this.carpView = null;
     this.movingHazardView = null;
     this.crayfishView = null;
+    this.blackBassView = null;
+    this.trajineraView = null;
     this.darkCaveView = null;
     this.glowPlantView = null;
     this.darkLightsNow = [];
@@ -631,6 +639,12 @@ export class SwimScene extends Phaser.Scene {
    * when a wall is in the way, and PebbleRoomView allocates its render argument object and each
    * pebble's centre point: the same bounded class as the residual below. The pulsing current motion
    * object is worked out again only when reduced motion changes.
+   * Deep canal Area 8 (#78): Areas 1 to 7 build and call nothing new. BlackBassView and TrajineraView
+   * are made once per trip, and only in an area with a black bass or with gliding trajineras.
+   * BlackBassView reuses its sprites and allocates only its render argument object. TrajineraView
+   * reuses its sprites and allocates its render argument object and, per boat, trajineraHull's and
+   * trajineraShadow's results; a push adds one trajineraHull result for its ripple. Bounded by the
+   * area's boat count: the same class as the residual below.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -873,6 +887,11 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView = predators.some((predator) => predator.species === CRAYFISH_SPECIES.id)
       ? new CrayfishView(this, this.assets, predators)
       : null;
+    this.blackBassView = predators.some((predator) => predator.species === BLACK_BASS_SPECIES.id)
+      ? new BlackBassView(this, this.assets, predators)
+      : null;
+    const lane = this.trip.trajineras;
+    this.trajineraView = lane !== null ? new TrajineraView(this, this.assets, lane.boats) : null;
     const movingHazards = this.trip.encounter.movingHazards ?? [];
     this.movingHazardView = movingHazards.length > 0 ? new MovingHazardView(this, this.assets, movingHazards) : null;
     this.mobileSnackView = hasMobileSnacks(zone) ? new MobileSnackView(this.mobileSnackTextures()) : null;
@@ -1255,6 +1274,7 @@ export class SwimScene extends Phaser.Scene {
       if (result.impulse) {
         this.swim = { ...this.swim, vx: result.impulse.x, vy: result.impulse.y };
       }
+      if (result.pushed) this.trajineraView?.startPush(result.pushed, this.trip.elementTime);
     } else {
       this.placeCarried();
     }
@@ -1490,6 +1510,8 @@ export class SwimScene extends Phaser.Scene {
     this.carpView?.destroy();
     this.movingHazardView?.destroy();
     this.crayfishView?.destroy();
+    this.blackBassView?.destroy();
+    this.trajineraView?.destroy();
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
     this.pulsingCurrentView?.destroy();
@@ -1528,6 +1550,8 @@ export class SwimScene extends Phaser.Scene {
     this.carpView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
     this.movingHazardView?.render({ encounter: this.trip.encounter, motion: this.motion });
     this.crayfishView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
+    this.blackBassView?.render({ encounter: this.trip.encounter, motion: this.motion, dt });
+    this.trajineraView?.render({ elementTime: this.trip.elementTime, motion: this.motion, dt });
     this.renderDarkCave();
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });

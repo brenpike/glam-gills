@@ -69,7 +69,26 @@ import { TRAJINERAS } from '../logic/trajineras';
 import { INK, LW, WHITE } from './palette';
 import { DEEP_CANAL_TEX, bakeDeepCanalTextures } from './deepCanalTextures';
 import { ROCK_WALL_KEY_PREFIX, bakeSpringCaveTextures, rockWallSizeKey } from './springCaveTextures';
-import { habitatLook } from './habitatLook';
+import { BASS_BODY } from './drawBlackBass';
+import {
+  DEEP_CANAL_BED_BOTTOM,
+  DEEP_CANAL_BED_LIP,
+  DEEP_CANAL_BED_TOP,
+  DEEP_CANAL_HAZE,
+  DEEP_CANAL_LOOK,
+  DEEP_CANAL_MUD,
+  DEEP_CANAL_SURFACE_LINE,
+  DEEP_CANAL_WATER_DEEP,
+  DEEP_CANAL_WATER_MID,
+  DEEP_CANAL_WATER_SHALLOW,
+  AREA_LOOK_IDS,
+  HABITAT_LOOK_IDS,
+  type AreaLookId,
+  habitatLook,
+} from './habitatLook';
+import { paintBackgroundChunk, bedEdgeY, type ChunkRow } from './drawScenery';
+import { VIEW_W, WATER_GRADIENT_END_Y, WATER_STOP_MID } from './palette';
+import { SKY_HORIZON, SKY_TOP } from './palette';
 import { AREAS, DEEP_CANAL_AREA, habitatById } from '../logic/areas';
 
 vi.mock('phaser', () => ({}));
@@ -721,6 +740,47 @@ describe('old canal-bed stones (guide 7a, 10; issue #78)', () => {
   });
 });
 
+describe('old canal-bed stones in the background chunks (issue #78)', () => {
+  const CHUNK_INDEX = 2;
+  const STONE_TONES = [CANAL_STONE, CANAL_STONE_LIGHT, CANAL_STONE_DARK];
+  const chunkOf = (look: AreaLookId, row: ChunkRow): Painted[] => {
+    let state = 12345;
+    const rand = (): number => {
+      state = (state * 1664525 + 1013904223) % 4294967296;
+      return state / 4294967296;
+    };
+    return record((ctx) => paintBackgroundChunk(ctx, { row, index: CHUNK_INDEX, hasSun: false, hasBank: false, look, rand }));
+  };
+  const stoneFills = (painted: readonly Painted[]): Painted[] => fills(painted).filter((p) => STONE_TONES.includes(p.style));
+
+  it('says only the deep canal look paints bed stones', () => {
+    for (const id of AREA_LOOK_IDS) expect(habitatLook(id).bedStones, id).toBe(id === 'deep-canal');
+  });
+
+  it('paints the stones last in a deep canal bottom and single chunk, on that chunk\'s own bed edge', () => {
+    const expected = record((ctx) => paintCanalBedStones(ctx, (x) => bedEdgeY(CHUNK_INDEX * VIEW_W + x)));
+    for (const row of ['bottom', 'single'] as const) {
+      const painted = chunkOf('deep-canal', row);
+      expect(stoneFills(painted), row).toHaveLength(CANAL_BED_SLABS.length + CANAL_BED_BLOCKS.length);
+      expect(signature(painted.slice(-expected.length)), row).toBe(signature(expected));
+    }
+  });
+
+  it('paints no stones in a top or middle deep canal chunk, which have no bed', () => {
+    for (const row of ['top', 'middle'] as const) expect(stoneFills(chunkOf('deep-canal', row)), row).toHaveLength(0);
+  });
+
+  it('paints no stones in any other look', () => {
+    for (const id of AREA_LOOK_IDS.filter((look) => look !== 'deep-canal')) {
+      for (const row of ['bottom', 'single'] as const) expect(stoneFills(chunkOf(id, row)), `${id} ${row}`).toHaveLength(0);
+    }
+  });
+
+  it('draws the same chunk twice: no time, no extra randomness', () => {
+    expect(signature(chunkOf('deep-canal', 'bottom'))).toBe(signature(chunkOf('deep-canal', 'bottom')));
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Side-canal inflow marks
 // ---------------------------------------------------------------------------
@@ -977,5 +1037,219 @@ describe('which areas need the deep canal bake (issue #78)', () => {
       expect(info?.key).toBe(`${ROCK_WALL_KEY_PREFIX}${rockWallSizeKey(w, h)}`);
     }
     expect(created.filter((c) => c.key.startsWith(ROCK_WALL_KEY_PREFIX))).toHaveLength(unique.size);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The deep canal look (issue #78, STEP-012)
+// ---------------------------------------------------------------------------
+
+/** The [r, g, b, a] of an rgba() colour. */
+function rgbaOf(colour: string): readonly [number, number, number, number] {
+  const match = /^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/.exec(colour);
+  expect(match, colour).not.toBeNull();
+  return (match as RegExpExecArray).slice(1).map(Number) as unknown as readonly [number, number, number, number];
+}
+
+/** An rgba() colour laid over an opaque #rrggbb, as the canvas mixes it in 8-bit sRGB. */
+function overRgba(base: string, colour: string): string {
+  const [r, g, b, a] = rgbaOf(colour);
+  return over(base, [r, g, b], a);
+}
+
+/** Hue of a #rrggbb colour in degrees, 0 to 360. */
+function hueOf(hex: string): number {
+  const [r, g, b] = channelsOf(hex).map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d === 0) return 0;
+  if (max === r) return ((((g - b) / d) % 6) * 60 + 360) % 360;
+  if (max === g) return (((b - r) / d + 2) * 60 + 360) % 360;
+  return (((r - g) / d + 4) * 60 + 360) % 360;
+}
+
+describe('the deep canal look (issue #78)', () => {
+  const look = habitatLook('deep-canal');
+
+  it('is the last habitat look and an area look, and resolves to the frozen look table entry', () => {
+    expect(HABITAT_LOOK_IDS[HABITAT_LOOK_IDS.length - 1]).toBe('deep-canal');
+    expect(AREA_LOOK_IDS).toContain('deep-canal');
+    expect(look).toBe(DEEP_CANAL_LOOK);
+    expect(look.id).toBe('deep-canal');
+    expect(Object.isFrozen(look)).toBe(true);
+    expect(Object.isFrozen(look.water)).toBe(true);
+    expect(Object.isFrozen(look.bed)).toBe(true);
+  });
+
+  it('boots Area 8: its habitat look id resolves, so areaLook no longer throws a RangeError', () => {
+    expect(() => habitatLook(DEEP_CANAL_AREA.look ?? habitatById(DEEP_CANAL_AREA.habitatId)?.look ?? '')).not.toThrow();
+  });
+
+  it('is the documented derived values', () => {
+    expect(look.water).toEqual({
+      shallow: '#46b2c0',
+      mid: '#2a95aa',
+      deep: '#21809a',
+      stopMid: WATER_STOP_MID,
+      gradientEndY: WATER_GRADIENT_END_Y,
+    });
+    expect([DEEP_CANAL_WATER_SHALLOW, DEEP_CANAL_WATER_MID, DEEP_CANAL_WATER_DEEP]).toEqual(['#46b2c0', '#2a95aa', '#21809a']);
+    expect(look.haze).toBe('rgba(60,170,200,0.12)');
+    expect(look.haze).toBe(DEEP_CANAL_HAZE);
+    expect(look.surfaceFill).toBe(DEEP_CANAL_WATER_SHALLOW);
+    expect(look.surfaceLine).toBe('rgba(224,248,252,0.95)');
+    expect(look.surfaceLine).toBe(DEEP_CANAL_SURFACE_LINE);
+    expect(look.bed.top).toBe('#6d8ca0');
+    expect(look.bed.bottom).toBe('#5c7d94');
+    expect(look.bed.lip).toBe('#a9c0cc');
+    expect(look.bed.mud).toBe('rgba(80,108,132,0.4)');
+    expect([DEEP_CANAL_BED_TOP, DEEP_CANAL_BED_BOTTOM, DEEP_CANAL_BED_LIP, DEEP_CANAL_MUD]).toEqual([
+      '#6d8ca0',
+      '#5c7d94',
+      '#a9c0cc',
+      'rgba(80,108,132,0.4)',
+    ]);
+  });
+
+  it('says what its area needs: the sunken hull on the bed, the moored hulls, and no pond, chinampa or spring cave props', () => {
+    expect(look.cave).toEqual({ kind: 'sunkenHull', anchor: 'bed' });
+    expect(look.deepCanalProps).toBe(true);
+    expect(look.springCaveProps).toBe(false);
+    expect(look.chinampaProps).toBe(false);
+    expect(look.pondProps).toBe(false);
+    expect(look.rowDetails).toBe('none');
+    expect(look.stream).toBe(false);
+    expect(look.edgeReeds).toBeNull();
+    expect(look.firefliesPerScreen).toBe(0);
+    expect(look.bank).toBe('willows');
+    expect(look.currentGap).toBe(false);
+    expect(look.airWash).toBeNull();
+    expect(look.rayAlphaScale).toBe(1);
+    expect(look.sky).toEqual({ top: SKY_TOP, horizon: SKY_HORIZON });
+  });
+
+  it('is the only look with the deep canal props or a sunken hull cave', () => {
+    for (const id of AREA_LOOK_IDS.filter((other) => other !== 'deep-canal')) {
+      expect(habitatLook(id).deepCanalProps, id).toBe(false);
+      expect(habitatLook(id).cave.kind, id).not.toBe('sunkenHull');
+    }
+  });
+
+  it('has deeper, darker blue-green water than the chinampa and the pond, stop by stop', () => {
+    const chinampa = habitatLook('chinampa').water;
+    const pond = habitatLook('pond').water;
+    for (const stop of ['shallow', 'mid', 'deep'] as const) {
+      expect(luminance(look.water[stop]), stop).toBeLessThan(luminance(chinampa[stop]));
+      expect(luminance(look.water[stop]), stop).toBeLessThan(luminance(pond[stop]));
+      // blue-green: the hue sits in the cyan band, bluer than the chinampa's green-teal
+      expect(hueOf(look.water[stop]), stop).toBeGreaterThan(180);
+      expect(hueOf(look.water[stop]), stop).toBeLessThan(200);
+      expect(hueOf(look.water[stop]), stop).toBeGreaterThan(hueOf(chinampa[stop]));
+    }
+    expect(luminance(look.water.shallow)).toBeGreaterThan(luminance(look.water.mid));
+    expect(luminance(look.water.mid)).toBeGreaterThan(luminance(look.water.deep));
+  });
+
+  it('has an old-stone bed in a cooler blue-grey than the sage stones painted on it, so the stones read', () => {
+    for (const hex of [CANAL_STONE, CANAL_STONE_LIGHT]) {
+      expect(luminance(hex), hex).toBeGreaterThan(luminance(look.bed.bottom));
+    }
+    expect(hueOf(look.bed.top)).toBeGreaterThan(hueOf(CANAL_STONE));
+    expect(hueOf(look.bed.bottom)).toBeGreaterThan(hueOf(CANAL_STONE));
+    expect(look.bed.pebbleCount).toBeGreaterThan(0);
+    expect(look.bed.mudCount).toBeGreaterThan(0);
+  });
+});
+
+describe('deep canal contrast (guide 10, the pond contrast rule)', () => {
+  const look = habitatLook('deep-canal');
+
+  /** Every background colour of the look, the haze laid over the water and the bed included. */
+  function backgrounds(): { name: string; hex: string }[] {
+    const out: { name: string; hex: string }[] = [
+      { name: 'sky top', hex: look.sky.top },
+      { name: 'sky horizon', hex: look.sky.horizon },
+    ];
+    for (const stop of ['shallow', 'mid', 'deep'] as const) {
+      out.push({ name: `water ${stop}`, hex: look.water[stop] });
+      out.push({ name: `water ${stop} under haze`, hex: overRgba(look.water[stop], look.haze) });
+    }
+    for (const stop of ['top', 'bottom', 'lip'] as const) {
+      out.push({ name: `bed ${stop}`, hex: look.bed[stop] });
+      out.push({ name: `bed ${stop} under haze`, hex: overRgba(look.bed[stop], look.haze) });
+    }
+    const mud = overRgba(look.bed.bottom, look.bed.mud);
+    out.push({ name: 'mud on bed bottom', hex: mud }, { name: 'mud on bed bottom under haze', hex: overRgba(mud, look.haze) });
+    return out;
+  }
+
+  it('every background has luminance 0.1687 or more, so ink is 3:1 or better on it', () => {
+    const all = backgrounds();
+    expect(all.length).toBe(16);
+    for (const { name, hex } of all) {
+      expect(luminance(hex), name).toBeGreaterThanOrEqual(LUMINANCE_FLOOR);
+      expect(contrast(INK, hex), name).toBeGreaterThanOrEqual(PAIR_FLOOR);
+    }
+  });
+
+  it('lets the haze only lighten the deep water and the bed, so the rule holds under it too', () => {
+    expect(luminance(overRgba(look.water.deep, look.haze))).toBeGreaterThan(luminance(look.water.deep));
+    expect(luminance(overRgba(look.bed.bottom, look.haze))).toBeGreaterThan(luminance(look.bed.bottom));
+  });
+
+  it('keeps the deep stop at the floor and within a hair of the moored shade, the darkest water the props are drawn for', () => {
+    expect(luminance(look.water.deep)).toBeGreaterThanOrEqual(luminance(FLOOR_WATER) - 0.01);
+    expect(Math.abs(luminance(look.water.deep) - luminance(FLOOR_WATER))).toBeLessThan(0.01);
+  });
+
+  it('documents the luminances and ratios the comments print', () => {
+    const rows: readonly (readonly [string, string, string, string])[] = [
+      ['water shallow', DEEP_CANAL_WATER_SHALLOW, '0.3695', '5.75'],
+      ['water mid', DEEP_CANAL_WATER_MID, '0.2489', '4.10'],
+      ['water deep', DEEP_CANAL_WATER_DEEP, '0.1809', '3.17'],
+      ['bed top', DEEP_CANAL_BED_TOP, '0.2455', '4.05'],
+      ['bed bottom', DEEP_CANAL_BED_BOTTOM, '0.1908', '3.30'],
+      ['bed lip', DEEP_CANAL_BED_LIP, '0.5049', '7.61'],
+    ];
+    for (const [name, hex, lum, ratio] of rows) {
+      expect(luminance(hex).toFixed(4), name).toBe(lum);
+      expect(contrast(hex, INK).toFixed(2), name).toBe(ratio);
+    }
+    expect(luminance(overRgba(DEEP_CANAL_WATER_DEEP, DEEP_CANAL_HAZE)).toFixed(4)).toBe('0.1969');
+    const mud = overRgba(DEEP_CANAL_BED_BOTTOM, DEEP_CANAL_MUD);
+    expect(luminance(mud).toFixed(4)).toBe('0.1694');
+    expect(contrast(mud, INK).toFixed(2)).toBe('3.01');
+    expect(mud).toBe('#57768e');
+  });
+
+  it('keeps the light sage black bass readable on the water: lighter than every stop, 2.87:1 on the deep one, ink outline 3:1 on all', () => {
+    for (const stop of ['shallow', 'mid', 'deep'] as const) {
+      expect(luminance(BASS_BODY), stop).toBeGreaterThan(luminance(look.water[stop]));
+      expect(contrast(INK, look.water[stop]), stop).toBeGreaterThanOrEqual(PAIR_FLOOR);
+    }
+    expect(contrast(BASS_BODY, look.water.deep).toFixed(2)).toBe('2.87');
+    expect(contrast(BASS_BODY, look.water.mid).toFixed(2)).toBe('2.22');
+    expect(contrast(BASS_BODY, look.water.shallow).toFixed(2)).toBe('1.58');
+    // The pair method: the bass body or its ink outline is 3:1 or better against every background.
+    for (const hex of [look.water.shallow, look.water.mid, look.water.deep, look.bed.top, look.bed.bottom]) {
+      expect(Math.max(contrast(INK, hex), contrast(BASS_BODY, hex)), hex).toBeGreaterThanOrEqual(PAIR_FLOOR);
+    }
+  });
+
+  it('shows the trajinera shadow as a step darker than every water stop: 1.5:1 or more at its most solid', () => {
+    const [r, g, b] = TRAJINERA_SHADOW_RGB;
+    for (const stop of ['shallow', 'mid', 'deep'] as const) {
+      const shadowed = over(look.water[stop], [r, g, b], TRAJINERA_SHADOW_ALPHA_TOP);
+      expect(luminance(shadowed), stop).toBeLessThan(luminance(look.water[stop]));
+      expect(contrast(look.water[stop], shadowed), stop).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
+  it('keeps every moored hull, bank hull and pole colour above the water in value, so the boats read against it', () => {
+    for (const hex of [BOAT_HULL, POLE_WOOD]) {
+      for (const stop of ['shallow', 'mid', 'deep'] as const) {
+        expect(luminance(hex), `${hex} on ${stop}`).toBeGreaterThan(luminance(look.water[stop]));
+      }
+    }
   });
 });

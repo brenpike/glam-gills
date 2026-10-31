@@ -61,7 +61,9 @@ import {
   refugeTrashKey,
 } from './refugeTextures';
 import { paintIcon, type IconKind } from './drawUi';
-import { HABITAT_LOOK_IDS, isHabitatLookId, type HabitatLookId } from './habitatLook';
+import { HABITAT_LOOK_IDS, habitatLook, isHabitatLookId, type HabitatLookId } from './habitatLook';
+import { CANAL_STONE, CANAL_STONE_LIGHT, CANAL_STONE_MOSS, HULL_CAVE_ALGAE, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK } from './drawDeepCanal';
+import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_YELLOW } from './drawPuntingPole';
 import { ROOT_TANGLE_BARK } from './drawChinampa';
 import { EYE, INK, LW, UI_ACCENT, WHITE, WILLOW_FOLIAGE, WILLOW_STRAND, WILLOW_TRUNK } from './palette';
 import texturesSource from './textures.ts?raw';
@@ -820,5 +822,148 @@ describe('bakeRefugeTextures', () => {
     expect(art.sparkle.originNormX).toBeCloseTo(0.5, 1);
     expect(art.nudge.originNormX).toBeCloseTo(0.5, 1);
     expect(art.nudge.originNormY).toBeCloseTo(0.5, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deep canal section (issue #78)
+// ---------------------------------------------------------------------------
+
+describe('deep canal refuge section (issue #78; guide 3g, 7, 10)', () => {
+  const styles = (look: HabitatLookId, state: RefugeArtState, pick: (p: Painted[]) => Painted[] = fills): string[] =>
+    pick(record((ctx) => paintRefugeSection(ctx, look, state))).map((p) => p.style);
+  /** The numbers of every fill painted in `style`, one list per fill. */
+  const hullFills = (state: RefugeArtState, style: string): Painted[] =>
+    fills(record((ctx) => paintRefugeSection(ctx, 'deep-canal', state))).filter((f) => f.style === style);
+
+  it('paints a moored trajinera at each bank: a faded plain hull when dirty, a cream hull with a painted band and a flower arch when clean', () => {
+    expect(styles('deep-canal', 'dirty').filter((c) => c === HULL_CAVE_WOOD)).toHaveLength(2);
+    expect(styles('deep-canal', 'dirty')).not.toContain(BOAT_HULL);
+    expect(styles('deep-canal', 'clean').filter((c) => c === BOAT_HULL)).toHaveLength(2);
+    expect(styles('deep-canal', 'clean')).not.toContain(HULL_CAVE_WOOD);
+    // The band along each hull: dark dull wood when dirty, painted pink when clean.
+    const band = (state: RefugeArtState, style: string): number => styles('deep-canal', state, strokes).filter((c) => c === style).length;
+    expect(band('dirty', HULL_CAVE_WOOD_DARK)).toBe(2);
+    expect(band('dirty', BOAT_PINK)).toBe(0);
+    expect(band('clean', BOAT_PINK)).toBe(2);
+    expect(band('clean', HULL_CAVE_WOOD_DARK)).toBe(0);
+    // The arch and its three flowers (a pink head and a yellow heart each) only when clean.
+    expect(band('dirty', BOAT_ORANGE)).toBe(0);
+    expect(band('clean', BOAT_ORANGE)).toBe(2);
+    expect(styles('deep-canal', 'dirty').filter((c) => c === BOAT_PINK)).toHaveLength(0);
+    expect(styles('deep-canal', 'clean').filter((c) => c === BOAT_PINK)).toHaveLength(6);
+    expect(styles('deep-canal', 'clean').filter((c) => c === BOAT_YELLOW)).toHaveLength(6);
+    expect(styles('deep-canal', 'dirty').filter((c) => c === BOAT_YELLOW)).toHaveLength(0);
+  });
+
+  it('keeps each hull at the bank, above the trash and clear of the plants and the resters', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const hull = hullFills(state, state === 'clean' ? BOAT_HULL : HULL_CAVE_WOOD)[0];
+      const xs = hull.cmds.flatMap((c) => c.slice(1).filter((_, i) => i % 2 === 0) as number[]);
+      const ys = hull.cmds.flatMap((c) => c.slice(1).filter((_, i) => i % 2 === 1) as number[]);
+      // Runs past the frame on the outside, ends in a prow tip at x 44 on the inside.
+      expect(Math.min(...xs)).toBeLessThan(0);
+      expect(Math.max(...xs)).toBeLessThanOrEqual(44);
+      // The deck stands above the surface (y 22) and the underside ends at y 30, above the trash rows.
+      expect(Math.min(...ys)).toBeLessThan(22);
+      expect(Math.max(...ys)).toBeLessThanOrEqual(30);
+    }
+    // The plants layer stands at the centre, 40 px each way, so it never meets the hulls (x 44 and 156).
+    expect(REFUGE_PLANTS_BASE.x - 40).toBeGreaterThan(44);
+    expect(REFUGE_PLANTS_BASE.x + 40).toBeLessThan(200 - 44);
+  });
+
+  it('lays four old paving slabs on the bed in both states, clear of the frame', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const slabs = fills(record((ctx) => paintRefugeSection(ctx, 'deep-canal', state))).filter(
+        (f) => f.style === CANAL_STONE || f.style === CANAL_STONE_LIGHT,
+      );
+      expect(slabs).toHaveLength(4);
+      for (const slab of slabs) {
+        const [, x, y, w, h] = slab.cmds.find((c) => c[0] === 'rect')!;
+        expect(x).toBeGreaterThan(8);
+        expect(x + w).toBeLessThan(192);
+        expect(y).toBeGreaterThanOrEqual(78);
+        expect(y + h).toBeLessThan(94);
+      }
+    }
+  });
+
+  it('owns its colours: the other looks paint no boat or old-stone colour', () => {
+    const mine = [BOAT_HULL, BOAT_PINK, BOAT_ORANGE, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK, CANAL_STONE, CANAL_STONE_LIGHT];
+    for (const look of ['canal', 'pond', 'chinampa', 'spring-cave'] as const) {
+      for (const state of REFUGE_ART_STATES) {
+        const all = record((ctx) => paintRefugeSection(ctx, look, state)).map((p) => p.style);
+        for (const c of mine) expect(all, `${look} ${state} ${c}`).not.toContain(c);
+      }
+    }
+  });
+
+  it('lists the moored hull colours as frame colours, each 3:1 or more with ink in both states', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const colours = refugeBackdropColours('deep-canal', state);
+      for (const c of [BOAT_HULL, BOAT_PINK, BOAT_ORANGE, BOAT_YELLOW, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK]) {
+        expect(colours).toContain(c);
+        expect(contrast(INK, c), c).toBeGreaterThanOrEqual(3);
+      }
+    }
+    // The faded wood and its dark band are the dirty hull's two tones: 4.46 and 3.14 against ink.
+    expect(contrast(INK, HULL_CAVE_WOOD).toFixed(2)).toBe('4.46');
+    expect(contrast(INK, HULL_CAVE_WOOD_DARK).toFixed(2)).toBe('3.14');
+  });
+
+  it('keeps every colour a deep canal picture paints at 3:1 or more with ink, the murk blotches apart', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const painted = record((ctx) => paintRefugeSection(ctx, 'deep-canal', state));
+      for (const f of fills(painted).filter((p) => isHex(p.style) && p.style !== REFUGE_MURK && p.style !== EYE)) {
+        expect(contrast(INK, f.style), `${state} ${f.style}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('draws darker water than the pond, the chinampa and the spring cave, clean and dirty, and keeps the dirty water grey-brown', () => {
+    const lum = (hex: string): number => luminance(hex);
+    for (const other of ['pond', 'chinampa', 'spring-cave'] as const) {
+      expect(lum(refugeCleanWater('deep-canal').top)).toBeLessThan(lum(refugeCleanWater(other).top));
+      expect(lum(refugeCleanWater('deep-canal').bottom)).toBeLessThan(lum(refugeCleanWater(other).bottom));
+    }
+    expect(refugeCleanWater('deep-canal')).toEqual({ top: habitatLook('deep-canal').water.shallow, bottom: habitatLook('deep-canal').water.mid });
+    // The clean water is a blue-green: more blue than red.
+    for (const c of Object.values(refugeCleanWater('deep-canal'))) {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+      expect(b, c).toBeGreaterThan(r);
+      expect(g, c).toBeGreaterThan(r);
+    }
+    // Dirty water under the tint keeps the 3:1 ink rule that every picture's frame needs.
+    for (const c of Object.values(refugeDirtyWater('deep-canal'))) expect(contrast(INK, c), c).toBeGreaterThanOrEqual(3);
+  });
+
+  it('tells dirty from clean without colour: murk blotches and plain hulls against flower arches, plants and two resting axolotls', () => {
+    const dirty = record((ctx) => paintRefugeSection(ctx, 'deep-canal', 'dirty'));
+    const clean = record((ctx) => paintRefugeSection(ctx, 'deep-canal', 'clean'));
+    expect(signature(dirty)).not.toBe(signature(clean));
+    expect(strokes(clean).length).toBeGreaterThan(strokes(dirty).length + 8);
+    expect(fills(dirty).filter((f) => f.style === REFUGE_MURK)).toHaveLength(4);
+    expect(fills(clean).filter((f) => f.style === REFUGE_MURK)).toHaveLength(0);
+    expect(fills(clean).filter((f) => f.style === '#ffb7cf').length).toBeGreaterThan(0);
+  });
+
+  it('paints its plants as a mossy stone block with three waterweed ribbons and one drifting flower, all above the base', () => {
+    const painted = record((ctx) => paintRefugePlants(ctx, 'deep-canal'));
+    expect(strokes(painted).filter((s) => s.style === HULL_CAVE_ALGAE)).toHaveLength(3);
+    expect(fills(painted).filter((f) => f.style === CANAL_STONE_LIGHT)).toHaveLength(1);
+    expect(fills(painted).filter((f) => f.style === CANAL_STONE_MOSS)).toHaveLength(1);
+    expect(fills(painted).filter((f) => f.style === BOAT_PINK)).toHaveLength(1);
+    expect(fills(painted).filter((f) => f.style === BOAT_FLOWER_CENTRE)).toHaveLength(1);
+    for (const f of fills(painted).filter((p) => isHex(p.style))) expect(contrast(INK, f.style), f.style).toBeGreaterThanOrEqual(3);
+    expect(paintedTop((ctx) => paintRefugePlants(ctx, 'deep-canal'))).toBeGreaterThanOrEqual(-60);
+  });
+
+  it('is still: painting twice gives the same shapes, so it is also the reduced-motion version', () => {
+    for (const state of REFUGE_ART_STATES) {
+      expect(signature(record((ctx) => paintRefugeSection(ctx, 'deep-canal', state)))).toBe(
+        signature(record((ctx) => paintRefugeSection(ctx, 'deep-canal', state))),
+      );
+    }
   });
 });

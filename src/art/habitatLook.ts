@@ -70,7 +70,7 @@ import {
 } from './palette';
 
 /** Look ids shipped so far. Must match the logic layer's Habitat.look values. */
-export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave';
+export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave' | 'deep-canal';
 
 /** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3). */
 export type AreaLookId = HabitatLookId | 'pond-dusk';
@@ -188,6 +188,11 @@ export interface HabitatLook {
    * cave; deepCanalTextures.ts). Its bank overhangs are drawn as moored hulls.
    */
   readonly deepCanalProps: boolean;
+  /**
+   * Paint the old canal-bed stones (drawDeepCanal.ts paintCanalBedStones) over the bed of its bottom
+   * and single chunks. Only the deep canal does.
+   */
+  readonly bedStones: boolean;
 }
 
 /** Sky of the daytime looks: the prototype sky (guide 7a). */
@@ -231,6 +236,7 @@ const CANAL_LOOK: HabitatLook = Object.freeze({
   rowDetails: 'none',
   springCaveProps: false,
   deepCanalProps: false,
+  bedStones: false,
 });
 
 /**
@@ -308,6 +314,7 @@ const POND_LOOK: HabitatLook = Object.freeze({
   rowDetails: 'none',
   springCaveProps: false,
   deepCanalProps: false,
+  bedStones: false,
 });
 
 /**
@@ -402,6 +409,7 @@ const POND_DUSK_LOOK: HabitatLook = Object.freeze({
   rowDetails: 'none',
   springCaveProps: false,
   deepCanalProps: false,
+  bedStones: false,
 });
 
 /**
@@ -471,6 +479,7 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   rowDetails: 'none',
   springCaveProps: false,
   deepCanalProps: false,
+  bedStones: false,
 });
 
 /**
@@ -545,6 +554,79 @@ export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   rowDetails: 'springCave',
   springCaveProps: true,
   deepCanalProps: false,
+  bedStones: false,
+});
+
+/**
+ * Deep canal water (issue #78, derived, provisional): a deep, dark blue-green, bluer and darker than
+ * the chinampa's green-teal and the canal's bright aqua (hue 187 / 191 / 194 against the chinampa's
+ * 153 / 165 / 171). Luminance 0.3695, 0.2489 and 0.1809. Deep #21809a, the floor of the rule, is
+ * 3.17:1 with ink, shallow #46b2c0 is 5.75:1. The light sage bass (#b9d97a) is 2.87:1 against the
+ * deep stop and 2.22:1 against the mid stop, and its ink outline carries the rest.
+ */
+export const DEEP_CANAL_WATER_SHALLOW = '#46b2c0';
+export const DEEP_CANAL_WATER_MID = '#2a95aa';
+export const DEEP_CANAL_WATER_DEEP = '#21809a';
+/** Deep canal haze: a cool, murky teal. Lightens every water stop (deep to luminance 0.1969), so the contrast rule above still holds. */
+export const DEEP_CANAL_HAZE = 'rgba(60,170,200,0.12)';
+/** Deep canal surface line: the canal line cooled toward a pale aqua. */
+export const DEEP_CANAL_SURFACE_LINE = 'rgba(224,248,252,0.95)';
+/**
+ * Deep canal old-stone bed (issue #78, derived, provisional): a blue-grey silt over old paving, cooler
+ * and bluer than the sage stones painted on it (drawDeepCanal.ts), so the stones still read. Top
+ * #6d8ca0 (luminance 0.2455, 4.05:1 with ink), bottom #5c7d94 (0.1908, 3.30:1), lip #a9c0cc (0.5049).
+ * Silt dots #506c84 at 0.4 over the bottom stop blend to #57768e, luminance 0.1694 (3.01:1 with ink).
+ */
+export const DEEP_CANAL_BED_TOP = '#6d8ca0';
+export const DEEP_CANAL_BED_BOTTOM = '#5c7d94';
+export const DEEP_CANAL_BED_LIP = '#a9c0cc';
+export const DEEP_CANAL_MUD = 'rgba(80,108,132,0.4)';
+
+/**
+ * Deep canal look (issue #78): dark blue-green water over a blue-grey old-stone bed, under the day
+ * sky. No stream, no reeds, no spring cave rows, no pond props. The banks keep the canal's willow
+ * soil, and the zone's bank overhangs are drawn as moored hulls. The hiding place is the sunken old
+ * trajinera hull on the bed; the old canal-bed stones are painted into the bottom chunks.
+ */
+export const DEEP_CANAL_LOOK: HabitatLook = Object.freeze({
+  id: 'deep-canal',
+  sky: DAY_SKY,
+  airWash: null,
+  rayAlphaScale: 1,
+  water: Object.freeze({
+    shallow: DEEP_CANAL_WATER_SHALLOW,
+    mid: DEEP_CANAL_WATER_MID,
+    deep: DEEP_CANAL_WATER_DEEP,
+    stopMid: WATER_STOP_MID,
+    gradientEndY: WATER_GRADIENT_END_Y,
+  }),
+  haze: DEEP_CANAL_HAZE,
+  surfaceFill: DEEP_CANAL_WATER_SHALLOW,
+  surfaceLine: DEEP_CANAL_SURFACE_LINE,
+  surfaceLineWidth: SURFACE_LINE_WIDTH,
+  bed: Object.freeze({
+    top: DEEP_CANAL_BED_TOP,
+    bottom: DEEP_CANAL_BED_BOTTOM,
+    lip: DEEP_CANAL_BED_LIP,
+    mud: DEEP_CANAL_MUD,
+    // Old paving under silt: a few dots, a few pebbles; the stones carry the bed.
+    mudCount: 8,
+    pebbles: PEBBLE_COLOURS,
+    pebbleShine: PEBBLE_SHINE,
+    pebbleCount: 6,
+  }),
+  edgeReeds: null,
+  stream: false,
+  cave: Object.freeze({ kind: 'sunkenHull', anchor: 'bed' }),
+  pondProps: false,
+  firefliesPerScreen: 0,
+  bank: 'willows',
+  currentGap: false,
+  chinampaProps: false,
+  rowDetails: 'none',
+  springCaveProps: false,
+  deepCanalProps: true,
+  bedStones: true,
 });
 
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
@@ -553,10 +635,11 @@ const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   chinampa: CHINAMPA_LOOK,
   'pond-dusk': POND_DUSK_LOOK,
   'spring-cave': SPRING_CAVE_LOOK,
+  'deep-canal': DEEP_CANAL_LOOK,
 };
 
 /** Every shipped habitat look id, in habitat order. Area-map markers are keyed by these. */
-export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave'];
+export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal'];
 
 /** Every shipped area look id: the habitat looks, then the per-area variants. */
 export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk'];

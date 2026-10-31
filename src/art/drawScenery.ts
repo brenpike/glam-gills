@@ -43,6 +43,7 @@ import {
   WILLOW_TRUNK,
 } from './palette';
 import { paintChinampaBank, paintChinampaBankRoots } from './drawChinampa';
+import { paintCanalBedStones } from './drawDeepCanal';
 import { paintSpringRowDetails } from './drawSpringCave';
 import { habitatLook, type AreaLookId, type EdgeReedLook, type HabitatLook } from './habitatLook';
 
@@ -697,6 +698,7 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
   }
   if (hasBed) {
     paintBed(ctx, opts.index, rand, look);
+    if (look.bedStones) paintCanalBedStones(ctx, (x) => bedEdgeY(opts.index * VIEW_W + x));
     if (look.edgeReeds) {
       if (opts.edgeLeft === true) paintEdgeReeds(ctx, opts.index, rand, look.edgeReeds, 'left');
       if (opts.edgeRight === true) paintEdgeReeds(ctx, opts.index, rand, look.edgeReeds, 'right');

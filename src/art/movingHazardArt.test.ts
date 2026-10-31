@@ -159,13 +159,14 @@ function compositeOver(fill: string, background: string): string {
 
 /**
  * Every colour a pole can be seen on, the water stops and the bed of each look that holds the
- * pond contrast rule (guide 3c, 10): the pond, the pond at dusk and the chinampa, from habitatLook.
+ * pond contrast rule (guide 3c, 10): the pond, the pond at dusk, the chinampa and the deep canal
+ * (issue #78, the darkest of them: its poles must stay readable on it), from habitatLook.
  * The canal is left out on purpose: its deep water is darker than the rule's floor, and no pole is
- * placed there (the pole is for the pond and chinampa areas).
+ * placed there (the pole is for the pond, chinampa and deep canal areas).
  */
 function backgrounds(): { name: string; hex: string }[] {
   const out: { name: string; hex: string }[] = [];
-  for (const id of ['pond', 'pond-dusk', 'chinampa']) {
+  for (const id of ['pond', 'pond-dusk', 'chinampa', 'deep-canal']) {
     const look = habitatLook(id);
     for (const stop of ['shallow', 'mid', 'deep'] as const) out.push({ name: `${id} water ${stop}`, hex: look.water[stop] });
     out.push({ name: `${id} bed top`, hex: look.bed.top }, { name: `${id} bed bottom`, hex: look.bed.bottom });
@@ -422,11 +423,30 @@ describe('punting pole contrast (guide 3g, 10)', () => {
 
   it('every background has luminance 0.1687 or more, so the opaque ink outline is 3:1 or better on it', () => {
     const all = backgrounds();
-    expect(all.length).toBe(15);
+    expect(all.length).toBe(20);
     for (const { name, hex } of all) {
       expect(luminance(hex), name).toBeGreaterThanOrEqual(LUMINANCE_FLOOR);
       expect(contrast(INK, hex), name).toBeGreaterThanOrEqual(PAIR_FLOOR);
     }
+  });
+
+  it('keeps the pole readable on the deep canal, the darkest water: lighter than every stop, the nodes and tip darker, ink 3:1 on all', () => {
+    const deepCanal = backgrounds().filter((b) => b.name.startsWith('deep-canal'));
+    expect(deepCanal).toHaveLength(5);
+    for (const { name, hex } of deepCanal) {
+      // the light shaft is lighter than the water, so it reads by value as well as by its ink outline
+      expect(luminance(POLE_WOOD), name).toBeGreaterThan(luminance(hex));
+      expect(contrast(INK, hex), name).toBeGreaterThanOrEqual(PAIR_FLOOR);
+      expect(Math.max(contrast(INK, hex), contrast(POLE_WOOD, hex)), name).toBeGreaterThanOrEqual(PAIR_FLOOR);
+      // the white ring and the cream hull stay lighter than the water too
+      expect(luminance(POLE_RING), name).toBeGreaterThan(luminance(hex));
+      expect(luminance(BOAT_HULL), name).toBeGreaterThan(luminance(hex));
+    }
+    const deepStop = habitatLook('deep-canal').water.deep;
+    expect(contrast(POLE_WOOD, deepStop).toFixed(2)).toBe('2.29');
+    expect(contrast(POLE_NODE, deepStop)).toBeLessThan(contrast(POLE_WOOD, deepStop));
+    expect(contrast(BOAT_HULL, deepStop).toFixed(2)).toBe('4.02');
+    expect(contrast(POLE_RING, deepStop).toFixed(2)).toBe('4.55');
   });
 
   it('the ring is white and ink: 14.39:1 as a pair, 3.79:1 or better on any background', () => {

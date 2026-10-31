@@ -608,11 +608,21 @@ describe('spring cave rows in the background chunks (guide 7a)', () => {
     expect(endsWith(single, tail)).toBe(signature(tail));
   });
 
-  it.each(['canal', 'pond', 'pond-dusk', 'chinampa'] as const)('paints none of the spring cave rows in the %s look', (look) => {
+  it.each(['canal', 'pond', 'pond-dusk', 'chinampa', 'deep-canal'] as const)('paints none of the spring cave rows in the %s look', (look) => {
     for (const row of ['single', 'top', 'middle', 'bottom'] as const) {
       const painted = springChunk(row, { edgeLeft: true, edgeRight: true }, look).painted;
       for (const style of SPRING_ROW_STYLES) expect(styleSet(painted).has(style), `${look} ${row} ${style}`).toBe(false);
     }
+  });
+
+  it('paints the deep canal look as an open sky chunk (issue #78): sun and clouds like the canal, and its own bed draws', () => {
+    const deep = springChunk('top', { hasSun: true }, 'deep-canal');
+    expect(deep.draws).toBe(springChunk('top', { hasSun: true }, 'canal').draws);
+    expect(deep.painted.some((p) => p.style === SUN)).toBe(true);
+    const bed = habitatLook('deep-canal').bed;
+    expect(springChunk('bottom', {}, 'deep-canal').draws).toBe(bed.mudCount * 4 + bed.pebbleCount * 5);
+    // Not the spring cave's rock roof: the deep canal look says no row details.
+    expect(habitatLook('deep-canal').rowDetails).toBe('none');
   });
 
   it('uses no randomness for the row details: the draws are the look\'s own', () => {
