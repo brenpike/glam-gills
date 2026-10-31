@@ -5,7 +5,7 @@ name: CI
 # build to GitHub Pages.
 # Changes that touch only docs (`docs/**` and `*.md`) start no run at all.
 # Runs for main share one concurrency group without cancelling, so they run
-# one after another and the newest commit deploys last. See ADR 0033.
+# one after another; GitHub does not guarantee their order (see ADR 0033).
 on:
   pull_request:
     branches: [main]
