@@ -17,7 +17,7 @@ The product owner asked for this: hits lose limbs that slowly regrow; losing all
 ## Decision
 
 - A tilapia hit (a lunge that connects) costs exactly one of four legs. Touching a non-lunging tilapia costs nothing.
-- Leg loss shows as a sparkle poof, never gore. The lost leg shows as a faint outline and regrows after about 20 s, one at a time, with sparkles.
+- Leg loss shows as a sparkle poof, never gore. The lost leg shows as a faint outline and regrows after a set time, one at a time, with sparkles. The time was about 20 s when this was decided; it is now about 35 s, and the PRD (A7 and its Tuning values) holds the current value.
 - After a hit there is brief protected time with no second hit. Its cue is steady and non-flashing (see [`docs/art-style-guide.md`](../art-style-guide.md)).
 - Fewer legs means slower, wobblier swimming, but the axolotl can always beat currents and swim home.
 - Every lunge is telegraphed (glint and wind-up) and followed by a cooldown, so hits are avoidable.
