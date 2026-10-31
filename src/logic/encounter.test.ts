@@ -20,6 +20,7 @@ import { inSightCover } from './hiding';
 import { createLegs, isProtected, legSwimTuning, presentCount } from './legs';
 import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardSpawn } from './movingHazards';
 import {
+  BLACK_BASS_SPECIES,
   HERON_SPECIES,
   TILAPIA_SPECIES,
   type PredatorRoute,
@@ -30,7 +31,7 @@ import { mulberry32 } from './rng';
 import { stepSwim, type SwimState } from './swimPhysics';
 import { inSafeArea } from './tilapia';
 import { TRIP_EVENTS, TRIP_REGISTRY_KEYS } from './tripEvents';
-import { HERON, LEGS, SWIM, TILAPIA } from './tuning';
+import { BLACK_BASS, HERON, LEGS, SWIM, TILAPIA } from './tuning';
 import { normalize } from './vec';
 import {
   BED_TOP,
@@ -1104,5 +1105,73 @@ describe('moving hazards in the encounter (ND-8)', () => {
     const { events, impulses } = run(poleEncounter(), underPole, 8, shellCtx);
     expect(typesOf(events, ['bump'])).toEqual([]);
     expect(impulses).toBe(0);
+  });
+});
+
+describe('rock walls in the encounter (ND-12)', () => {
+  /** A 40 px rock wall like Area 8's lane divider. */
+  const divider = { x0: 1080, x1: 1120, y0: 200, y1: 600 };
+  const bassRoute: PredatorRoute = {
+    id: 'bass-0',
+    waypoints: [{ x: 1000, y: 400 }, { x: 1000, y: 300 }],
+    species: BLACK_BASS_SPECIES,
+  };
+  const source: EncounterSource = {
+    safeArea: { x0: 0, x1: 100, y0: 100, y1: 200 },
+    tilapiaRoutes: [],
+    predatorRoutes: [bassRoute],
+    rockWalls: [divider],
+  };
+  const open: EncounterSource = { ...source, rockWalls: undefined };
+  const ctx = createEncounterContext({ bounds: { minX: 0, maxX: 3000, minY: 100, maxY: 800 } });
+  /** Across the divider from the bass, well within its 180 px reach. */
+  const otherLane: Point = { x: 1150, y: 360 };
+
+  it('copies the rock walls, only when the source has them, and keeps them on reset', () => {
+    const state = createEncounter(source);
+    expect(state.rockWalls).toEqual([divider]);
+    expect(state.rockWalls?.[0]).not.toBe(divider);
+    expect(Object.keys(createEncounter(open))).not.toContain('rockWalls');
+    expect(Object.keys(createEncounter(zone))).not.toContain('rockWalls');
+    expect(resetEncounter(state)).toEqual(state);
+  });
+
+  it('never warns at, strikes or bumps an axolotl across the rock, which it does in open water', () => {
+    const openRun = run(createEncounter(open), otherLane, 5, ctx);
+    expect(typesOf(openRun.events, ['telegraph', 'lunge', 'hit'])).toEqual(expect.arrayContaining(['telegraph', 'lunge', 'hit']));
+    const walled = run(createEncounter(source), otherLane, 10, ctx);
+    expect(typesOf(walled.events, ['telegraph', 'lunge', 'hit', 'bump', 'shellBlock'])).toEqual([]);
+    expect(presentCount(walled.state.legs)).toBe(LEGS.count);
+  });
+
+  it('keeps every predator out of the rock grown by its body', () => {
+    const route: PredatorRoute = { ...bassRoute, waypoints: [{ x: 900, y: 400 }, { x: 1300, y: 400 }] };
+    let state = createEncounter({ ...source, predatorRoutes: [route] });
+    let farthest = 0;
+    for (let t = 0; t < 10; t += DT) {
+      state = stepEncounter(state, { x: 2500, y: 700 }, DT, ctx).state;
+      const pos = state.predators[0].pos;
+      const reach = BLACK_BASS.bodyRadius;
+      const inside = pos.x > divider.x0 - reach && pos.x < divider.x1 + reach && pos.y > divider.y0 - reach && pos.y < divider.y1 + reach;
+      expect(inside).toBe(false);
+      farthest = Math.max(farthest, pos.x);
+    }
+    expect(farthest).toBe(divider.x0 - BLACK_BASS.bodyRadius);
+  });
+
+  it('warns at an axolotl it sees past the end of the wall', () => {
+    const route: PredatorRoute = { ...bassRoute, waypoints: [{ x: 1000, y: 640 }] };
+    const pastTheEnd: Point = { x: 1150, y: 650 };
+    const result = run(createEncounter({ ...source, predatorRoutes: [route] }), pastTheEnd, 0.5, ctx, 'telegraph');
+    expect(typesOf(result.events, ['telegraph'])).toEqual(['telegraph']);
+  });
+
+  it('counts an axolotl seen only across the corner of the wall as behind rock', () => {
+    const route: PredatorRoute = { ...bassRoute, waypoints: [{ x: 1040, y: 560 }] };
+    const pastTheCorner: Point = { x: 1120, y: 640 };
+    const seen = run(createEncounter({ ...open, predatorRoutes: [route] }), pastTheCorner, 0.5, ctx, 'telegraph');
+    expect(typesOf(seen.events, ['telegraph'])).toEqual(['telegraph']);
+    const result = run(createEncounter({ ...source, predatorRoutes: [route] }), pastTheCorner, 2, ctx);
+    expect(typesOf(result.events, ['telegraph'])).toEqual([]);
   });
 });

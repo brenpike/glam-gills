@@ -49,6 +49,7 @@ Every sound is made live in code with Web Audio. There are no audio files (PRD M
 | Lily Pad Hop | Lily pad pond (Areas 2 and 3) | F major | 4/4, straight | 104 bpm | Flute-like whistle tune doubled by marimba, plucked strings going oom-pah, wood block, a boing at phrase ends |
 | Garden Boats | Chinampa gardens (Areas 4 and 5) | D mixolydian | 4/4 on a 3-3-2 beat | 112 bpm | Marimba tune with whistle, nylon guitar strums, guiro, box-drum slap, soft kick |
 | Cenote Glow | Spring cave (Areas 6 and 7) | E dorian | 4/4, slow and straight | 66 bpm | Glass bell tune, a soft pad and a deep bass on each bar, glass sparkles, water drips, and the echo |
+| Trajinera Waltz (provisional name) | Deep canal (from Area 8, once the habitat is built) | D major | 3/4 waltz, straight | 108 bpm | Nylon guitar tune, a deep bass and a soft kick on beat 1, plucked strings and a shaker on beats 2 and 3, a soft pad, a kalimba on pass 2, a second guitar a third below on pass 3, bubbles |
 
 Chords, one bar each (two chords in one bar are split at the half bar):
 
@@ -59,6 +60,7 @@ Chords, one bar each (two chords in one bar are split at the half bar):
 | Lily Pad Hop | F, Dm, Gm, C, F, A7, Bb C, F |
 | Garden Boats | D, C, G, D, Bm, G, Em A, D |
 | Cenote Glow | Em9, A, Cmaj7, D, Em9, A, Cmaj7, D |
+| Trajinera Waltz | D, Bm, G, A, D, Em, A7, D |
 
 The tunes are written out in the sketches (each cue's `tune` data) and in `src/logic/music.ts`.
 
@@ -69,6 +71,7 @@ Notes on mood:
 - **Lily Pad Hop** leaps like a frog, a little busier than the canal.
 - **Garden Boats** is for the busiest areas: a sunny adventure, like a trajinera band going by. It is still never tense.
 - **Cenote Glow** is for the cave: calm and full of wonder, never spooky, like light on clear water deep underground. It has no drums. Its plan differs from the usual one in section 3: a soft pad and a deep bass hold each bar's chord, glass bells play the tune, and now and then a glass bell sparkles an octave above the chord; on every third pass the tune rests and a made-up glass line from the E minor pentatonic notes, E5 up to E6, takes its place; water drips fall at random, and the echo carries all of it.
+- **Trajinera Waltz** is for the deep canal: gliding and cozy, like a trajinera band's waltz heard from under the water as the boats go by overhead. It is the only cue in 3/4. The canal is deeper here, and the black bass lives in it, but the music stays the same when a predator warns (PRD M5): never tense or spooky. Two bubbles end bars 4 and 8.
 
 ## 5. The dusk rule
 
@@ -76,7 +79,7 @@ A dusk or night area plays the dusk version of its habitat's cue, never a cue of
 
 | Part | Day | Dusk version |
 |---|---|---|
-| Tempo | The cue's tempo | Slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52 (no swing) |
+| Tempo | The cue's tempo | Slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52 (no swing), Trajinera Waltz 84 (no swing) |
 | Tune | The cue's instruments | The same notes on a music box (raised an octave when below C5) |
 | Chords | Strums, plucks | The same chords, held soft, with a light kalimba on the beats |
 | Bass | Busy | The root on each chord change, softer |
@@ -95,3 +98,5 @@ A night look uses the dusk version too, until a night version is asked for (PRD 
 5. The habitat test (PRD M3) fails until the cue exists.
 
 The spring cave (issue #77) was added this way. Its cue is **Cenote Glow**, the sketches page's sample cave cue, ported note for note from it: E dorian, 66 bpm, 4/4 with 2 steps a beat and no swing, its chords and tune, a soft pad and a bass note on each bar, glass bells for the tune and the chord sparkles, the glass line on every third pass, water drips, and an echo of 0.4 (section 3). It needed the two new voices (section 2) and the echo. E dorian uses the notes of D major, so the sounds play in D while it plays (the sound guide, section 3). Its dusk pace is 52 bpm with no swing; no spring cave area is at dusk yet. Check it by ear on the sketches page.
+
+The deep canal (issue #78) is being added this way. Its cue is **Trajinera Waltz**, a provisional name: D major, 108 bpm, a straight 3/4 waltz with 2 steps a beat and no swing, the only cue in 3/4 and the only one at that tempo. Its lead is a nylon guitar, which no other cue uses for its tune. It plays oom-pah-pah: a soft pad, a deep bass and a soft kick on beat 1, then plucked strings and a shaker on beats 2 and 3, with now and then a quiet bass fifth leading into the next bar. Each pass changes, following section 3: pass 1 the guitar tune; pass 2 a kalimba joins an octave up; pass 3 a second guitar plays a third below, in D major; pass 4 keeps the tune for bars 1 to 4, then makes up a guitar phrase from the D major pentatonic notes, D5 up to D6. It uses existing voices only and has no echo, only the shared room reverb. D major's home note is D, so the sounds play in D while it plays (the sound guide, section 3). Its dusk pace is 84 bpm with no swing, for the shared dusk rule. It joins the habitat cue list when the deep canal habitat is built, and the habitat test (PRD M3) then checks it. Check it by ear on the sketches page.

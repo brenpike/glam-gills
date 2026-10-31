@@ -4,6 +4,7 @@ import {
   ALL_TREASURES,
   CHINAMPA_2_TREASURES,
   CHINAMPA_TREASURES,
+  DEEP_CANAL_TREASURES,
   PERK_VALUES,
   POND_2_TREASURES,
   SPRING_CAVE_TREASURES,
@@ -94,6 +95,9 @@ const AREA_5_WEARABLE_IDS: readonly string[] = CHINAMPA_2_TREASURES.filter((trea
   (treasure) => treasure.id,
 );
 const AREA_6_WEARABLE_IDS: readonly string[] = SPRING_CAVE_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
+  (treasure) => treasure.id,
+);
+const AREA_8_WEARABLE_IDS: readonly string[] = DEEP_CANAL_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
   (treasure) => treasure.id,
 );
 
@@ -210,6 +214,22 @@ describe('catalogue Wearable perks (F9)', () => {
       expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
     }
     expect(new Set(area6.map((wearable) => wearable.perk.type)).size).toBeGreaterThan(1);
+  });
+
+  it('gives the Area 8 Wearables existing perks at the PERK_VALUES value for their rarity, no two the same type (ND-14)', () => {
+    const area8 = CATALOGUE_WEARABLES.filter((wearable) => AREA_8_WEARABLE_IDS.includes(wearable.id));
+    expect(area8.map((wearable) => [wearable.id, wearable.rarity, wearable.slot, wearable.perk])).toEqual([
+      ['deep-canal/sailor-cap', 'common', 'head', { type: 'speed', value: 4 }],
+      ['deep-canal/striped-scarf', 'common', 'neck', { type: 'regrowth', value: 10 }],
+      ['deep-canal/mariachi-jacket', 'rare', 'shirt', { type: 'dash', value: 15 }],
+      ['deep-canal/captains-hat', 'epic', 'head', { type: 'treasureSense', value: 35 }],
+      ['deep-canal/rainbow-fin-streamers', 'legendary', 'tail', { type: 'snackMagnet', value: 60 }],
+    ]);
+    for (const wearable of area8) {
+      expect(PERK_ORDER, wearable.id).toContain(wearable.perk.type);
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+    }
+    expect(new Set(area8.map((wearable) => wearable.perk.type)).size).toBe(area8.length);
   });
 
   it('puts Shell only on Epic or Legendary Wearables', () => {

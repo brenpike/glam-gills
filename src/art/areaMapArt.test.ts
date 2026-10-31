@@ -12,6 +12,9 @@ import {
   MAP_BADGE_R,
   MAP_CHINAMPA_PLOT,
   MAP_CHINAMPA_PLOT_FILL,
+  MAP_DEEP_CANAL_ARCH_FILL,
+  MAP_DEEP_CANAL_BOAT,
+  MAP_DEEP_CANAL_HULL_FILL,
   MAP_FOCUS_WHITE_R,
   MAP_FOCUS_LW,
   MAP_HABITAT_TINTS,
@@ -32,6 +35,7 @@ import {
 } from './drawAreaMap';
 import {
   areaMapChinampaMarkerKey,
+  areaMapDeepCanalMarkerKey,
   areaMapMarkerKey,
   areaMapPondMarkerKey,
   areaMapSpringCaveMarkerKey,
@@ -160,6 +164,15 @@ function polygonOf(cmds: Cmd[]): Pt[] {
         ]);
       }
     }
+    if (name === 'quadraticCurveTo') {
+      const [x0, y0] = pts[pts.length - 1];
+      const [cx, cy, x1, y1] = a;
+      for (let i = 1; i <= 24; i++) {
+        const t = i / 24;
+        const u = 1 - t;
+        pts.push([u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1]);
+      }
+    }
     if (name === 'arc') {
       const [cx, cy, r, from, to] = a;
       const steps = Math.max(2, Math.ceil(Math.abs(to - from) / 0.01));
@@ -270,6 +283,7 @@ describe('pond marker frame', () => {
     const art = bakeAreaMapTextures(scene as never, 2);
     const { canal, pond, chinampa } = art.markersByLook;
     const springCave = art.markersByLook['spring-cave'];
+    const deepCanal = art.markersByLook['deep-canal'];
     expect(canal.unlocked).toBe(art.markerUnlocked);
     expect(canal.locked).toBe(art.markerLocked);
     expect(canal.unlocked.key).toBe(areaMapMarkerKey(false));
@@ -280,9 +294,11 @@ describe('pond marker frame', () => {
     expect(chinampa.locked.key).toBe(areaMapChinampaMarkerKey(true));
     expect(springCave.unlocked.key).toBe(areaMapSpringCaveMarkerKey(false));
     expect(springCave.locked.key).toBe(areaMapSpringCaveMarkerKey(true));
+    expect(deepCanal.unlocked.key).toBe(areaMapDeepCanalMarkerKey(false));
+    expect(deepCanal.locked.key).toBe(areaMapDeepCanalMarkerKey(true));
     expect(Object.keys(art.markersByLook).sort()).toEqual([...HABITAT_LOOK_IDS].sort());
     expect(new Set(baked.map((b) => b.key)).size).toBe(baked.length);
-    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked, springCave.unlocked, springCave.locked]) {
+    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked, springCave.unlocked, springCave.locked, deepCanal.unlocked, deepCanal.locked]) {
       expect(info.w).toBe(canal.unlocked.w);
       expect(info.h).toBe(canal.unlocked.h);
       expect(info.pxW).toBe(canal.unlocked.pxW);
@@ -668,6 +684,167 @@ describe('spring cave marker frame and silhouette (greyscale shape cue)', () => 
 });
 
 // ---------------------------------------------------------------------------
+// Deep canal marker (issue #78)
+// ---------------------------------------------------------------------------
+
+describe('deep canal marker look', () => {
+  /** The arch tube's two strokes (ink, then colour) and the hull's fill and stroke, in paint order. */
+  const parts = (locked: boolean): { archInk: Painted; archColour: Painted; hullFill: Painted; hullInk: Painted; all: Painted[] } => {
+    const all = paintMarker(locked, 'deep-canal');
+    return { archInk: all[0], archColour: all[1], hullFill: all[2], hullInk: all[3], all };
+  };
+
+  it('paints a salmon hull under a yellow arch unlocked, and a white hull under a white arch locked', () => {
+    const unlocked = parts(false);
+    const locked = parts(true);
+    expect(unlocked.all).toHaveLength(4);
+    expect(unlocked.hullFill.op).toBe('fill');
+    expect(unlocked.hullFill.style).toBe(MAP_DEEP_CANAL_HULL_FILL);
+    expect(unlocked.archColour.style).toBe(MAP_DEEP_CANAL_ARCH_FILL);
+    expect(MAP_DEEP_CANAL_ARCH_FILL).toBe(UI_PRIMARY);
+    expect(locked.hullFill.style).toBe(WHITE);
+    expect(locked.archColour.style).toBe(WHITE);
+    // The first fill is the marker's own fill, as for every other look.
+    expect(fillOf(paintMarker(false, 'deep-canal')).style).toBe(MAP_DEEP_CANAL_HULL_FILL);
+  });
+
+  it('inks the hull at 3.5 and the arch tube at 2 a side, every ink stroke in the ink colour', () => {
+    for (const locked of [false, true]) {
+      const { archInk, archColour, hullFill, hullInk } = parts(locked);
+      expect(archInk.op).toBe('stroke');
+      expect(archInk.style).toBe(INK);
+      expect(archInk.lineWidth).toBe(4 + 2 * 2);
+      expect(archColour.lineWidth).toBe(4);
+      expect(hullInk.op).toBe('stroke');
+      expect(hullInk.style).toBe(INK);
+      expect(hullInk.lineWidth).toBe(LW);
+      expect(hullInk.cmds).toEqual(hullFill.cmds);
+    }
+  });
+
+  it('turns only the colours white when locked: the shapes and the ink are the same', () => {
+    const unlocked = paintMarker(false, 'deep-canal');
+    const locked = paintMarker(true, 'deep-canal');
+    expect(JSON.stringify(locked.map((p) => p.cmds))).toBe(JSON.stringify(unlocked.map((p) => p.cmds)));
+    expect(locked.map((p) => p.style)).not.toEqual(unlocked.map((p) => p.style));
+    expect(locked.filter((p) => p.style === INK)).toEqual(unlocked.filter((p) => p.style === INK));
+  });
+
+  it('is a boat of its own: curved deck and keel, no ellipse or arc, and the other looks keep their painting', () => {
+    const hull = fillOf(paintMarker(false, 'deep-canal')).cmds;
+    expect(hull.some((c) => c[0] === 'ellipse' || c[0] === 'arc')).toBe(false);
+    expect(hull.filter((c) => c[0] === 'quadraticCurveTo')).toHaveLength(1);
+    expect(hull.filter((c) => c[0] === 'bezierCurveTo')).toHaveLength(2);
+    expect(fillOf(paintMarker(false, 'canal')).style).toBe(UI_PRIMARY);
+    expect(fillOf(paintMarker(false, 'pond')).style).toBe(MAP_POND_PAD_FILL);
+    expect(fillOf(paintMarker(false, 'chinampa')).style).toBe(MAP_CHINAMPA_PLOT_FILL);
+    expect(fillOf(paintMarker(false, 'spring-cave')).style).toBe(MAP_SPRING_CAVE_STONE_FILL);
+  });
+
+  it('keeps the hull salmon, not the disc yellow, the pad green, the plot orange or the stone grey-blue', () => {
+    for (const other of [UI_PRIMARY, MAP_POND_PAD_FILL, MAP_CHINAMPA_PLOT_FILL, MAP_SPRING_CAVE_STONE_FILL, MAP_SPRING_CAVE_CRYSTAL_FILL]) {
+      expect(MAP_DEEP_CANAL_HULL_FILL).not.toBe(other);
+    }
+    expect(hueOf(MAP_DEEP_CANAL_HULL_FILL)).toBeGreaterThan(0);
+    expect(hueOf(MAP_DEEP_CANAL_HULL_FILL)).toBeLessThan(20);
+  });
+});
+
+describe('deep canal marker contrast (guide 10)', () => {
+  it('keeps the bold ink number at 4.5:1 or more on the hull, locked or not', () => {
+    expect(contrast(INK, MAP_DEEP_CANAL_HULL_FILL)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(INK, MAP_DEEP_CANAL_HULL_FILL).toFixed(2)).toBe('7.32');
+    expect(contrast(INK, WHITE).toFixed(2)).toBe('14.39');
+  });
+
+  it('passes 3:1 against the backdrop by every fill that meets it, arch included', () => {
+    expect(contrast(MAP_DEEP_CANAL_HULL_FILL, BACKDROP)).toBeGreaterThanOrEqual(3);
+    expect(contrast(MAP_DEEP_CANAL_HULL_FILL, BACKDROP).toFixed(2)).toBe('3.09');
+    expect(contrast(MAP_DEEP_CANAL_ARCH_FILL, BACKDROP)).toBeGreaterThanOrEqual(3);
+    expect(contrast(MAP_DEEP_CANAL_ARCH_FILL, BACKDROP).toFixed(2)).toBe('4.66');
+    expect(contrast(WHITE, BACKDROP)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('is told from the other markers by shape (raised ends, arch, keel), not by colour alone', () => {
+    // In greyscale the hull is close to the plot and the disc in value, so the outline carries it.
+    expect(contrast(INK, MAP_DEEP_CANAL_ARCH_FILL)).toBeGreaterThanOrEqual(3);
+    expect(contrast(INK, MAP_DEEP_CANAL_HULL_FILL)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('deep canal marker frame and silhouette (greyscale shape cue)', () => {
+  const painted = paintMarker(false, 'deep-canal');
+  const hullPoly = polygonOf(painted[2].cmds);
+  const archPoly = polygonOf(painted[0].cmds);
+  const { endX, endY, deckY, keelY, archFootX, archTopY } = MAP_DEEP_CANAL_BOAT;
+  const ARCH_HALF = 4;
+
+  it('fits the 64 px frame: the hull is about 52 wide and its keel reaches 25 below the centre, the arch about 30 above', () => {
+    const xs = hullPoly.map(([x]) => x);
+    const ys = hullPoly.map(([, y]) => y);
+    expect(Math.max(...xs) + LW / 2).toBeLessThan(MAP_MARKER_D / 2);
+    expect(Math.min(...xs) - LW / 2).toBeGreaterThan(-MAP_MARKER_D / 2);
+    expect(Math.max(...ys) + LW / 2).toBeCloseTo(keelY + LW / 2, 6);
+    expect(Math.max(...ys) + LW / 2).toBeLessThan(MAP_MARKER_D / 2);
+    expect(Math.min(...archPoly.map(([, y]) => y)) - ARCH_HALF).toBeCloseTo(archTopY - ARCH_HALF, 6);
+    expect(Math.min(...archPoly.map(([, y]) => y)) - ARCH_HALF).toBeGreaterThan(-MAP_MARKER_D / 2);
+    expect(Math.min(...archPoly.map(([, y]) => y)) - ARCH_HALF).toBeLessThan(-29);
+    expect(Math.max(...xs) - Math.min(...xs) + LW).toBeGreaterThan(50);
+    expect(Math.max(...xs) - Math.min(...xs) + LW).toBeLessThan(58);
+    expect(MAP_MARKER_TEX.originX).toBeGreaterThanOrEqual(MAP_MARKER_D / 2);
+    expect(MAP_MARKER_TEX.originY).toBeGreaterThanOrEqual(MAP_MARKER_D / 2);
+  });
+
+  it('stays clear of the focus ring: every outline point and its ink is inside the ring white line', () => {
+    const ringInner = MAP_FOCUS_WHITE_R - MAP_FOCUS_LW / 2;
+    expect(Math.max(...hullPoly.map(([x, y]) => Math.hypot(x, y))) + LW / 2).toBeLessThanOrEqual(ringInner);
+    expect(Math.max(...archPoly.map(([x, y]) => Math.hypot(x, y))) + ARCH_HALF).toBeLessThanOrEqual(ringInner);
+  });
+
+  it('leaves the number box (a two-digit number, 34 x 28, centred) wholly on the hull, inked edge included', () => {
+    for (const [x, y] of [
+      [-17, -14],
+      [17, -14],
+      [-17, 14],
+      [17, 14],
+      [0, 0],
+    ] as const) {
+      expect(inside(hullPoly, x, y), `${x},${y}`).toBe(true);
+    }
+    // The deck's inner ink edge (the deck at its lowest, mid-hull) stays above the box top, and the sides clear its corners.
+    expect(deckY + LW / 2).toBeLessThan(-14);
+    // Sample the hull's width at the box's bottom corners: the inner ink edge is outside x = 17.
+    const rightAtBottom = Math.max(...hullPoly.filter(([, y]) => Math.abs(y - 14) < 1).map(([x]) => x));
+    expect(rightAtBottom - LW / 2).toBeGreaterThan(17);
+  });
+
+  it('raises the prow and stern above the deck, and tucks the arch feet behind the deck', () => {
+    expect(endY).toBeLessThan(deckY);
+    expect(keelY).toBeGreaterThan(0);
+    // The arch feet start on or just below the deck line, so the hull covers them.
+    expect(MAP_DEEP_CANAL_BOAT.archFootY).toBeGreaterThanOrEqual(deckY);
+    expect(archFootX).toBeLessThan(endX);
+    expect(archTopY).toBeLessThan(endY);
+  });
+
+  it('keeps the visible arch off the padlock icon: the icon box (18 px) lies 12.7 or less from the badge centre', () => {
+    // The padlock badge hangs on the upper right, as on every marker. Its disc may cover a little of the arch's
+    // outer ink (it is drawn over the marker), but the lock icon in its middle never meets the arch centreline.
+    const iconReach = (MAP_BADGE_R * 3) / 4 * Math.SQRT2;
+    const visible = archPoly.filter(([, y]) => y < deckY - 1);
+    expect(visible.length).toBeGreaterThan(10);
+    const nearest = Math.min(...visible.map(([x, y]) => Math.hypot(x - MAP_BADGE_OFFSET.x, y - MAP_BADGE_OFFSET.y)));
+    expect(nearest).toBeGreaterThan(iconReach);
+  });
+
+  it('is a clearly different silhouette from the disc: narrower and flatter in extent, and a different area', () => {
+    const discArea = Math.PI * RIM_R * RIM_R;
+    expect(areaOf(hullPoly)).toBeLessThan(0.8 * discArea);
+    expect(areaOf(hullPoly)).toBeGreaterThan(0.5 * discArea);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Habitat panels and tabs (issue #113)
 // ---------------------------------------------------------------------------
 
@@ -688,6 +865,13 @@ describe('habitat tints (issue #113, ND-4; guide 10)', () => {
     expect(contrast(INK, '#e5ebf2').toFixed(2)).toBe('11.99');
     expect(contrast('#e5ebf2', BACKDROP).toFixed(2)).toBe('5.06');
     for (const other of ['canal', 'pond', 'chinampa'] as const) expect(mapHabitatTint('spring-cave')).not.toBe(mapHabitatTint(other));
+  });
+
+  it('tints the deep canal a pale salmon, 30% of its hull over white (issue #78)', () => {
+    expect(mapHabitatTint('deep-canal')).toBe('#ffe3dd');
+    expect(contrast(INK, '#ffe3dd').toFixed(2)).toBe('11.85');
+    expect(contrast('#ffe3dd', BACKDROP).toFixed(2)).toBe('5.00');
+    for (const other of ['canal', 'pond', 'chinampa', 'spring-cave'] as const) expect(mapHabitatTint('deep-canal')).not.toBe(mapHabitatTint(other));
   });
 
   it('keeps the canal, pond and chinampa tints unchanged', () => {

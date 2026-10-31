@@ -1,10 +1,17 @@
 /**
- * Tilapia, heron, garter snake, carp, crayfish, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
+ * Tilapia, heron, garter snake, carp, crayfish, black bass bake, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
  * The painters run against a recording context and a stub Path2D (the same approach as
  * treasureArt.test.ts): every fill and stroke is kept with the style, width and alpha it
  * was painted under, and every context call is logged.
  */
 import { describe, expect, it, vi } from 'vitest';
+import {
+  BASS_BODY,
+  BASS_FLASH_BODY,
+  BASS_STRIPE,
+  BLACK_BASS_FRAMES,
+  BLACK_BASS_TEX,
+} from './drawBlackBass';
 import {
   CARP_BARBEL,
   CARP_BELLY,
@@ -2312,9 +2319,19 @@ describe('bakePredatorTextures', () => {
   /** The crayfish (issue #77): five frames. */
   const CRAYFISH = ['crayfish-stand', 'crayfish-walk-a', 'crayfish-walk-b', 'crayfish-warn', 'crayfish-pinch'];
 
-  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake, the carp and the crayfish under fixed keys', () => {
+  /** The black bass (issue #78): six frames. */
+  const BLACK_BASS = [
+    'black-bass-swim-0',
+    'black-bass-swim-1',
+    'black-bass-swim-2',
+    'black-bass-warn',
+    'black-bass-strike',
+    'black-bass-still',
+  ];
+
+  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake, the carp, the crayfish and the black bass under fixed keys', () => {
     const { baked, made } = withFakeScene((scene, made) => ({ baked: bakePredatorTextures(scene, 2), made }));
-    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP, ...CRAYFISH].sort();
+    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP, ...CRAYFISH, ...BLACK_BASS].sort();
     expect([...made.keys()].sort()).toEqual(all);
     expect(Object.keys(baked.info).sort()).toEqual(all);
     for (const retired of ['heron-shadow', 'heron-shadow-warning', 'heron-beak-dip']) {
@@ -2548,6 +2565,60 @@ describe('bakePredatorTextures', () => {
       expect(ops.some((op) => isFill(op) && op.fillStyle === CRAYFISH_SHELL)).toBe(true);
       expect(ops.some((op) => isFill(op) && op.fillStyle === CRAYFISH_CLAW)).toBe(true);
       expect(ops.some((op) => isFill(op) && op.fillStyle === EYE)).toBe(true);
+    }
+    const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
+    expect(new Set(keys.map(argsOf)).size).toBe(keys.length);
+  });
+
+  it('bakes each black bass frame under its own key at its own size', () => {
+    const baked = withFakeScene((scene) => bakePredatorTextures(scene, 2));
+    expect(PREDATOR_TEX.blackBassSwim0).toBe('black-bass-swim-0');
+    expect(PREDATOR_TEX.blackBassSwim1).toBe('black-bass-swim-1');
+    expect(PREDATOR_TEX.blackBassSwim2).toBe('black-bass-swim-2');
+    expect(PREDATOR_TEX.blackBassWarn).toBe('black-bass-warn');
+    expect(PREDATOR_TEX.blackBassStrike).toBe('black-bass-strike');
+    expect(PREDATOR_TEX.blackBassStill).toBe('black-bass-still');
+    expect(baked.blackBass.swim0.key).toBe('black-bass-swim-0');
+    expect(baked.blackBass.swim1.key).toBe('black-bass-swim-1');
+    expect(baked.blackBass.swim2.key).toBe('black-bass-swim-2');
+    expect(baked.blackBass.warn.key).toBe('black-bass-warn');
+    expect(baked.blackBass.strike.key).toBe('black-bass-strike');
+    expect(baked.blackBass.still.key).toBe('black-bass-still');
+    for (const frame of BLACK_BASS_FRAMES) {
+      const info = baked.blackBass[frame];
+      expect(info.scale).toBe(2);
+      expect([info.w, info.h, info.originX, info.originY]).toEqual([
+        BLACK_BASS_TEX.w,
+        BLACK_BASS_TEX.h,
+        BLACK_BASS_TEX.originX,
+        BLACK_BASS_TEX.originY,
+      ]);
+    }
+  });
+
+  it('paints each black bass texture with its own painter and tone', () => {
+    const made = withFakeScene((scene, made) => {
+      bakePredatorTextures(scene, 1);
+      return made;
+    });
+    const keys = [
+      PREDATOR_TEX.blackBassSwim0,
+      PREDATOR_TEX.blackBassSwim1,
+      PREDATOR_TEX.blackBassSwim2,
+      PREDATOR_TEX.blackBassWarn,
+      PREDATOR_TEX.blackBassStrike,
+      PREDATOR_TEX.blackBassStill,
+    ];
+    for (const key of keys) {
+      const ops = (made.get(key) as Recording).ops;
+      expect(ops.some((op) => isFill(op) && op.fillStyle === BASS_STRIPE)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === EYE)).toBe(true);
+    }
+    // only the warning has the pale flash body; every other frame has the plain body
+    for (const key of keys) {
+      const ops = (made.get(key) as Recording).ops;
+      expect(ops.some((op) => isFill(op) && op.fillStyle === BASS_BODY)).toBe(key !== PREDATOR_TEX.blackBassWarn);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === BASS_FLASH_BODY)).toBe(key === PREDATOR_TEX.blackBassWarn);
     }
     const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
     expect(new Set(keys.map(argsOf)).size).toBe(keys.length);

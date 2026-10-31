@@ -257,6 +257,49 @@ export const WATERFALL_BASE = GOLDEN_LOTUS_BASE;
 /** Gemstone cape, a pale amethyst. 11.00:1. */
 export const GEMSTONE_CAPE_FILL = '#e6dcff';
 
+// ---- Deep canal Area 8 silhouette fills (issue #78; all at least 9:1 with ink) ----
+// Icons and the worn looks of the five Area 8 Wearables share these (the worn looks import them from here, they
+// never repeat the hex). The deep canal is the festival water: cream trajinera hulls, pale teal arches, pink and
+// yellow blossoms and a pale rainbow. The Flower garland uses shipped colours alone (the lotus lantern pink and
+// the marigold blossom of drawTreasures.ts, the reed leaf green and the firefly hook ring). None equals a
+// BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour say so.
+
+/** Paper boat, a pale paper blue. 11.18:1. */
+export const PAPER_BOAT_FILL = '#bfe9ff';
+/** Paper boat and Floating flower market anchor weights, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const DEEP_CANAL_WEIGHT = FIREFLY_HOOK;
+/** Little trajinera and Trajinera flower arch hull and deck, the trajinera's warm cream (guide 3g). 12.72:1. */
+export const TRAJINERA_HULL = '#fff0c9';
+/** Little trajinera and Trajinera flower arch ring, a pale teal. Also the Painted oar blade and the Floating flower market hull. 11.05:1. */
+export const TRAJINERA_ARCH = '#a6f0dc';
+/** Flower arch and flower market blossoms, the lotus lantern pink. Alias of LOTUS_PETAL. 9.90:1. */
+export const TRAJINERA_BLOSSOM_PINK = LOTUS_PETAL;
+/** Flower arch and flower market blossoms, sun yellow. Alias of HAT_FILL. 11.05:1. */
+export const TRAJINERA_BLOSSOM_YELLOW = HAT_FILL;
+/** Flower market leaves, the reed leaf green. Alias of PLANT_LEAF. 9.25:1. */
+export const MARKET_LEAF = PLANT_LEAF;
+/** Painted oar shaft and grip, the decoy's pale carved wood. Alias of DECOY_BODY. 10.59:1. */
+export const PAINTED_OAR_WOOD = DECOY_BODY;
+/** Painted oar blade, the trajinera arch's pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const PAINTED_OAR_BLADE = TRAJINERA_ARCH;
+/** Floating flower market hull, the trajinera arch's pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const FLOWER_MARKET_HULL = TRAJINERA_ARCH;
+/** Sailor cap, a pale blue-white. The same hex as the worn cap's own SAILOR_CAP_FILL in drawWearables.ts. 13.04:1. */
+export const SAILOR_CAP_FILL = '#eef4ff';
+/** Striped scarf, a pale apricot. The same hex as the worn scarf's own STRIPED_SCARF_FILL in drawWearables.ts. 10.97:1. */
+export const STRIPED_SCARF_FILL = '#ffdbb0';
+/** Mariachi jacket, a pale butter yellow. The same hex as the worn jacket's own MARIACHI_JACKET_FILL in drawWearables.ts. 12.53:1. */
+export const MARIACHI_JACKET_FILL = '#fff0a8';
+/** Captain's hat crown, band and visor, a pale cream (the band and the visor are the same colour darkened). The same hex as the worn cap's own CAPTAINS_HAT_FILL in drawWearables.ts. 13.34:1. */
+export const CAPTAINS_HAT_FILL = '#fff6dc';
+/**
+ * Rainbow fin streamers, the six ribbons left to right: pink, orange, yellow, green, blue and violet, none red
+ * (the Rainbow serape cape's six stripes, as outer fills here). 9.90:1, 9.25:1, 11.05:1, 10.95:1, 9.42:1 and 9.47:1.
+ */
+export const FIN_STREAMER_FILLS: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a', '#a2f58c', '#9fd8ff', '#d8caff'];
+/** Rainbow fin streamers tie, a pale silver-white (so the gold band across it reads in greyscale). Alias of CRYSTAL_CROWN_BAND. 12.96:1. */
+export const FIN_STREAMER_KNOT = CRYSTAL_CROWN_BAND;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -281,6 +324,10 @@ export const FIREFLY_GLOW = 'rgba(255,225,74,0.75)';
 export const GEM_GLINT = WHITE;
 /** 4-point star on Legendary icons (guide 4e): white with an ink outline. */
 export const TREASURE_STAR = WHITE;
+/** The Mariachi jacket's turquoise braid, its one trim band (a yellow band would hide on the butter yellow jacket); inside the silhouette, so free. The same hex as the worn jacket's own MARIACHI_BRAID in drawWearables.ts. */
+export const MARIACHI_BRAID = '#2fb5a8';
+/** The Mariachi jacket's silver studs, pebble A; inside the silhouette, so free (the worn jacket paints them too). */
+export const MARIACHI_STUD = PEBBLE_A;
 
 // ---- Worn looks (guide 6a, 6i) ----------------------------------------------
 
@@ -308,7 +355,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-two Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -329,7 +376,9 @@ export type DreamSwatchId =
   | 'moonstone'
   | 'chocolate'
   | 'crystal-shine'
-  | 'glowworm';
+  | 'glowworm'
+  | 'jade'
+  | 'fiesta-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -392,5 +441,13 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     pattern: 'glow-dots',
     marks: ['#5ff2d2', 'rgba(95,242,210,0.3)'],
     dark: true,
+  },
+  jade: { body: '#3ec8a8', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a sunny yellow and a turquoise stripe, both lighter than the pink body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'fiesta-shine': {
+    body: '#ff78c8',
+    pattern: 'stripes',
+    marks: ['rgba(255,225,74,0.85)', 'rgba(64,224,208,0.8)'],
+    dark: false,
   },
 };

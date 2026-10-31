@@ -128,6 +128,7 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
           <tr><td>Area 3</td><td>Lily Pad Hop, dusk version</td><td>Habitat <code>pond</code> with the dusk look</td></tr>
           <tr><td>Areas 4 and 5</td><td>Garden Boats</td><td>Habitat <code>chinampa</code></td></tr>
           <tr><td>A future dusk or night chinampa area</td><td>Garden Boats, dusk version</td><td>Habitat <code>chinampa</code> with a dusk look</td></tr>
+          <tr><td>Deep canal, from Area 8</td><td>Trajinera Waltz (provisional name)</td><td>The deep canal habitat, once it is built</td></tr>
           <tr><td>A future habitat</td><td>Its own cue, such as Cenote Glow</td><td>A new entry keyed by its habitat id</td></tr>
         </tbody>
       </table>
@@ -396,6 +397,57 @@ code { font-size: .9em; background: var(--surface); border: 1px solid var(--line
         if (hit && pass % 3 !== 2) V.glass(t, hit.m, 0.2, 'melody');
         if (pass % 3 === 2 && st % 4 === 0 && rng() < 0.6) V.glass(t, midi('E5') + pick(rng, [0, 3, 5, 7, 10, 12]), 0.14, 'melody');
         if (rng() < 0.1) V.drip(t + rng() * stepDur, 0.07, 'sparkles');
+      },
+    },
+    {
+      id: 'deepcanal',
+      name: 'Trajinera Waltz',
+      where: 'Deep canal · from Area 8',
+      blurb: 'A gliding waltz, like a trajinera band heard from under the water as the boats go by overhead. A nylon guitar picks the tune over oom-pah-pah: a deep bass on 1, plucked strings on 2 and 3. A kalimba joins the second time round, a second guitar a third below the third time. Provisional name.',
+      key: 'D major', meter: '3/4 waltz', bpm: 108, beatsPerBar: 3, stepsPerBeat: 2, swing: 0, tonic: 'D',
+      variants: { day: { label: 'Day', bpm: 108, swing: 0 }, dusk: { label: 'Dusk', bpm: 84, swing: 0 } },
+      variant: 'day',
+      layers: ['melody', 'chords', 'bass', 'rhythm', 'sparkles'],
+      chords: [
+        ['D', 'F#3 A3 D4', 'D2'], ['Bm', 'F#3 B3 D4', 'B2'], ['G', 'G3 B3 D4', 'G2'], ['A', 'E3 A3 C#4', 'A2'],
+        ['D', 'F#3 A3 D4', 'D2'], ['Em', 'G3 B3 E4', 'E2'], ['A7', 'G3 C#4 E4', 'A2'], ['D', 'F#3 A3 D4', 'D2'],
+      ],
+      tune: melody([
+        [[0, 'A4', 2], [2, 'D5', 2], [4, 'F#5', 2]],
+        [[0, 'F#5', 3], [3, 'E5', 1], [4, 'D5', 2]],
+        [[0, 'B4', 2], [2, 'D5', 2], [4, 'G5', 2]],
+        [[0, 'E5', 6]],
+        [[0, 'A4', 2], [2, 'D5', 2], [4, 'A5', 2]],
+        [[0, 'G5', 3], [3, 'F#5', 1], [4, 'E5', 2]],
+        [[0, 'C#5', 2], [2, 'E5', 2], [4, 'G5', 2]],
+        [[0, 'E5', 2], [2, 'D5', 4]],
+      ]),
+      step(e) {
+        if (this.variant === 'dusk') return duskStep(this, e);
+        const { t, bar, st, pass, rng, stepDur, chord } = e;
+        // Oom-pah-pah: pad, bass and a soft kick on 1, plucked strings and a shaker on 2 and 3.
+        if (st === 0) {
+          V.pad(t, chord.notes, stepDur * 6.2, 0.035, 'chords');
+          V.bass(t, chord.root, 0.4, stepDur * 3, 'bass');
+          V.kick(t, 0.22, 'rhythm');
+        } else if (st === 2 || st === 4) {
+          V.strumPluck(t, chord.notes, st === 2 ? 0.11 : 0.08, 'pizz', 'chords');
+          V.shaker(t, 0.03, 'rhythm');
+        }
+        if (st === 5 && rng() < 0.4) V.bass(t, chord.root + 7, 0.14, stepDur, 'bass');
+        const p = pass % 4;
+        const hit = this.tune[bar].find((n) => n.step === st);
+        const improvise = p === 3 && bar >= 4;
+        // A third below in D major: a major third when it is in the key, else a minor third.
+        const inD = (m) => [1, 2, 4, 6, 7, 9, 11].includes(m % 12);
+        if (hit && !improvise) {
+          V.pluck(t, hit.m, 0.34, 'guitar', 'melody');
+          if (p === 1) V.kalimba(t, hit.m + 12, 0.09, 'melody');
+          if (p === 2) V.pluck(t, inD(hit.m - 4) ? hit.m - 4 : hit.m - 3, 0.16, 'guitar', 'melody');
+        }
+        if (improvise && st % 2 === 0 && rng() < 0.5) V.pluck(t, midi('D5') + pick(rng, [0, 2, 4, 7, 9, 12]), 0.26, 'guitar', 'melody');
+        if ((bar === 3 || bar === 7) && st >= 4) V.bubble(t, st === 4 ? 0.08 : 0.06, 'sparkles');
+        else if (rng() < 0.03) V.bubble(t, 0.05, 'sparkles');
       },
     },
   ];

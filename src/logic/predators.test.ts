@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BLACK_BASS_FACT,
+  BLACK_BASS_MEET_RANGE,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
   HERON_FACT,
@@ -7,8 +9,10 @@ import {
   TILAPIA_FACT,
   TILAPIA_MEET_RANGE,
 } from './factCards';
+import { DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import { routeDistance } from './hiding';
 import {
+  BLACK_BASS_SPECIES,
   CARP_SPECIES,
   CRAYFISH_SPECIES,
   GARTER_SNAKE_SPECIES,
@@ -16,12 +20,16 @@ import {
   PREDATOR_SPECIES,
   ROUTE_WARN_TOLERANCE,
   TILAPIA_SPECIES,
+  bumpImpulse,
   createPredator,
+  crossesRock,
   lungeConnects,
   phaseProgress,
   routeLoopDistance,
   stabTip,
   stepPredator,
+  touching,
+  tunedSpecies,
   type PredatorContext,
   type PredatorEvent,
   type PredatorRoute,
@@ -30,7 +38,7 @@ import {
   type PredatorState,
   type PredatorTuning,
 } from './predators';
-import { GARTER_SNAKE, HERON, TILAPIA } from './tuning';
+import { BLACK_BASS, BLACK_BASS_CHASE, CARP, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA } from './tuning';
 import type { Point } from './zone';
 
 const TEST_TUNING: Readonly<PredatorTuning> = Object.freeze({
@@ -98,7 +106,14 @@ describe('predator species', () => {
     expect(TILAPIA_SPECIES.fact).toBe(TILAPIA_FACT);
     expect(TILAPIA_SPECIES.hook).toBeUndefined();
     expect(TILAPIA_SPECIES.neverTouches).toBeUndefined();
-    expect(PREDATOR_SPECIES).toEqual([TILAPIA_SPECIES, HERON_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, CARP_SPECIES]);
+    expect(PREDATOR_SPECIES).toEqual([
+      TILAPIA_SPECIES,
+      HERON_SPECIES,
+      CRAYFISH_SPECIES,
+      BLACK_BASS_SPECIES,
+      GARTER_SNAKE_SPECIES,
+      CARP_SPECIES,
+    ]);
     expect(Object.isFrozen(TILAPIA_SPECIES)).toBe(true);
     expect(Object.isFrozen(PREDATOR_SPECIES)).toBe(true);
   });
@@ -958,5 +973,793 @@ describe('shared rule: level strike', () => {
     expect(aimed.events).toEqual([{ type: 'lungeStart', aim: { x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) } }]);
     const ruleOff = stepPredator(linerWarningAt(start), { x: 1160, y: 280 }, STALKER_DT, { ...LEVELLER_CTX, rules: { levelStrike: false } });
     expect(ruleOff.events).toEqual(aimed.events);
+  });
+});
+
+/** The black bass's warning length, max(windup, minWindup). */
+const BASS_WINDUP = Math.max(BLACK_BASS.windup, BLACK_BASS.minWindup);
+const BASS_START: Point = { x: 1000, y: 300 };
+/** The bass swims its route leftward, so swimming it again turns it round after a rightward strike. */
+const BASS_ROUTE: PredatorRoute = {
+  id: 'bass-route',
+  waypoints: [BASS_START, { x: 600, y: 300 }],
+  species: BLACK_BASS_SPECIES,
+};
+const BASS_CTX: PredatorContext = {
+  safeArea: { x0: 0, x1: 200, y0: 100, y1: 700 },
+  bounds: { minX: 0, maxX: 3000, minY: 100, maxY: 700 },
+  tuning: BLACK_BASS_SPECIES.tuning,
+  rules: BLACK_BASS_SPECIES.rules,
+};
+/** Exactly the bass's 180 px reach from its start, down and to the right: aim (0.6, 0.8). */
+const BASS_PREY: Point = { x: BASS_START.x + 108, y: BASS_START.y + 144 };
+const BASS_AIM: Point = { x: 0.6, y: 0.8 };
+const BASS_REACH = BLACK_BASS.lungeSpeed * BLACK_BASS.lungeDuration;
+/** How far the bass glides through a full cooldown: from patrolSpeed slowing evenly to a stop. */
+const BASS_GLIDE = (BLACK_BASS.patrolSpeed * BLACK_BASS.cooldown) / 2;
+/** Behind the bass and out of its reach. */
+const BEHIND_BASS: Point = { x: 700, y: 300 };
+
+function spawnBass(): PredatorState {
+  return createPredator(BASS_ROUTE, BLACK_BASS_SPECIES.id);
+}
+
+/** A bass at its start whose warning is about to end. */
+function bassWarningEnding(): PredatorState {
+  return { ...spawnBass(), phase: 'telegraph', elapsed: BASS_WINDUP - STALKER_DT, duration: BASS_WINDUP };
+}
+
+/** A bass whose strike along BASS_AIM has just started from its start. */
+function bassStrike(): PredatorState {
+  const result = stepPredator(bassWarningEnding(), BASS_PREY, STALKER_DT, BASS_CTX);
+  expect(result.events).toEqual([{ type: 'lungeStart', aim: { x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) } }]);
+  return result.state;
+}
+
+/** Offset of `pos` from the bass's start along BASS_AIM, and across it. */
+function alongBassAim(pos: Point): { along: number; across: number } {
+  const dx = pos.x - BASS_START.x;
+  const dy = pos.y - BASS_START.y;
+  return { along: dx * BASS_AIM.x + dy * BASS_AIM.y, across: dx * BASS_AIM.y - dy * BASS_AIM.x };
+}
+
+describe('black bass species (issue #78)', () => {
+  it('describes the black bass: its own tuning, meet range and fact, and the slow turn rule only', () => {
+    expect(BLACK_BASS_SPECIES).toEqual({
+      id: 'black-bass',
+      name: 'Black bass',
+      tuning: BLACK_BASS,
+      meetRange: BLACK_BASS_MEET_RANGE,
+      fact: BLACK_BASS_FACT,
+      rules: { slowTurn: true },
+    });
+    expect(BLACK_BASS_SPECIES.tuning).toBe(BLACK_BASS);
+    expect(BLACK_BASS_SPECIES.fact).toBe(BLACK_BASS_FACT);
+    expect(BLACK_BASS_SPECIES.hook).toBeUndefined();
+    expect(BLACK_BASS_SPECIES.neverTouches).toBeUndefined();
+    expect(BLACK_BASS_SPECIES.dangerPart).toBeUndefined();
+    expect(Object.isFrozen(BLACK_BASS_SPECIES)).toBe(true);
+    expect(Object.isFrozen(BLACK_BASS_SPECIES.rules)).toBe(true);
+  });
+
+  it("warns for 0.8 s, strikes 480 px/s for 0.45 s with a 180 px reach, cools down for 1.5 s and patrols at 60 px/s (the owner's values)", () => {
+    expect(BLACK_BASS).toEqual({
+      minWindup: 0.8,
+      windup: 0.8,
+      cooldown: 1.5,
+      lungeRange: 180,
+      lungeSpeed: 480,
+      lungeDuration: 0.45,
+      hitRadius: 40,
+      contactRadius: 44,
+      bodyRadius: 28,
+      patrolSpeed: 60,
+      bumpSpeed: TILAPIA.bumpSpeed,
+      bumpCooldown: TILAPIA.bumpCooldown,
+    });
+    expect(BASS_WINDUP).toBe(0.8);
+    expect(BASS_REACH).toBeCloseTo(216, 9);
+    expect(BASS_REACH).toBeGreaterThan(BLACK_BASS.lungeRange);
+    expect(BLACK_BASS.hitRadius).toBeGreaterThan(CARP.hitRadius);
+    expect(BLACK_BASS.contactRadius).toBeGreaterThan(BLACK_BASS.hitRadius);
+    expect(BLACK_BASS.bodyRadius).toBeGreaterThan(TILAPIA.bodyRadius);
+    expect(BLACK_BASS.bodyRadius).toBeLessThan(CARP.bodyRadius);
+    expect(Object.isFrozen(BLACK_BASS)).toBe(true);
+  });
+
+  it('chases with a 260 px sight, a 160 px leash and 130 px/s, inside the chase limits', () => {
+    expect(BLACK_BASS_CHASE).toEqual({ sight: 260, leash: 160, speed: 130 });
+    expect(BLACK_BASS_CHASE.speed).toBeGreaterThan(SWIM.maxSpeed * LEGS.speedByLegs[1]);
+    expect(BLACK_BASS_CHASE.speed).toBeLessThan(SWIM.maxSpeed * LEGS.speedByLegs[LEGS.count - 1]);
+    const chasing = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    expect(chasing.tuning.chase).toBe(BLACK_BASS_CHASE);
+    expect(chasing.rules).toBe(BLACK_BASS_SPECIES.rules);
+    expect(Object.isFrozen(BLACK_BASS_CHASE)).toBe(true);
+  });
+});
+
+describe('black bass warning', () => {
+  it('warns by distance at any depth, within its 180 px reach (inclusive)', () => {
+    const at = (dx: number, dy: number): Point => ({ x: BASS_START.x + dx, y: BASS_START.y + dy });
+    for (const target of [at(0, 180), at(0, -180), at(-180, 0), BASS_PREY]) {
+      expect(eventTypes(stepPredator(spawnBass(), target, STALKER_DT, BASS_CTX).events)).toEqual(['telegraphStart']);
+    }
+    expect(stepPredator(spawnBass(), at(0, 180.5), STALKER_DT, BASS_CTX).events).toEqual([]);
+  });
+
+  it('does not start while another predator is warning or striking (A1)', () => {
+    const blocked = stepPredator(spawnBass(), BASS_PREY, STALKER_DT, { ...BASS_CTX, telegraphBlocked: true });
+    expect(blocked.events).toEqual([]);
+    expect(blocked.state.phase).toBe('patrol');
+  });
+
+  it('holds still for 0.8 s, then strikes', () => {
+    const warned = stepPredator(spawnBass(), BASS_PREY, STALKER_DT, BASS_CTX).state;
+    expect(warned.phase).toBe('telegraph');
+    expect(warned.duration).toBe(BASS_WINDUP);
+    const run = runStalker(warned, BASS_PREY, 1, BASS_CTX, 'lungeStart');
+    expect(eventTypes(run.events)).toEqual(['lungeStart']);
+    expect(run.positions.length + 1).toBe(Math.ceil(BASS_WINDUP / STALKER_DT));
+    for (const pos of run.positions.slice(0, -1)) expect(pos).toEqual(BASS_START);
+  });
+});
+
+describe('black bass strike', () => {
+  it('lunges straight along the aim locked at strike start, with no homing, 216 px in 0.45 s', () => {
+    const run = runStalker(bassStrike(), BEHIND_BASS, 1, BASS_CTX, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    for (const pos of run.positions) expect(alongBassAim(pos).across).toBeCloseTo(0, 6);
+    const lungeEnd = BLACK_BASS.lungeDuration;
+    const stepsInLunge = Math.ceil(lungeEnd / STALKER_DT);
+    expect(run.positions.length).toBe(stepsInLunge);
+    expect(alongBassAim(run.positions[stepsInLunge - 2]).along).toBeCloseTo(BLACK_BASS.lungeSpeed * (stepsInLunge - 1) * STALKER_DT, 6);
+    expect(alongBassAim(run.positions.at(-1) ?? BASS_START).along).toBeGreaterThanOrEqual(BASS_REACH - 1e-6);
+  });
+
+  it('connects as a hit once the axolotl is within its 40 px hit reach', () => {
+    const run = runStalker(bassStrike(), BASS_PREY, 1, BASS_CTX, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    const struckFrom = run.positions.at(-2) ?? BASS_START;
+    expect(Math.hypot(struckFrom.x - BASS_PREY.x, struckFrom.y - BASS_PREY.y)).toBeGreaterThan(BLACK_BASS.hitRadius);
+    expect(alongBassAim(run.state.pos).along).toBeLessThan(BASS_REACH);
+  });
+
+  it('never connects with an axolotl in the safe area', () => {
+    const sheltered: PredatorContext = { ...BASS_CTX, safeArea: { x0: 1050, x1: 1200, y0: 400, y1: 500 } };
+    const run = runStalker(bassStrike(), BASS_PREY, 1, sheltered, 'lungeEnd');
+    expect(run.events.at(-1)).toEqual({ type: 'lungeEnd', connected: false });
+  });
+
+  it('touches with its 44 px contact reach outside a strike and bumps gently', () => {
+    const bass = spawnBass();
+    expect(touching(bass, { x: BASS_START.x + 44, y: BASS_START.y }, BLACK_BASS)).toBe(true);
+    expect(touching(bass, { x: BASS_START.x + 44.5, y: BASS_START.y }, BLACK_BASS)).toBe(false);
+    expect(touching(bassStrike(), BASS_START, BLACK_BASS)).toBe(false);
+    expect(bumpImpulse(bass, { x: BASS_START.x + 10, y: BASS_START.y }, BLACK_BASS)).toEqual({ x: TILAPIA.bumpSpeed, y: 0 });
+  });
+});
+
+describe('shared rule: slow turn (issue #78, ND-5)', () => {
+  /** The bass at the end of a strike that missed, as it enters its cooldown. */
+  function bassCooling(): PredatorState {
+    const struck = runStalker(bassStrike(), BEHIND_BASS, 1, BASS_CTX, 'lungeEnd');
+    expect(struck.state.phase).toBe('cooldown');
+    return struck.state;
+  }
+
+  it('keeps the strike facing and glides along the aim, slowing evenly to a stop, through the cooldown', () => {
+    const start: PredatorState = { ...bassCooling(), elapsed: 0, pos: { x: 1000 + 0.6 * BASS_REACH, y: 300 + 0.8 * BASS_REACH } };
+    expect(start.glide).toEqual({ x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) });
+    expect(start.aim).toBeNull();
+    expect(start.facing).toBe(1);
+    const run = runStalker(start, BEHIND_BASS, BLACK_BASS.cooldown + 1, BASS_CTX, 'cooldownEnd');
+    expect(eventTypes(run.events)).toEqual(['cooldownEnd']);
+    let previous = start.pos;
+    let previousStep = Infinity;
+    for (const pos of run.positions) {
+      const along = alongBassAim(pos).along - alongBassAim(previous).along;
+      expect(alongBassAim(pos).across).toBeCloseTo(0, 6);
+      expect(along).toBeGreaterThan(0);
+      expect(along).toBeLessThan(previousStep);
+      previousStep = along;
+      previous = pos;
+    }
+    expect(alongBassAim(run.state.pos).along).toBeCloseTo(BASS_REACH + BASS_GLIDE, 6);
+    expect(previousStep).toBeLessThan(0.01);
+  });
+
+  it('never changes facing before the cooldown ends, even with the axolotl behind it', () => {
+    let state = bassCooling();
+    while (state.phase === 'cooldown') {
+      const result = stepPredator(state, BEHIND_BASS, STALKER_DT, BASS_CTX);
+      if (result.state.phase === 'cooldown') expect(result.state.facing).toBe(1);
+      state = result.state;
+    }
+    expect(state.phase).toBe('patrol');
+    expect(Object.keys(state)).not.toContain('glide');
+    const back = runStalker(state, BEHIND_BASS, 0.25, BASS_CTX);
+    expect(back.events).toEqual([]);
+    expect(back.state.facing).toBe(-1);
+    expect(back.state.pos.x).toBeLessThan(state.pos.x);
+  });
+
+  it('glides the same whatever the step size', () => {
+    const start = bassCooling();
+    const fine = runStalker(start, BEHIND_BASS, 1, BASS_CTX).state;
+    const coarse = stepPredator(start, BEHIND_BASS, 1, BASS_CTX).state;
+    expect(coarse.pos.x).toBeCloseTo(fine.pos.x, 9);
+    expect(coarse.pos.y).toBeCloseTo(fine.pos.y, 9);
+  });
+
+  it('holds still keeping its facing through the cooldown after a cancelled warning', () => {
+    const cancelled = stepPredator(bassWarningEnding(), BEHIND_BASS, STALKER_DT, BASS_CTX);
+    expect(eventTypes(cancelled.events)).toEqual(['telegraphCancel']);
+    expect(cancelled.state.facing).toBe(-1);
+    expect(Object.keys(cancelled.state)).not.toContain('glide');
+    const right: Point = { x: 1400, y: 300 };
+    const run = runStalker(cancelled.state, right, BLACK_BASS.cooldown / 2, BASS_CTX);
+    for (const pos of run.positions) expect(pos).toEqual(BASS_START);
+    expect(run.state.facing).toBe(-1);
+  });
+
+  it('gives a species without the rule no glide and leaves it swimming its route', () => {
+    const noRule: PredatorContext = { ...BASS_CTX, rules: undefined };
+    const ruleOff: PredatorContext = { ...BASS_CTX, rules: { slowTurn: false } };
+    for (const ctx of [noRule, ruleOff]) {
+      const struck = runStalker(bassStrike(), BEHIND_BASS, 1, ctx, 'lungeEnd');
+      expect(struck.state.phase).toBe('cooldown');
+      expect(Object.keys(struck.state)).not.toContain('glide');
+      const swimming = runStalker(struck.state, BEHIND_BASS, 0.25, ctx);
+      expect(swimming.state.facing).toBe(-1);
+    }
+  });
+
+  it('stands still with the still cooldown rule as well', () => {
+    const both: PredatorContext = { ...BASS_CTX, rules: { slowTurn: true, stillCooldown: true } };
+    const start = bassCooling();
+    const run = runStalker(start, BEHIND_BASS, BLACK_BASS.cooldown / 2, both);
+    for (const pos of run.positions) expect(pos).toEqual(start.pos);
+    expect(run.state.facing).toBe(-1);
+  });
+});
+
+/** Where every species starts in the rock tests: its route runs 300 px right of here. */
+const ROCK_START: Point = { x: 1000, y: 400 };
+const ROCK_SAFE: PredatorContext['safeArea'] = { x0: 0, x1: 100, y0: 100, y1: 200 };
+const ROCK_BOUNDS: PredatorContext['bounds'] = { minX: 0, maxX: 3000, minY: 100, maxY: 800 };
+/** A 40 px rock wall, like Area 8's lane divider, standing 80 px right of ROCK_START. */
+const DIVIDER = { x0: 1080, x1: 1120, y0: 200, y1: 600 };
+
+function rockRoute(species: Readonly<PredatorSpecies>): PredatorRoute {
+  return { id: `${species.id}-rock`, waypoints: [ROCK_START, { x: ROCK_START.x + 300, y: ROCK_START.y }], species };
+}
+
+function rockCtx(species: Readonly<PredatorSpecies>, extra: Partial<PredatorContext> = {}): PredatorContext {
+  return { safeArea: ROCK_SAFE, bounds: ROCK_BOUNDS, tuning: species.tuning, rules: species.rules, hook: species.hook, ...extra };
+}
+
+/** Half the species' lungeRange right of ROCK_START: in range of every species. */
+function rockPrey(species: Readonly<PredatorSpecies>): Point {
+  return { x: ROCK_START.x + species.tuning.lungeRange / 2, y: ROCK_START.y };
+}
+
+/** A predator of `species` at ROCK_START whose warning at `target` is about to end. */
+function rockWarningEnding(species: Readonly<PredatorSpecies>, target: Point): PredatorState {
+  const duration = Math.max(species.tuning.windup, species.tuning.minWindup);
+  const state: PredatorState = { ...createPredator(rockRoute(species), species.id), phase: 'telegraph', elapsed: duration - STALKER_DT, duration };
+  if (species.rules?.fixedStrikeSpot) state.strikeSpot = { ...target };
+  return state;
+}
+
+/**
+ * A predator of `species` at ROCK_START mid-strike, aimed right, with the target exactly where its
+ * striking point is after one STALKER_DT step.
+ */
+function rockStrikeAtTarget(species: Readonly<PredatorSpecies>): { state: PredatorState; target: Point } {
+  const base = createPredator(rockRoute(species), species.id);
+  const state: PredatorState = { ...base, phase: 'lunge', elapsed: 0, duration: species.tuning.lungeDuration, aim: { x: 1, y: 0 } };
+  if (species.rules?.fixedStrikeSpot) {
+    state.strikeSpot = { ...ROCK_START };
+    return { state, target: { ...ROCK_START } };
+  }
+  return { state, target: { x: ROCK_START.x + species.tuning.lungeSpeed * STALKER_DT, y: ROCK_START.y } };
+}
+
+/** Whether `pos` is strictly inside `wall` grown by `margin`. */
+function insideGrown(pos: Point, wall: typeof DIVIDER, margin: number): boolean {
+  return pos.x > wall.x0 - margin && pos.x < wall.x1 + margin && pos.y > wall.y0 - margin && pos.y < wall.y1 + margin;
+}
+
+describe('rock walls block sight (ND-12)', () => {
+  const wall = { x0: 100, x1: 140, y0: 100, y1: 200 };
+
+  it('finds rock on a segment through a wall, along an edge or touching a corner', () => {
+    expect(crossesRock({ x: 50, y: 150 }, { x: 200, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 120, y: 50 }, { x: 120, y: 250 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 50, y: 100 }, { x: 200, y: 100 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 50, y: 50 }, { x: 150, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 90, y: 90 }, { x: 100, y: 100 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 160, y: 80 }, { x: 120, y: 120 }, [wall])).toBe(true);
+  });
+
+  it('finds rock at either end and for a point in rock', () => {
+    expect(crossesRock({ x: 120, y: 150 }, { x: 300, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 300, y: 150 }, { x: 140, y: 150 }, [wall])).toBe(true);
+    expect(crossesRock({ x: 120, y: 150 }, { x: 120, y: 150 }, [wall])).toBe(true);
+  });
+
+  it('finds no rock on a segment that passes or stops short of every wall', () => {
+    expect(crossesRock({ x: 50, y: 99.9 }, { x: 200, y: 99.9 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 99.9, y: 150 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 89, y: 90 }, { x: 99, y: 100 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 150, y: 50 }, { x: 160, y: 250 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 50, y: 150 }, [wall])).toBe(false);
+    expect(crossesRock({ x: 50, y: 150 }, { x: 200, y: 150 }, [])).toBe(false);
+  });
+
+  it('checks every wall', () => {
+    const far = { x0: 400, x1: 440, y0: 100, y1: 200 };
+    expect(crossesRock({ x: 300, y: 150 }, { x: 500, y: 150 }, [wall, far])).toBe(true);
+    expect(crossesRock({ x: 300, y: 150 }, { x: 350, y: 150 }, [wall, far])).toBe(false);
+  });
+});
+
+describe('a target behind rock (ND-12)', () => {
+  it('starts no warning for any species, which warns at the same target in sight', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const target = rockPrey(species);
+      const spawned = createPredator(rockRoute(species), species.id);
+      const seen = stepPredator(spawned, target, STALKER_DT, rockCtx(species));
+      expect(eventTypes(seen.events), species.id).toEqual(['telegraphStart']);
+      const hidden = stepPredator(spawned, target, STALKER_DT, rockCtx(species, { targetBehindRock: true }));
+      expect(hidden.events, species.id).toEqual([]);
+      expect(hidden.state.phase, species.id).toBe('patrol');
+    }
+  });
+
+  it('cancels a warning at its end for any species', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const target = rockPrey(species);
+      const ending = rockWarningEnding(species, target);
+      expect(eventTypes(stepPredator(ending, target, STALKER_DT, rockCtx(species)).events), species.id).toEqual(['lungeStart']);
+      const hidden = stepPredator(ending, target, STALKER_DT, rockCtx(species, { targetBehindRock: true }));
+      expect(eventTypes(hidden.events), species.id).toEqual(['telegraphCancel']);
+      expect(hidden.state.phase, species.id).toBe('cooldown');
+    }
+  });
+
+  it('is never hit by a strike of any species', () => {
+    for (const species of PREDATOR_SPECIES) {
+      const { state, target } = rockStrikeAtTarget(species);
+      expect(stepPredator(state, target, STALKER_DT, rockCtx(species)).events, species.id).toEqual([{ type: 'lungeEnd', connected: true }]);
+      const hidden = rockCtx(species, { targetBehindRock: true });
+      let current = state;
+      const events: PredatorEvent[] = [];
+      while (current.phase === 'lunge') {
+        const result = stepPredator(current, target, STALKER_DT, hidden);
+        current = result.state;
+        events.push(...result.events);
+      }
+      expect(events, species.id).toEqual([{ type: 'lungeEnd', connected: false }]);
+    }
+  });
+
+  it('is never hit when rock lies between the striking point and the target after the move', () => {
+    const thin = { x0: 1030, x1: 1032, y0: 200, y1: 600 };
+    const target: Point = { x: 1036, y: ROCK_START.y };
+    const bass = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge' as const, elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const open = stepPredator(bass, target, STALKER_DT, rockCtx(BLACK_BASS_SPECIES));
+    expect(open.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    const walled = stepPredator(bass, target, STALKER_DT, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [thin] }));
+    expect(walled.events).toEqual([]);
+    expect(walled.state.pos.x).toBe(thin.x0 - BLACK_BASS.bodyRadius);
+    expect(Math.hypot(walled.state.pos.x - target.x, walled.state.pos.y - target.y)).toBeLessThanOrEqual(BLACK_BASS.hitRadius);
+  });
+
+  it('is not chased by any species that can chase: it swims its route instead', () => {
+    for (const species of PREDATOR_SPECIES.filter((candidate) => !candidate.rules?.fixedStrikeSpot && !candidate.rules?.stillCooldown)) {
+      const chase = { sight: species.tuning.lungeRange + 100, leash: 160, speed: 130 };
+      const chaser = tunedSpecies(species, { ...species.tuning, chase });
+      const target: Point = { x: ROCK_START.x - species.tuning.lungeRange - 50, y: ROCK_START.y };
+      const spawned = createPredator(rockRoute(chaser), chaser.id);
+      const seen = stepPredator(spawned, target, STALKER_DT, rockCtx(chaser));
+      const hidden = stepPredator(spawned, target, STALKER_DT, rockCtx(chaser, { targetBehindRock: true }));
+      const patrolling = stepPredator(spawned, target, STALKER_DT, rockCtx(species));
+      expect(hidden.state, species.id).toEqual(patrolling.state);
+      expect(hidden.state.pos.x, species.id).toBeGreaterThan(ROCK_START.x);
+      if (!species.rules?.warnOnRoute) expect(seen.state.pos.x, species.id).toBeLessThan(ROCK_START.x);
+    }
+  });
+});
+
+describe('rock walls stop every move (ND-12)', () => {
+  const bassCtx = rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] });
+  const face = DIVIDER.x0 - BLACK_BASS.bodyRadius;
+
+  it('stops a patrol at the rock face, then turns it back along its route', () => {
+    let state = createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id);
+    let farthest = state.pos.x;
+    for (let i = 0; i < 64 * 4; i++) {
+      state = stepPredator(state, { x: 2000, y: 100 }, STALKER_DT, bassCtx).state;
+      expect(insideGrown(state.pos, DIVIDER, BLACK_BASS.bodyRadius)).toBe(false);
+      farthest = Math.max(farthest, state.pos.x);
+    }
+    expect(farthest).toBe(face);
+    expect(state.pos.x).toBeLessThan(face);
+  });
+
+  it('stops a strike at the rock face, and a strike that misses ends with no hit', () => {
+    const bass: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const run = runStalker(bass, { x: 1200, y: ROCK_START.y }, 1, { ...bassCtx, targetBehindRock: true }, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    for (const pos of run.positions) expect(pos.x).toBeLessThanOrEqual(face);
+    expect(run.state.pos).toEqual({ x: face, y: ROCK_START.y });
+  });
+
+  it('stops the slow turn glide at the rock face', () => {
+    const cooling: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: face - 10, y: ROCK_START.y }, phase: 'cooldown', elapsed: 0, duration: BLACK_BASS.cooldown, glide: { x: 1, y: 0 } };
+    const run = runStalker(cooling, { x: 500, y: ROCK_START.y }, BLACK_BASS.cooldown, bassCtx, 'cooldownEnd');
+    for (const pos of run.positions) expect(pos.x).toBeLessThanOrEqual(face);
+    expect(run.state.pos.x).toBe(face);
+  });
+
+  it('stops a chase at the rock face', () => {
+    const chaser = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    const ctx = rockCtx(chaser, { rockWalls: [DIVIDER], targetBehindRock: false });
+    const target: Point = { x: ROCK_START.x + 250, y: ROCK_START.y };
+    const run = runStalker(createPredator(rockRoute(chaser), chaser.id), target, 2, ctx);
+    for (const pos of run.positions) expect(insideGrown(pos, DIVIDER, BLACK_BASS.bodyRadius)).toBe(false);
+    expect(run.positions.some((pos) => pos.x === face)).toBe(true);
+  });
+
+  it('stops a diagonal move on the face it reaches, sliding along it', () => {
+    const top = DIVIDER.y0 - BLACK_BASS.bodyRadius;
+    const above: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: 1100, y: top - 5 }, phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 0.6, y: 0.8 } };
+    const result = stepPredator(above, { x: 0, y: 800 }, STALKER_DT, bassCtx);
+    expect(result.state.pos.y).toBe(top);
+    expect(result.state.pos.x).toBeCloseTo(1100 + 0.6 * BLACK_BASS.lungeSpeed * STALKER_DT, 9);
+  });
+
+  it('stops even a move long enough to pass right over the wall', () => {
+    const fast = rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER], tuning: { ...BLACK_BASS, lungeSpeed: 100 / STALKER_DT } });
+    const bass: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: { x: 1, y: 0 } };
+    const result = stepPredator(bass, { x: 0, y: 800 }, STALKER_DT, fast);
+    expect(result.state.pos.x).toBe(face);
+  });
+
+  it('lets a predator already inside a grown wall move out', () => {
+    const stuck: PredatorState = { ...createPredator(rockRoute(BLACK_BASS_SPECIES), BLACK_BASS_SPECIES.id), pos: { x: face + 5, y: ROCK_START.y }, waypointIndex: 0 };
+    const result = stepPredator(stuck, { x: 2000, y: 100 }, 0.5, bassCtx);
+    expect(result.state.pos.x).toBeLessThan(face);
+  });
+
+  it('moves exactly as before with no rock walls or an empty list', () => {
+    const route = rockRoute(BLACK_BASS_SPECIES);
+    const target = rockPrey(BLACK_BASS_SPECIES);
+    const plain = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES));
+    const empty = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [], targetBehindRock: false }));
+    expect(empty).toEqual(plain);
+  });
+});
+
+/** A box as the rock tests use it: a wall, or a safe area. */
+type SweepBox = Readonly<{ x0: number; x1: number; y0: number; y1: number }>;
+
+/** Far from every test box: no warning starts at it. */
+const SWEEP_NOWHERE: Point = { x: -50000, y: -50000 };
+const SWEEP_BOUNDS: PredatorContext['bounds'] = { minX: -10000, maxX: 10000, minY: -10000, maxY: 10000 };
+const SWEEP_FAR_SAFE: PredatorContext['safeArea'] = { x0: -9000, x1: -8900, y0: -9000, y1: -8900 };
+
+/** A context whose patrol covers any test move in one step, so one patrol step is one whole move. */
+function sweepCtx(margin: number, extra: Partial<PredatorContext> = {}): PredatorContext {
+  return {
+    safeArea: SWEEP_FAR_SAFE,
+    bounds: SWEEP_BOUNDS,
+    tuning: { ...TEST_TUNING, bodyRadius: margin, patrolSpeed: 1e6 },
+    ...extra,
+  };
+}
+
+/** Where one move from `from` straight to `to` ends: one patrol step toward `to` as its waypoint. */
+function moveOnce(from: Point, to: Point, ctx: PredatorContext): Point {
+  const state: PredatorState = { ...createPredator({ id: 'sweep', waypoints: [from, to] }, 'sweep'), waypointIndex: 1 };
+  return stepPredator(state, SWEEP_NOWHERE, STALKER_DT, ctx).state.pos;
+}
+
+/** `box` grown by `margin` on every side. */
+function grownBox(box: SweepBox, margin: number): SweepBox {
+  return { x0: box.x0 - margin, x1: box.x1 + margin, y0: box.y0 - margin, y1: box.y1 + margin };
+}
+
+/** Whether `pos` is strictly inside `box`. */
+function strictlyInside(pos: Point, box: SweepBox): boolean {
+  return pos.x > box.x0 && pos.x < box.x1 && pos.y > box.y0 && pos.y < box.y1;
+}
+
+/**
+ * The shares of the one-axis move from `start` by `delta` that lie strictly inside (lo, hi), as
+ * [first, last]; empty (first >= last) when none do.
+ */
+function openSlabShares(start: number, delta: number, lo: number, hi: number): [number, number] {
+  if (delta === 0) return start > lo && start < hi ? [-Infinity, Infinity] : [Infinity, -Infinity];
+  const atLo = (lo - start) / delta;
+  const atHi = (hi - start) / delta;
+  return [Math.min(atLo, atHi), Math.max(atLo, atHi)];
+}
+
+/** Whether some point of the segment from `from` to `to` lies strictly inside `box`: edges and corners count as outside. */
+function segmentEntersOpenBox(from: Point, to: Point, box: SweepBox): boolean {
+  const [xFirst, xLast] = openSlabShares(from.x, to.x - from.x, box.x0, box.x1);
+  const [yFirst, yLast] = openSlabShares(from.y, to.y - from.y, box.y0, box.y1);
+  return Math.max(xFirst, yFirst, 0) < Math.min(xLast, yLast, 1);
+}
+
+/** The four corners of `box`, each with the signs pointing out of the box along x and y. */
+function boxCorners(box: SweepBox): { corner: Point; outX: -1 | 1; outY: -1 | 1 }[] {
+  return [
+    { corner: { x: box.x0, y: box.y0 }, outX: -1, outY: -1 },
+    { corner: { x: box.x1, y: box.y0 }, outX: 1, outY: -1 },
+    { corner: { x: box.x0, y: box.y1 }, outX: -1, outY: 1 },
+    { corner: { x: box.x1, y: box.y1 }, outX: 1, outY: 1 },
+  ];
+}
+
+/** Sixteen directions a quarter of a right angle apart, the first straight right. */
+const SIXTEEN_DIRECTIONS: readonly Point[] = Array.from({ length: 16 }, (_, i) => ({
+  x: Math.cos((i * Math.PI) / 8),
+  y: Math.sin((i * Math.PI) / 8),
+}));
+/** Move lengths in px for the sweeps: short moves up to 24 px, then one longer move. */
+const SWEEP_LENGTHS: readonly number[] = [1, 6, 12, 24, 160];
+/** Start offsets in px from a corner along each axis. */
+const SWEEP_OFFSETS: readonly number[] = [-24, -8, -1, 0, 1, 8, 24];
+
+/**
+ * Moves from every start around `corners` (none strictly inside a grown box) in sixteen directions
+ * and every SWEEP_LENGTHS length, checking each move against the grown boxes `grown`. Returns how
+ * many moves it made and a description of each move that broke a rule.
+ */
+function sweepAroundCorners(corners: readonly Point[], grown: readonly SweepBox[], ctx: PredatorContext): { moves: number; broken: string[] } {
+  const broken: string[] = [];
+  let moves = 0;
+  for (const corner of corners) {
+    for (const offsetX of SWEEP_OFFSETS) {
+      for (const offsetY of SWEEP_OFFSETS) {
+        const from: Point = { x: corner.x + offsetX, y: corner.y + offsetY };
+        if (grown.some((box) => strictlyInside(from, box))) continue;
+        moves += sweepFrom(from, grown, ctx, broken);
+      }
+    }
+  }
+  return { moves, broken };
+}
+
+/**
+ * Makes the moves from `from` in sixteen directions and every SWEEP_LENGTHS length, adding to
+ * `broken` each one that ends strictly inside a grown box, whose straight line from `from` enters
+ * one, or whose clear path enters none yet ends short of its target. Returns how many moves it made.
+ */
+function sweepFrom(from: Point, grown: readonly SweepBox[], ctx: PredatorContext, broken: string[]): number {
+  let moves = 0;
+  for (const direction of SIXTEEN_DIRECTIONS) {
+    for (const length of SWEEP_LENGTHS) {
+      const to: Point = { x: from.x + direction.x * length, y: from.y + direction.y * length };
+      const end = moveOnce(from, to, ctx);
+      const entered = grown.some((box) => strictlyInside(end, box) || segmentEntersOpenBox(from, end, box));
+      const clear = !grown.some((box) => segmentEntersOpenBox(from, to, box));
+      const short = clear && (Math.abs(end.x - to.x) > 1e-9 || Math.abs(end.y - to.y) > 1e-9);
+      if (entered || short) broken.push(`from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) ended at (${end.x}, ${end.y})`);
+      moves++;
+    }
+  }
+  return moves;
+}
+
+describe('every move is checked along its whole straight path (ND-12)', () => {
+  const margin = 10;
+  const wall = { x0: 100, x1: 140, y0: 100, y1: 200 };
+  const grown = grownBox(wall, margin);
+  const ctx = sweepCtx(margin, { rockWalls: [wall] });
+
+  it('stops a move at each grown corner on the face it reaches first, then slides to the target', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const ontoY = { from: { x: corner.x + 10 * outX, y: corner.y + 20 * outY }, to: { x: corner.x - 20 * outX, y: corner.y - 10 * outY } };
+      const yEnd = moveOnce(ontoY.from, ontoY.to, ctx);
+      expect(yEnd.y).toBe(corner.y);
+      expect(yEnd.x).toBe(ontoY.to.x);
+      expect(segmentEntersOpenBox(ontoY.from, yEnd, grown)).toBe(false);
+      const ontoX = { from: { x: corner.x + 20 * outX, y: corner.y + 10 * outY }, to: { x: corner.x - 10 * outX, y: corner.y - 20 * outY } };
+      const xEnd = moveOnce(ontoX.from, ontoX.to, ctx);
+      expect(xEnd.x).toBe(corner.x);
+      expect(xEnd.y).toBe(ontoX.to.y);
+      expect(segmentEntersOpenBox(ontoX.from, xEnd, grown)).toBe(false);
+    }
+  });
+
+  it('lets a move that passes outside a grown corner end at its target', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const from: Point = { x: corner.x + 10 * outX, y: corner.y - 5 * outY };
+      const to: Point = { x: corner.x - 10 * outX, y: corner.y + 15 * outY };
+      expect(segmentEntersOpenBox(from, to, grown)).toBe(false);
+      expect(moveOnce(from, to, ctx)).toEqual(to);
+    }
+  });
+
+  it('does not stop a move that only grazes a grown corner point', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const from: Point = { x: corner.x + 10 * outX, y: corner.y - 10 * outY };
+      const to: Point = { x: corner.x - 10 * outX, y: corner.y + 10 * outY };
+      expect(moveOnce(from, to, ctx)).toEqual(to);
+    }
+  });
+
+  it('stops a move clipping a grown corner that both old per-axis checks missed', () => {
+    const from: Point = { x: grown.x1 - 10, y: grown.y0 - 1 };
+    const to: Point = { x: grown.x1 + 1, y: grown.y0 + 8 };
+    expect(segmentEntersOpenBox(from, to, grown)).toBe(true);
+    expect(moveOnce(from, to, ctx)).toEqual({ x: to.x, y: grown.y0 });
+  });
+});
+
+describe("Area 8's divider stops every move along its whole path (ND-12)", () => {
+  const stones = DEEP_CANAL_LAYOUT.rockWalls ?? [];
+
+  /** Every grown face crossing on the edge of a grown stone: each corner of the union, convex and concave. */
+  function dividerCorners(grown: readonly SweepBox[]): Point[] {
+    const xs = [...new Set(grown.flatMap((box) => [box.x0, box.x1]))];
+    const ys = [...new Set(grown.flatMap((box) => [box.y0, box.y1]))];
+    const onEdge = (pos: Point): boolean =>
+      grown.some((box) => pos.x >= box.x0 && pos.x <= box.x1 && pos.y >= box.y0 && pos.y <= box.y1) &&
+      !grown.some((box) => strictlyInside(pos, box));
+    return xs.flatMap((x) => ys.map((y) => ({ x, y }))).filter(onEdge);
+  }
+
+  it('is all seven stones, with the stepped joints at x 1880 to 2280', () => {
+    expect(stones).toHaveLength(7);
+    expect(stones.filter((stone) => stone.x0 >= 1880 && stone.x1 <= 2280)).toHaveLength(3);
+  });
+
+  it('never lets a move end in or pass through a grown stone, around every corner, in sixteen directions', () => {
+    for (const margin of [TILAPIA.bodyRadius, BLACK_BASS.bodyRadius, CARP.bodyRadius]) {
+      const grown = stones.map((stone) => grownBox(stone, margin));
+      const corners = dividerCorners(grown);
+      expect(corners.length, `margin ${margin}`).toBeGreaterThanOrEqual(16);
+      const { moves, broken } = sweepAroundCorners(corners, grown, sweepCtx(margin, { rockWalls: stones }));
+      expect(moves, `margin ${margin}`).toBeGreaterThan(0);
+      expect(broken, `margin ${margin}`).toEqual([]);
+    }
+  });
+
+  it('stops a diagonal move into each concave joint on both faces', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const ctx = sweepCtx(margin, { rockWalls: stones });
+    const joints = [
+      { corner: { x: 1880 - margin, y: 340 - margin }, inX: 1, inY: 1 },
+      { corner: { x: 1920 + margin, y: 228 + margin }, inX: -1, inY: -1 },
+      { corner: { x: 2240 - margin, y: 228 + margin }, inX: 1, inY: -1 },
+      { corner: { x: 2280 + margin, y: 340 - margin }, inX: -1, inY: 1 },
+    ];
+    for (const { corner, inX, inY } of joints) {
+      const from: Point = { x: corner.x - 20 * inX, y: corner.y - 10 * inY };
+      const to: Point = { x: corner.x + 10 * inX, y: corner.y + 20 * inY };
+      expect(moveOnce(from, to, ctx), `joint (${corner.x}, ${corner.y})`).toEqual(corner);
+      const level: Point = { x: corner.x - 10 * inX, y: corner.y - 20 * inY };
+      const deep: Point = { x: corner.x + 20 * inX, y: corner.y + 10 * inY };
+      expect(moveOnce(level, deep, ctx), `joint (${corner.x}, ${corner.y})`).toEqual(corner);
+    }
+  });
+});
+
+describe('every move mode goes round a grown rock corner (ND-12)', () => {
+  /** The top right corner of DIVIDER grown by `margin`. */
+  function topRight(margin: number): Point {
+    return { x: DIVIDER.x1 + margin, y: DIVIDER.y0 - margin };
+  }
+
+  /** A start 8 px left of and 4 px above the grown top right corner: heading down right it meets the top face 4 px from the corner. */
+  function besideCorner(margin: number): Point {
+    const corner = topRight(margin);
+    return { x: corner.x - 8, y: corner.y - 4 };
+  }
+
+  /** A route from `start` heading down and to the right. */
+  function diagonalRoute(species: Readonly<PredatorSpecies>, start: Point): PredatorRoute {
+    return { id: `${species.id}-corner`, waypoints: [start, { x: start.x + 300, y: start.y + 300 }], species };
+  }
+
+  /** Checks no step of `run` from `start` enters DIVIDER grown by `margin`, and that it ends down and right of the corner. */
+  function expectRoundCorner(run: StalkerRun, start: Point, margin: number, mode: string): void {
+    const grown = grownBox(DIVIDER, margin);
+    let previous = start;
+    for (const pos of run.positions) {
+      expect(segmentEntersOpenBox(previous, pos, grown), `${mode} from (${previous.x}, ${previous.y}) to (${pos.x}, ${pos.y})`).toBe(false);
+      previous = pos;
+    }
+    const corner = topRight(margin);
+    expect(run.state.pos.x, mode).toBeGreaterThan(corner.x);
+    expect(run.state.pos.y, mode).toBeGreaterThan(corner.y);
+  }
+
+  const DOWN_RIGHT: Point = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+
+  it('patrol', () => {
+    const margin = TILAPIA.bodyRadius;
+    const start = besideCorner(margin);
+    const state = createPredator(diagonalRoute(TILAPIA_SPECIES, start), TILAPIA_SPECIES.id);
+    const run = runStalker(state, SWEEP_NOWHERE, 2, rockCtx(TILAPIA_SPECIES, { rockWalls: [DIVIDER] }));
+    expect(run.events).toEqual([]);
+    expectRoundCorner(run, start, margin, 'patrol');
+  });
+
+  it('cooldown swim on the route, for a species with neither slow turn nor still cooldown', () => {
+    expect(TILAPIA_SPECIES.rules?.slowTurn).toBeUndefined();
+    expect(TILAPIA_SPECIES.rules?.stillCooldown).toBeUndefined();
+    const margin = TILAPIA.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(TILAPIA_SPECIES, start), TILAPIA_SPECIES.id), phase: 'cooldown', elapsed: 0, duration: TILAPIA.cooldown };
+    const run = runStalker(state, SWEEP_NOWHERE, 1, rockCtx(TILAPIA_SPECIES, { rockWalls: [DIVIDER] }));
+    expect(run.state.phase).toBe('cooldown');
+    expectRoundCorner(run, start, margin, 'cooldown swim');
+  });
+
+  it('chase', () => {
+    const chaser = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const reach = BLACK_BASS_CHASE.sight - 1;
+    const target: Point = { x: start.x + DOWN_RIGHT.x * reach, y: start.y + DOWN_RIGHT.y * reach };
+    const state = createPredator(diagonalRoute(chaser, start), chaser.id);
+    const run = runStalker(state, target, 1, rockCtx(chaser, { rockWalls: [DIVIDER] }), 'telegraphStart');
+    expectRoundCorner(run, start, margin, 'chase');
+  });
+
+  it('lunge', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(BLACK_BASS_SPECIES, start), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: DOWN_RIGHT };
+    const run = runStalker(state, SWEEP_NOWHERE, BLACK_BASS.lungeDuration, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] }), 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    expectRoundCorner(run, start, margin, 'lunge');
+  });
+
+  it('slow turn glide', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(BLACK_BASS_SPECIES, start), BLACK_BASS_SPECIES.id), phase: 'cooldown', elapsed: 0, duration: BLACK_BASS.cooldown, glide: DOWN_RIGHT };
+    const run = runStalker(state, SWEEP_NOWHERE, BLACK_BASS.cooldown, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] }), 'cooldownEnd');
+    expect(run.events).toEqual([{ type: 'cooldownEnd' }]);
+    expectRoundCorner(run, start, margin, 'slow turn glide');
+  });
+});
+
+describe('the safe area stops every move along its whole path', () => {
+  const margin = 10;
+
+  it('never lets a diagonal move enter the grown safe area at an exposed corner', () => {
+    const safeArea = { x0: 0, x1: 200, y0: 300, y1: 500 };
+    const grown = grownBox(safeArea, margin);
+    const ctx = sweepCtx(margin, { safeArea, bounds: { minX: 0, maxX: 1000, minY: 0, maxY: 1000 } });
+    const exposed = [{ x: grown.x1, y: grown.y0 }, { x: grown.x1, y: grown.y1 }];
+    const { moves, broken } = sweepAroundCorners(exposed, [grown], ctx);
+    expect(moves).toBeGreaterThan(0);
+    expect(broken).toEqual([]);
+    const from: Point = { x: grown.x1 - 10, y: grown.y0 - 10 };
+    const to: Point = { x: grown.x1 + 5, y: grown.y0 + 10 };
+    expect(segmentEntersOpenBox(from, to, grown)).toBe(true);
+    expect(moveOnce(from, to, ctx)).toEqual({ x: to.x, y: grown.y0 });
+  });
+
+  it('stops a move at the face of a full-height safe area and slides along it exactly as before', () => {
+    const ctx = sweepCtx(margin, { safeArea: CTX.safeArea, bounds: CTX.bounds });
+    const face = CTX.safeArea.x1 + margin;
+    const moves: { from: Point; to: Point; end: Point }[] = [
+      { from: { x: 230, y: 150 }, to: { x: 190, y: 170 }, end: { x: face, y: 170 } },
+      { from: { x: 230, y: 250 }, to: { x: 150, y: 120 }, end: { x: face, y: 120 } },
+      { from: { x: 230, y: 290 }, to: { x: 190, y: 330 }, end: { x: face, y: CTX.bounds.maxY } },
+      { from: { x: 230, y: 110 }, to: { x: 100, y: 50 }, end: { x: face, y: CTX.bounds.minY } },
+      { from: { x: face, y: 200 }, to: { x: face, y: 260 }, end: { x: face, y: 260 } },
+      { from: { x: 300, y: 200 }, to: { x: 250, y: 260 }, end: { x: 250, y: 260 } },
+    ];
+    for (const { from, to, end } of moves) expect(moveOnce(from, to, ctx)).toEqual(end);
   });
 });

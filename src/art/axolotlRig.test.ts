@@ -527,7 +527,7 @@ const PALETTES: readonly MorphPalette[] = [
 const IRIDESCENT = axolotlPalette('leucistic', 'iridescent');
 const CRYSTAL_SHINE = axolotlPalette('copper', 'crystal-shine');
 /** The sheen Dream colours (isSheenDream), which split the tail round a live stripe. */
-const SHEEN_DREAMS = ['iridescent', 'crystal-shine'] as const satisfies readonly DreamLookId[];
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine', 'fiesta-shine'] as const satisfies readonly DreamLookId[];
 const isSheen = (palette: MorphPalette): boolean => palette.dream !== undefined && isSheenDream(palette.dream.id);
 
 /**

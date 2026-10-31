@@ -55,6 +55,12 @@ import {
   type FindId,
   type Holdings,
 } from './tripBag';
+import {
+  createTrajineraLane,
+  stepTrajineraLane,
+  type TrajineraLane,
+  type TrajineraPush,
+} from './trajineras';
 import type { FoundInfo, LegsSnapshot, RescueSnapshot, TripEnding, TripPhase, TripSnapshot } from './tripEvents';
 import {
   CARRY,
@@ -71,6 +77,7 @@ import {
 import type { Vec2 } from './vec';
 import {
   inHomeSpot as isInHomeSpot,
+  swimBounds,
   type FindSpawn,
   type HidingSpot,
   type HomeSpot,
@@ -84,10 +91,12 @@ export const LEG_PROGRESS_STEPS = 10;
 /**
  * The zone parts a trip is built from: the encounter parts, the area id, the Home Spot start point
  * and ring, the finds (treasure pools), the hiding spots, the main swim path, the elements (none
- * when absent) and the dark water (none when absent).
+ * when absent) and the dark water (none when absent). The gliding trajineras (none when absent)
+ * read the area's width, bed top and rock walls (none when absent) for where a push may go.
  */
 export type TripSource = EncounterSource &
-  Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> & {
+  Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> &
+  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras'>> & {
     elements?: readonly Readonly<ElementSpawn>[];
   };
 
@@ -136,6 +145,10 @@ export interface CarryState {
  * glow-plant element ids lit this trip, in lighting order; they are trip state only, never saved,
  * so every plant is unlit at a new trip. `darkHintTime` is the hint clock (stepDarkHintClock) in
  * seconds and `darkHint` the unlit plant the hint points at, or null (issue #77, ND-8).
+ * `trajineras` is the trip's gliding trajineras and their push cooldowns, or null when the area has
+ * none (issue #78, ND-8); each boat's hull is where trajineraHull puts it at `elementTime`, and it is
+ * solid: each swimming step holds the axolotl centre out of it (stepTrajineraLane), and the hold is
+ * the step result's `outOfHull`. The lane's rules (createTrajineraLane) leave every hull a way down.
  */
 export interface TripState {
   phase: TripPhase;
@@ -169,6 +182,7 @@ export interface TripState {
   litGlowPlants: string[];
   darkHintTime: number;
   darkHint: string | null;
+  trajineras: TrajineraLane | null;
 }
 
 /**
@@ -236,13 +250,20 @@ export type TripEvent =
   | { type: 'snagged'; id: string; at: Point };
 
 /**
- * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump
- * that did not bank: the velocity in px/s to give the axolotl.
+ * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump or a
+ * trajinera push that did not bank: the velocity in px/s to give the axolotl. `pushed` is set only
+ * on a swimming step where a gliding trajinera's hull pushed the axolotl aside (issue #78, ND-8),
+ * and `impulse` is then that push's. `outOfHull` is set only on a swimming step that neither banks
+ * nor starts the carry and where a gliding trajinera's hull held the axolotl out (issue #78, ND-8,
+ * ND-9): the axolotl centre after the hold, a copy, which differs from `axolotlPos`; on a push step
+ * it equals `pushed.to`. Each optional key is absent, never undefined-valued, when not set.
  */
 export interface TripStepResult {
   state: TripState;
   events: TripEvent[];
   impulse?: Vec2;
+  pushed?: TrajineraPush;
+  outOfHull?: Point;
 }
 
 type PassedEncounterEvent = Exclude<EncounterEvent, { type: 'carriedHome' }>;
@@ -280,9 +301,12 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * axolotl starts not queasy; worms never change the placement. The source's ghost net hazards are
  * the trip's nets, and the axolotl starts not snagged; nets never change the placement here. The
  * source's elements are the trip's elements, with the element clock at 0. The source's dark water
- * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. Throws
- * when a pool cannot be placed
- * or `options.area` is not the source's area.
+ * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. The source's gliding
+ * trajineras are the trip's, each push cooldown at 0, kept in the swim bounds of the source's width
+ * and bed top and out of its rock walls. Throws when a pool cannot be placed, `options.area` is not
+ * the source's area, or the source has trajineras but no width or bed top. Throws createTrajineraLane's
+ * RangeError when, for some boat, the row a body reach under its hull band is out of the swim bounds
+ * or meets rock, or two boats' spans are less than twice the body reach apart.
  */
 export function createTrip(
   source: TripSource,
@@ -334,17 +358,33 @@ export function createTrip(
     litGlowPlants: [],
     darkHintTime: 0,
     darkHint: null,
+    trajineras: tripTrajineras(source),
   };
 }
 
-/** A copy of the element sharing its type; the mat pair, glow-plant and pebble geometry, when set, are copied. */
+/** A copy of the element sharing its type; the mat pair, glow-plant, pebble and trajinera geometry, when set, are copied. */
 function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
   return {
     ...element,
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
+    ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
   };
+}
+
+/**
+ * The source's gliding trajineras as a new trip's lane (issue #78, ND-8), or null when it has none.
+ * Throws RangeError when it has trajineras but no width or bed top.
+ */
+function tripTrajineras(source: TripSource): TrajineraLane | null {
+  const boats = source.trajineras ?? [];
+  if (boats.length === 0) return null;
+  const { width, bedTop } = source;
+  if (width === undefined || bedTop === undefined) {
+    throw new RangeError(`createTrip: ${source.areaId} has trajineras but no width or bed top`);
+  }
+  return createTrajineraLane(boats, swimBounds({ width, bedTop }), source.rockWalls ?? []);
 }
 
 /**
@@ -355,14 +395,14 @@ function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
  * Dash pot is sealed again. The treasures returned when carried home (`ending.returned`) come back this trip, always
  * placed, and the area's special treasure is always placed while unbanked, on top of the treasure
  * slots. Every plastic worm is back at its spawn and the axolotl is neither queasy nor snagged. The
- * elements and moving hazards are the same, and the element clock and the moving hazard clock are
- * back at 0. It
+ * elements, moving hazards and gliding trajineras are the same, and the element clock and the
+ * moving hazard clock are back at 0, with every push cooldown at 0. It
  * passes no other trip options, so the new trip has no stranded axolotl and every fact card counts
  * as unseen. Any other phase returns the input state unchanged.
  */
 export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.tripSeed)): TripState {
   if (state.phase !== 'ended') return state;
-  return createTrip(
+  const next = createTrip(
     {
       ...state.encounter,
       areaId: state.areaId,
@@ -379,6 +419,8 @@ export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.
     tripSeed,
     { returnedFinds: state.ending?.returned ?? [] },
   );
+  const lane = state.trajineras;
+  return lane ? { ...next, trajineras: createTrajineraLane(lane.boats, lane.bounds, lane.rocks) } : next;
 }
 
 /**
@@ -524,7 +566,7 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * pickup radius goes into the Trip Bag and onto `found` (`pickedUp` each, in placed order), so a
  * break and its pickup can happen in one step. Then `inHomeSpot` updates, and inside the ring with
  * a non-empty bag the whole bag banks: `banked` is emitted, the phase becomes 'banked', the
- * axolotl is held where it is and any bump impulse is dropped.
+ * axolotl is held where it is and any bump impulse or trajinera push is dropped.
  * Before the banking check, a waiting stranded axolotl within reach goes into the Trip Bag and
  * onto `found` (`rescued`); a following one swims behind the axolotl and a safe one swims to its
  * rest point by the Home Spot. It is never part of the encounter, so it cannot be hit. The first
@@ -542,6 +584,15 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * step while the axolotl centre is in the dark water, and goes back to 0 on a new light or out of
  * the dark; then `darkHint` is the plant darkHintPlant picks. A step that ends the trip, a paused
  * step, the banked card and the carry leave the hint clock and the hint as they were.
+ * Gliding trajineras (issue #78, ND-8, ND-9), after the encounter (stepTrajineraLane at the new
+ * element time): each push cooldown counts down by the capped step; then, on a step with no bump
+ * impulse, the first ready boat whose hull touches the axolotl centre pushes it aside: `pushed` and
+ * `impulse` are set and that boat's cooldown starts. Then, whatever the cooldowns and the bump, the
+ * hull is solid: the axolotl centre is held out of every hull, down or sideways and never up, and
+ * when that moves it `outOfHull` is the held place (`pushed.to` on a push step). A bump impulse
+ * still wins over a push, and the hold never changes the impulse. A push or a hold never costs a
+ * leg, never counts as a hit, drops no find, starts no protected time and emits no event; a step
+ * that ends the trip neither pushes nor holds, and a banking step drops both.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -828,6 +879,10 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const ghostNets = stepSnag(state.ghostNets, input.axolotlPos, step, elementTime, events);
   const met = meetThreats(state.met, result.state, state.elements, input.axolotlPos, elementTime, ctx.encounter);
   const glow = stepGlowPlants(state, input.axolotlPos, step);
+  const boats =
+    state.trajineras === null
+      ? NO_TRAJINERA_LANE_STEP
+      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, result.impulse !== undefined);
   const inside = isInHomeSpot(input.axolotlPos, state.homeSpot);
   const next: TripState = {
     ...state,
@@ -841,10 +896,28 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
     plasticWorms: tickQueasy(state.plasticWorms, step),
     ghostNets,
     elementTime,
+    trajineras: boats.lane,
   };
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
-  if (result.impulse) return { state: next, events, impulse: result.impulse };
-  return { state: next, events };
+  const stepped: TripStepResult = { state: next, events };
+  if (result.impulse) {
+    stepped.impulse = result.impulse;
+  } else if (boats.push) {
+    stepped.impulse = { ...boats.push.impulse };
+    stepped.pushed = boats.push;
+  }
+  const outOfHull = movedOutOfHull(boats.pos, input.axolotlPos);
+  if (outOfHull) stepped.outOfHull = outOfHull;
+  return stepped;
+}
+
+// INVARIANT: frozen and shared; a trip with no trajineras steps them with no allocation.
+const NO_TRAJINERA_LANE_STEP = Object.freeze({ lane: null, pos: null, push: null });
+
+/** A copy of `held`, the body centre after the trajinera hold, when it moved from `pos`; null when it did not or there was no hold. */
+function movedOutOfHull(held: Readonly<Point> | null, pos: Readonly<Point>): Point | null {
+  if (held === null || (held.x === pos.x && held.y === pos.y)) return null;
+  return { x: held.x, y: held.y };
 }
 
 /**

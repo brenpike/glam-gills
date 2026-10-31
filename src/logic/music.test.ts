@@ -24,6 +24,7 @@ import {
   MUSIC_ON_LABEL,
   MUSIC_STORAGE_KEY,
   SUNNY_TANK,
+  TRAJINERA_WALTZ,
   UNPITCHED_VOICES,
   arrangeStep,
   duskVersion,
@@ -46,11 +47,22 @@ import { SOUNDS, inSoundKey, soundKeyFor, soundNotes, type SoundId } from './sou
 
 const HOME_SCREENS: readonly MusicScreen[] = ['title', 'homeTank', 'creator', 'areaMap', 'refuge'];
 const SEED = 7;
-const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW];
+const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW, TRAJINERA_WALTZ];
 /** Pitch classes of E dorian, which uses D major's notes, above C. */
 const E_DORIAN_PITCHES: readonly number[] = ['E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'].map((name) => noteMidi(name) % 12);
 const DUSK_HABITAT_CUES: readonly Readonly<MusicCue>[] = DAY_HABITAT_CUES.map((cue) => tripCueFor({ habitatId: habitatOf(cue), look: 'pond-dusk' }));
 const ALL_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES, ...DUSK_HABITAT_CUES];
+/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: none today. */
+const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [];
+const UNREGISTERED_CUES: readonly Readonly<MusicCue>[] = [...UNREGISTERED_DAY_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
+/** Every day habitat cue the shared habitat cue checks cover, registered or not. */
+const CHECKED_DAY_CUES: readonly Readonly<MusicCue>[] = [...DAY_HABITAT_CUES, ...UNREGISTERED_DAY_CUES];
+/** Every dusk version the shared dusk rule checks cover, registered or not. */
+const CHECKED_DUSK_CUES: readonly Readonly<MusicCue>[] = [...DUSK_HABITAT_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
+/** Every cue the shared arrangement checks cover. */
+const CHECKED_CUES: readonly Readonly<MusicCue>[] = [...ALL_CUES, ...UNREGISTERED_CUES];
+/** Pitch classes of D major above C. */
+const D_MAJOR_PITCHES: readonly number[] = ['D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'C#5'].map((name) => noteMidi(name) % 12);
 
 function habitatOf(cue: Readonly<MusicCue>): string {
   const entry = Object.entries(HABITAT_CUES).find(([, habitatCue]) => habitatCue === cue);
@@ -162,14 +174,14 @@ describe('habitat cues (M3)', () => {
 describe('the dusk rule (M4)', () => {
   it('has no dusk version of the Home cue, or of a dusk version', () => {
     expect(() => duskVersion(SUNNY_TANK)).toThrow();
-    for (const dusk of DUSK_HABITAT_CUES) expect(() => duskVersion(dusk)).toThrow();
+    for (const dusk of CHECKED_DUSK_CUES) expect(() => duskVersion(dusk)).toThrow();
   });
 
-  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52', () => {
-    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52]);
+  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52, Trajinera Waltz 84', () => {
+    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52, 84]);
     expect(CENOTE_GLOW.dusk).toEqual({ bpm: 52, swing: 0 });
-    DAY_HABITAT_CUES.forEach((day, i) => {
-      const dusk = DUSK_HABITAT_CUES[i];
+    CHECKED_DAY_CUES.forEach((day, i) => {
+      const dusk = CHECKED_DUSK_CUES[i];
       expect(dusk.tune).toBe(day.tune);
       expect(dusk.bars).toBe(day.bars);
       expect(dusk.bpm).toBeLessThan(day.bpm);
@@ -178,7 +190,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('plays every tune note on its step on a music box, every pass, raised an octave when below C5', () => {
-    for (const dusk of DUSK_HABITAT_CUES) {
+    for (const dusk of CHECKED_DUSK_CUES) {
       const steps = notesOf(dusk, SEED);
       const perBar = stepsPerBar(dusk);
       for (let pass = 0; pass < 4; pass++) {
@@ -194,7 +206,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it("holds each chord's notes softly on a pad from the chord's first step", () => {
-    for (const dusk of DUSK_HABITAT_CUES) {
+    for (const dusk of CHECKED_DUSK_CUES) {
       notesOf(dusk, SEED, 1).forEach((notes, index) => {
         const place = stepPlace(dusk, index);
         const pads = notes.filter((n) => n.voice === 'pad');
@@ -209,7 +221,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('plays no drums, only a faint shaker, and fireflies', () => {
-    for (const dusk of DUSK_HABITAT_CUES) {
+    for (const dusk of CHECKED_DUSK_CUES) {
       const notes = notesOf(dusk, SEED).flat();
       for (const n of notes) {
         expect(DRUM_VOICES).not.toContain(n.voice);
@@ -224,7 +236,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('gives every day habitat cue but Cenote Glow drums, so the dusk version is what takes them away', () => {
-    for (const day of DAY_HABITAT_CUES.filter((cue) => cue !== CENOTE_GLOW)) {
+    for (const day of CHECKED_DAY_CUES.filter((cue) => cue !== CENOTE_GLOW)) {
       expect(notesOf(day, SEED, 1).flat().some((n) => DRUM_VOICES.includes(n.voice))).toBe(true);
     }
   });
@@ -241,7 +253,7 @@ describe('music voices', () => {
 
 describe('the music echo', () => {
   it('is 0.4 for Cenote Glow and its dusk version, and off for every other cue, which plays only the shared room reverb', () => {
-    for (const cue of ALL_CUES) {
+    for (const cue of CHECKED_CUES) {
       const cenote = (cue.dayId ?? cue.id) === CENOTE_GLOW.id;
       expect(cue.echo, cue.id).toBe(cenote ? 0.4 : undefined);
     }
@@ -333,6 +345,121 @@ describe('the key of Cenote Glow (S12)', () => {
   });
 });
 
+describe("Trajinera Waltz, the deep canal's cue (M3; docs/music-guide.md, section 4)", () => {
+  const PER_LOOP = stepsPerLoop(TRAJINERA_WALTZ);
+  const PER_BAR = stepsPerBar(TRAJINERA_WALTZ);
+  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES.filter((cue) => cue !== TRAJINERA_WALTZ)];
+
+  /** The tune notes of pass `pass` (from 0) of `cue`, step by step. */
+  function tuneNotesOf(cue: Readonly<MusicCue>, steps: readonly MusicNote[][], pass: number): MusicNote[][] {
+    const perLoop = stepsPerLoop(cue);
+    return steps.slice(pass * perLoop, (pass + 1) * perLoop).map((notes) => notes.filter((n) => n.part === 'tune'));
+  }
+
+  it('matches the music guide: D major, a straight 3/4 waltz at 108 bpm, its chords, no echo, and a dusk pace of 84', () => {
+    const chordNames = TRAJINERA_WALTZ.bars.map((chords) => chords.map((c) => c.name).join(' '));
+    expect([TRAJINERA_WALTZ.id, TRAJINERA_WALTZ.name, TRAJINERA_WALTZ.version]).toEqual(['trajinera-waltz', 'Trajinera Waltz', 'day']);
+    expect([TRAJINERA_WALTZ.key, TRAJINERA_WALTZ.bpm, TRAJINERA_WALTZ.beatsPerBar, TRAJINERA_WALTZ.stepsPerBeat, TRAJINERA_WALTZ.swing]).toEqual(['D major', 108, 3, 2, 0]);
+    expect(chordNames).toEqual(['D', 'Bm', 'G', 'A', 'D', 'Em', 'A7', 'D']);
+    expect(TRAJINERA_WALTZ.tune).toHaveLength(8);
+    expect(TRAJINERA_WALTZ.dusk).toEqual({ bpm: 84, swing: 0 });
+    expect(duskVersion(TRAJINERA_WALTZ)).toMatchObject({ id: 'trajinera-waltz-dusk', name: 'Trajinera Waltz (dusk)', bpm: 84, swing: 0, version: 'dusk', dayId: TRAJINERA_WALTZ.id });
+    expect(TRAJINERA_WALTZ.echo).toBeUndefined();
+    expect(stepSeconds(TRAJINERA_WALTZ)).toBeCloseTo(60 / 108 / 2);
+    expect(PER_BAR).toBe(6);
+  });
+
+  it('has its own key, feel, tempo and lead instrument, unlike every other cue', () => {
+    const leadOf = (cue: Readonly<MusicCue>): string[] => [...new Set(tuneNotesOf(cue, notesOf(cue, SEED, 1), 0).flat().map((n) => n.voice))];
+    const tempos = OTHER_CUES.flatMap((cue) => [cue.bpm, ...(cue.dusk === undefined ? [] : [cue.dusk.bpm])]);
+    expect(leadOf(TRAJINERA_WALTZ)).toEqual(['guitar']);
+    for (const cue of OTHER_CUES) {
+      expect(cue.key, cue.id).not.toBe(TRAJINERA_WALTZ.key);
+      expect(cue.beatsPerBar, cue.id).not.toBe(3);
+      expect(leadOf(cue), cue.id).not.toContain('guitar');
+    }
+    expect(tempos).not.toContain(TRAJINERA_WALTZ.bpm);
+    expect(tempos).not.toContain(TRAJINERA_WALTZ.dusk?.bpm);
+  });
+
+  it('plays oom-pah-pah: a pad, a deep bass and a soft kick on beat 1, plucked strings on beats 2 and 3', () => {
+    notesOf(TRAJINERA_WALTZ, SEED, 1).forEach((notes, index) => {
+      const place = stepPlace(TRAJINERA_WALTZ, index);
+      const pads = notes.filter((n) => n.voice === 'pad');
+      const kicks = notes.filter((n) => n.voice === 'kick');
+      const strings = notes.filter((n) => n.voice === 'strings');
+      const roots = notes.filter((n) => n.voice === 'bass' && n.midi === place.chord.root);
+      expect(pads.map((n) => n.midi)).toEqual(place.step === 0 ? [...place.chord.notes] : []);
+      expect(kicks).toHaveLength(place.step === 0 ? 1 : 0);
+      expect(roots).toHaveLength(place.step === 0 ? 1 : 0);
+      expect(strings.map((n) => n.midi)).toEqual(place.step === 2 || place.step === 4 ? [...place.chord.notes] : []);
+      for (const n of notes.filter((each) => DRUM_VOICES.includes(each.voice))) expect(n.voice).toBe('kick');
+    });
+  });
+
+  it('plays the guitar tune, a kalimba an octave up on the second pass, and a guitar a third below in D major on the third', () => {
+    const steps = notesOf(TRAJINERA_WALTZ, SEED);
+    for (let pass = 0; pass < 3; pass++) {
+      const tune = tuneNotesOf(TRAJINERA_WALTZ, steps, pass);
+      TRAJINERA_WALTZ.tune.forEach((tuneBar, barIndex) => {
+        for (const tuneNote of tuneBar) {
+          const played = tune[barIndex * PER_BAR + tuneNote.step];
+          const lead = played.filter((n) => n.voice === 'guitar' && n.midi === tuneNote.midi);
+          expect(lead).toHaveLength(1);
+          const others = played.filter((n) => n !== lead[0]);
+          if (pass === 0) expect(others).toHaveLength(0);
+          if (pass === 1) expect(others.map((n) => [n.voice, n.midi])).toEqual([['kalimba', tuneNote.midi + 12]]);
+          if (pass === 2) {
+            expect(others).toHaveLength(1);
+            expect(others[0].voice).toBe('guitar');
+            expect([3, 4]).toContain(tuneNote.midi - (others[0].midi ?? 0));
+            expect(D_MAJOR_PITCHES).toContain((others[0].midi ?? 0) % 12);
+          }
+        }
+      });
+    }
+  });
+
+  it('keeps the tune in the first half of the fourth pass and makes up a guitar phrase from the D major pentatonic in the second', () => {
+    const steps = notesOf(TRAJINERA_WALTZ, SEED);
+    const fourth = tuneNotesOf(TRAJINERA_WALTZ, steps, 3);
+    const half = PER_LOOP / 2;
+    expect(fourth.slice(0, half)).toEqual(tuneNotesOf(TRAJINERA_WALTZ, steps, 0).slice(0, half));
+    const madeUp = fourth.slice(half).flat();
+    expect(madeUp.length).toBeGreaterThan(0);
+    for (const n of madeUp) {
+      expect(n.voice).toBe('guitar');
+      expect([0, 2, 4, 7, 9, 12]).toContain((n.midi ?? 0) - noteMidi('D5'));
+    }
+  });
+
+  it('keeps every tune, chord and bass note in D major, and ends bars 4 and 8 with two bubbles', () => {
+    const steps = notesOf(TRAJINERA_WALTZ, SEED);
+    for (const n of steps.flat().filter((each) => each.part !== 'sparkles' && each.midi !== null)) {
+      expect(D_MAJOR_PITCHES).toContain((n.midi ?? 0) % 12);
+    }
+    steps.forEach((notes, index) => {
+      const place = stepPlace(TRAJINERA_WALTZ, index);
+      if ((place.bar === 3 || place.bar === 7) && place.step >= 4) expect(notes.filter((n) => n.voice === 'bubble')).toHaveLength(1);
+    });
+  });
+
+  it('is in sound key D, the home note of D major, in its dusk version too, with every pitched sound inside D major (S12)', () => {
+    expect(TRAJINERA_WALTZ.soundKey).toBe('D');
+    expect(TRAJINERA_WALTZ.tonic).toBe('D');
+    expect(soundKeyFor(duskVersion(TRAJINERA_WALTZ))).toBe('D');
+    const key = soundKeyFor(TRAJINERA_WALTZ);
+    for (const id of Object.keys(SOUNDS) as SoundId[]) {
+      for (const version of Object.keys(SOUNDS[id].versions)) {
+        for (const midi of soundNotes(id, version, key).flatMap((n) => n.midis)) {
+          expect(inSoundKey(key, midi)).toBe(true);
+          expect(D_MAJOR_PITCHES).toContain(midi % 12);
+        }
+      }
+    }
+  });
+});
+
 describe('Sunny Tank data (docs/music-guide.md, section 4)', () => {
   it('is an 8-bar loop in G at 96 bpm, swung', () => {
     expect(SUNNY_TANK.bars).toHaveLength(8);
@@ -375,22 +502,22 @@ describe('stepPlace', () => {
 });
 
 describe('arrangeStep (M10)', () => {
-  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('plays the same notes for the same seed: %s', (_, cue) => {
+  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('plays the same notes for the same seed: %s', (_, cue) => {
     expect(notesOf(cue, SEED)).toEqual(notesOf(cue, SEED));
   });
 
-  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('changes some notes from one pass to the next: %s', (_, cue) => {
+  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('changes some notes from one pass to the next: %s', (_, cue) => {
     const steps = notesOf(cue, SEED);
     const perLoop = stepsPerLoop(cue);
     const passes = [0, 1, 2, 3].map((pass) => JSON.stringify(steps.slice(pass * perLoop, (pass + 1) * perLoop)));
     expect(new Set(passes).size).toBe(4);
   });
 
-  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('changes some notes for another seed: %s', (_, cue) => {
+  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('changes some notes for another seed: %s', (_, cue) => {
     expect(notesOf(cue, SEED)).not.toEqual(notesOf(cue, SEED + 1));
   });
 
-  it.each([SUNNY_TANK, ...DAY_HABITAT_CUES].map((cue) => [cue.name, cue] as const))(
+  it.each([SUNNY_TANK, ...CHECKED_DAY_CUES].map((cue) => [cue.name, cue] as const))(
     'plays the tune on its steps in the first pass: %s',
     (_, cue) => {
       const steps = notesOf(cue, SEED, 1);
@@ -413,7 +540,7 @@ describe('arrangeStep (M10)', () => {
     for (const n of fourth) expect([0, 2, 4, 7, 9, 12]).toContain((n.midi ?? 0) - g5);
   });
 
-  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('keeps every note in range, gentle, and on time: %s', (_, cue) => {
+  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('keeps every note in range, gentle, and on time: %s', (_, cue) => {
     // A dusk echo or firefly may land up to a step late; every other note starts within its step.
     const latest = stepSeconds(cue) * (cue.version === 'dusk' ? 2 : 1);
     for (const n of notesOf(cue, SEED).flat()) {

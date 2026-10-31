@@ -19,6 +19,7 @@ import {
 import { DEV_DANGER_AREA } from './devAreas';
 import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
 import {
+  BLACK_BASS_SPECIES,
   CARP_SPECIES,
   GARTER_SNAKE_SPECIES,
   TILAPIA_SPECIES,
@@ -404,6 +405,16 @@ describe('meetsDepthRule', () => {
     expect(rule([upper], [predatorLoop('carp-1', CHASING_CARP, loop(100, 300, 270, 318))])).toBe(false);
     expect(rule([], [predatorLoop('carp-1', CHASING_CARP, loop(100, 300, 170, 318))])).toBe(true);
     expect(rule([], [predatorLoop('pike-1', OTHER_SPECIES, loop(100, 300, 170, 171))])).toBe(true);
+  });
+
+  it('counts black bass loops on their own (issue #78, ND-6)', () => {
+    const bass = (id: string, y0: number, y1: number) => predatorLoop(id, BLACK_BASS_SPECIES, loop(100, 300, y0, y1));
+    expect(rule([], [bass('bass-1', 170, 318)])).toBe(true);
+    expect(rule([], [bass('bass-1', 170, 317)])).toBe(false);
+    expect(rule([], [bass('bass-1', 171, 218), bass('bass-2', 194, 394)])).toBe(false);
+    expect(rule([], [bass('bass-1', 94, 218), bass('bass-2', 270, 318)])).toBe(true);
+    expect(rule([tilapiaBetween('t-1', 94, 218)], [bass('bass-1', 270, 318)])).toBe(false);
+    expect(rule([], [bass('bass-1', 94, 218), predatorLoop('carp-1', CHASING_CARP, loop(100, 300, 270, 318))])).toBe(false);
   });
 });
 

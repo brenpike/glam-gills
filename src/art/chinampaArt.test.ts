@@ -343,7 +343,7 @@ describe('chinampa look (guide 3c, 7a)', () => {
 
   it('is a habitat look, listed after the pond and before the area variants', () => {
     expect(isHabitatLookId('chinampa')).toBe(true);
-    expect([...HABITAT_LOOK_IDS]).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
+    expect([...HABITAT_LOOK_IDS]).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
     expect(AREA_LOOK_IDS.indexOf('chinampa')).toBe(2);
     expect(look.id).toBe('chinampa');
   });
@@ -390,8 +390,8 @@ describe('chinampa look (guide 3c, 7a)', () => {
     expect(look.chinampaProps).toBe(true);
   });
 
-  it('leaves the canal, the pond and the dusk pond with willow banks, no gap edges and no chinampa props', () => {
-    for (const id of ['canal', 'pond', 'pond-dusk'] as const) {
+  it('leaves the canal, the pond, the dusk pond and the deep canal with willow banks, no gap edges and no chinampa props', () => {
+    for (const id of ['canal', 'pond', 'pond-dusk', 'deep-canal'] as const) {
       const other = habitatLook(id);
       expect(other.bank, id).toBe('willows');
       expect(other.currentGap, id).toBe(false);

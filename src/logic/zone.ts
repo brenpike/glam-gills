@@ -15,6 +15,7 @@ import type { RockWall } from './pebble';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import type { PredatorRoute } from './predators';
 import { mulberry32 } from './rng';
+import { trajineraHullBand, type TrajineraSpawn } from './trajineras';
 import { FINDS, type TilapiaTuning } from './tuning';
 
 /** Height of one screen in world px; the canal is one screen tall. */
@@ -45,7 +46,7 @@ const SNACK_START_CLEARANCE = 90;
 const SNACK_MAX_ATTEMPTS = 400;
 /**
  * Minimum distance in px from every snack start to every hazard's drift sweep (hazardSweep), every
- * element sweep and every moving hazard's sweep.
+ * element sweep, every moving hazard's sweep and every gliding trajinera's hull band.
  */
 export const SNACK_HAZARD_CLEARANCE = 80;
 const SPOT_HOME_CLEARANCE = FINDS.pickupRadius + 8;
@@ -262,6 +263,8 @@ export interface ZoneLayout {
   rockWalls?: RockWall[];
   /** Walled side rooms behind a pebble (issue #105, ND-8); absent means none. */
   sideRooms?: RockWall[];
+  /** Gliding trajineras (issue #78, ND-8); absent means none. Never in `elements`. */
+  trajineras?: TrajineraSpawn[];
 }
 
 /** An area's size in world px. */
@@ -339,6 +342,12 @@ export interface AreaLayoutData {
    * needs the pebble. Absent means none.
    */
   readonly sideRooms?: readonly Readonly<RockWall>[];
+  /**
+   * Gliding trajineras, built with trajineraSpawn() (issue #78, ND-8): fixed area data, never seeded
+   * and never in `elements`. No snack starts within SNACK_HAZARD_CLEARANCE of a boat's hull band
+   * (trajineraHullBand). Absent means none.
+   */
+  readonly trajineras?: readonly Readonly<TrajineraSpawn>[];
 }
 
 /** The canal cave. */
@@ -643,7 +652,8 @@ function rockRect(rock: Readonly<RockWall>): HazardRect {
 
 /**
  * The sweep of every element that has geometry, then of every moving hazard, then every rock wall
- * and side room (issue #105, ND-8), in data order.
+ * and side room (issue #105, ND-8), then every gliding trajinera's hull band (issue #78, ND-8), in
+ * data order.
  */
 function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
   const elementSweeps = data.elements.flatMap((element) => {
@@ -651,12 +661,13 @@ function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
     return sweep ? [sweep] : [];
   });
   const rock = [...(data.rockWalls ?? []), ...(data.sideRooms ?? [])].map(rockRect);
-  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep), ...rock];
+  const hullBands = (data.trajineras ?? []).map((boat) => trajineraHullBand(boat));
+  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep), ...rock, ...hullBands];
 }
 
 /**
  * Snack starts, each SNACK_HAZARD_CLEARANCE px or more from every hazard's drift sweep, element
- * sweep and moving hazard sweep. Only candidates near one are redrawn, so an area with none makes
+ * sweep, moving hazard sweep and trajinera hull band. Only candidates near one are redrawn, so an area with none makes
  * the same draws.
  */
 function buildSnacks(
@@ -864,6 +875,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
+    ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
   };
 }
 
@@ -887,10 +899,18 @@ function copyHazard(hazard: Readonly<HazardSpawn>): HazardSpawn {
   };
 }
 
+/** A copy of the boat sharing no object with the data. */
+function copyTrajinera(boat: Readonly<TrajineraSpawn>): TrajineraSpawn {
+  return { ...boat, type: copyElementType(boat.type), trajinera: { ...boat.trajinera } };
+}
+
 /** The layout's optional fields, each copied only when its data is set. */
 function optionalLayoutParts(
   data: Readonly<AreaLayoutData>,
-): Pick<ZoneLayout, 'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks' | 'darkWater' | 'rockWalls' | 'sideRooms'> {
+): Pick<
+  ZoneLayout,
+  'tilapia' | 'bankOverhangs' | 'movingHazards' | 'mobileSnacks' | 'darkWater' | 'rockWalls' | 'sideRooms' | 'trajineras'
+> {
   return {
     ...(data.tilapia ? { tilapia: { ...data.tilapia } } : {}),
     ...(data.bankOverhangs ? { bankOverhangs: data.bankOverhangs.map((overhang) => ({ ...overhang })) } : {}),
@@ -899,15 +919,16 @@ function optionalLayoutParts(
     ...(data.darkWater ? { darkWater: { ...data.darkWater } } : {}),
     ...(data.rockWalls ? { rockWalls: data.rockWalls.map((wall) => ({ ...wall })) } : {}),
     ...(data.sideRooms ? { sideRooms: data.sideRooms.map((room) => ({ ...room })) } : {}),
+    ...(data.trajineras ? { trajineras: data.trajineras.map(copyTrajinera) } : {}),
   };
 }
 
 /**
  * Deterministically builds an area's zone layout from its data and a mulberry32 seed. The rules
  * read the layout's width, height and bedTop, never the canal constants. The optional tilapia
- * tuning, bank overhangs, bank spots, moving hazards, mobile snacks, dark water, rock walls and side
- * rooms make no rand() draws; only snack starts near a drifting net's path, a moving hazard's sweep,
- * a rock wall or a side room are redrawn.
+ * tuning, bank overhangs, bank spots, moving hazards, mobile snacks, dark water, rock walls, side
+ * rooms and gliding trajineras make no rand() draws; only snack starts near a drifting net's path, a
+ * moving hazard's sweep, a rock wall, a side room or a trajinera's hull band are redrawn.
  */
 export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLayout {
   const rand = mulberry32(seed);

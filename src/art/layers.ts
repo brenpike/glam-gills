@@ -51,9 +51,16 @@
  * haze, and snacks never sit in a band. `rock` (the solid rock walls and the pebble, issue #105,
  * ND-8) sits above the glow-plants and below the tilapia: what is drawn is what blocks, so snacks,
  * treasure spots and the dark layer are behind it, and every predator and the axolotl draw in front.
+ * `trajineraShadow` (a gliding trajinera's leading shadow, issue #78, ND-8) sits just above the haze
+ * and below `hyacinthMat`: the see-through warning on the water is never hazed, and every cue object,
+ * the boat's own hull included, draws over it. `trajineraHull` (the gliding trajinera's hull, issue
+ * #78, ND-8) shares `movingHazard`'s band, as the punting pole's bow is the same kind of boat: in
+ * front of the tilapia and the black bass, behind the heron stab, the halo and the axolotl, so a
+ * pushed axolotl is never hidden by the boat. The surface and the pads draw over its rail at the
+ * water line. Its push ripple uses `fx`. The black bass reuses `tilapia`.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
- * < haze < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
- * < collectibles < darkWater < glowPlant < rock < tilapia < movingHazard < heronStab < halo < friend < axolotl < queasyTint
+ * < haze < trajineraShadow < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
+ * < collectibles < darkWater < glowPlant < rock < tilapia < movingHazard = trajineraHull < heronStab < halo < friend < axolotl < queasyTint
  * < bubbles < surface < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
@@ -68,6 +75,8 @@ export const DEPTH = {
   /** Provisional. Past-the-current carved stone marker (hazed scenery). */
   currentMarker: 12,
   haze: 20,
+  /** Provisional. Gliding trajinera's leading shadow: above the haze, below the mats and every cue object. */
+  trajineraShadow: 21,
   /** Provisional. Water hyacinth mats: above the haze, below the heron body and every cue object. */
   hyacinthMat: 22,
   /** Provisional. Wading heron body, legs, and rest, watch and warn head and neck: above the haze, below every cue object. */
@@ -93,6 +102,8 @@ export const DEPTH = {
   tilapia: 35,
   /** Provisional. Moving hazard shadow, shaft and bow: in front of the tilapia, behind the heron stab, the halo and the axolotl. */
   movingHazard: 36,
+  /** Provisional. Gliding trajinera hull: the moving hazard band, behind the heron stab, the halo and the axolotl. */
+  trajineraHull: 36,
   /** Provisional. Wading heron stab head and neck piece: in front of the tilapia, behind the halo and the axolotl. */
   heronStab: 37,
   /** Provisional. Protected halo: behind the axolotl, in front of the tilapia. */

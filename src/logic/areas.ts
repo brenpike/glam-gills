@@ -1,6 +1,7 @@
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import type { SnackDrift } from './collectibles';
+import { DEEP_CANAL_AREA_ID, DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import { REFUGE_FACT_CARDS, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT, type FactCard } from './factCards';
 import type { ElementSpawn, HazardSpawn } from './hazards';
 import type { MobileSnackMix } from './mobileSnacks';
@@ -34,8 +35,17 @@ export const CHINAMPA_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'chinampa
 /** The spring cave habitat, home of Areas 6 and 7. */
 export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
 
+/** The deep canal habitat, home of Area 8 (issue #78). */
+export const DEEP_CANAL_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
+
 /** Every habitat. */
-export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT]);
+export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([
+  CANAL_HABITAT,
+  POND_HABITAT,
+  CHINAMPA_HABITAT,
+  SPRING_CAVE_HABITAT,
+  DEEP_CANAL_HABITAT,
+]);
 
 /** The habitat with this id, or undefined when there is none. */
 export function habitatById(id: string): Readonly<Habitat> | undefined {
@@ -252,6 +262,33 @@ export const SPRING_CAVE_2_AREA: Readonly<AreaData> = Object.freeze({
   strandingChance: 0.3,
 });
 
+/**
+ * Area 8, the deep canal, the first two-lane area, where the black bass hunts and the trajineras
+ * glide (issue #78).
+ */
+export const DEEP_CANAL_AREA: Readonly<AreaData> = Object.freeze({
+  id: DEEP_CANAL_AREA_ID,
+  number: 8,
+  habitatId: DEEP_CANAL_HABITAT.id,
+  layout: DEEP_CANAL_LAYOUT,
+  /**
+   * Provisional exit low in the exit pocket on the east side, where the two lanes join, so its gate
+   * stands on the bed (issue #183), at the end of the main path: inside the swim bounds, out of the safe area and every predator's reach, clear of
+   * every pole sweep and the divider, and clear of every hiding spot by more than the exit radius
+   * plus the find pickup radius.
+   */
+  exit: Object.freeze({ x: 3720, y: 600, radius: 40 }),
+  specialTreasureId: 'deep-canal/little-trajinera',
+  /**
+   * Provisional drift, a little faster than Area 7 (PRD H4): the same amplitudes with shorter
+   * periods. That is below the 17 px/s a one-leg axolotl makes against the side-canal inflow and at
+   * most half the 40 px/s Snack magnet pull. No snacks dart once: the shrimp replace the one-time
+   * darters.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 7.0, periodY: 5.6 }),
+  strandingChance: 0.3,
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -261,6 +298,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CHINAMPA_2_AREA,
   SPRING_CAVE_AREA,
   SPRING_CAVE_2_AREA,
+  DEEP_CANAL_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */
@@ -443,7 +481,8 @@ function countedThreatIds(source: ThreatSource): string[] {
 
 /**
  * Per area, in area order, the hazards or predators and the timing or puzzle elements that no
- * earlier area has. Carried-forward ids are not new. Danger parts and mobile snack types are never
+ * earlier area has: its elements, then its gliding trajineras (issue #78, ND-8), which are kept out
+ * of `elements`. Carried-forward ids are not new. Danger parts and mobile snack types are never
  * counted (ND-13, ND-27).
  */
 export function newThingsByArea(areas: readonly Readonly<AreaData>[] = AREAS): NewThings[] {
@@ -453,7 +492,7 @@ export function newThingsByArea(areas: readonly Readonly<AreaData>[] = AREAS): N
     areaId: area.id,
     threats: takeNewIds(countedThreatIds(area.layout), seenThreats),
     elements: takeNewIds(
-      area.layout.elements.map((element) => element.type.id),
+      [...area.layout.elements, ...(area.layout.trajineras ?? [])].map((element) => element.type.id),
       seenElements,
     ),
   }));

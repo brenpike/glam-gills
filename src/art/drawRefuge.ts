@@ -17,7 +17,10 @@
  * plots with ahuejote willows and roots, bare when dirty, with corn, marigolds and lettuce
  * when clean. Spring cave (issue #77): grey-blue rock walls and stalactites under the cave roof,
  * dull stubs when dirty, teal crystals glowing at the wall feet when clean, and glow-plants in the
- * plants layer. Nothing for the deep canal: later habitats add their own entries.
+ * plants layer. Deep canal (issue #78): darker blue-green water, a moored trajinera silhouette at each
+ * bank and old paving slabs on the bed; plain faded hulls when dirty, cream hulls with a painted band
+ * and a flower arch when clean, and a mossy stone block with waterweed and a drifting flower in the
+ * plants layer. Later habitats add their own entries.
  *
  * Contrast (guide 10): the picture is UI, not a cue object. Its ink frame (3.5) must read
  * on everything that meets it, so every colour that can touch the frame is held to 3:1
@@ -37,6 +40,15 @@ import { REFUGE_PICTURE } from '../logic/refugeUi';
 import { TAU, ell, frameFromBounds, inkMany, line, seg, shape, type Seg, type TexSize } from './canvasKit';
 import { ROOT_TANGLE_BARK } from './drawChinampa';
 import { paintLilyPad, paintReed, type ReedLook } from './drawScenery';
+import {
+  CANAL_STONE,
+  CANAL_STONE_LIGHT,
+  CANAL_STONE_MOSS,
+  HULL_CAVE_ALGAE,
+  HULL_CAVE_WOOD,
+  HULL_CAVE_WOOD_DARK,
+} from './drawDeepCanal';
+import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_YELLOW } from './drawPuntingPole';
 import { habitatLook, type HabitatLook, type HabitatLookId } from './habitatLook';
 import {
   EYE,
@@ -256,7 +268,8 @@ const CANAL_STONES: readonly string[] = [PEBBLE_A, PEBBLE_B, PEBBLE_C];
 /**
  * The structure colours of each look that can meet the ink frame: the canal's stones, nothing for
  * the pond (its pads and cattails stand inside the picture), and the chinampa's plot soil, plot top,
- * willow trunk, roots and crops, and the spring cave's wall rock, stalactite rock and crystals. A new
+ * willow trunk, roots and crops, the spring cave's wall rock, stalactite rock and crystals, and the deep
+ * canal's moored hulls. A new
  * look fails to compile until it lists its own.
  */
 const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>> = {
@@ -275,6 +288,8 @@ const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>
     REFUGE_DEAD_STALK,
   ],
   'spring-cave': [REFUGE_CAVE_ROCK, REFUGE_CAVE_ROCK_LIGHT, REFUGE_CRYSTAL, REFUGE_CRYSTAL_LIT, REFUGE_CRYSTAL_DULL],
+  // the moored hulls reach the frame at the picture's sides: cream hull, painted band, arch and faded dirty wood
+  'deep-canal': [BOAT_HULL, BOAT_PINK, BOAT_ORANGE, BOAT_YELLOW, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK],
 };
 
 /**
@@ -796,11 +811,89 @@ function paintSpringCaveStructure(ctx: CanvasRenderingContext2D, state: RefugeAr
   }
 }
 
+// -- Deep canal: moored trajineras and old paving slabs ---------------------
+
+/** Ink of the moored hulls and the bed slabs (the pebble width, guide 4b). */
+const DEEP_HULL_LW = STONE_LW;
+/** Ink of the thinner slab seams' outline: the small slabs keep their fill. */
+const DEEP_SLAB_LW = 1.6;
+
+/**
+ * The left moored trajinera's hull, to the ink centreline: x -4 (past the frame) to the prow tip at
+ * (44, 10), its deck at y 16 (6 px above the waterline, SURF_Y 22) and its underside down to y 30.
+ * The right hull mirrors it about the picture centre, so both bows point to the middle.
+ */
+function mooredHullPath(): Path2D {
+  const p = new Path2D();
+  p.moveTo(-4, 16);
+  p.lineTo(36, 16);
+  p.quadraticCurveTo(42, 15, 44, 10);
+  p.quadraticCurveTo(43, 25, 32, 30);
+  p.lineTo(-4, 30);
+  p.closePath();
+  return p;
+}
+
+/** The flower arch over a clean hull: a tube from foot to foot, its middle at y 7. */
+function mooredArch(): Seg {
+  return curveTube(6, 16, 18, -2, 30, 16, 3.4, BOAT_ORANGE, 1.8);
+}
+
+/** Where the arch flowers sit (the arch at 0.25, 0.5 and 0.75 of its length): x, y. */
+const MOORED_FLOWERS: readonly (readonly [number, number])[] = [
+  [12, 9.25],
+  [18, 7],
+  [24, 9.25],
+];
+
+/** Old paving slabs lying in the bed: x, y, width. All 8 tall, inside the picture, clear of the frame. */
+const DEEP_SLABS: readonly (readonly [number, number, number, string])[] = [
+  [16, 83, 36, CANAL_STONE],
+  [62, 84, 30, CANAL_STONE_LIGHT],
+  [108, 84, 30, CANAL_STONE_LIGHT],
+  [148, 83, 36, CANAL_STONE],
+];
+const DEEP_SLAB_H = 8;
+
+function paintDeepCanalStructure(ctx: CanvasRenderingContext2D, state: RefugeArtState): void {
+  const clean = state === 'clean';
+  for (const [x, y, w, fill] of DEEP_SLABS) {
+    shape(ctx, rectPath(x, y, w, DEEP_SLAB_H), fill, DEEP_SLAB_LW);
+  }
+  for (const mirror of [false, true]) {
+    ctx.save();
+    if (mirror) {
+      ctx.translate(PIC_W, 0);
+      ctx.scale(-1, 1);
+    }
+    // the arch first, so its feet tuck behind the deck
+    if (clean) inkMany(ctx, [mooredArch()]);
+    shape(ctx, mooredHullPath(), clean ? BOAT_HULL : HULL_CAVE_WOOD, DEEP_HULL_LW);
+    // the band along the hull: painted when clean, dull dark wood when dirty
+    ctx.lineWidth = 3.6;
+    ctx.strokeStyle = clean ? BOAT_PINK : HULL_CAVE_WOOD_DARK;
+    ctx.stroke(line(-4, 23, 40, 23));
+    if (clean) {
+      for (const [fx, fy] of MOORED_FLOWERS) {
+        const petals = new Path2D();
+        ell(petals, fx, fy, 3.4, 3.4);
+        shape(ctx, petals, BOAT_PINK, 1.8);
+        const heart = new Path2D();
+        ell(heart, fx, fy, 1.2, 1.2);
+        ctx.fillStyle = BOAT_YELLOW;
+        ctx.fill(heart);
+      }
+    }
+    ctx.restore();
+  }
+}
+
 const STRUCTURES: Readonly<Record<HabitatLookId, Structure>> = {
   canal: paintCanalStructure,
   pond: paintPondStructure,
   chinampa: paintChinampaStructure,
   'spring-cave': paintSpringCaveStructure,
+  'deep-canal': paintDeepCanalStructure,
 };
 
 /** Where the small axolotls rest in a clean picture, on the bed between the banks. */
@@ -821,6 +914,11 @@ const RESTERS: Readonly<Record<HabitatLookId, readonly { readonly x: number; rea
   'spring-cave': [
     { x: 74, y: 71, flip: false },
     { x: 126, y: 70, flip: true },
+  ],
+  // between the moored hulls (their bows end at x 44 and 156) and the plants at the centre
+  'deep-canal': [
+    { x: 72, y: 71, flip: false },
+    { x: 128, y: 70, flip: true },
   ],
 };
 
@@ -950,6 +1048,10 @@ export const REFUGE_SECTION_PAINTERS: Readonly<
     dirty: (ctx) => paintRefugeSection(ctx, 'spring-cave', 'dirty'),
     clean: (ctx) => paintRefugeSection(ctx, 'spring-cave', 'clean'),
   },
+  'deep-canal': {
+    dirty: (ctx) => paintRefugeSection(ctx, 'deep-canal', 'dirty'),
+    clean: (ctx) => paintRefugeSection(ctx, 'deep-canal', 'clean'),
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1037,12 +1139,44 @@ function paintSpringCavePlants(ctx: CanvasRenderingContext2D): void {
   }
 }
 
+/**
+ * The deep canal's plants: a worn stone block on the bed with a moss cap, three ribbons of waterweed
+ * and one pink flower that has drifted down from the arches, growing up from the base. About 36 wide
+ * and 56 tall, narrow enough to stand between the two resting axolotls ({@link REFUGE_PLANTS_TEX} is 80 x 60).
+ */
+function paintDeepCanalPlants(ctx: CanvasRenderingContext2D): void {
+  const weeds: Seg[] = [];
+  for (const [x, lean, h] of [
+    [-9, -5, 30],
+    [0, 3, 44],
+    [9, 6, 24],
+  ] as const) {
+    weeds.push(curveTube(x, -5, x - lean * 0.6, -5 - h * 0.55, x + lean, -5 - h, 3, HULL_CAVE_ALGAE, 1.7));
+  }
+  inkMany(ctx, weeds);
+  const block = new Path2D();
+  ell(block, 0, -3, 17, 5.5);
+  shape(ctx, block, CANAL_STONE_LIGHT, 2.4);
+  const moss = new Path2D();
+  ell(moss, -3, -6.5, 8, 1.8);
+  ctx.fillStyle = CANAL_STONE_MOSS;
+  ctx.fill(moss);
+  const flower = new Path2D();
+  ell(flower, 3, -49, 4.4, 4.4);
+  shape(ctx, flower, BOAT_PINK, 1.8);
+  const heart = new Path2D();
+  ell(heart, 3, -49, 1.5, 1.5);
+  ctx.fillStyle = BOAT_FLOWER_CENTRE;
+  ctx.fill(heart);
+}
+
 /** Every look's plants painter. Local (0, 0) is the base of the plants, bottom-centre ({@link REFUGE_PLANTS_TEX}). */
 export const REFUGE_PLANTS_PAINTERS: Readonly<Record<HabitatLookId, PlantsPainter>> = {
   canal: paintCanalPlants,
   pond: paintPondPlants,
   chinampa: paintChinampaPlants,
   'spring-cave': paintSpringCavePlants,
+  'deep-canal': paintDeepCanalPlants,
 };
 
 /** Paint the plants layer of `look` with its base at local (0, 0), growing up. */

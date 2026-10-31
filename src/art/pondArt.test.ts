@@ -428,7 +428,7 @@ describe('habitat looks (guide 3c, 7a)', () => {
   });
 
   it('has one look per shipped id', () => {
-    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
+    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
     for (const id of HABITAT_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
   });
 
@@ -784,8 +784,8 @@ const LUMINANCE_FLOOR = 0.1687;
 
 describe('area looks (issue #98)', () => {
   it('lists the habitat looks, then the dusk variant; only the habitat looks key the area map', () => {
-    expect(AREA_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'pond-dusk']);
-    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
+    expect(AREA_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'pond-dusk']);
+    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
     for (const id of AREA_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
     expect(isAreaLookId('pond-dusk')).toBe(true);
     expect(isHabitatLookId('pond-dusk')).toBe(false);
@@ -803,6 +803,7 @@ describe('area looks (issue #98)', () => {
       ['pond', true, { kind: 'log', anchor: 'bed' }, true, 0],
       ['chinampa', false, { kind: 'rootTangle', anchor: 'bed' }, false, 0],
       ['spring-cave', false, { kind: 'grotto', anchor: 'bed' }, false, 0],
+      ['deep-canal', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
       ['pond-dusk', true, { kind: 'rootArch', anchor: 'bank' }, true, 2],
     ]);
   });

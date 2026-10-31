@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   AXOLOTL_REFUGES_FACT,
+  BLACK_BASS_FACT,
+  BLACK_BASS_MEET_RANGE,
   BOY_OR_GIRL_FACT,
   CANAL_CLEAN_UPS_FACT,
   CARP_FACT,
@@ -32,7 +34,7 @@ import {
   unfoundFactCardHint,
   type ThreatSighting,
 } from './factCards';
-import { CARP, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
+import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
 import type { SafeArea } from './zone';
 
 const BANNED = [
@@ -426,6 +428,43 @@ describe('stalactite and geyser fact card copy (issue #77, ND-3, option B)', () 
 
   it.each([STALACTITE_FACT, GEYSER_FACT].flatMap((card) => [card.name, card.title, card.body]))('"%s" avoids banned words', (text) => {
     expect(findBannedWords(text)).toEqual([]);
+  });
+});
+
+describe('black bass fact card copy (issue #78)', () => {
+  it("has the black-bass id and name, the owner's title and body, and no hint of its own", () => {
+    expect(BLACK_BASS_FACT).toEqual({
+      id: 'black-bass',
+      name: 'Black bass',
+      title: 'Meet the black bass',
+      body: 'Black bass are big fish that people brought to Xochimilco from far away. They hunt fast in open water. Axolotls stay safe by swimming out of the way.',
+    });
+    expect(BLACK_BASS_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(BLACK_BASS_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      ...REFUGE_FACT_CARDS.map((card) => card.id),
+    ];
+    expect(others).not.toContain(BLACK_BASS_FACT.id);
+  });
+
+  it.each([BLACK_BASS_FACT.name, BLACK_BASS_FACT.title, BLACK_BASS_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('uses a meet range of 180 px, no less than the lunge range', () => {
+    expect(BLACK_BASS_MEET_RANGE).toBe(180);
+    expect(BLACK_BASS_MEET_RANGE).toBeGreaterThanOrEqual(BLACK_BASS.lungeRange);
   });
 });
 

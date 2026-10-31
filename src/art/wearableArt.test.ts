@@ -115,6 +115,7 @@ import {
   ALL_TREASURES,
   CHINAMPA_2_TREASURES,
   CHINAMPA_TREASURES,
+  DEEP_CANAL_TREASURES,
   POND_2_TREASURES,
   POND_TREASURES,
   SPRING_CAVE_2_TREASURES,
@@ -128,6 +129,7 @@ import { WORLD_H } from '../logic/zone';
 import {
   BOAT_TRIM,
   BOW_GEM,
+  CAPTAINS_HAT_FILL,
   CAVE_CRYSTAL_FILL,
   CRYSTAL_CROWN_BAND,
   CRYSTAL_CUFF_BAND,
@@ -138,6 +140,8 @@ import {
   EXPLORER_VEST_FILL,
   FEATHER_CAP_FILL,
   FEATHER_FILL,
+  FIN_STREAMER_FILLS,
+  FIN_STREAMER_KNOT,
   FIREFLY_CAPE_FILL,
   FIREFLY_GLOW,
   FLIPPER_CUFF,
@@ -153,6 +157,9 @@ import {
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_SOCK_FILL,
+  MARIACHI_BRAID,
+  MARIACHI_JACKET_FILL,
+  MARIACHI_STUD,
   MINERS_HELMET_FILL,
   CLIMBING_HELMET_FILL,
   GEMSTONE_CAPE_FILL,
@@ -168,8 +175,10 @@ import {
   PEARL_FILL,
   POND_WEED_SCARF,
   RAINCOAT_FILL,
+  SAILOR_CAP_FILL,
   SOCK_FILL,
   SOCK_STRIPE_ALPHA,
+  STRIPED_SCARF_FILL,
   TANK_TOP_FILL,
   TREASURE_SHINE,
   WATER_LILY_BLOSSOM,
@@ -2558,7 +2567,7 @@ interface WearableRecord {
 
 /**
  * The measured numbers of every catalogue Wearable of every area (the canal's eight, the pond's seven, the
- * pond Area 3's five, the chinampa Area 4's five, the chinampa Area 5's six, the spring cave Area 6's five and Area 7's five), keyed by catalogue id. A new Wearable needs its row: the suite fails until its numbers are recorded,
+ * pond Area 3's five, the chinampa Area 4's five, the chinampa Area 5's six, the spring cave Area 6's five and Area 7's five, and the deep canal Area 8's five), keyed by catalogue id. A new Wearable needs its row: the suite fails until its numbers are recorded,
  * and fails when a number moves.
  */
 const WEARABLE_RECORD: Readonly<Record<string, WearableRecord>> = {
@@ -2659,6 +2668,11 @@ const WEARABLE_RECORD: Readonly<Record<string, WearableRecord>> = {
     worst: 'medium boy long regular baby swim 0.00 amp 1',
     slot: { minLength: 22, torsoLengthShare: 0.5, proud: 10.7473, outsideShare: 0.6385 },
   },
+  'deep-canal/sailor-cap': { cssPx2: 103.05, worst: 'boy happy smile', slot: { headWidthShare: 0.5113, rise: 13.62 } },
+  'deep-canal/striped-scarf': { cssPx2: 65.82, worst: 'boy happy bigGrin', slot: { minWidth: 38.11 } },
+  'deep-canal/mariachi-jacket': { cssPx2: 66.61, worst: 'medium boy short slim baby swim 0.00 amp 1', slot: { torsoSideShare: 0.8538 } },
+  'deep-canal/captains-hat': { cssPx2: 90.24, worst: 'boy happy smile', slot: { headWidthShare: 0.5249, rise: 16.95 } },
+  'deep-canal/rainbow-fin-streamers': { cssPx2: 84.39, worst: 'medium girl short regular baby swim 1.57 amp 1', slot: { tailHeightShare: 0.5559, minAlong: 22 } },
 };
 
 
@@ -3859,8 +3873,8 @@ const contrast = (a: string, b: string): number => {
 };
 
 describe('chinampa Area 4 Wearables (issue #76): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five chinampa Area 4 Wearables of the 41: Head, Neck, Shirt, Head and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(41);
+  it('has five chinampa Area 4 Wearables of the 46: Head, Neck, Shirt, Head and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(46);
     expect(CHINAMPA_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:straw-sun-hat',
       'neck:marigold-necklace',
@@ -3869,7 +3883,7 @@ describe('chinampa Area 4 Wearables (issue #76): zones, footprints and layers', 
       'back:monarch-wings',
     ]);
     expect(CHINAMPA_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(41);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(46);
     expect(Object.values(AREA4_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'head', 'back']);
   });
 
@@ -4354,8 +4368,8 @@ const AREA5_BODY_ITEMS = [
 const EVERY_SHIRT_SLUG = ['tank-top', POND_SLUG.raincoat, AREA3_SLUG.shirt, AREA4_SLUG.overalls, AREA5_SLUG.shirt] as const;
 
 describe('chinampa Area 5 Wearables (issue #103): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has six chinampa Area 5 Wearables of the 41: Head, Neck, Face, Shirt, Tail and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(41);
+  it('has six chinampa Area 5 Wearables of the 46: Head, Neck, Face, Shirt, Tail and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(46);
     expect(CHINAMPA_2_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:bee-headband',
       'neck:bandana',
@@ -4365,7 +4379,7 @@ describe('chinampa Area 5 Wearables (issue #103): zones, footprints and layers',
       'back:rainbow-serape-cape',
     ]);
     expect(CHINAMPA_2_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES, ...CHINAMPA_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(41);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(46);
     expect(Object.values(AREA5_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'face', 'shirt', 'tail', 'back']);
     // The Area 5 slugs come last, after the twenty-five earlier ones.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(25, 31)).toEqual([
@@ -5015,8 +5029,8 @@ const inkWidthsOf = (paints: readonly Paint[]): number[] =>
   [...new Set(paints.filter((p) => p.kind === 'stroke' && p.style === INK).map((p) => Math.round(p.lineWidth * 1e9) / 1e9))].sort((a, b) => a - b);
 
 describe('spring cave Area 6 Wearables (issue #77): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five spring cave Wearables of the 41: Head, Neck, Shirt, Tail and Head', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(41);
+  it('has five spring cave Wearables of the 46: Head, Neck, Shirt, Tail and Head', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(46);
     expect(SPRING_CAVE_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:miners-headlamp',
       'neck:crystal-pendant',
@@ -5025,7 +5039,7 @@ describe('spring cave Area 6 Wearables (issue #77): zones, footprints and layers
       'head:crystal-crown',
     ]);
     expect(SPRING_CAVE_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES, ...CHINAMPA_WEARABLES, ...CHINAMPA_2_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(41);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(46);
     expect(Object.values(AREA6_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'tail', 'head']);
     // The Area 6 slugs come after the thirty-one earlier ones.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(31, 36)).toEqual(['miners-headlamp', 'crystal-pendant', 'explorer-vest', 'crystal-tail-cuff', 'crystal-crown']);
@@ -5585,8 +5599,8 @@ const AREA7_BODY_ITEMS = [
 ] as const;
 
 describe('spring cave Area 7 Wearables (issue #105): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five spring cave Area 7 Wearables of the 41: Head, Neck, Face, Tail and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(41);
+  it('has five spring cave Area 7 Wearables of the 46: Head, Neck, Face, Tail and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(46);
     expect(SPRING_CAVE_2_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:climbing-helmet',
       'neck:pebble-necklace',
@@ -5595,10 +5609,10 @@ describe('spring cave Area 7 Wearables (issue #105): zones, footprints and layer
       'back:gemstone-cape',
     ]);
     expect(SPRING_CAVE_2_WEARABLES.some((w) => SPRING_CAVE_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(41);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(46);
     expect(Object.values(AREA7_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'face', 'tail', 'back']);
-    // The Area 7 slugs come last, after the thirty-six earlier ones.
-    expect(Object.keys(WEARABLE_ART_SLOT).slice(36)).toEqual(['climbing-helmet', 'pebble-necklace', 'cave-goggles', 'glow-tail-lantern', 'gemstone-cape']);
+    // The Area 7 slugs come after the thirty-six earlier ones, and the Area 8 slugs after them.
+    expect(Object.keys(WEARABLE_ART_SLOT).slice(36, 41)).toEqual(['climbing-helmet', 'pebble-necklace', 'cave-goggles', 'glow-tail-lantern', 'gemstone-cape']);
   });
 
   it('maps Area 7 catalogue ids to art slugs by slot, and leaves out an Area 7 id worn in the wrong slot', () => {
@@ -6001,6 +6015,549 @@ describe('spring cave Area 7 Wearables (issue #105): the rarity look ladder', ()
     expect(inkWidthsOf(bodyPaints('tail', GIRL, 0, 1, AREA7_SLUG.lantern))).toEqual([1.2, 4]);
     // The cape: the stones' 1.2 and the star's 1.2, the clasp band's 0.6 lines and the blob's 2 x 2.0.
     expect(inkWidthsOf(bodyPaints('back', GIRL, 0, 1, AREA7_SLUG.cape))).toEqual([0.6, 1.2, 4]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The deep canal Area 8 Wearables (issue #78): zones, footprints, layers and counted details
+// ---------------------------------------------------------------------------
+//
+// The same checks as the Area 7 block above, for the Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and
+// Rainbow fin streamers. The catalogue-driven suite holds each to the size rule; these hold them to the rest of guide
+// 6i. The earlier looks' checks are unchanged, and a digest pins their paints.
+
+const AREA8_SLUG = {
+  sailor: 'sailor-cap',
+  scarf: 'striped-scarf',
+  jacket: 'mariachi-jacket',
+  hat: 'captains-hat',
+  streamers: 'rainbow-fin-streamers',
+} as const satisfies Record<string, WearableArtSlug>;
+const DEEP_CANAL_WEARABLES = CATALOGUE_WEARABLES.filter((w) => DEEP_CANAL_TREASURES.some((t) => t.id === w.id));
+/** A full Area 8 outfit with the Captain's hat, and the same with the Sailor cap in the Head slot. */
+const AREA8_OUTFIT: ArtOutfit = { head: AREA8_SLUG.hat, neck: AREA8_SLUG.scarf, shirt: AREA8_SLUG.jacket, tail: AREA8_SLUG.streamers };
+const AREA8_SAILOR_OUTFIT: ArtOutfit = { ...AREA8_OUTFIT, head: AREA8_SLUG.sailor };
+/** The Area 8 slugs that paint on the body, with their slots. */
+const AREA8_BODY_ITEMS = [
+  ['head', AREA8_SLUG.sailor],
+  ['neck', AREA8_SLUG.scarf],
+  ['shirt', AREA8_SLUG.jacket],
+  ['head', AREA8_SLUG.hat],
+  ['tail', AREA8_SLUG.streamers],
+] as const;
+/** The seven Back items: Area 8 has none of its own, so every one keeps off the Mariachi jacket. */
+const EVERY_BACK_SLUG_7 = [...EVERY_BACK_SLUG, AREA7_SLUG.cape] as const;
+
+describe('deep canal Area 8 Wearables (issue #78): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
+  it('has five deep canal Wearables of the 46: Head, Neck, Shirt, Head and Tail', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(46);
+    expect(DEEP_CANAL_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
+      'head:sailor-cap',
+      'neck:striped-scarf',
+      'shirt:mariachi-jacket',
+      'head:captains-hat',
+      'tail:rainbow-fin-streamers',
+    ]);
+    expect(DEEP_CANAL_WEARABLES.some((w) => SPRING_CAVE_2_WEARABLES.includes(w))).toBe(false);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(46);
+    expect(Object.values(AREA8_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'head', 'tail']);
+    // The Area 8 slugs come last, after the forty-one earlier ones.
+    expect(Object.keys(WEARABLE_ART_SLOT).slice(41)).toEqual(['sailor-cap', 'striped-scarf', 'mariachi-jacket', 'captains-hat', 'rainbow-fin-streamers']);
+  });
+
+  it('maps Area 8 catalogue ids to art slugs by slot, and leaves out an Area 8 id worn in the wrong slot', () => {
+    expect(
+      artOutfit({
+        head: 'deep-canal/captains-hat',
+        neck: 'deep-canal/striped-scarf',
+        shirt: 'deep-canal/mariachi-jacket',
+        tail: 'deep-canal/rainbow-fin-streamers',
+      }),
+    ).toEqual(AREA8_OUTFIT);
+    expect(artOutfit({ head: 'deep-canal/sailor-cap' })).toEqual({ head: AREA8_SLUG.sailor });
+    expect(
+      artOutfit({
+        head: 'deep-canal/striped-scarf',
+        neck: 'deep-canal/captains-hat',
+        shirt: 'deep-canal/rainbow-fin-streamers',
+        tail: 'deep-canal/mariachi-jacket',
+        face: 'deep-canal/sailor-cap',
+      }),
+    ).toEqual({});
+    expect(outfitKey(AREA8_OUTFIT)).toBe('head=captains-hat,neck=striped-scarf,shirt=mariachi-jacket,tail=rainbow-fin-streamers');
+    // Still the canal's slug per slot first: the new slugs only come after.
+    expect(WEARABLE_ART_SLUGS).toEqual(['sun-hat', 'shell-necklace', 'heart-glasses', 'tank-top', 'diving-tank', 'golden-bow', 'stripy-socks', 'flippers']);
+  });
+
+  it('keeps the Sailor cap, Captain\'s hat and Striped scarf off the gill roots and the cheek heart zone, alike on every look', () => {
+    for (const [slot, slug] of [
+      ['head', AREA8_SLUG.sailor],
+      ['head', AREA8_SLUG.hat],
+      ['neck', AREA8_SLUG.scarf],
+    ] as const) {
+      const paints = bodyPaints(slot, DEFAULT_ART_LOOK, 0, 1, slug);
+      expect(paints.length).toBeGreaterThan(0);
+      for (const look of EVERY_BODY_LOOK) expect(bodyPaints(slot, look, 0, 1, slug).map(signature), `${slug} ${lookId(look)}`).toEqual(paints.map(signature));
+      for (const paint of paints) expect(trouble(paint, { lashes: true, gills: true }), `${slug} ${paint.kind} ${paint.style}`).toBeNull();
+    }
+  });
+
+  it('keeps the Mariachi jacket and the Rainbow fin streamers off the eyes, lashes, gill roots and cheek heart zone on every look, swim phase and tail amplitude', () => {
+    const bad: string[] = [];
+    for (const look of EVERY_BODY_LOOK) {
+      for (const p of bodyPaints('shirt', look, 0, 1, AREA8_SLUG.jacket)) {
+        const why = trouble(p, { lashes: true, gills: true });
+        if (why) bad.push(`${lookId(look)} jacket ${why}`);
+      }
+      for (const swim of SWIMS) {
+        for (const amp of AMPS) {
+          for (const p of bodyPaints('tail', look, swim, amp, AREA8_SLUG.streamers)) {
+            const why = trouble(p, { lashes: true, gills: true });
+            if (why) bad.push(`${lookId(look)} swim ${swim.toFixed(2)} amp ${amp} streamers ${why}`);
+          }
+        }
+      }
+    }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+
+  it('keeps every Area 8 Wearable of a full drawAxolotl run off the eyes and, past the silhouette, the gill roots and cheek heart zone, at every size', () => {
+    const looks = AXO_SIZES.flatMap((size): AxolotlArtLook[] => [
+      { ...DEFAULT_ART_LOOK, size },
+      { ...GIRL, size, body: 'chubby', age: 'baby', tail: 'short' },
+      { ...GIRL, size, body: 'slim', age: 'grownUp', tail: 'long' },
+    ]);
+    for (const outfit of [AREA8_OUTFIT, AREA8_SAILOR_OUTFIT]) {
+      for (const pose of Object.values(POSES)) {
+        for (const look of looks) {
+          const base = drawn(pose, look);
+          const worn = drawn(pose, look, outfit);
+          const silhouette = worn.findIndex((p) => p.kind === 'stroke' && p.lineWidth === 2 * LW && p.style === INK);
+          const inserted = insertedPaints(base, worn)!;
+          expect(inserted.length).toBeGreaterThan(0);
+          for (const { index, paint } of inserted) {
+            const why = trouble(paint, { lashes: false, gills: index > silhouette, heart: index > silhouette });
+            expect(why, `${lookId(look)} paint ${index} ${paint.kind} ${paint.style}`).toBeNull();
+          }
+        }
+      }
+    }
+  });
+
+  it('paints every Area 8 Wearable before the eyes, a Girl lashes included, and changes none of the axolotl\'s own paints', () => {
+    for (const outfit of [AREA8_OUTFIT, AREA8_SAILOR_OUTFIT]) {
+      for (const look of [DEFAULT_ART_LOOK, GIRL, { ...GIRL, body: 'chubby' as const, age: 'baby' as const, tail: 'short' as const }]) {
+        for (const pose of Object.values(POSES)) {
+          const base = drawn(pose, look);
+          const worn = drawn(pose, look, outfit);
+          const inserted = insertedPaints(base, worn);
+          expect(inserted).not.toBeNull();
+          expect(inserted!.length).toBeGreaterThan(0);
+          const eyes = firstEyePaint(worn);
+          expect(eyes).toBeGreaterThan(0);
+          for (const x of inserted!) expect(x.index).toBeLessThan(eyes);
+          expect(worn.length - eyes).toBe(base.length - firstEyePaint(base));
+        }
+      }
+    }
+  });
+
+  it('keeps the Sailor cap on the head top (ink x about 17 to 45.6, lowest y -19.5), resting on the head, its crown rising 8 or more above the head outline', () => {
+    const paints = bodyPaints('head', DEFAULT_ART_LOOK, 0, 1, AREA8_SLUG.sailor);
+    const box = inkBounds(paints);
+    expect(isInside(box, HEAD_FOOTPRINT)).toBe(true);
+    expect(box.maxY).toBeCloseTo(-19.5, 1);
+    expect(box.minX).toBeGreaterThanOrEqual(HEAD_FOOTPRINT.minX);
+    expect(box.maxX).toBeLessThanOrEqual(HEAD_FOOTPRINT.maxX + TOL);
+    expect(box.maxX - box.minX).toBeGreaterThanOrEqual(HEAD_ELLIPSE.rx * 2 * WEARABLE_SLOT_MINIMUMS.head.headWidthShare);
+    expect(headRise(inkPoints(paints))).toBeGreaterThanOrEqual(WEARABLE_SLOT_MINIMUMS.head.rise);
+    // The brim rests on the head: its lowest fill point is inside the head outline's ink ring.
+    const fills = paints.filter((p) => p.kind === 'fill' && p.style === SAILOR_CAP_FILL);
+    expect(fills).toHaveLength(2);
+    const lowest = fills.flatMap((p) => p.subs[0].pts).reduce((a, b) => (b.y > a.y ? b : a));
+    expect(((lowest.x - HEAD_ELLIPSE.cx) / (HEAD_ELLIPSE.rx + LW)) ** 2 + ((lowest.y - HEAD_ELLIPSE.cy) / (HEAD_ELLIPSE.ry + LW)) ** 2).toBeLessThan(1);
+    // The glasses keep 1.5 or more under it, as under every Head item.
+    expect(FACE_FOOTPRINT.minY - HEAD_FOOTPRINT.maxY).toBeCloseTo(1.5, 6);
+  });
+
+  it('paints the Sailor cap as a round crown on a flared brim: the brim wider at the top than at the bottom, the crown above it, the band darkened by ink at the stripe alpha', () => {
+    const paints = bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.sailor);
+    const [brimPaint, crownPaint] = paints.filter((p) => p.kind === 'fill' && p.style === SAILOR_CAP_FILL);
+    const brim = rawBoxOf([brimPaint]);
+    const crown = rawBoxOf([crownPaint]);
+    expect(crown.minY).toBeLessThan(brim.minY - 6);
+    expect(crown.minX).toBeGreaterThan(brim.minX);
+    expect(crown.maxX).toBeLessThan(brim.maxX);
+    const widthAt = (y: number): number => {
+      const xs = brimPaint.subs[0].pts.filter((q) => Math.abs(q.y - y) < 0.35).map((q) => q.x);
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    expect(widthAt(brim.minY + 1.6)).toBeGreaterThan(widthAt(brim.maxY - 0.5) + 2);
+    // The band: one fill of ink at the stripe alpha, clipped to the brim. No other colour.
+    const band = paints.filter((p) => p.kind === 'fill' && p.alpha === SOCK_STRIPE_ALPHA);
+    expect(band).toHaveLength(1);
+    expect(band[0].style).toBe(INK);
+    expect(band[0].clips.length).toBeGreaterThan(0);
+  });
+
+  it('keeps the Captain\'s hat on the head top (ink x about 17 to 46, lowest y -19.5), resting on the head, its top rising 8 or more above the head outline', () => {
+    const paints = bodyPaints('head', DEFAULT_ART_LOOK, 0, 1, AREA8_SLUG.hat);
+    const box = inkBounds(paints);
+    expect(isInside(box, HEAD_FOOTPRINT)).toBe(true);
+    expect(box.maxY).toBeCloseTo(-19.5, 1);
+    expect(box.maxX - box.minX).toBeGreaterThanOrEqual(HEAD_ELLIPSE.rx * 2 * WEARABLE_SLOT_MINIMUMS.head.headWidthShare);
+    expect(headRise(inkPoints(paints))).toBeGreaterThanOrEqual(WEARABLE_SLOT_MINIMUMS.head.rise);
+    const fills = paints.filter((p) => p.kind === 'fill' && p.style === CAPTAINS_HAT_FILL);
+    expect(fills).toHaveLength(3);
+    const lowest = fills.flatMap((p) => p.subs[0].pts).reduce((a, b) => (b.y > a.y ? b : a));
+    expect(((lowest.x - HEAD_ELLIPSE.cx) / (HEAD_ELLIPSE.rx + LW)) ** 2 + ((lowest.y - HEAD_ELLIPSE.cy) / (HEAD_ELLIPSE.ry + LW)) ** 2).toBeLessThan(1);
+  });
+
+  it('paints the Captain\'s hat as a flat round top over a band with a peak jutting forward, the gem on the band\'s front and the band and peak darkened', () => {
+    const paints = bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.hat);
+    const [band, peak, top] = paints.filter((p) => p.kind === 'fill' && p.style === CAPTAINS_HAT_FILL).map((p) => rawBoxOf([p]));
+    // The top is the widest part and sits highest; the peak juts further forward than the band and lower than its top.
+    expect(top.minY).toBeLessThan(band.minY);
+    expect(top.maxX - top.minX).toBeGreaterThan(band.maxX - band.minX);
+    expect(peak.maxX).toBeGreaterThan(band.maxX);
+    expect(peak.minY).toBeGreaterThan(band.minY + 4);
+    const gem = rawBoxOf([paints.find((p) => p.kind === 'fill' && p.style === BOW_GEM)!]);
+    expect(gem.minX).toBeGreaterThanOrEqual(band.minX);
+    expect(gem.maxX).toBeLessThanOrEqual(band.maxX);
+    expect(gem.minY).toBeGreaterThanOrEqual(band.minY);
+    expect(gem.maxY).toBeLessThanOrEqual(band.maxY);
+    expect((gem.minX + gem.maxX) / 2).toBeGreaterThan((band.minX + band.maxX) / 2);
+    // Two fills of ink at the stripe alpha: the band's lower stripe (clipped to the band) and the peak.
+    const dark = paints.filter((p) => p.kind === 'fill' && p.alpha === SOCK_STRIPE_ALPHA);
+    expect(dark).toHaveLength(2);
+    expect(dark.every((p) => p.style === INK)).toBe(true);
+    expect(dark[0].clips.length).toBeGreaterThan(0);
+  });
+
+  it('keeps the Striped scarf in the Neck footprint, under the mouth, off the cheek heart zone and inside LW / 2 of the silhouette outline on every look', () => {
+    const paints = bodyPaints('neck', DEFAULT_ART_LOOK, 0, 1, AREA8_SLUG.scarf);
+    const box = inkBounds(paints);
+    expect(isInside(box, NECK_FOOTPRINT)).toBe(true);
+    expect(box.maxX - box.minX).toBeGreaterThanOrEqual(WEARABLE_SLOT_MINIMUMS.neck.minWidth);
+    expect(paints.some((p) => reachesBox(regionOf(p), MOUTH_ZONE))).toBe(true);
+    let heartGap = Infinity;
+    for (const p of paints) {
+      const r = regionOf(p);
+      for (const [a, b] of edgesOf(r)) heartGap = Math.min(heartGap, segDist(CHEEK_HEART_ZONE.x, CHEEK_HEART_ZONE.y, a, b) - r.hw - CHEEK_HEART_ZONE.r);
+    }
+    expect(heartGap).toBeGreaterThanOrEqual(-TOL);
+    const points = inkPoints(paints).filter(({ p, hw }) => p.y + hw >= 17);
+    const least = leastOver(outlineMargins(points));
+    expect(least.value, least.id).toBeGreaterThanOrEqual(0);
+  });
+
+  it('paints the Striped scarf as the Pond-weed scarf\'s band with six leaning stripes of ink at the stripe alpha, clipped to it, ink 0.6 outside', () => {
+    const scarf = bodyPaints('neck', GIRL, 0, 1, AREA8_SLUG.scarf);
+    const pond = bodyPaints('neck', GIRL, 0, 1, POND_SLUG.scarf);
+    const band = scarf.filter((p) => p.kind === 'fill' && p.style === STRIPED_SCARF_FILL);
+    expect(band).toHaveLength(1);
+    const pondBand = pond.find((p) => p.kind === 'fill' && p.style === POND_WEED_SCARF)!;
+    expect(band[0].subs.map((sub) => sub.pts.map((q) => `${fixed4(q.x)},${fixed4(q.y)}`))).toEqual(
+      pondBand.subs.map((sub) => sub.pts.map((q) => `${fixed4(q.x)},${fixed4(q.y)}`)),
+    );
+    const stripes = scarf.filter((p) => p.kind === 'fill' && p.alpha === SOCK_STRIPE_ALPHA);
+    expect(stripes).toHaveLength(6);
+    for (const s of stripes) {
+      expect(s.style).toBe(INK);
+      expect(s.clips.length).toBeGreaterThan(0);
+    }
+    const xs = stripes.map((s) => (rawBoxOf([s]).minX + rawBoxOf([s]).maxX) / 2);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+    expect(inkWidthsOf(scarf)).toEqual([1.2]);
+  });
+
+  it('keeps the Mariachi jacket inside the torso edge band, behind the front line, cut at the tail root, on every look', () => {
+    const bad: string[] = [];
+    for (const look of EVERY_BODY_LOOK) {
+      const shirt = shirtGeometry(look);
+      const e: BodyEllipse = shirt.inset;
+      const boundary = Array.from({ length: 720 }, (_, k) => ({
+        x: e.cx + Math.cos((k / 720) * TAU) * e.rx,
+        y: e.cy + Math.sin((k / 720) * TAU) * e.ry,
+      }));
+      const paints = bodyPaints('shirt', look, 0, 1, AREA8_SLUG.jacket);
+      expect(paints.length).toBeGreaterThan(0);
+      for (const { p, hw } of inkPoints(paints)) {
+        const inside = ((p.x - e.cx) / e.rx) ** 2 + ((p.y - e.cy) / e.ry) ** 2 <= 1 + 1e-9;
+        const gap = Math.min(...boundary.map((q) => Math.hypot(p.x - q.x, p.y - q.y)));
+        if (!inside || gap < hw - TOL) bad.push(`${lookId(look)} edge band`);
+        if (p.x + hw > SHIRT_FRONT_X + TOL) bad.push(`${lookId(look)} front`);
+        if (p.x + hw > SHIRT_BACK_FRONT_LINE_X + TOL) bad.push(`${lookId(look)} front line`);
+        if (p.x - hw < shirt.rearX - TOL) bad.push(`${lookId(look)} rear`);
+      }
+    }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+
+  it('paints the Mariachi jacket on the Tank top\'s whole silhouette: one inked shape, ink 2.0, the neckline to x -7, with the braid clipped inside it', () => {
+    for (const look of EVERY_BODY_LOOK) {
+      const shirt = shirtGeometry(look);
+      const paints = bodyPaints('shirt', look, 0, 1, AREA8_SLUG.jacket);
+      const body = paints.filter((p) => p.kind === 'fill' && p.style === MARIACHI_JACKET_FILL);
+      expect(body).toHaveLength(1);
+      expect(paints.filter((p) => p.kind === 'stroke' && p.lineWidth === 2 && p.style === INK)).toHaveLength(1);
+      const tank = bodyPaints('shirt', look).find((p) => p.kind === 'fill' && p.style === TANK_TOP_FILL)!;
+      expect(body[0].subs.map((sub) => sub.pts.map((q) => `${q.x.toFixed(6)},${q.y.toFixed(6)}`))).toEqual(
+        tank.subs.map((sub) => sub.pts.map((q) => `${q.x.toFixed(6)},${q.y.toFixed(6)}`)),
+      );
+      expect(Math.min(...body[0].subs[0].pts.slice(-24).map((p) => p.x))).toBeCloseTo(shirt.neckline.apexX - 1, 6);
+      const braid = paints.filter((p) => p.kind === 'fill' && p.style === MARIACHI_BRAID);
+      expect(braid).toHaveLength(1);
+      expect(braid[0].clips.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('runs the Mariachi jacket\'s braid down the front, taller than it is wide and 0.8 behind the neckline\'s ink, with three silver studs on it and the shine clear of it', () => {
+    const bad: string[] = [];
+    for (const look of EVERY_BODY_LOOK) {
+      const shirt = shirtGeometry(look);
+      const paints = bodyPaints('shirt', look, 0, 1, AREA8_SLUG.jacket);
+      const braid = rawBoxOf([paints.find((p) => p.kind === 'fill' && p.style === MARIACHI_BRAID)!]);
+      if (Math.abs(braid.maxX - braid.minX - 3.2) > TOL) bad.push(`${lookId(look)} braid width`);
+      if (braid.maxY - braid.minY < 4 * (braid.maxX - braid.minX)) bad.push(`${lookId(look)} braid height`);
+      if (Math.abs(braid.maxX - (shirt.neckline.apexX - 2 - 0.8)) > TOL) bad.push(`${lookId(look)} braid place`);
+      const studs = paints.filter((p) => p.kind === 'fill' && p.style === MARIACHI_STUD);
+      if (studs.length !== 3) bad.push(`${lookId(look)} studs ${studs.length}`);
+      for (const b of studs) {
+        const box = rawBoxOf([b]);
+        if (box.minX < braid.minX - TOL || box.maxX > braid.maxX + TOL) bad.push(`${lookId(look)} stud off braid`);
+        if (Math.abs((box.maxX - box.minX) / 2 - 0.85) > 0.01) bad.push(`${lookId(look)} stud size`);
+      }
+      const shine = rawBoxOf([paints.find((p) => p.kind === 'fill' && p.style === TREASURE_SHINE)!]);
+      if (shine.maxX + 0.6 > braid.minX) bad.push(`${lookId(look)} shine over braid`);
+    }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+
+  it('keeps the Mariachi jacket\'s fill off every Back item\'s fill (all seven Back items), on every look', () => {
+    const bad: string[] = [];
+    for (const look of EVERY_BODY_LOOK) {
+      const fillsOf = (slot: 'shirt' | 'back', slug: WearableArtSlug): SampledPaint[] =>
+        sampledPaints(bodyPaints(slot, look, 0, 1, slug).filter((x) => x.kind === 'fill' && isItemFill(x)));
+      const jacket = fillsOf('shirt', AREA8_SLUG.jacket);
+      for (const backSlug of EVERY_BACK_SLUG_7) {
+        const back = fillsOf('back', backSlug);
+        const both = gridPoints(unionBounds(back.map((f) => f.box))).filter((q) => back.some((f) => paintCovers(f, q.x, q.y)) && jacket.some((f) => paintCovers(f, q.x, q.y)));
+        if (both.length > 0) bad.push(`${lookId(look)} ${backSlug} over the jacket`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('keeps the Rainbow fin streamers within 17.5 units of their anchor, ink included, at every look, swim phase and tail amplitude', () => {
+    let reach = 0;
+    for (const look of EVERY_BODY_LOOK) {
+      const tail = axolotlBodyGeometry(look).tail;
+      for (const swim of SWIMS) {
+        for (const amp of AMPS) {
+          const frame = tailSlotFrame(tail, swim, amp);
+          for (const { p, hw } of inkPoints(bodyPaints('tail', look, swim, amp, AREA8_SLUG.streamers))) {
+            reach = Math.max(reach, Math.hypot(p.x - frame.x, p.y - frame.y) + hw);
+          }
+        }
+      }
+    }
+    expect(reach).toBeLessThanOrEqual(TAIL_SLOT_REACH + TOL);
+  });
+
+  it('turns the Rainbow fin streamers with the local tail direction: five streamers fan toward the head, one short one points to the tail tip, the gold tie at the root and the star above the tip side', () => {
+    const tail = axolotlBodyGeometry(DEFAULT_ART_LOOK).tail;
+    for (const swim of SWIMS) {
+      const frame = tailSlotFrame(tail, swim, 1.6);
+      const paints = bodyPaints('tail', DEFAULT_ART_LOOK, swim, 1.6, AREA8_SLUG.streamers);
+      const boxIn = (paint: Paint): Bounds => {
+        const pts = paint.subs.flatMap((sub) => sub.pts.map((q) => toFrame(frame, q)));
+        return { minX: Math.min(...pts.map((q) => q.x)), maxX: Math.max(...pts.map((q) => q.x)), minY: Math.min(...pts.map((q) => q.y)), maxY: Math.max(...pts.map((q) => q.y)) };
+      };
+      const ribbons = FIN_STREAMER_FILLS.map((colour) => boxIn(paints.find((p) => p.kind === 'fill' && p.style === colour)!));
+      // The first five fan toward the head (x' grows), the sixth reaches back toward the tail tip (x' negative).
+      for (const b of ribbons.slice(0, 5)) expect(b.maxX).toBeGreaterThan(5);
+      expect(ribbons[5].minX).toBeLessThan(-3);
+      expect(Math.min(...ribbons.slice(0, 5).map((b) => b.minX))).toBeGreaterThanOrEqual(-1.6);
+      // They fan from top to bottom in colour order.
+      const mids = ribbons.slice(0, 5).map((b) => (b.minY + b.maxY) / 2);
+      expect(mids).toEqual([...mids].sort((a, b) => a - b));
+      // The gold tie sits across the root, centred on it, and the star is above the root toward the tip.
+      const gold = boxIn(paints.find((p) => p.style === GOLD_TRIM)!);
+      expect((gold.minX + gold.maxX) / 2).toBeCloseTo(0, 6);
+      const star = boxIn(starsOf(paints)[0]);
+      expect((star.minX + star.maxX) / 2).toBeLessThan(0);
+      expect(star.maxY).toBeLessThan(Math.min(...ribbons.map((b) => b.minY)) + 1);
+    }
+  });
+
+  it('keeps the Rainbow fin streamers\' star outside the silhouette: its ink is clear of every streamer\'s ink (2.0 outside the fill) at every look, swim phase and tail amplitude', () => {
+    const gapBetween = (a: Paint, b: Paint): number => {
+      const from = (x: Paint, y: Paint): number =>
+        Math.min(...x.subs.flatMap((sub) => sub.pts).map((q) => Math.min(...edgesOf(regionOf(y)).map(([e0, e1]) => segDist(q.x, q.y, e0, e1)))));
+      return Math.min(from(a, b), from(b, a));
+    };
+    const paints = bodyPaints('tail', GIRL, 0, 1, AREA8_SLUG.streamers);
+    const star = starsOf(paints)[0];
+    for (const colour of FIN_STREAMER_FILLS) {
+      for (const p of paints.filter((q) => q.kind === 'fill' && q.style === colour)) expect(gapBetween(star, p), colour).toBeGreaterThanOrEqual(2 + 0.6 - TOL);
+    }
+  });
+
+  it('keeps every Area 8 Wearable, ink included, in the texture frame with 4 or more units of padding', () => {
+    const inner = frameInner(FRAME_PAD);
+    const bad: string[] = [];
+    for (const look of EVERY_BODY_LOOK) {
+      for (const [slot, slug] of AREA8_BODY_ITEMS) {
+        const swims = slot === 'tail' ? SWIMS : [0];
+        for (const swim of swims) {
+          for (const amp of slot === 'tail' ? AMPS : [1]) {
+            if (!isInside(inkBounds(bodyPaints(slot, look, swim, amp, slug)), inner, 1e-6)) bad.push(`${lookId(look)} ${slug}`);
+          }
+        }
+      }
+    }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+
+  it('paints a still look: no Area 8 painter reads a swim phase or tail amplitude except the streamers\' frame, and a repaint is identical', () => {
+    for (const [slot, slug] of AREA8_BODY_ITEMS.filter(([slot]) => slot !== 'tail')) {
+      const first = bodyPaints(slot, GIRL, 0, 1, slug).map(signature);
+      expect(bodyPaints(slot, GIRL, 0, 1, slug).map(signature)).toEqual(first);
+      for (const swim of SWIMS) for (const amp of AMPS) expect(bodyPaints(slot, GIRL, swim, amp, slug).map(signature), `${slug} swim ${swim} amp ${amp}`).toEqual(first);
+    }
+    const tail = axolotlBodyGeometry(GIRL).tail;
+    const inFrameOf = (swim: number, amp: number): string[] => {
+      const frame = tailSlotFrame(tail, swim, amp);
+      return bodyPaints('tail', GIRL, swim, amp, AREA8_SLUG.streamers).map((p) =>
+        JSON.stringify({ k: p.kind, s: p.style, w: p.lineWidth, pts: p.subs.map((sub) => sub.pts.map((q) => {
+          const f = toFrame(frame, q);
+          return `${fixed4(f.x)},${fixed4(f.y)}`;
+        })) }),
+      );
+    };
+    const first = inFrameOf(0, 1);
+    for (const swim of SWIMS) for (const amp of AMPS) expect(inFrameOf(swim, amp)).toEqual(first);
+  });
+
+  it('never looks hurt: no Area 8 paint is red, and every Area 8 outer fill is a pale colour at 9:1 with ink and not a rarity badge fill', () => {
+    const red = (hex: string): boolean => {
+      const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+      if (!m) return false;
+      const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16));
+      return r >= 180 && g <= 100 && b <= 100;
+    };
+    for (const [slot, slug] of AREA8_BODY_ITEMS) {
+      for (const look of [DEFAULT_ART_LOOK, GIRL]) {
+        for (const p of bodyPaints(slot, look, 0, 1, slug)) expect(red(p.style), `${slug} ${p.kind} ${p.style}`).toBe(false);
+      }
+    }
+    for (const fill of [SAILOR_CAP_FILL, STRIPED_SCARF_FILL, MARIACHI_JACKET_FILL, CAPTAINS_HAT_FILL, FIN_STREAMER_KNOT, ...FIN_STREAMER_FILLS]) {
+      expect(contrast(fill, INK), fill).toBeGreaterThanOrEqual(9);
+      expect(Object.values(BADGE_FILL), fill).not.toContain(fill);
+    }
+  });
+
+  it('keeps the Rare braid, its studs and the Epic gem readable in greyscale: each differs from the colour it sits on by a luminance ratio of 1.4 or more', () => {
+    expect(contrast(MARIACHI_BRAID, MARIACHI_JACKET_FILL)).toBeGreaterThanOrEqual(1.4);
+    expect(contrast(MARIACHI_STUD, MARIACHI_BRAID)).toBeGreaterThanOrEqual(1.4);
+    expect(contrast(BOW_GEM, CAPTAINS_HAT_FILL)).toBeGreaterThanOrEqual(1.4);
+    // The gold tie band sits on the silver-white knot, between its own two ink lines (0.6).
+    expect(contrast(GOLD_TRIM, FIN_STREAMER_KNOT)).toBeGreaterThanOrEqual(1.1);
+    const streamers = bodyPaints('tail', GIRL, 0, 1, AREA8_SLUG.streamers);
+    expect(streamers.filter((p) => p.kind === 'stroke' && p.style === INK && Math.abs(p.lineWidth - 0.6) < 1e-9).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('leaves the forty-one earlier worn looks as they were: the digest of their paints is unchanged', () => {
+    const slugs = (Object.keys(WEARABLE_ART_SLOT) as WearableArtSlug[]).slice(0, 41);
+    expect(slugs[40]).toBe('gemstone-cape');
+    const looks: AxolotlArtLook[] = [
+      DEFAULT_ART_LOOK,
+      { ...GIRL, body: 'chubby', age: 'baby', tail: 'short' },
+      { ...GIRL, body: 'slim', age: 'grownUp', tail: 'long' },
+    ];
+    const out: string[] = [];
+    for (const slug of slugs) {
+      const slot = WEARABLE_ART_SLOT[slug];
+      for (const look of looks) {
+        for (const [swim, amp] of [
+          [0, 1],
+          [2.1, 1.6],
+        ] as const) {
+          if (isLegSlot(slot)) for (const frame of legSlotFrames(look, swim)) out.push(...legPaints({ [slot]: slug }, frame).map(signature));
+          else out.push(...bodyPaints(slot, look, swim, amp, slug).map(signature));
+        }
+      }
+    }
+    expect(out).toHaveLength(4596);
+    expect(digest(out.join('\n'))).toBe('1b21ee0a2d8e3a72');
+  });
+});
+
+describe('deep canal Area 8 Wearables (issue #78): the rarity look ladder', () => {
+  const colours = (paints: readonly Paint[], kind: 'fill' | 'stroke'): string[] =>
+    paints.filter((p) => p.kind === kind && p.alpha === 1).map((p) => p.style);
+  const count = (list: readonly string[], value: string): number => list.filter((v) => v === value).length;
+  const noGemOrGold = (paints: readonly Paint[]): boolean => !paints.some((p) => p.style === GOLD_TRIM || p.style === GLASSES_GEM || p.style === BOW_GEM);
+
+  it('paints Common as flat colour plus one shine, no trim: Sailor cap (band), Striped scarf (stripes)', () => {
+    const cap = bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.sailor);
+    expect(new Set(colours(cap, 'fill'))).toEqual(new Set([SAILOR_CAP_FILL, TREASURE_SHINE]));
+    expect(count(colours(cap, 'fill'), SAILOR_CAP_FILL)).toBe(2);
+    expect(count(colours(cap, 'fill'), TREASURE_SHINE)).toBe(1);
+    expect(noGemOrGold(cap) && !cap.some((p) => p.style === BOAT_TRIM)).toBe(true);
+    expect(starsOf(cap)).toHaveLength(0);
+    const scarf = bodyPaints('neck', GIRL, 0, 1, AREA8_SLUG.scarf);
+    expect(new Set(colours(scarf, 'fill'))).toEqual(new Set([STRIPED_SCARF_FILL, TREASURE_SHINE]));
+    expect(count(colours(scarf, 'fill'), TREASURE_SHINE)).toBe(1);
+    expect(noGemOrGold(scarf) && !scarf.some((p) => p.style === BOAT_TRIM)).toBe(true);
+    expect(starsOf(scarf)).toHaveLength(0);
+  });
+
+  it('adds one trim band in a second colour for Rare: Mariachi jacket braid', () => {
+    const jacket = bodyPaints('shirt', GIRL, 0, 1, AREA8_SLUG.jacket);
+    expect(count(colours(jacket, 'fill'), MARIACHI_BRAID)).toBe(1);
+    expect(count(colours(jacket, 'fill'), MARIACHI_JACKET_FILL)).toBe(1);
+    expect(count(colours(jacket, 'fill'), TREASURE_SHINE)).toBe(1);
+    // Three silver studs on the braid are picture details, not counted trim.
+    expect(count(colours(jacket, 'fill'), MARIACHI_STUD)).toBe(3);
+    expect(new Set(colours(jacket, 'fill'))).toEqual(new Set([MARIACHI_JACKET_FILL, MARIACHI_BRAID, MARIACHI_STUD, TREASURE_SHINE]));
+    expect(noGemOrGold(jacket)).toBe(true);
+    expect(starsOf(jacket)).toHaveLength(0);
+  });
+
+  it('adds one rounded gem for Epic: Captain\'s hat, a gem of radius 2.5 on the band, no gold or star', () => {
+    const hat = bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.hat);
+    const gems = hat.filter((p) => p.kind === 'fill' && p.style === BOW_GEM);
+    expect(gems).toHaveLength(1);
+    const box = inkBounds([gems[0]]);
+    expect((box.maxX - box.minX) / 2).toBeCloseTo(2.5, 1);
+    expect(count(colours(hat, 'fill'), CAPTAINS_HAT_FILL)).toBe(3);
+    expect(count(colours(hat, 'fill'), TREASURE_SHINE)).toBe(1);
+    expect(hat.some((p) => p.style === GOLD_TRIM || p.style === BOAT_TRIM || p.style === GLASSES_GEM)).toBe(false);
+    expect(starsOf(hat)).toHaveLength(0);
+  });
+
+  it('adds gold trim and one static 4-point star for Legendary: Rainbow fin streamers, a gold tie band on a silver-white knot and six rainbow colours, no gem', () => {
+    const streamers = bodyPaints('tail', GIRL, 0, 1, AREA8_SLUG.streamers);
+    const gold = streamers.filter((p) => p.style === GOLD_TRIM);
+    expect(gold).toHaveLength(1);
+    expect(gold[0].clips.length).toBeGreaterThan(0);
+    // Six streamers, one rainbow colour each, and the silver-white knot on top of them.
+    for (const colour of FIN_STREAMER_FILLS) expect(count(colours(streamers, 'fill'), colour), colour).toBe(1);
+    expect(count(colours(streamers, 'fill'), FIN_STREAMER_KNOT)).toBe(1);
+    expect(count(colours(streamers, 'fill'), TREASURE_SHINE)).toBe(1);
+    expect(starsOf(streamers)).toHaveLength(1);
+    expect(streamers.some((p) => p.style === GLASSES_GEM || p.style === BOW_GEM)).toBe(false);
+  });
+
+  it('strokes an Area 8 silhouette at the item ink: 2 x 2.0 for a blob, 2 x 0.6 for the scarf', () => {
+    expect(inkWidthsOf(bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.sailor))).toEqual([4]);
+    expect(inkWidthsOf(bodyPaints('neck', GIRL, 0, 1, AREA8_SLUG.scarf))).toEqual([1.2]);
+    expect(inkWidthsOf(bodyPaints('shirt', GIRL, 0, 1, AREA8_SLUG.jacket))).toEqual([0.6, 2]);
+    expect(inkWidthsOf(bodyPaints('head', GIRL, 0, 1, AREA8_SLUG.hat))).toEqual([1.2, 4]);
+    // The streamers: the star's 1.2, the gold tie band's two 0.6 lines, and the blob's 2 x 2.0.
+    expect(inkWidthsOf(bodyPaints('tail', GIRL, 0, 1, AREA8_SLUG.streamers))).toEqual([0.6, 1.2, 4]);
   });
 });
 

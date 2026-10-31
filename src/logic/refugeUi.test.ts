@@ -64,7 +64,7 @@ const HABITAT_NAMES: Readonly<Record<string, string>> = Object.freeze({
   pond: 'Lily pad pond',
   chinampa: 'Chinampa gardens',
   'spring-cave': 'Spring cave',
-  deep: 'Deep canal',
+  'deep-canal': 'Deep canal',
 });
 
 /** The area line of each section id: today's areas, then made-up future ones, the last the widest. */
@@ -73,7 +73,7 @@ const AREA_LINES: Readonly<Record<string, string>> = Object.freeze({
   pond: 'Areas 2 and 3',
   chinampa: 'Areas 4 and 5',
   'spring-cave': 'Areas 6 and 7',
-  deep: 'Areas 8 to 10',
+  'deep-canal': 'Areas 8 to 10',
 });
 
 /** Height of a one-line area line panel: 18 px text and the 2 px padding above and below. */
@@ -538,17 +538,19 @@ describe('refugeLayout at the smallest canvases', () => {
   });
 
   it.each([SMALL_LANDSCAPE, SMALL_PORTRAIT])(
-    "fits today's four sections at $cssW x $cssH, clean or not, and shows the third whole two pans on and the last three pans on",
+    "fits today's five sections at $cssW x $cssH, clean or not, and shows the third whole two pans on, the fourth three pans on and the last four pans on",
     (view) => {
-      for (const clean of [0, 1, 2, 3, 4]) {
+      for (const clean of [0, 1, 2, 3, 4, 5]) {
         const entries = todaysSections(clean);
         const layout = layoutOf(view, entries);
         expect(layout.fits, `clean=${clean}`).toBe(true);
-        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave']);
+        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
         const twoPans = panRefugeScroll(layout, panRefugeScroll(layout, 0, 1), 1);
         expect(sectionShows(layout, 2, twoPans), `clean=${clean}`).toBe(true);
         const threePans = panRefugeScroll(layout, twoPans, 1);
         expect(sectionShows(layout, 3, threePans), `clean=${clean}`).toBe(true);
+        const fourPans = panRefugeScroll(layout, threePans, 1);
+        expect(sectionShows(layout, 4, fourPans), `clean=${clean}`).toBe(true);
       }
     },
   );

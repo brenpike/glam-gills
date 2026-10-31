@@ -4,7 +4,7 @@
  * the music switch's stored value and labels, and the music levels. The synth that plays the notes is
  * browser glue in src/platform/musicPlayer.ts. Nothing here reads danger, legs or trip state (M5).
  */
-import { CANAL_HABITAT, CHINAMPA_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
+import { CANAL_HABITAT, CHINAMPA_HABITAT, DEEP_CANAL_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
 import { mulberry32 } from './rng';
 
 /** A part of a cue, which the synth can mix on its own. */
@@ -352,6 +352,51 @@ export const CENOTE_GLOW: Readonly<MusicCue> = Object.freeze({
   echo: 0.4,
 });
 
+/** Id of the deep canal's cue. */
+export const TRAJINERA_WALTZ_ID = 'trajinera-waltz';
+
+const BM = chord('Bm', 'F#3 B3 D4', 'B2');
+
+/**
+ * Trajinera Waltz, the deep canal's cue (M3; provisional name): gliding and cozy, like a boat band
+ * heard from under the water, D major at 108 bpm in a straight 3/4 waltz, 2 steps a beat, a nylon
+ * guitar tune over a deep bass on beat 1, plucked strings on beats 2 and 3, and a soft pad, with no
+ * echo (prototypes/music/sketches.html).
+ */
+export const TRAJINERA_WALTZ: Readonly<MusicCue> = Object.freeze({
+  id: TRAJINERA_WALTZ_ID,
+  name: 'Trajinera Waltz',
+  key: 'D major',
+  tonic: 'D',
+  soundKey: 'D',
+  bpm: 108,
+  beatsPerBar: 3,
+  stepsPerBeat: 2,
+  swing: 0,
+  bars: Object.freeze([
+    bar(D_LOW),
+    bar(BM),
+    bar(G),
+    bar(A_OPEN),
+    bar(D_LOW),
+    bar(chord('Em', 'G3 B3 E4', 'E2')),
+    bar(chord('A7', 'G3 C#4 E4', 'A2')),
+    bar(D_LOW),
+  ]),
+  tune: Object.freeze([
+    tuneBar([0, 'A4', 2], [2, 'D5', 2], [4, 'F#5', 2]),
+    tuneBar([0, 'F#5', 3], [3, 'E5', 1], [4, 'D5', 2]),
+    tuneBar([0, 'B4', 2], [2, 'D5', 2], [4, 'G5', 2]),
+    tuneBar([0, 'E5', 6]),
+    tuneBar([0, 'A4', 2], [2, 'D5', 2], [4, 'A5', 2]),
+    tuneBar([0, 'G5', 3], [3, 'F#5', 1], [4, 'E5', 2]),
+    tuneBar([0, 'C#5', 2], [2, 'E5', 2], [4, 'G5', 2]),
+    tuneBar([0, 'E5', 2], [2, 'D5', 4]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 84, swing: 0 }),
+});
+
 /**
  * The dusk version of habitat cue `cue` (the dusk rule, M4): the same tune and chords at the cue's
  * dusk pace, played by the shared dusk arrangement. Throws for a cue with no dusk pace (the Home cue)
@@ -377,6 +422,7 @@ export const HABITAT_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object
   [POND_HABITAT.id]: LILY_PAD_HOP,
   [CHINAMPA_HABITAT.id]: GARDEN_BOATS,
   [SPRING_CAVE_HABITAT.id]: CENOTE_GLOW,
+  [DEEP_CANAL_HABITAT.id]: TRAJINERA_WALTZ,
 });
 
 /** Each habitat cue's dusk version, by the day cue's id, made once so the same version is reused. */
@@ -503,6 +549,8 @@ const FIREFLY_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9]);
 const MIXOLYDIAN_STEPS: readonly number[] = Object.freeze([0, 2, 4, 7, 9, 10, 12]);
 /** Cenote Glow's glass line: the minor pentatonic steps above E5, all in E dorian. */
 const MINOR_PENTATONIC_STEPS: readonly number[] = Object.freeze([0, 3, 5, 7, 10, 12]);
+/** Pitch classes of D major, above C, for Trajinera Waltz's harmony in thirds. */
+const D_MAJOR_PITCHES: readonly number[] = Object.freeze([1, 2, 4, 6, 7, 9, 11]);
 
 function pick<T>(random: () => number, list: readonly T[]): T {
   return list[Math.floor(random() * list.length)];
@@ -693,6 +741,47 @@ function arrangeCenoteGlow(cue: Readonly<MusicCue>, place: StepPlace, random: ()
   return notes;
 }
 
+/** The D major note a third below D major note `midi`: a major third when that is in the key, else a minor third. */
+function lowerByThirdInD(midi: number): number {
+  return D_MAJOR_PITCHES.includes((midi - 4) % 12) ? midi - 4 : midi - 3;
+}
+
+/**
+ * Trajinera Waltz's arrangement for one step: oom-pah-pah. A soft pad, a deep bass and a soft kick
+ * on beat 1, plucked strings and a shaker on beats 2 and 3, and now and then a quiet bass fifth
+ * leading into the next bar. The guitar tune; then a kalimba joins an octave up; then a second
+ * guitar a third below in D major; then a made-up guitar phrase in the second half. Two bubbles end
+ * bars 4 and 8.
+ */
+function arrangeTrajineraWaltz(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  if (step === 0) {
+    for (const midi of sounding.notes) notes.push(note('pad', 'chords', midi, 0.035, stepS * 6.2, at));
+    notes.push(note('bass', 'bass', sounding.root, 0.4, stepS * 3, at));
+    notes.push(note('kick', 'percussion', null, 0.22, 0.18, at));
+  } else if (step === 2 || step === 4) {
+    notes.push(...strum('strings', sounding.notes, step === 2 ? 0.11 : 0.08, RING_S.strings, at));
+    notes.push(note('shaker', 'percussion', null, 0.03, 0.05, at));
+  }
+  if (step === 5 && random() < 0.4) notes.push(note('bass', 'bass', sounding.root + 7, 0.14, stepS, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  const improvise = pass === 3 && barIndex >= 4;
+  if (hit !== undefined && !improvise) {
+    notes.push(note('guitar', 'tune', hit.midi, 0.34, RING_S.guitar, at));
+    if (pass === 1) notes.push(note('kalimba', 'tune', hit.midi + 12, 0.09, RING_S.kalimba, at));
+    if (pass === 2) notes.push(note('guitar', 'tune', lowerByThirdInD(hit.midi), 0.16, RING_S.guitar, at));
+  }
+  if (improvise && step % 2 === 0 && random() < 0.5) {
+    notes.push(note('guitar', 'tune', noteMidi('D5') + pick(random, PENTATONIC), 0.26, RING_S.guitar, at));
+  }
+  if ((barIndex === 3 || barIndex === 7) && step >= 4) notes.push(bubble(random, step === 4 ? 0.08 : 0.06, at));
+  else if (random() < 0.03) notes.push(bubble(random, 0.05, at));
+  return notes;
+}
+
 /**
  * The shared dusk rule (M4; docs/music-guide.md, section 5), for any habitat cue's dusk version: soft
  * held chords with the root under each chord change and a light kalimba on the other beats; a faint
@@ -748,6 +837,8 @@ export function arrangeStep(cue: Readonly<MusicCue>, index: number, seed: number
       return arrangeGardenBoats(cue, place, random, at);
     case CENOTE_GLOW_ID:
       return arrangeCenoteGlow(cue, place, random, at);
+    case TRAJINERA_WALTZ_ID:
+      return arrangeTrajineraWaltz(cue, place, random, at);
     default:
       throw new Error(`music: no arrangement for cue ${cue.id}`);
   }

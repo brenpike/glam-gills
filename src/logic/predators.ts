@@ -1,4 +1,6 @@
 import {
+  BLACK_BASS_FACT,
+  BLACK_BASS_MEET_RANGE,
   CARP_FACT,
   CARP_MEET_RANGE,
   CRAYFISH_FACT,
@@ -11,7 +13,8 @@ import {
   TILAPIA_MEET_RANGE,
   type FactCard,
 } from './factCards';
-import { CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
+import type { RockWall } from './pebble';
+import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
 
@@ -49,6 +52,11 @@ export interface PredatorRuleHook {
  * or right toward the target (the strike spot with `fixedStrikeSpot`), along the facing when the
  * target is straight above or below. The strike never moves the predator up or down, so it reaches
  * only a target within hitRadius of the predator's height.
+ * `slowTurn` (issue #78, ND-5): through the cooldown after a strike the predator keeps the strike's
+ * facing and glides along the strike's aim, kept as `PredatorState.glide`, from patrolSpeed slowing
+ * evenly to a stop at the cooldown's end; after a cancelled warning it holds still, keeping its
+ * facing. It never changes facing before the cooldown ends, then swims its route again. With
+ * `stillCooldown` as well, `stillCooldown` wins.
  */
 export interface PredatorRules {
   sightCover?: boolean;
@@ -56,6 +64,7 @@ export interface PredatorRules {
   stillCooldown?: boolean;
   warnOnRoute?: boolean;
   levelStrike?: boolean;
+  slowTurn?: boolean;
 }
 
 /** How far in px a predator with the `warnOnRoute` rule may be from its route and still warn (inclusive). */
@@ -90,6 +99,9 @@ export type PredatorRoute = TilapiaRoute & { species: Readonly<PredatorSpecies> 
  * `strikeSpot` is for a species with the `fixedStrikeSpot` rule only: where its strike goes, fixed
  * at warning start and kept through the warning and strike. It is absent in every other phase and
  * on every other species.
+ * `glide` is for a species with the `slowTurn` rule only: the unit direction of its glide through
+ * the cooldown after a strike, the strike's aim. It is absent in every other phase, after a
+ * cancelled warning and on every other species.
  */
 export interface PredatorState {
   species: string;
@@ -103,6 +115,7 @@ export interface PredatorState {
   duration: number;
   aim: Point | null;
   strikeSpot?: Point;
+  glide?: Point;
 }
 
 /** Phase events emitted by `stepPredator`, in the order they happened within the step. */
@@ -113,7 +126,12 @@ export type PredatorEvent =
   | { type: 'lungeEnd'; connected: boolean }
   | { type: 'cooldownEnd' };
 
-/** World context a predator step needs. `bounds` limits the predator centre. */
+/**
+ * World context a predator step needs. `bounds` limits the predator centre. `rockWalls`, when set,
+ * are solid rock (ND-12): no move carries the centre into, or through, a wall grown by bodyRadius.
+ * The whole straight path of every move is checked against each grown wall, and the move stops on
+ * the face it reaches and slides along it.
+ */
 export interface PredatorContext {
   safeArea: SafeArea;
   bounds: SwimBounds;
@@ -129,6 +147,13 @@ export interface PredatorContext {
   rules?: Readonly<PredatorRules>;
   /** Whether the target is in sight cover this step; read only with the `sightCover` rule. Absent means false. */
   targetInCover?: boolean;
+  /** Solid rock walls (ND-12); absent means none. */
+  rockWalls?: readonly Readonly<RockWall>[];
+  /**
+   * Whether rock lies between the predator centre and the target this step (`crossesRock`), for every
+   * species. Absent means false.
+   */
+  targetBehindRock?: boolean;
 }
 
 export interface PredatorStepResult {
@@ -144,6 +169,7 @@ interface PhaseStep {
 
 const MAX_PHASE_STEPS = 8;
 const PROGRESS_EPSILON = 1e-9;
+const NO_ROCK: readonly Readonly<RockWall>[] = Object.freeze([]);
 /**
  * Slack in px for the chase: a chase stops this far inside the lungeRange, so float error never
  * leaves it just outside reach, and a chaser counts as within its leash up to this far past it.
@@ -222,11 +248,29 @@ export const CRAYFISH_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   rules: Object.freeze({ warnOnRoute: true }),
 });
 
+/**
+ * The black bass (issue #78), the deep canal's signature predator: it plays the shared rules with its
+ * own tuning. It warns by distance at any depth, flaring its fins, when the axolotl is within reach
+ * of it, then lunges straight along the aim locked at strike start, with no homing. With the
+ * `slowTurn` rule it keeps that facing through the cooldown and glides to a stop along its aim before
+ * it swims its route again, so dodging sideways beats it. A strike that connects is a hit; a touch
+ * is the gentle bump. It is not a danger part: it is the one new predator of its area.
+ */
+export const BLACK_BASS_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
+  id: 'black-bass',
+  name: 'Black bass',
+  tuning: BLACK_BASS,
+  meetRange: BLACK_BASS_MEET_RANGE,
+  fact: BLACK_BASS_FACT,
+  rules: Object.freeze({ slowTurn: true }),
+});
+
 /** Every predator species. */
 export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.freeze([
   TILAPIA_SPECIES,
   HERON_SPECIES,
   CRAYFISH_SPECIES,
+  BLACK_BASS_SPECIES,
   GARTER_SNAKE_SPECIES,
   CARP_SPECIES,
 ]);
@@ -391,8 +435,10 @@ export function phaseProgress(state: PredatorState): number {
  * it to patrol.
  *
  * All movement is clamped to `bounds` and kept clear of the safe area grown by `bodyRadius`,
- * so the body never overlaps the safe area. Callers should cap dt (for example SWIM.dtMax)
- * so strike contact is sampled finely.
+ * so the body never overlaps the safe area: the whole straight path of every move is checked
+ * against the grown safe area, and the move stops on the face it reaches and slides along it
+ * (`moveClamped`). Callers should cap dt (for example SWIM.dtMax) so strike contact is sampled
+ * finely.
  *
  * Shared rules (`ctx.rules`, see `PredatorRules`): with `sightCover`, a target in cover
  * (`ctx.targetInCover`) counts as not exposed, so it gates the warning start, the end-of-warning
@@ -403,9 +449,19 @@ export function phaseProgress(state: PredatorState): number {
  * With `warnOnRoute`, the predator must also be within `ROUTE_WARN_TOLERANCE` of its route
  * (`routeLoopDistance`) to start a warning and at the end-of-warning re-check; movement is unchanged.
  * With `levelStrike`, the aim locked at the end of the warning is level, toward the target's side.
+ * With `slowTurn`, the cooldown after a strike glides along the strike's aim to a stop, keeping the
+ * facing, and the cooldown after a cancelled warning holds still.
  *
  * Chase (PRD open question 249, ND-2): only with `ctx.tuning.chase`, and only on patrol when no
  * warning starts. See `chaseStep`. Without a chase, patrol is unchanged.
+ *
+ * Rock (ND-12), for every species: a target behind rock (`ctx.targetBehindRock`) counts as not
+ * exposed, so it starts no warning, cancels a warning at its end, is not chased and is never hit. A
+ * strike also never connects while rock lies between its striking point and the target after the
+ * move (`crossesRock` with `ctx.rockWalls`). Every move (patrol, chase, strike, cooldown, glide) is
+ * checked along its whole straight path against each rock wall grown by bodyRadius, and stops at the
+ * face it reaches, sliding along it as along the safe area.
+ * With no rock walls nothing changes.
  */
 export function stepPredator(
   state: PredatorState,
@@ -568,7 +624,10 @@ function stepLunge(state: PredatorState, target: Point, dt: number, ctx: Predato
   const used = Math.min(dt, state.duration - state.elapsed);
   const pos = state.strikeSpot ? state.pos : lungePosition(state, used, ctx);
   const moved: PredatorState = { ...state, pos, elapsed: state.elapsed + used };
-  const connected = lungeConnects(moved, target, ctx.tuning) && targetExposed(target, ctx);
+  const connected =
+    lungeConnects(moved, target, ctx.tuning) &&
+    targetExposed(target, ctx) &&
+    !crossesRock(stabTip(moved), target, ctx.rockWalls ?? []);
   if (connected || moved.elapsed >= moved.duration) {
     return { state: enterCooldown(moved, ctx), used, event: { type: 'lungeEnd', connected } };
   }
@@ -594,21 +653,39 @@ function stepCooldown(
     return { state: { ...drifted, elapsed }, used, event: null };
   }
   const patrol: PredatorState = { ...drifted, phase: 'patrol', elapsed: 0, duration: 0 };
+  delete patrol.glide;
   return { state: patrol, used, event: { type: 'cooldownEnd' } };
 }
 
 /**
  * Moves a cooling-down predator for `used` seconds: a species with the `stillCooldown` rule stands
- * still facing the target, any other swims its route.
+ * still facing the target, one with the `slowTurn` rule glides (`glideMove`), any other swims its
+ * route.
  */
 function cooldownMove(state: PredatorState, target: Point, used: number, ctx: PredatorContext): PredatorState {
   if (ctx.rules?.stillCooldown) return { ...state, facing: faceToward(state.facing, target.x - state.pos.x) };
+  if (ctx.rules?.slowTurn) return glideMove(state, used, ctx);
   return swimRoute(state, used, ctx);
+}
+
+/**
+ * Glides a cooling-down predator for `used` seconds along `glide`, its facing unchanged. The speed
+ * starts at patrolSpeed and slows evenly to 0 at the end of the cooldown, so the distance is the
+ * exact area under that speed over the step, whatever the step size. No glide holds still.
+ */
+function glideMove(state: PredatorState, used: number, ctx: PredatorContext): PredatorState {
+  const glide = state.glide;
+  if (!glide || state.duration <= 0) return state;
+  const start = state.elapsed;
+  const end = Math.min(state.duration, start + used);
+  const travelled = ctx.tuning.patrolSpeed * (end - start - (end * end - start * start) / (2 * state.duration));
+  return { ...state, pos: moveClamped(state.pos, scale(glide, travelled), ctx) };
 }
 
 function enterCooldown(state: PredatorState, ctx: PredatorContext): PredatorState {
   const cooldown: PredatorState = { ...state, phase: 'cooldown', elapsed: 0, duration: ctx.tuning.cooldown, aim: null };
   delete cooldown.strikeSpot;
+  if (ctx.rules?.slowTurn && state.aim) cooldown.glide = { x: state.aim.x, y: state.aim.y };
   return cooldown;
 }
 
@@ -632,12 +709,46 @@ function onRouteToWarn(state: PredatorState, ctx: PredatorContext): boolean {
 }
 
 /**
- * Whether the target can be attacked: outside the safe area, whose edges count as inside, and,
- * for a species with the `sightCover` rule, not in cover.
+ * Whether the target can be attacked: outside the safe area, whose edges count as inside, not behind
+ * rock (`ctx.targetBehindRock`) and, for a species with the `sightCover` rule, not in cover.
  */
 function targetExposed(target: Point, ctx: PredatorContext): boolean {
-  const hidden = ctx.rules?.sightCover === true && ctx.targetInCover === true;
+  const hidden = (ctx.rules?.sightCover === true && ctx.targetInCover === true) || ctx.targetBehindRock === true;
   return !hidden && !inSafeArea(target, ctx.safeArea);
+}
+
+/**
+ * Whether the segment from `from` to `to` touches any rock wall (ND-12). Edges and corners count as
+ * rock, as `inRock` in dangerBar.ts counts them, so a segment that only grazes a corner is blocked.
+ */
+export function crossesRock(from: Point, to: Point, walls: readonly Readonly<RockWall>[]): boolean {
+  return walls.some((wall) => segmentTouchesBox(from, to, wall));
+}
+
+/** Whether the segment from `from` to `to` touches the box, edges included (slab clipping). */
+function segmentTouchesBox(from: Point, to: Point, box: Readonly<RockWall>): boolean {
+  const alongX = clipSlab(from.x, to.x - from.x, box.x0, box.x1, { enter: 0, exit: 1 });
+  if (!alongX) return false;
+  return clipSlab(from.y, to.y - from.y, box.y0, box.y1, alongX) !== null;
+}
+
+/**
+ * Narrows the segment share `span` to the part where `start + share * delta` lies in [lo, hi],
+ * edges included; null when no part does.
+ */
+function clipSlab(
+  start: number,
+  delta: number,
+  lo: number,
+  hi: number,
+  span: { enter: number; exit: number },
+): { enter: number; exit: number } | null {
+  if (delta === 0) return start >= lo && start <= hi ? span : null;
+  const atLo = (lo - start) / delta;
+  const atHi = (hi - start) / delta;
+  const enter = Math.max(span.enter, Math.min(atLo, atHi));
+  const exit = Math.min(span.exit, Math.max(atLo, atHi));
+  return enter <= exit ? { enter, exit } : null;
 }
 
 /** A level aim: straight toward the target's side, along `facing` when the target is straight above or below. */
@@ -672,31 +783,113 @@ function swimRoute(state: PredatorState, dt: number, ctx: PredatorContext): Pred
 }
 
 /**
- * Moves `from` by `delta`, clamping the result to `ctx.bounds` and keeping it out of the
- * safe area grown by `bodyRadius`. Resolves one axis at a time, stopping on the face of the
- * keep-out box the mover approached from, so it slides along the box instead of crossing it.
+ * Moves `from` by `delta`, clamping the target to `ctx.bounds` on each axis, then keeping the centre
+ * out of the safe area and each rock wall in `ctx.rockWalls`, every box grown by `bodyRadius`. The
+ * whole straight path of the move, from `from` to the clamped target, is checked against the open
+ * inside of every grown box: the move stops on the face of the first box it would enter, then slides
+ * along that face toward the target's other coordinate, and that slide is checked against every box
+ * in the same way. It stops at most twice, so at a joint of two boxes it ends on both faces. Edges
+ * count as outside: a move along a face, or through a grown corner point, is not stopped. When it
+ * would enter on both axes at once, the vertical (x) face stops it. A wall whose grown box already
+ * holds `from` does not stop it, so a predator inside one can leave. A start inside the grown safe
+ * area keeps the target's y, and its x unless that lies strictly between the grown safe area's left
+ * and right faces, which moves it to the right face.
  */
 function moveClamped(from: Point, delta: Point, ctx: PredatorContext): Point {
-  const keepOut = growSafeArea(ctx.safeArea, ctx.tuning.bodyRadius);
-  const { bounds } = ctx;
-  let x = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
-  if (strictlyInside(x, from.y, keepOut)) x = from.x <= keepOut.x0 ? keepOut.x0 : keepOut.x1;
-  let y = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
-  if (strictlyInside(x, y, keepOut)) y = from.y <= keepOut.y0 ? keepOut.y0 : keepOut.y1;
-  return { x, y };
+  // Grown boxes are compared through `margin` rather than built, so a move allocates no box (hot path).
+  const margin = ctx.tuning.bodyRadius;
+  const { bounds, safeArea } = ctx;
+  const walls = ctx.rockWalls ?? NO_ROCK;
+  const fromInSafeArea = strictlyInsideGrown(from.x, from.y, safeArea, margin);
+  let endX = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
+  let endY = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
+  if (fromInSafeArea && endX > safeArea.x0 - margin && endX < safeArea.x1 + margin) endX = safeArea.x1 + margin;
+  let x = from.x;
+  let y = from.y;
+  for (let contact = 0; contact < 2; contact++) {
+    const dx = endX - x;
+    const dy = endY - y;
+    if (dx === 0 && dy === 0) break;
+    let share = Infinity;
+    let onX = false;
+    let face = 0;
+    for (let i = -1; i < walls.length; i++) {
+      const box = i < 0 ? safeArea : walls[i];
+      if (pathMissesGrown(x, y, endX, endY, box, margin)) continue;
+      const holdsFrom = i < 0 ? fromInSafeArea : strictlyInsideGrown(from.x, from.y, box, margin);
+      if (holdsFrom) continue;
+      const entry = entryShare(x, y, dx, dy, box, margin);
+      if (entry === Infinity || entry > share) continue;
+      const boxOnX = entersOnXFace(x, y, dx, dy, box, margin);
+      if (entry === share && (onX || !boxOnX)) continue;
+      share = entry;
+      onX = boxOnX;
+      face = boxOnX ? (dx > 0 ? box.x0 - margin : box.x1 + margin) : dy > 0 ? box.y0 - margin : box.y1 + margin;
+    }
+    if (share === Infinity) break;
+    if (onX) {
+      y += share * dy;
+      x = face;
+      endX = face;
+    } else {
+      x += share * dx;
+      y = face;
+      endY = face;
+    }
+  }
+  return { x: endX, y: endY };
 }
 
-function growSafeArea(safeArea: SafeArea, margin: number): SafeArea {
-  return {
-    x0: safeArea.x0 - margin,
-    x1: safeArea.x1 + margin,
-    y0: safeArea.y0 - margin,
-    y1: safeArea.y1 + margin,
-  };
+/**
+ * Whether the box spanned by the path from (x, y) to (endX, endY) stays off the open inside of `box`
+ * grown by `margin`, so the path cannot enter it.
+ */
+function pathMissesGrown(x: number, y: number, endX: number, endY: number, box: SafeArea, margin: number): boolean {
+  return (
+    Math.max(x, endX) <= box.x0 - margin ||
+    Math.min(x, endX) >= box.x1 + margin ||
+    Math.max(y, endY) <= box.y0 - margin ||
+    Math.min(y, endY) >= box.y1 + margin
+  );
 }
 
-function strictlyInside(x: number, y: number, box: SafeArea): boolean {
-  return x > box.x0 && x < box.x1 && y > box.y0 && y < box.y1;
+/**
+ * The share of the move from (x, y) by (dx, dy) at which it enters the open inside of `box` grown by
+ * `margin`, at least 0; Infinity when it never does before its end. A start already inside counts as
+ * entering at 0.
+ */
+function entryShare(x: number, y: number, dx: number, dy: number, box: SafeArea, margin: number): number {
+  const enter = Math.max(slabEntry(x, dx, box.x0 - margin, box.x1 + margin), slabEntry(y, dy, box.y0 - margin, box.y1 + margin));
+  const exit = Math.min(slabExit(x, dx, box.x0 - margin, box.x1 + margin), slabExit(y, dy, box.y0 - margin, box.y1 + margin));
+  return enter < exit && exit > 0 && enter < 1 ? Math.max(enter, 0) : Infinity;
+}
+
+/** Whether the move from (x, y) by (dx, dy) enters `box` grown by `margin` through an x face, x winning a tie. */
+function entersOnXFace(x: number, y: number, dx: number, dy: number, box: SafeArea, margin: number): boolean {
+  return slabEntry(x, dx, box.x0 - margin, box.x1 + margin) >= slabEntry(y, dy, box.y0 - margin, box.y1 + margin);
+}
+
+/**
+ * The share of a one-axis move from `start` by `delta` at which it enters the open span (lo, hi):
+ * -Infinity for a still start inside, Infinity for a still start outside.
+ */
+function slabEntry(start: number, delta: number, lo: number, hi: number): number {
+  if (delta === 0) return start > lo && start < hi ? -Infinity : Infinity;
+  return ((delta > 0 ? lo : hi) - start) / delta;
+}
+
+/**
+ * The share of a one-axis move from `start` by `delta` at which it leaves the open span (lo, hi):
+ * Infinity for a still start inside, -Infinity for a still start outside.
+ */
+function slabExit(start: number, delta: number, lo: number, hi: number): number {
+  if (delta === 0) return start > lo && start < hi ? Infinity : -Infinity;
+  return ((delta > 0 ? hi : lo) - start) / delta;
+}
+
+/** Whether (x, y) is strictly inside `box` grown by `margin` on every side. */
+function strictlyInsideGrown(x: number, y: number, box: SafeArea, margin: number): boolean {
+  return x > box.x0 - margin && x < box.x1 + margin && y > box.y0 - margin && y < box.y1 + margin;
 }
 
 function faceToward(facing: -1 | 1, dx: number): -1 | 1 {

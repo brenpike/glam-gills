@@ -1,6 +1,7 @@
 /**
- * Phaser glue for the predators and leg loss (issues #7, #98, #103 and #77): bakes the
- * tilapia, heron, garter snake, carp, crayfish, effect and leg icon painters into CanvasTextures.
+ * Phaser glue for the predators and leg loss (issues #7, #98, #103, #77 and #78): bakes the
+ * tilapia, heron, garter snake, carp, crayfish, black bass, effect and leg icon painters into
+ * CanvasTextures.
  * Visual only. No game state, no input, no physics.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale`, so a
@@ -8,6 +9,12 @@
  */
 import * as Phaser from 'phaser';
 import type { TexSize } from './canvasKit';
+import {
+  BLACK_BASS_FRAMES,
+  BLACK_BASS_TEX,
+  paintBlackBass,
+  type BlackBassFrame,
+} from './drawBlackBass';
 import {
   CARP_FRAMES,
   CARP_PUFF_TEX,
@@ -107,7 +114,23 @@ export const PREDATOR_TEX = {
   crayfishWalkB: 'crayfish-walk-b',
   crayfishWarn: 'crayfish-warn',
   crayfishPinch: 'crayfish-pinch',
+  blackBassSwim0: 'black-bass-swim-0',
+  blackBassSwim1: 'black-bass-swim-1',
+  blackBassSwim2: 'black-bass-swim-2',
+  blackBassWarn: 'black-bass-warn',
+  blackBassStrike: 'black-bass-strike',
+  blackBassStill: 'black-bass-still',
 } as const;
+
+/** Fixed key of each black bass frame. */
+const BLACK_BASS_KEYS: Readonly<Record<BlackBassFrame, string>> = {
+  swim0: PREDATOR_TEX.blackBassSwim0,
+  swim1: PREDATOR_TEX.blackBassSwim1,
+  swim2: PREDATOR_TEX.blackBassSwim2,
+  warn: PREDATOR_TEX.blackBassWarn,
+  strike: PREDATOR_TEX.blackBassStrike,
+  still: PREDATOR_TEX.blackBassStill,
+};
 
 /** Fixed key of each crayfish frame. */
 const CRAYFISH_KEYS: Readonly<Record<CrayfishFrame, string>> = {
@@ -223,9 +246,17 @@ export interface PredatorTextures {
    * CRAYFISH_FOOT_Y below it and the tail trails toward -x.
    */
   readonly crayfish: Readonly<Record<CrayfishFrame, TexInfo>>;
+  /**
+   * Black bass, one still frame each (BLACK_BASS_TEX), facing right: `swim0` to `swim2` (fins
+   * folded, the tail one step up, straight, one step down; the scene steps 0, 1, 2, 1), `warn` (the
+   * stop: fins flared, head up, pale flash), `strike` (fins tucked flat, tail swept wide) and
+   * `still` (fins flared, level, no flash: the reduced motion pose). Anchor is the body centre, the
+   * bass's logic point; the tail trails toward -x.
+   */
+  readonly blackBass: Readonly<Record<BlackBassFrame, TexInfo>>;
 }
 
-/** Bake the tilapia, heron, garter snake, carp, crayfish, effect and leg icon textures into the scene's texture manager. */
+/** Bake the tilapia, heron, garter snake, carp, crayfish, black bass, effect and leg icon textures into the scene's texture manager. */
 export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): PredatorTextures {
   const info: Record<string, TexInfo> = {};
   const add = (t: TexInfo): TexInfo => {
@@ -288,6 +319,10 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
   for (const frame of CRAYFISH_FRAMES) {
     crayfish[frame] = add(bake(scene, CRAYFISH_KEYS[frame], CRAYFISH_TEX, bakeScale, (ctx) => paintCrayfish(ctx, frame)));
   }
+  const blackBass = {} as Record<BlackBassFrame, TexInfo>;
+  for (const frame of BLACK_BASS_FRAMES) {
+    blackBass[frame] = add(bake(scene, BLACK_BASS_KEYS[frame], BLACK_BASS_TEX, bakeScale, (ctx) => paintBlackBass(ctx, frame)));
+  }
 
   return {
     info,
@@ -309,5 +344,6 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
     carpPuff,
     carpPuffStill,
     crayfish,
+    blackBass,
   };
 }

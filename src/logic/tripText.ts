@@ -148,7 +148,7 @@ function axolotlFriends(count: number): string {
 function rescuedBankedOpening(rescuedCount: number, count: number): string {
   const friends = axolotlFriends(rescuedCount);
   if (count === 0) return `${friends} ${rescuedCount === 1 ? 'is' : 'are'} safe now!`;
-  if (count === 1) return `${friends} and your treasure are safe now!`;
+  if (count === 1) return `${friends} and your treasure are safe!`;
   return `${friends} and ${count} treasures are safe!`;
 }
 

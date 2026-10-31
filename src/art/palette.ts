@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the twenty Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the twenty-two Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -479,7 +479,9 @@ export type DreamLookId =
   | 'moonstone'
   | 'chocolate'
   | 'crystal-shine'
-  | 'glowworm';
+  | 'glowworm'
+  | 'jade'
+  | 'fiesta-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -562,6 +564,15 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // than Galaxy (1.37:1) and Midnight blue (1.62:1): 16.03:1 with white and 1.11:1 with ink, so it follows the dark-body
   // rules (white spots, eye ring, rim light). The glow gill #4fe3c1 is 9.99:1 against it.
   glowworm: dreamSlots('#101c52', '#131d52', '#707797', '#9399b1', ['#4fe3c1', '#76e9cf'], ['#4bd0b6', '#70d9c5']),
+  // Deep canal Area 8 Dream colour (Jade, issue #78). Body #3ec8a8 is a deep blue-green (relative luminance 0.452), darker
+  // than Mint (1.60:1) and Lily green (1.70:1) and 1.62:1 lighter than Crystal shine, so all three keep the 1.5:1 greyscale
+  // margin. 6.88:1 with ink and 2.09:1 with white, so ink spots and, as Rainbow, the rim light. The deep jade gill #13806c
+  // is 2.32:1 against it.
+  jade: dreamSlots('#3ec8a8', '#3cb49d', '#8bdecb', '#a8e6d8', ['#13806c', '#479c8c'], ['#157769', '#459287']),
+  // Deep canal Area 8 Legendary Dream colour (Fiesta shine, a sheen). Body #ff78c8 is a bright fiesta pink (relative
+  // luminance 0.389): 1.51:1 darker than Bubblegum and 1.59:1 from Iridescent, the other light sheen. 6.01:1 with ink and
+  // 2.39:1 with white, so ink spots and, as Rainbow, the rim light. The sunny yellow gill #ffd83a is 1.73:1 against it.
+  'fiesta-shine': dreamSlots('#ff78c8', '#e66eba', '#ffaede', '#ffc2e6', ['#ffd83a', '#ffe165'], ['#eac63c', '#eed263']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -589,6 +600,8 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'plum',
   'chocolate',
   'glowworm',
+  'jade',
+  'fiesta-shine',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

@@ -517,7 +517,7 @@ describe('rescued and waiting axolotls', () => {
 
   it('bankedBodyShort pairs the axolotl friend with one treasure', () => {
     expect(bankedBodyShort(1, 1, 1)).toBe(
-      'Your axolotl friend and your treasure are safe now! You have 1 treasure safe at the Home Spot.',
+      'Your axolotl friend and your treasure are safe! You have 1 treasure safe at the Home Spot.',
     );
   });
 

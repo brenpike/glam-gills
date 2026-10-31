@@ -3,6 +3,7 @@ import { bakeAreaMapTextures, type AreaMapTextures } from '../art/areaMapTexture
 import { bakeAreaTextures, type AreaTextures } from '../art/areaTextures';
 import { createAxolotlRigBake, type AxolotlRigBake } from '../art/axolotlRig';
 import { bakeChinampaTextures, type ChinampaTextures } from '../art/chinampaTextures';
+import { bakeDeepCanalTextures, type DeepCanalTextures } from '../art/deepCanalTextures';
 import type { GhostNetSize } from '../art/drawChinampa';
 import { CAVE_H, CAVE_W } from '../art/drawFinds';
 import { streamColumnFor, type ReedLook } from '../art/drawScenery';
@@ -102,7 +103,11 @@ export interface BakedDecorationPack {
  * textures, baked only when some area has mobile snacks, else null. `springCave` holds the spring
  * cave props (the side grotto, the rock ledges, the outflow marks, the glow-plants and the soft
  * light), baked only when some area's look has the grotto cave or says it needs them, or some area
- * has dark water, else null. "Some area" counts the dev area when one was loaded. A dev area that
+ * has dark water, else null. The spring cave props also hold one rock wall per wall size of any area,
+ * the deep canal's divider included. `deepCanal` holds the deep canal props (the gliding trajinera
+ * hull and its shadow, the moored hulls and the sunken hull cave), baked only when some area's look
+ * has the sunken hull cave or says it needs them, or some area has gliding trajineras, else null.
+ * "Some area" counts the dev area when one was loaded. A dev area that
  * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
  * of `predator`.
  */
@@ -126,6 +131,7 @@ export interface GameAssets {
   movingHazards: MovingHazardTextures | null;
   mobileSnacks: MobileSnackTextures | null;
   springCave: SpringCaveTextures | null;
+  deepCanal: DeepCanalTextures | null;
 }
 
 /** What the swim scene and its HUD start from: the game assets and the id of the area to swim in. */
@@ -613,6 +619,27 @@ function bakeSpringCaveProps(
   return needed ? bakeSpringCaveTextures(scene, bakeScale, rockWallSizes) : null;
 }
 
+/** Whether area `area` has any gliding trajinera (issue #78, ND-8). */
+function hasTrajineras(area: Readonly<AreaData>): boolean {
+  return (area.layout.trajineras ?? []).length > 0;
+}
+
+/**
+ * The deep canal props, baked once for every area: when some area's look has the sunken hull cave or
+ * says it needs the deep canal props, or some area has gliding trajineras (in any look). Null when no
+ * area needs them.
+ */
+function bakeDeepCanalProps(
+  scene: Phaser.Scene,
+  areas: readonly Readonly<AreaData>[],
+  bakeScale: number,
+): DeepCanalTextures | null {
+  const needed =
+    areas.map(areaLook).some((look) => look.cave.kind === 'sunkenHull' || look.deepCanalProps) ||
+    areas.some(hasTrajineras);
+  return needed ? bakeDeepCanalTextures(scene, bakeScale) : null;
+}
+
 /** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */
 function areasWithDev(devArea: Readonly<AreaData> | undefined): Readonly<AreaData>[] {
   if (devArea === undefined || AREAS.some((area) => area.id === devArea.id)) return [...AREAS];
@@ -666,6 +693,7 @@ export class BootScene extends Phaser.Scene {
     const movingHazards = bakeMovingHazards(this, areas, bakeScale);
     const mobileSnacks = areas.some(hasMobileSnacks) ? bakeMobileSnackTextures(this, bakeScale) : null;
     const springCave = bakeSpringCaveProps(this, areas, bakeScale);
+    const deepCanal = bakeDeepCanalProps(this, areas, bakeScale);
     const assets: GameAssets = {
       areas,
       zones,
@@ -686,6 +714,7 @@ export class BootScene extends Phaser.Scene {
       movingHazards,
       mobileSnacks,
       springCave,
+      deepCanal,
     };
     this.scene.start(SCENE_KEYS.title, assets);
   }
