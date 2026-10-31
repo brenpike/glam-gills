@@ -1,4 +1,6 @@
 import {
+  BLACK_BASS_FACT,
+  BLACK_BASS_MEET_RANGE,
   CARP_FACT,
   CARP_MEET_RANGE,
   CRAYFISH_FACT,
@@ -11,7 +13,7 @@ import {
   TILAPIA_MEET_RANGE,
   type FactCard,
 } from './factCards';
-import { CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
+import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
 
@@ -49,6 +51,11 @@ export interface PredatorRuleHook {
  * or right toward the target (the strike spot with `fixedStrikeSpot`), along the facing when the
  * target is straight above or below. The strike never moves the predator up or down, so it reaches
  * only a target within hitRadius of the predator's height.
+ * `slowTurn` (issue #78, ND-5): through the cooldown after a strike the predator keeps the strike's
+ * facing and glides along the strike's aim, kept as `PredatorState.glide`, from patrolSpeed slowing
+ * evenly to a stop at the cooldown's end; after a cancelled warning it holds still, keeping its
+ * facing. It never changes facing before the cooldown ends, then swims its route again. With
+ * `stillCooldown` as well, `stillCooldown` wins.
  */
 export interface PredatorRules {
   sightCover?: boolean;
@@ -56,6 +63,7 @@ export interface PredatorRules {
   stillCooldown?: boolean;
   warnOnRoute?: boolean;
   levelStrike?: boolean;
+  slowTurn?: boolean;
 }
 
 /** How far in px a predator with the `warnOnRoute` rule may be from its route and still warn (inclusive). */
@@ -90,6 +98,9 @@ export type PredatorRoute = TilapiaRoute & { species: Readonly<PredatorSpecies> 
  * `strikeSpot` is for a species with the `fixedStrikeSpot` rule only: where its strike goes, fixed
  * at warning start and kept through the warning and strike. It is absent in every other phase and
  * on every other species.
+ * `glide` is for a species with the `slowTurn` rule only: the unit direction of its glide through
+ * the cooldown after a strike, the strike's aim. It is absent in every other phase, after a
+ * cancelled warning and on every other species.
  */
 export interface PredatorState {
   species: string;
@@ -103,6 +114,7 @@ export interface PredatorState {
   duration: number;
   aim: Point | null;
   strikeSpot?: Point;
+  glide?: Point;
 }
 
 /** Phase events emitted by `stepPredator`, in the order they happened within the step. */
@@ -222,11 +234,29 @@ export const CRAYFISH_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   rules: Object.freeze({ warnOnRoute: true }),
 });
 
+/**
+ * The black bass (issue #78), the deep canal's signature predator: it plays the shared rules with its
+ * own tuning. It warns by distance at any depth, flaring its fins, when the axolotl is within reach
+ * of it, then lunges straight along the aim locked at strike start, with no homing. With the
+ * `slowTurn` rule it keeps that facing through the cooldown and glides to a stop along its aim before
+ * it swims its route again, so dodging sideways beats it. A strike that connects is a hit; a touch
+ * is the gentle bump. It is not a danger part: it is the one new predator of its area.
+ */
+export const BLACK_BASS_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
+  id: 'black-bass',
+  name: 'Black bass',
+  tuning: BLACK_BASS,
+  meetRange: BLACK_BASS_MEET_RANGE,
+  fact: BLACK_BASS_FACT,
+  rules: Object.freeze({ slowTurn: true }),
+});
+
 /** Every predator species. */
 export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.freeze([
   TILAPIA_SPECIES,
   HERON_SPECIES,
   CRAYFISH_SPECIES,
+  BLACK_BASS_SPECIES,
   GARTER_SNAKE_SPECIES,
   CARP_SPECIES,
 ]);
@@ -403,6 +433,8 @@ export function phaseProgress(state: PredatorState): number {
  * With `warnOnRoute`, the predator must also be within `ROUTE_WARN_TOLERANCE` of its route
  * (`routeLoopDistance`) to start a warning and at the end-of-warning re-check; movement is unchanged.
  * With `levelStrike`, the aim locked at the end of the warning is level, toward the target's side.
+ * With `slowTurn`, the cooldown after a strike glides along the strike's aim to a stop, keeping the
+ * facing, and the cooldown after a cancelled warning holds still.
  *
  * Chase (PRD open question 249, ND-2): only with `ctx.tuning.chase`, and only on patrol when no
  * warning starts. See `chaseStep`. Without a chase, patrol is unchanged.
@@ -594,21 +626,39 @@ function stepCooldown(
     return { state: { ...drifted, elapsed }, used, event: null };
   }
   const patrol: PredatorState = { ...drifted, phase: 'patrol', elapsed: 0, duration: 0 };
+  delete patrol.glide;
   return { state: patrol, used, event: { type: 'cooldownEnd' } };
 }
 
 /**
  * Moves a cooling-down predator for `used` seconds: a species with the `stillCooldown` rule stands
- * still facing the target, any other swims its route.
+ * still facing the target, one with the `slowTurn` rule glides (`glideMove`), any other swims its
+ * route.
  */
 function cooldownMove(state: PredatorState, target: Point, used: number, ctx: PredatorContext): PredatorState {
   if (ctx.rules?.stillCooldown) return { ...state, facing: faceToward(state.facing, target.x - state.pos.x) };
+  if (ctx.rules?.slowTurn) return glideMove(state, used, ctx);
   return swimRoute(state, used, ctx);
+}
+
+/**
+ * Glides a cooling-down predator for `used` seconds along `glide`, its facing unchanged. The speed
+ * starts at patrolSpeed and slows evenly to 0 at the end of the cooldown, so the distance is the
+ * exact area under that speed over the step, whatever the step size. No glide holds still.
+ */
+function glideMove(state: PredatorState, used: number, ctx: PredatorContext): PredatorState {
+  const glide = state.glide;
+  if (!glide || state.duration <= 0) return state;
+  const start = state.elapsed;
+  const end = Math.min(state.duration, start + used);
+  const travelled = ctx.tuning.patrolSpeed * (end - start - (end * end - start * start) / (2 * state.duration));
+  return { ...state, pos: moveClamped(state.pos, scale(glide, travelled), ctx) };
 }
 
 function enterCooldown(state: PredatorState, ctx: PredatorContext): PredatorState {
   const cooldown: PredatorState = { ...state, phase: 'cooldown', elapsed: 0, duration: ctx.tuning.cooldown, aim: null };
   delete cooldown.strikeSpot;
+  if (ctx.rules?.slowTurn && state.aim) cooldown.glide = { x: state.aim.x, y: state.aim.y };
   return cooldown;
 }
 

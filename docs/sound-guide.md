@@ -37,6 +37,7 @@ Pitched sounds use the five notes of the major pentatonic scale of the cue that 
 | Lily Pad Hop (day and dusk) | F | F G A C D |
 | Garden Boats (day and dusk) | D | D E F# A B |
 | Cenote Glow (day and dusk; E dorian uses D major's notes) | D | D E F# A B |
+| Trajinera Waltz, the deep canal's cue (day and dusk; D major) | D | D E F# A B |
 | No music (music off) | The cue that would play | The same notes |
 
 A recipe names its notes as steps of that scale: step 0 is the home note in the octave above middle C (G5, F5 or D5), step 5 is the home note an octave up, and step −5 an octave down. The "home chord" is steps −5, −3 and −2 (the major triad on the home note, an octave down: the home note, its third and its fifth).
@@ -57,6 +58,8 @@ Unpitched sounds (swishes, puffs, taps, clay knocks) do not change with the key.
 ## 5. The sounds
 
 Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is a summary; the sketches hold the exact notes and timings.
+
+The deep canal (issue #78) adds no sound code. The black bass's warning plays the predator warning ripple and a strike that costs a leg plays the uh-oh, as for every predator; a strike that misses plays nothing. A trajinera's hull pushing the axolotl, and a boat's shadow, are kept silent (section 6).
 
 | Group | Moment | Sound | Slice |
 |---|---|---|---|
@@ -109,6 +112,8 @@ Slice 1 is the first build; slices 2 and 3 follow (PRD N7). The recipe column is
 | Predators patrolling or chasing | A chase sound would be danger music. |
 | A lunge or strike that misses | Missing is the good outcome; the warning was the cue. |
 | Bumping a predator that is not lunging | Nothing is lost. |
+| A trajinera's hull pushing the axolotl | Nothing is lost; the push shows it. |
+| A trajinera's shadow on the water | Seeing it is the cue to look; a sound for it would feel like danger music. |
 | Protected time, and a leg regrowing | Only the moment a leg is back gets a sound. |
 | The hidden-treasure hint sparkle | Finding it by looking is the fun. |
 | Lighting a glow-plant | The light spreading through the dark is the reward. A soft glass chime is an open question (PRD), to sketch and measure first (section 7). |

@@ -292,7 +292,7 @@ describe('girl eyelashes on every morph (guide 6u, 10)', () => {
   });
 });
 
-/** Every body the cheek heart sits on: the eight morphs, then the twenty Dream colours (guide 3b, 3f). */
+/** Every body the cheek heart sits on: the eight morphs, then the twenty-two Dream colours (guide 3b, 3f). */
 const HEART_BODIES: readonly (readonly [string, string])[] = [
   ...MORPH_LOOK_IDS.map((id): [string, string] => [id, MORPH_PALETTES[id].body]),
   ...Object.entries(DREAM_SLOTS).map(([id, slots]): [string, string] => [`dream ${id}`, slots.body]),
@@ -332,6 +332,8 @@ const CHEEK_HEART_CONTRAST: Readonly<Record<string, readonly [number, number, nu
   'dream chocolate': [9.37, 1.54, 3.24],
   'dream crystal-shine': [3.38, 4.26, 1.17],
   'dream glowworm': [16.03, 1.11, 5.53],
+  'dream jade': [2.09, 6.88, 1.38],
+  'dream fiesta-shine': [2.39, 6.01, 1.21],
 };
 
 /** An rgba(r,g,b,a) colour laid over an opaque #rrggbb colour, as #rrggbb. */
@@ -347,8 +349,8 @@ function laidOver(rgba: string, under: string): string {
 }
 
 describe('girl cheek heart on every body (guide 6u, 10)', () => {
-  it('lists the eight morphs and the twenty Dream colours', () => {
-    expect(HEART_BODIES).toHaveLength(28);
+  it('lists the eight morphs and the twenty-two Dream colours', () => {
+    expect(HEART_BODIES).toHaveLength(30);
     expect(Object.keys(CHEEK_HEART_CONTRAST)).toEqual(HEART_BODIES.map(([id]) => id));
   });
 

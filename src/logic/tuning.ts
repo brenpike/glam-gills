@@ -516,6 +516,31 @@ export const CRAYFISH: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
+ * Black bass values (issue #78, the owner's decisions of 2026-10-22); tune in play. The bass swims
+ * long open-water routes at patrolSpeed, stops, flares its fins and flashes pale for 0.8 s (the
+ * PRD's 0.8 s floor) when the axolotl is within lungeRange of it at any depth, then lunges
+ * lungeSpeed x lungeDuration = 216 px straight along the aim locked at strike start, and glides to
+ * a stop through the 1.5 s cooldown (the `slowTurn` rule on BLACK_BASS_SPECIES in
+ * src/logic/predators.ts). Warning, strike, reach, cooldown and patrol speed are the owner's.
+ * Provisional, not the owner's: hitRadius and contactRadius, larger than the carp's because it is a
+ * big fish; bodyRadius, between the tilapia's and the carp's; the tilapia's gentle bump.
+ */
+export const BLACK_BASS: Readonly<TilapiaTuning> = Object.freeze({
+  minWindup: 0.8,
+  windup: 0.8,
+  cooldown: 1.5,
+  lungeRange: 180,
+  lungeSpeed: 480,
+  lungeDuration: 0.45,
+  hitRadius: 40,
+  contactRadius: 44,
+  bodyRadius: 28,
+  patrolSpeed: 60,
+  bumpSpeed: TILAPIA.bumpSpeed,
+  bumpCooldown: TILAPIA.bumpCooldown,
+});
+
+/**
  * Provisional chase defaults for each predator type (PRD open question 251, ND-4); tune in play.
  * None is wired into a real area. Each speed is strictly between the 2-leg (112.5 px/s) and 4-leg
  * (150 px/s) top speeds, and each sight is greater than its predator's lungeRange (ND-3). This one
@@ -559,6 +584,16 @@ export const CRAYFISH_CHASE: Readonly<ChaseTuning> = Object.freeze({
   sight: 200,
   leash: 0,
   speed: 120,
+});
+
+/**
+ * Provisional chase default for a black bass (issue #78, ND-4). Its sight is greater than its 180 px
+ * lungeRange, and its speed is strictly between the 2-leg and 4-leg top speeds.
+ */
+export const BLACK_BASS_CHASE: Readonly<ChaseTuning> = Object.freeze({
+  sight: 260,
+  leash: 160,
+  speed: 130,
 });
 
 /** Provisional carried-home values; a gentle float of 1.5 to 5 s, or a 1.5 s still bubble. */

@@ -77,8 +77,8 @@ export interface HazardSpawn {
 }
 
 /**
- * How an element behaves: 'cycle' runs a fixed timing cycle, as the mat pairs do; 'puzzle' is a
- * puzzle element, such as the glow-plant (issue #77, ND-8): always active, never a hit and with no
+ * How an element behaves: 'cycle' runs a fixed timing cycle, as the mat pairs and the gliding
+ * trajineras (issue #78, ND-8) do; 'puzzle' is a puzzle element, such as the glow-plant (issue #77, ND-8): always active, never a hit and with no
  * fact card.
  */
 export type ElementKind = 'cycle' | 'puzzle';
@@ -156,6 +156,20 @@ export interface PebbleGroove {
   radius: number;
 }
 
+/** Which way a gliding trajinera crosses its span (issue #78, ND-8). */
+export type GlideDirection = 'left' | 'right';
+
+/**
+ * A gliding trajinera's crossing (issue #78, ND-8): its hull glides across `x0..x1` in the surface
+ * lane, in `direction`, once per crossing period (trajineras.ts). Not a sweep: the boat never hits
+ * and never costs a leg; it only pushes the axolotl aside. Inclusive edges; `x0 < x1`.
+ */
+export interface TrajineraCrossing {
+  x0: number;
+  x1: number;
+  direction: GlideDirection;
+}
+
 export interface ElementSpawn {
   id: string;
   type: ElementType;
@@ -167,6 +181,8 @@ export interface ElementSpawn {
   glowPlant?: GlowPlantSpot;
   /** Pebble groove (issue #105, ND-8); absent on every element that is not a pebble. */
   pebble?: PebbleGroove;
+  /** Gliding trajinera crossing (issue #78, ND-8); absent on every element that is not a boat. */
+  trajinera?: TrajineraCrossing;
 }
 
 /**
@@ -234,7 +250,8 @@ export function elementActive(element: ElementSpawn, timeS: number): boolean {
 /**
  * The rectangle the element's moving parts can ever occupy: for a mat pair, its whole
  * `x0..x1` by `rowTop..rowBottom`, since closed mats meet at the channel. Null when the element
- * has no mat pair, a glow-plant included (issue #77, ND-8).
+ * has no mat pair, a glow-plant (issue #77, ND-8) and a gliding trajinera (issue #78, ND-8)
+ * included: a boat's hull band is trajineraHullBand's (trajineras.ts), so it is never a mat.
  */
 export function elementSweep(element: Readonly<ElementSpawn>): HazardRect | null {
   const pair = element.matPair;

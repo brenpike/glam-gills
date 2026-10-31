@@ -6,7 +6,7 @@
  */
 import { shapeDistance, type HazardShape } from './hazards';
 import { movingHazardSweep } from './movingHazards';
-import { CARP_SPECIES, TILAPIA_SPECIES, routeLoopDistance, type PredatorRules } from './predators';
+import { BLACK_BASS_SPECIES, CARP_SPECIES, TILAPIA_SPECIES, routeLoopDistance, type PredatorRules } from './predators';
 import { TILAPIA, type TilapiaTuning } from './tuning';
 import { SCREEN_W, WORLD_H, inSafeArea, swimBounds, type Point, type SafeArea, type TilapiaRoute, type ZoneLayout } from './zone';
 
@@ -37,8 +37,8 @@ const BAND_REACH = 24;
 /** Fewest depth bands each loop the depth rule covers reaches into (issue #130, ND-5). */
 const MIN_LOOP_BANDS = 2;
 
-/** Species ids whose loops the depth rule covers (issue #130, ND-5). */
-const DEPTH_RULE_SPECIES: readonly string[] = [TILAPIA_SPECIES.id, CARP_SPECIES.id];
+/** Species ids whose loops the depth rule covers (issue #130, ND-5; the black bass, issue #78, ND-6). */
+const DEPTH_RULE_SPECIES: readonly string[] = [TILAPIA_SPECIES.id, CARP_SPECIES.id, BLACK_BASS_SPECIES.id];
 
 /** Screens of water per carp the carp rule asks for (issue #130, ND-7). */
 const SCREENS_PER_CARP = 3;
@@ -200,11 +200,11 @@ export function depthBands(layout: Pick<ZoneLayout, 'width' | 'bedTop'>): YSpan[
 }
 
 /**
- * Whether the tilapia and carp loops patrol at every depth (issue #130, ND-5). It covers tilapia
- * routes and predator routes whose species id is the tilapia's or the carp's, grouped by species
- * id: (a) each loop's height overlaps at least two depth bands by at least BAND_REACH px each, and
- * (b) each species' loops together overlap every band by at least BAND_REACH px. True when the area
- * has no such loop.
+ * Whether the tilapia, carp and black bass loops patrol at every depth (issue #130, ND-5; issue #78,
+ * ND-6). It covers tilapia routes and predator routes whose species id is the tilapia's, the carp's
+ * or the black bass's, grouped by species id: (a) each loop's height overlaps at least two depth
+ * bands by at least BAND_REACH px each, and (b) each species' loops together overlap every band by at
+ * least BAND_REACH px. True when the area has no such loop.
  */
 export function meetsDepthRule(layout: RouteGeometry): boolean {
   const bands = depthBands(layout);

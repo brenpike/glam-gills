@@ -695,6 +695,7 @@ describe('bookPages', () => {
       ['dreamColour', 5],
       ['dreamColour', 5],
       ['dreamColour', 5],
+      ['dreamColour', 2],
       ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
@@ -719,8 +720,8 @@ describe('bookPages', () => {
   });
 
   it('puts every Dream colour on its own page at one row per page', () => {
-    expect(DREAM_COLOURS).toHaveLength(20);
-    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 20 + 17);
+    expect(DREAM_COLOURS).toHaveLength(22);
+    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 22 + 17);
   });
 
   it('gives an empty section one page', () => {

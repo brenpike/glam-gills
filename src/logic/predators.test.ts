@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BLACK_BASS_FACT,
+  BLACK_BASS_MEET_RANGE,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
   HERON_FACT,
@@ -9,6 +11,7 @@ import {
 } from './factCards';
 import { routeDistance } from './hiding';
 import {
+  BLACK_BASS_SPECIES,
   CARP_SPECIES,
   CRAYFISH_SPECIES,
   GARTER_SNAKE_SPECIES,
@@ -16,12 +19,15 @@ import {
   PREDATOR_SPECIES,
   ROUTE_WARN_TOLERANCE,
   TILAPIA_SPECIES,
+  bumpImpulse,
   createPredator,
   lungeConnects,
   phaseProgress,
   routeLoopDistance,
   stabTip,
   stepPredator,
+  touching,
+  tunedSpecies,
   type PredatorContext,
   type PredatorEvent,
   type PredatorRoute,
@@ -30,7 +36,7 @@ import {
   type PredatorState,
   type PredatorTuning,
 } from './predators';
-import { GARTER_SNAKE, HERON, TILAPIA } from './tuning';
+import { BLACK_BASS, BLACK_BASS_CHASE, CARP, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA } from './tuning';
 import type { Point } from './zone';
 
 const TEST_TUNING: Readonly<PredatorTuning> = Object.freeze({
@@ -98,7 +104,14 @@ describe('predator species', () => {
     expect(TILAPIA_SPECIES.fact).toBe(TILAPIA_FACT);
     expect(TILAPIA_SPECIES.hook).toBeUndefined();
     expect(TILAPIA_SPECIES.neverTouches).toBeUndefined();
-    expect(PREDATOR_SPECIES).toEqual([TILAPIA_SPECIES, HERON_SPECIES, CRAYFISH_SPECIES, GARTER_SNAKE_SPECIES, CARP_SPECIES]);
+    expect(PREDATOR_SPECIES).toEqual([
+      TILAPIA_SPECIES,
+      HERON_SPECIES,
+      CRAYFISH_SPECIES,
+      BLACK_BASS_SPECIES,
+      GARTER_SNAKE_SPECIES,
+      CARP_SPECIES,
+    ]);
     expect(Object.isFrozen(TILAPIA_SPECIES)).toBe(true);
     expect(Object.isFrozen(PREDATOR_SPECIES)).toBe(true);
   });
@@ -958,5 +971,252 @@ describe('shared rule: level strike', () => {
     expect(aimed.events).toEqual([{ type: 'lungeStart', aim: { x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) } }]);
     const ruleOff = stepPredator(linerWarningAt(start), { x: 1160, y: 280 }, STALKER_DT, { ...LEVELLER_CTX, rules: { levelStrike: false } });
     expect(ruleOff.events).toEqual(aimed.events);
+  });
+});
+
+/** The black bass's warning length, max(windup, minWindup). */
+const BASS_WINDUP = Math.max(BLACK_BASS.windup, BLACK_BASS.minWindup);
+const BASS_START: Point = { x: 1000, y: 300 };
+/** The bass swims its route leftward, so swimming it again turns it round after a rightward strike. */
+const BASS_ROUTE: PredatorRoute = {
+  id: 'bass-route',
+  waypoints: [BASS_START, { x: 600, y: 300 }],
+  species: BLACK_BASS_SPECIES,
+};
+const BASS_CTX: PredatorContext = {
+  safeArea: { x0: 0, x1: 200, y0: 100, y1: 700 },
+  bounds: { minX: 0, maxX: 3000, minY: 100, maxY: 700 },
+  tuning: BLACK_BASS_SPECIES.tuning,
+  rules: BLACK_BASS_SPECIES.rules,
+};
+/** Exactly the bass's 180 px reach from its start, down and to the right: aim (0.6, 0.8). */
+const BASS_PREY: Point = { x: BASS_START.x + 108, y: BASS_START.y + 144 };
+const BASS_AIM: Point = { x: 0.6, y: 0.8 };
+const BASS_REACH = BLACK_BASS.lungeSpeed * BLACK_BASS.lungeDuration;
+/** How far the bass glides through a full cooldown: from patrolSpeed slowing evenly to a stop. */
+const BASS_GLIDE = (BLACK_BASS.patrolSpeed * BLACK_BASS.cooldown) / 2;
+/** Behind the bass and out of its reach. */
+const BEHIND_BASS: Point = { x: 700, y: 300 };
+
+function spawnBass(): PredatorState {
+  return createPredator(BASS_ROUTE, BLACK_BASS_SPECIES.id);
+}
+
+/** A bass at its start whose warning is about to end. */
+function bassWarningEnding(): PredatorState {
+  return { ...spawnBass(), phase: 'telegraph', elapsed: BASS_WINDUP - STALKER_DT, duration: BASS_WINDUP };
+}
+
+/** A bass whose strike along BASS_AIM has just started from its start. */
+function bassStrike(): PredatorState {
+  const result = stepPredator(bassWarningEnding(), BASS_PREY, STALKER_DT, BASS_CTX);
+  expect(result.events).toEqual([{ type: 'lungeStart', aim: { x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) } }]);
+  return result.state;
+}
+
+/** Offset of `pos` from the bass's start along BASS_AIM, and across it. */
+function alongBassAim(pos: Point): { along: number; across: number } {
+  const dx = pos.x - BASS_START.x;
+  const dy = pos.y - BASS_START.y;
+  return { along: dx * BASS_AIM.x + dy * BASS_AIM.y, across: dx * BASS_AIM.y - dy * BASS_AIM.x };
+}
+
+describe('black bass species (issue #78)', () => {
+  it('describes the black bass: its own tuning, meet range and fact, and the slow turn rule only', () => {
+    expect(BLACK_BASS_SPECIES).toEqual({
+      id: 'black-bass',
+      name: 'Black bass',
+      tuning: BLACK_BASS,
+      meetRange: BLACK_BASS_MEET_RANGE,
+      fact: BLACK_BASS_FACT,
+      rules: { slowTurn: true },
+    });
+    expect(BLACK_BASS_SPECIES.tuning).toBe(BLACK_BASS);
+    expect(BLACK_BASS_SPECIES.fact).toBe(BLACK_BASS_FACT);
+    expect(BLACK_BASS_SPECIES.hook).toBeUndefined();
+    expect(BLACK_BASS_SPECIES.neverTouches).toBeUndefined();
+    expect(BLACK_BASS_SPECIES.dangerPart).toBeUndefined();
+    expect(Object.isFrozen(BLACK_BASS_SPECIES)).toBe(true);
+    expect(Object.isFrozen(BLACK_BASS_SPECIES.rules)).toBe(true);
+  });
+
+  it("warns for 0.8 s, strikes 480 px/s for 0.45 s with a 180 px reach, cools down for 1.5 s and patrols at 60 px/s (the owner's values)", () => {
+    expect(BLACK_BASS).toEqual({
+      minWindup: 0.8,
+      windup: 0.8,
+      cooldown: 1.5,
+      lungeRange: 180,
+      lungeSpeed: 480,
+      lungeDuration: 0.45,
+      hitRadius: 40,
+      contactRadius: 44,
+      bodyRadius: 28,
+      patrolSpeed: 60,
+      bumpSpeed: TILAPIA.bumpSpeed,
+      bumpCooldown: TILAPIA.bumpCooldown,
+    });
+    expect(BASS_WINDUP).toBe(0.8);
+    expect(BASS_REACH).toBeCloseTo(216, 9);
+    expect(BASS_REACH).toBeGreaterThan(BLACK_BASS.lungeRange);
+    expect(BLACK_BASS.hitRadius).toBeGreaterThan(CARP.hitRadius);
+    expect(BLACK_BASS.contactRadius).toBeGreaterThan(BLACK_BASS.hitRadius);
+    expect(BLACK_BASS.bodyRadius).toBeGreaterThan(TILAPIA.bodyRadius);
+    expect(BLACK_BASS.bodyRadius).toBeLessThan(CARP.bodyRadius);
+    expect(Object.isFrozen(BLACK_BASS)).toBe(true);
+  });
+
+  it('chases with a 260 px sight, a 160 px leash and 130 px/s, inside the chase limits', () => {
+    expect(BLACK_BASS_CHASE).toEqual({ sight: 260, leash: 160, speed: 130 });
+    expect(BLACK_BASS_CHASE.speed).toBeGreaterThan(SWIM.maxSpeed * LEGS.speedByLegs[1]);
+    expect(BLACK_BASS_CHASE.speed).toBeLessThan(SWIM.maxSpeed * LEGS.speedByLegs[LEGS.count - 1]);
+    const chasing = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    expect(chasing.tuning.chase).toBe(BLACK_BASS_CHASE);
+    expect(chasing.rules).toBe(BLACK_BASS_SPECIES.rules);
+    expect(Object.isFrozen(BLACK_BASS_CHASE)).toBe(true);
+  });
+});
+
+describe('black bass warning', () => {
+  it('warns by distance at any depth, within its 180 px reach (inclusive)', () => {
+    const at = (dx: number, dy: number): Point => ({ x: BASS_START.x + dx, y: BASS_START.y + dy });
+    for (const target of [at(0, 180), at(0, -180), at(-180, 0), BASS_PREY]) {
+      expect(eventTypes(stepPredator(spawnBass(), target, STALKER_DT, BASS_CTX).events)).toEqual(['telegraphStart']);
+    }
+    expect(stepPredator(spawnBass(), at(0, 180.5), STALKER_DT, BASS_CTX).events).toEqual([]);
+  });
+
+  it('does not start while another predator is warning or striking (A1)', () => {
+    const blocked = stepPredator(spawnBass(), BASS_PREY, STALKER_DT, { ...BASS_CTX, telegraphBlocked: true });
+    expect(blocked.events).toEqual([]);
+    expect(blocked.state.phase).toBe('patrol');
+  });
+
+  it('holds still for 0.8 s, then strikes', () => {
+    const warned = stepPredator(spawnBass(), BASS_PREY, STALKER_DT, BASS_CTX).state;
+    expect(warned.phase).toBe('telegraph');
+    expect(warned.duration).toBe(BASS_WINDUP);
+    const run = runStalker(warned, BASS_PREY, 1, BASS_CTX, 'lungeStart');
+    expect(eventTypes(run.events)).toEqual(['lungeStart']);
+    expect(run.positions.length + 1).toBe(Math.ceil(BASS_WINDUP / STALKER_DT));
+    for (const pos of run.positions.slice(0, -1)) expect(pos).toEqual(BASS_START);
+  });
+});
+
+describe('black bass strike', () => {
+  it('lunges straight along the aim locked at strike start, with no homing, 216 px in 0.45 s', () => {
+    const run = runStalker(bassStrike(), BEHIND_BASS, 1, BASS_CTX, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    for (const pos of run.positions) expect(alongBassAim(pos).across).toBeCloseTo(0, 6);
+    const lungeEnd = BLACK_BASS.lungeDuration;
+    const stepsInLunge = Math.ceil(lungeEnd / STALKER_DT);
+    expect(run.positions.length).toBe(stepsInLunge);
+    expect(alongBassAim(run.positions[stepsInLunge - 2]).along).toBeCloseTo(BLACK_BASS.lungeSpeed * (stepsInLunge - 1) * STALKER_DT, 6);
+    expect(alongBassAim(run.positions.at(-1) ?? BASS_START).along).toBeGreaterThanOrEqual(BASS_REACH - 1e-6);
+  });
+
+  it('connects as a hit once the axolotl is within its 40 px hit reach', () => {
+    const run = runStalker(bassStrike(), BASS_PREY, 1, BASS_CTX, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    const struckFrom = run.positions.at(-2) ?? BASS_START;
+    expect(Math.hypot(struckFrom.x - BASS_PREY.x, struckFrom.y - BASS_PREY.y)).toBeGreaterThan(BLACK_BASS.hitRadius);
+    expect(alongBassAim(run.state.pos).along).toBeLessThan(BASS_REACH);
+  });
+
+  it('never connects with an axolotl in the safe area', () => {
+    const sheltered: PredatorContext = { ...BASS_CTX, safeArea: { x0: 1050, x1: 1200, y0: 400, y1: 500 } };
+    const run = runStalker(bassStrike(), BASS_PREY, 1, sheltered, 'lungeEnd');
+    expect(run.events.at(-1)).toEqual({ type: 'lungeEnd', connected: false });
+  });
+
+  it('touches with its 44 px contact reach outside a strike and bumps gently', () => {
+    const bass = spawnBass();
+    expect(touching(bass, { x: BASS_START.x + 44, y: BASS_START.y }, BLACK_BASS)).toBe(true);
+    expect(touching(bass, { x: BASS_START.x + 44.5, y: BASS_START.y }, BLACK_BASS)).toBe(false);
+    expect(touching(bassStrike(), BASS_START, BLACK_BASS)).toBe(false);
+    expect(bumpImpulse(bass, { x: BASS_START.x + 10, y: BASS_START.y }, BLACK_BASS)).toEqual({ x: TILAPIA.bumpSpeed, y: 0 });
+  });
+});
+
+describe('shared rule: slow turn (issue #78, ND-5)', () => {
+  /** The bass at the end of a strike that missed, as it enters its cooldown. */
+  function bassCooling(): PredatorState {
+    const struck = runStalker(bassStrike(), BEHIND_BASS, 1, BASS_CTX, 'lungeEnd');
+    expect(struck.state.phase).toBe('cooldown');
+    return struck.state;
+  }
+
+  it('keeps the strike facing and glides along the aim, slowing evenly to a stop, through the cooldown', () => {
+    const start: PredatorState = { ...bassCooling(), elapsed: 0, pos: { x: 1000 + 0.6 * BASS_REACH, y: 300 + 0.8 * BASS_REACH } };
+    expect(start.glide).toEqual({ x: expect.closeTo(0.6, 9), y: expect.closeTo(0.8, 9) });
+    expect(start.aim).toBeNull();
+    expect(start.facing).toBe(1);
+    const run = runStalker(start, BEHIND_BASS, BLACK_BASS.cooldown + 1, BASS_CTX, 'cooldownEnd');
+    expect(eventTypes(run.events)).toEqual(['cooldownEnd']);
+    let previous = start.pos;
+    let previousStep = Infinity;
+    for (const pos of run.positions) {
+      const along = alongBassAim(pos).along - alongBassAim(previous).along;
+      expect(alongBassAim(pos).across).toBeCloseTo(0, 6);
+      expect(along).toBeGreaterThan(0);
+      expect(along).toBeLessThan(previousStep);
+      previousStep = along;
+      previous = pos;
+    }
+    expect(alongBassAim(run.state.pos).along).toBeCloseTo(BASS_REACH + BASS_GLIDE, 6);
+    expect(previousStep).toBeLessThan(0.01);
+  });
+
+  it('never changes facing before the cooldown ends, even with the axolotl behind it', () => {
+    let state = bassCooling();
+    while (state.phase === 'cooldown') {
+      const result = stepPredator(state, BEHIND_BASS, STALKER_DT, BASS_CTX);
+      if (result.state.phase === 'cooldown') expect(result.state.facing).toBe(1);
+      state = result.state;
+    }
+    expect(state.phase).toBe('patrol');
+    expect(Object.keys(state)).not.toContain('glide');
+    const back = runStalker(state, BEHIND_BASS, 0.25, BASS_CTX);
+    expect(back.events).toEqual([]);
+    expect(back.state.facing).toBe(-1);
+    expect(back.state.pos.x).toBeLessThan(state.pos.x);
+  });
+
+  it('glides the same whatever the step size', () => {
+    const start = bassCooling();
+    const fine = runStalker(start, BEHIND_BASS, 1, BASS_CTX).state;
+    const coarse = stepPredator(start, BEHIND_BASS, 1, BASS_CTX).state;
+    expect(coarse.pos.x).toBeCloseTo(fine.pos.x, 9);
+    expect(coarse.pos.y).toBeCloseTo(fine.pos.y, 9);
+  });
+
+  it('holds still keeping its facing through the cooldown after a cancelled warning', () => {
+    const cancelled = stepPredator(bassWarningEnding(), BEHIND_BASS, STALKER_DT, BASS_CTX);
+    expect(eventTypes(cancelled.events)).toEqual(['telegraphCancel']);
+    expect(cancelled.state.facing).toBe(-1);
+    expect(Object.keys(cancelled.state)).not.toContain('glide');
+    const right: Point = { x: 1400, y: 300 };
+    const run = runStalker(cancelled.state, right, BLACK_BASS.cooldown / 2, BASS_CTX);
+    for (const pos of run.positions) expect(pos).toEqual(BASS_START);
+    expect(run.state.facing).toBe(-1);
+  });
+
+  it('gives a species without the rule no glide and leaves it swimming its route', () => {
+    const noRule: PredatorContext = { ...BASS_CTX, rules: undefined };
+    const ruleOff: PredatorContext = { ...BASS_CTX, rules: { slowTurn: false } };
+    for (const ctx of [noRule, ruleOff]) {
+      const struck = runStalker(bassStrike(), BEHIND_BASS, 1, ctx, 'lungeEnd');
+      expect(struck.state.phase).toBe('cooldown');
+      expect(Object.keys(struck.state)).not.toContain('glide');
+      const swimming = runStalker(struck.state, BEHIND_BASS, 0.25, ctx);
+      expect(swimming.state.facing).toBe(-1);
+    }
+  });
+
+  it('stands still with the still cooldown rule as well', () => {
+    const both: PredatorContext = { ...BASS_CTX, rules: { slowTurn: true, stillCooldown: true } };
+    const start = bassCooling();
+    const run = runStalker(start, BEHIND_BASS, BLACK_BASS.cooldown / 2, both);
+    for (const pos of run.positions) expect(pos).toEqual(start.pos);
+    expect(run.state.facing).toBe(-1);
   });
 });

@@ -17,6 +17,7 @@ import { createLegs, isProtected, presentCount, tryHit, type LegsState } from '.
 import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
 import { CANAL_AREA } from './areas';
 import { treasureById } from './catalogue';
+import { TRAJINERAS, trajineraSpawn } from './trajineras';
 import {
   LEG_PROGRESS_STEPS,
   beatArea,
@@ -2818,5 +2819,108 @@ describe('glow-plants in the trip (issue #77, ND-8)', () => {
     expect(done.phase).toBe('ended');
     expect(done.darkHintTime).toBe(atStart);
     expect(tripSnapshot(done).glowPlantHint).toBeNull();
+  });
+});
+
+describe('gliding trajineras in the trip (issue #78, ND-8)', () => {
+  /** Offset -2 puts the hull 2 s into its crossing at element time 0: x 620 to 740, mid-span. */
+  const boat = trajineraSpawn('canal/trajinera-1', -2, { x0: 600, x1: 880, direction: 'right' });
+  const boatZone: TripSource = { ...findZone, trajineras: [boat] };
+  const underHull: Point = { x: 700, y: 130 };
+  const clear: Point = { x: 700, y: 260 };
+
+  it('keeps a trip with no boats unchanged', () => {
+    const plain = createTrip(zone);
+    expect(plain.trajineras).toBeNull();
+    expect(createTrip({ ...zone, trajineras: [] })).toEqual(plain);
+    const result = stepAt(plain, underHull);
+    expect(result).not.toHaveProperty('pushed');
+    expect(result.state.trajineras).toBeNull();
+  });
+
+  it('starts the lane with the boats, the swim bounds, the rock walls and every cooldown at 0', () => {
+    const rock = { x0: 1000, x1: 1100, y0: 200, y1: 318 };
+    const lane = createTrip({ ...boatZone, rockWalls: [rock] }).trajineras;
+    expect(lane).toEqual({ boats: [boat], bounds: swimBounds(zone), rocks: [rock], cooldowns: [0] });
+    expect(lane?.boats[0]).not.toBe(boat);
+  });
+
+  it('refuses boats without the area width or bed top', () => {
+    expect(() => createTrip({ ...boatZone, width: undefined })).toThrow(RangeError);
+    expect(() => createTrip({ ...boatZone, bedTop: undefined })).toThrow(RangeError);
+  });
+
+  it('pushes the axolotl out of the hull: no leg, no hit and no protected time', () => {
+    const result = stepAt(createTrip(boatZone), underHull);
+    expect(result.pushed).toMatchObject({ id: 'canal/trajinera-1', from: underHull, to: { x: 700, y: SURF + 60 + TRAJINERAS.bodyReach } });
+    expect(result.impulse).toEqual({ x: 0, y: TRAJINERAS.pushSpeed });
+    expect(result.impulse).not.toBe(result.pushed?.impulse);
+    expect(result.events).toEqual([]);
+    expect(result.state.legsLost).toBe(0);
+    expect(presentCount(result.state.encounter.legs)).toBe(LEGS.count);
+    expect(isProtected(result.state.encounter.legs)).toBe(false);
+    expect(result.state.trajineras?.cooldowns).toEqual([TRAJINERAS.pushCooldown]);
+  });
+
+  it('drops no carried find', () => {
+    const carried = walk(createTrip(boatZone), [spotA]).state;
+    expect(carried.holdings.bag).toEqual([PLANT]);
+    const result = stepAt(carried, underHull);
+    expect(result.pushed).toBeDefined();
+    expect(result.state.holdings).toEqual(carried.holdings);
+    expect(result.state.found).toEqual(carried.found);
+  });
+
+  it('gives no push again during the cooldown, then pushes again', () => {
+    const steps = Math.ceil(TRAJINERAS.pushCooldown / DT) + 1;
+    let state = createTrip(boatZone);
+    const pushedOn: number[] = [];
+    for (let step = 0; step <= steps; step++) {
+      const result = stepAt(state, underHull);
+      if (result.pushed) pushedOn.push(step);
+      state = result.state;
+    }
+    expect(pushedOn).toHaveLength(2);
+    expect(pushedOn[0]).toBe(0);
+    expect(pushedOn[1] * DT).toBeGreaterThanOrEqual(TRAJINERAS.pushCooldown - 1e-9);
+  });
+
+  it('gives no push clear of the hull, and counts the cooldown down with the capped step', () => {
+    const pushed = stepAt(createTrip(boatZone), underHull).state;
+    const away = stepAt(pushed, clear);
+    expect(away).not.toHaveProperty('pushed');
+    expect(away.impulse).toBeUndefined();
+    expect(away.state.trajineras?.cooldowns[0]).toBeCloseTo(TRAJINERAS.pushCooldown - DT, 9);
+    const long = stepTrip(pushed, { axolotlPos: clear, reduced: false, dashing: false }, 1, ctx);
+    expect(long.state.trajineras?.cooldowns[0]).toBeCloseTo(TRAJINERAS.pushCooldown - SWIM.dtMax, 9);
+  });
+
+  it('lets a bump win over a push on the same step, with no cooldown started', () => {
+    const edgeBoat = trajineraSpawn('canal/trajinera-2', -2, { x0: 200, x1: 480, direction: 'right' });
+    const edge: TripSource = { ...zone, tilapiaRoutes: [{ id: 'edge', waypoints: [{ x: 324, y: 130 }] }], trajineras: [edgeBoat] };
+    const result = stepAt(createTrip(edge), { x: 300, y: 130 });
+    expect(result.events.map((event) => event.type)).toEqual(['bump']);
+    expect(result).not.toHaveProperty('pushed');
+    expect(result.impulse).toBeDefined();
+    expect(result.state.trajineras?.cooldowns).toEqual([0]);
+  });
+
+  it('never changes Star 3: a push is not a leg lost', () => {
+    const pushed = stepAt(createTrip(boatZone), underHull).state;
+    expect(beatArea(pushed, { specialTreasureId: PLANT }).state.ending?.stars?.legsOrRescue).toBe(true);
+  });
+
+  it('holds the boats while paused and restarts the cooldowns on newTrip', () => {
+    const pushed = stepAt(createTrip(boatZone), underHull).state;
+    for (const dt of PAUSE_DTS) {
+      expect(stepTrip(pushed, { axolotlPos: underHull, reduced: false, dashing: false }, dt, ctx).state).toBe(pushed);
+    }
+    const atHome = stepAt(pushed, home).state;
+    expect(atHome.trajineras?.cooldowns[0]).toBeGreaterThan(0);
+    const done = goHome(atHome).state;
+    expect(done.phase).toBe('ended');
+    const next = newTrip(done, 42);
+    expect(next.trajineras).toEqual({ ...pushed.trajineras, cooldowns: [0] });
+    expect(next).toEqual(createTrip(boatZone, LEGS, [], 42));
   });
 });

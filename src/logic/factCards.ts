@@ -188,6 +188,36 @@ export const CRAYFISH_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The black bass fact card, shown the first time the axolotl meets a black bass (PRD C13; issue
+ * #78). The title and body are the owner's (issue #78, owner interrogation, 2026-10-22).
+ * Sources, checked 2026-10-30 (web research only; the game fetches nothing):
+ * Zambrano (responsible), Instituto de Biologia, UNAM, "Abundancia y estructura poblacional del
+ * axolotl (Ambystoma mexicanum) en los sistemas dulceacuicolas de Xochimilco y Chalco", final report
+ * of CONABIO project AS004, 2004, http://www.conabio.gob.mx/institucion/proyectos/resultados/InfAS004.pdf
+ * ("La carpa, la tilapia y la lobina son especies introducidas con muy altas densidades dentro de
+ * Xochimilco y Chalco"; "la lobina (Micropterus salmoides) es una especie tipicamente depredadora
+ * que puede estar reduciendo las poblaciones de ajolotes por depredacion directa de juveniles") for
+ * "people brought to Xochimilco";
+ * U.S. Geological Survey, Nonindigenous Aquatic Species, "Largemouth Bass (Micropterus nigricans) -
+ * Species Profile", https://nas.er.usgs.gov/queries/FactSheet.aspx?SpeciesID=401 (native to the St.
+ * Lawrence and Great Lakes, Hudson Bay and Mississippi River basins, the Atlantic Slope and "the Gulf
+ * Slope drainages from southern Florida into northern Mexico"; "Size: 97 cm"; "Largemouth Bass are
+ * voracious feeders"; "They feed predominately by sight") for "from far away" and "big fish".
+ * Owner to verify: "black bass" reads the report's "lobina" (Micropterus salmoides, the largemouth
+ * bass, now Micropterus nigricans); "from far away" reads the native range, which reaches northern
+ * Mexico but not the Valley of Mexico; "hunt fast in open water" is not checked against a source (the
+ * USGS profile ties the bass to shorelines, vegetation and submerged structure); "Axolotls stay safe
+ * by swimming out of the way" is the game's rule (the bass lunges only straight), not checked against
+ * a source.
+ */
+export const BLACK_BASS_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'black-bass',
+  name: 'Black bass',
+  title: 'Meet the black bass',
+  body: 'Black bass are big fish that people brought to Xochimilco from far away. They hunt fast in open water. Axolotls stay safe by swimming out of the way.',
+});
+
+/**
  * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
  * issue #77, ND-3). Provisional copy.
  * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
@@ -427,6 +457,13 @@ export const CARP_MEET_RANGE = 180;
  * card can show before the first pinch.
  */
 export const CRAYFISH_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a black bass (issue #78). Provisional; tune in
+ * play. The same as the tilapia's, and equal to the bass's 180 px lunge range, so the card shows no
+ * later than the first warning.
+ */
+export const BLACK_BASS_MEET_RANGE = 180;
 
 /**
  * Distance in px from a pulsing current's band within which the axolotl meets it (issue #105,

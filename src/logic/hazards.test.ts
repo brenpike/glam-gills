@@ -421,3 +421,28 @@ describe('the glow-plant element (issue #77, ND-8)', () => {
     expect(next).toEqual({ x: 300, y: 200 });
   });
 });
+
+const TRAJINERA_ELEMENT: ElementSpawn = {
+  id: 'test/boat-1',
+  type: { id: 'test-boat', name: 'Test boat', kind: 'cycle', period: 6, activeFor: 6 },
+  offset: 0,
+  trajinera: { x0: 200, x1: 480, direction: 'right' },
+};
+
+describe('a gliding trajinera crossing on an element (issue #78, ND-8)', () => {
+  it('has no sweep, so the boat is never a mat, never a hit and never blocks as one', () => {
+    expect(elementSweep(TRAJINERA_ELEMENT)).toBeNull();
+    const next = blockExplorer({ x: 260, y: 100 }, { x: 300, y: 100 }, [TRAJINERA_ELEMENT], 2, {
+      bounds: swimBounds(),
+      nets: [],
+      currents: [],
+    });
+    expect(next).toEqual({ x: 300, y: 100 });
+  });
+
+  it('keeps its crossing clock always running', () => {
+    for (let time = -12; time <= 24; time += 0.25) {
+      expect(elementActive(TRAJINERA_ELEMENT, time)).toBe(true);
+    }
+  });
+});

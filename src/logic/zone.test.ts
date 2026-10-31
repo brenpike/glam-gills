@@ -18,6 +18,7 @@ import { coversAt, inReeds, isDeep, routeDistance, spotMatchesLabels, turnDistan
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
 import { POND_2_LAYOUT } from './pond2Layout';
+import { trajineraHullBand, trajineraSpawn } from './trajineras';
 import { POND_LAYOUT } from './pondLayout';
 import { inSafeArea } from './tilapia';
 import { createTrip } from './trip';
@@ -1073,6 +1074,57 @@ describe('moving hazards in the layout (ND-8)', () => {
     expect(movingHazards).toEqual(far);
     expect(movingHazards?.[0]).not.toBe(far[0]);
     expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+});
+
+const BOATS = [
+  trajineraSpawn('canal/trajinera-1', 0, { x0: 500, x1: 780, direction: 'right' }),
+  trajineraSpawn('canal/trajinera-2', 3, { x0: 1300, x1: 1580, direction: 'left' }),
+];
+
+describe('gliding trajineras in the layout (issue #78, ND-8)', () => {
+  it.each(ALL_SEEDS)('keeps every snack start SNACK_HAZARD_CLEARANCE from every hull band for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ trajineras: BOATS }), seed);
+    expect(zone.collectibles).toHaveLength(16);
+    for (const snack of zone.collectibles) {
+      for (const boat of BOATS) {
+        const distance = shapeDistance(snack, trajineraHullBand(boat));
+        expect(distance, `${snack.id} is ${distance.toFixed(1)} px from ${boat.id}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
+      }
+    }
+  });
+
+  it('tests hull bands that sit where the canal would put snacks', () => {
+    const tooClose = ALL_SEEDS.filter((seed) =>
+      buildCanalZone(seed).collectibles.some((snack) => BOATS.some((boat) => shapeDistance(snack, trajineraHullBand(boat)) < SNACK_HAZARD_CLEARANCE)),
+    );
+    expect(tooClose.length).toBeGreaterThan(0);
+  });
+
+  it('copies the boats, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ trajineras: BOATS }), 3);
+    expect(zone.trajineras).toEqual(BOATS);
+    zone.trajineras?.forEach((boat, index) => {
+      expect(boat).not.toBe(BOATS[index]);
+      expect(boat.type).not.toBe(BOATS[index].type);
+      expect(boat.trajinera).not.toBe(BOATS[index].trajinera);
+    });
+  });
+
+  it('never puts a boat in the elements', () => {
+    expect(buildZone(canalWith({ trajineras: BOATS }), 3).elements).toEqual([]);
+  });
+
+  it.each(ALL_SEEDS)('copies the boats with no rand() draws when no hull band is near for seed %i', (seed) => {
+    const far = [trajineraSpawn('canal/trajinera-9', 0, { x0: -1000, x1: -800, direction: 'right' })];
+    const { trajineras, ...rest } = buildZone(canalWith({ trajineras: far }), seed);
+    expect(trajineras).toEqual(far);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no trajineras key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('trajineras');
+    expect(buildZone(canalWith({ trajineras: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), trajineras: [] });
   });
 });
 
