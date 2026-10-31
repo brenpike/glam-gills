@@ -90,7 +90,7 @@ const SURFACE_LANE = { top: 94, bottom: 340 };
 const DEEP_LANE = { top: 380, bottom: 656 };
 /** y of the low divider runs and of the raised run over `bass-1` (the owner's Q3). */
 const LOW_RUN = { y0: 340, y1: 380 };
-const RAISED_RUN = { y0: 200, y1: 240 };
+const RAISED_RUN = { y0: 188, y1: 228 };
 /** The divider's thickness and the widest a stone may be (the owner's Q3). */
 const STONE_THICKNESS = 40;
 const STONE_MAX_WIDTH = 640;
@@ -99,7 +99,7 @@ const RAISED_BASS_TOP = 257;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends. */
 const LONGEST_QUIET_SWIM = { length: 352.9, from: { x: 3576, y: 102 }, to: { x: 3792, y: 310 } };
 /** Longest quiet swim in each lane, counting only that lane's threats, in px, as measured: the deep lane has none. */
-const LANE_QUIET_SWIM = { surface: 414.39, deep: null };
+const LANE_QUIET_SWIM = { surface: 407.76, deep: null };
 /** Longest quiet stretch of the floor lane in px, as measured. */
 const FLOOR_QUIET_STRETCH = 0;
 /** One-leg seconds along each lane to the exit, as measured. */
@@ -502,9 +502,9 @@ describe('Area 8 two lanes (the area shape rule)', () => {
     expect(divider).toEqual([
       { x0: 600, x1: 1240, y0: 340, y1: 380 },
       { x0: 1240, x1: 1880, y0: 340, y1: 380 },
-      { x0: 1880, x1: 1920, y0: 200, y1: 380 },
-      { x0: 1920, x1: 2240, y0: 200, y1: 240 },
-      { x0: 2240, x1: 2280, y0: 200, y1: 380 },
+      { x0: 1880, x1: 1920, y0: 188, y1: 380 },
+      { x0: 1920, x1: 2240, y0: 188, y1: 228 },
+      { x0: 2240, x1: 2280, y0: 188, y1: 380 },
       { x0: 2280, x1: 2920, y0: 340, y1: 380 },
       { x0: 2920, x1: 3560, y0: 340, y1: 380 },
     ]);
@@ -518,7 +518,7 @@ describe('Area 8 two lanes (the area shape rule)', () => {
     }
   });
 
-  it('runs the divider mostly at y 340 to 380, stepping up to y 200 to 240 for about one screen', () => {
+  it('runs the divider mostly at y 340 to 380, stepping up to y 188 to 228 for about one screen', () => {
     const low = divider.filter((stone) => stone.y0 === LOW_RUN.y0 && stone.y1 === LOW_RUN.y1);
     const lowWidth = low.reduce((sum, stone) => sum + stone.x1 - stone.x0, 0);
     expect(lowWidth / (dividerEast - dividerWest)).toBeGreaterThan(0.8);
@@ -671,15 +671,12 @@ describe('Area 8 lanes of threats', () => {
     });
   });
 
-  it('keeps every predator body clear of the divider, all but the bass under the raised run, which reaches up to y 257 under it', () => {
+  it('keeps every predator body clear of the divider, the bass under the raised run included', () => {
     for (const { route, body } of strikeRoutes(zone)) {
       const away = Math.min(...divider.map((stone) => shapeRouteDistance(rectOf(stone), route.waypoints)));
-      if (route.id === 'bass-1') {
-        expect(away, route.id).toBe(RAISED_BASS_TOP - RAISED_RUN.y1);
-        continue;
-      }
       expect(away, route.id).toBeGreaterThan(body);
     }
+    expect(RAISED_BASS_TOP - RAISED_RUN.y1).toBeGreaterThan(DEEP_CANAL_BASS.tuning.bodyRadius);
   });
 
   it('puts bass-1 under the raised run, reaching up to y 257, so the bass reach the surface band', () => {

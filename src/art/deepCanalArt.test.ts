@@ -3,7 +3,8 @@
  * its leading shadow, the moored hulls, the sunken old hull cave, the old canal-bed stones and the
  * reused side-canal inflow marks. The painters run against a recording context and a stub Path2D
  * (the same approach as springCaveArt.test.ts and movingHazardArt.test.ts): every fill and stroke is
- * kept with the style, width and fill rule it was painted under. No Phaser is loaded.
+ * kept with the style, width and fill rule it was painted under. The Phaser bakes (STEP-010) run
+ * against a fake scene whose canvases record. No Phaser is loaded.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -66,6 +67,10 @@ import { CAVE_TEX } from './drawFinds';
 import type { TexSize } from './canvasKit';
 import { TRAJINERAS } from '../logic/trajineras';
 import { INK, LW, WHITE } from './palette';
+import { DEEP_CANAL_TEX, bakeDeepCanalTextures } from './deepCanalTextures';
+import { ROCK_WALL_KEY_PREFIX, bakeSpringCaveTextures, rockWallSizeKey } from './springCaveTextures';
+import { habitatLook } from './habitatLook';
+import { AREAS, DEEP_CANAL_AREA, habitatById } from '../logic/areas';
 
 vi.mock('phaser', () => ({}));
 
@@ -835,5 +840,142 @@ describe('deep canal greyscale (guide 10)', () => {
     expect(contrast(INK, FLOOR_WATER)).toBeGreaterThanOrEqual(PAIR_FLOOR);
     // The darkest composite is still visibly darker than the water (a 1.3:1 or better step), so the footprint shows without the outline too.
     expect(contrast(FLOOR_WATER, darkest)).toBeGreaterThanOrEqual(1.3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The bakes (issue #78, STEP-010)
+// ---------------------------------------------------------------------------
+
+/** A fake scene that records every canvas texture created. */
+function fakeScene(created: { key: string; w: number; h: number }[]): never {
+  return {
+    textures: {
+      exists: () => false,
+      remove: () => undefined,
+      createCanvas: (key: string, w: number, h: number) => {
+        created.push({ key, w, h });
+        return {
+          context: new Proxy(
+            {},
+            {
+              get: (_target, name) =>
+                name === 'createLinearGradient' || name === 'createRadialGradient'
+                  ? () => new GradientStub('linear', [])
+                  : () => undefined,
+              set: () => true,
+            },
+          ),
+          refresh: () => undefined,
+        };
+      },
+    },
+  } as never;
+}
+
+describe('bakeDeepCanalTextures', () => {
+  const bakeAt = (scale: number) => {
+    const created: { key: string; w: number; h: number }[] = [];
+    vi.stubGlobal('Path2D', LogPath);
+    const art = bakeDeepCanalTextures(fakeScene(created), scale);
+    return { art, created };
+  };
+
+  it('bakes every prop under its own fixed key', () => {
+    const { created } = bakeAt(2);
+    expect(created.map((c) => c.key).sort()).toEqual(Object.values(DEEP_CANAL_TEX).sort());
+    expect(new Set(created.map((c) => c.key)).size).toBe(created.length);
+    expect(DEEP_CANAL_TEX.trajineraHull).toBe('deep-canal-trajinera-hull');
+    expect(DEEP_CANAL_TEX.mooredHulls).toBe('deep-canal-moored-hulls');
+  });
+
+  it('bakes each texture at the bake scale, its pixel size rounded up from its frame', () => {
+    const { art, created } = bakeAt(3);
+    const infos = [art.trajineraHull, art.trajineraShadow, art.mooredHulls, art.hullCave.back, art.hullCave.front];
+    for (const info of infos) {
+      expect(info.scale).toBe(3);
+      expect(info.pxW).toBe(Math.ceil(info.w * 3 - 1e-6));
+      expect(info.pxH).toBe(Math.ceil(info.h * 3 - 1e-6));
+      expect(created.find((c) => c.key === info.key)).toEqual({ key: info.key, w: info.pxW, h: info.pxH });
+    }
+  });
+
+  it('bakes the gliding hull and its shadow anchored on the water line at the middle of the hull, as their frames say', () => {
+    const { art } = bakeAt(2);
+    for (const [info, tex] of [
+      [art.trajineraHull, TRAJINERA_HULL_TEX],
+      [art.trajineraShadow, TRAJINERA_SHADOW_TEX],
+    ] as const) {
+      expect(info.w).toBe(tex.w);
+      expect(info.h).toBe(tex.h);
+      expect(info.originX).toBe(tex.originX);
+      expect(info.originY).toBe(tex.originY);
+      expect(info.originNormX).toBeCloseTo(0.5, 6);
+      expect(info.originNormY).toBeCloseTo(tex.originY / tex.h, 6);
+    }
+    expect(art.trajineraHull.key).toBe(DEEP_CANAL_TEX.trajineraHull);
+    expect(art.trajineraShadow.key).toBe(DEEP_CANAL_TEX.trajineraShadow);
+  });
+
+  it('bakes the moored hulls anchored at the top-left corner of their rect, so they stretch like the bank overhang', () => {
+    const info = bakeAt(2).art.mooredHulls;
+    expect(info.w).toBe(MOORED_TEX.w);
+    expect(info.h).toBe(MOORED_TEX.h);
+    expect(info.w).toBe(MOORED_W + 8);
+    expect(info.h).toBe(MOORED_H + 8);
+    expect(info.originNormX).toBeCloseTo(4 / MOORED_TEX.w, 6);
+    expect(info.originNormY).toBeCloseTo(4 / MOORED_TEX.h, 6);
+  });
+
+  it('bakes the hull cave back and front in the cave frame, anchored at the base centre', () => {
+    const { art } = bakeAt(2);
+    for (const info of [art.hullCave.back, art.hullCave.front]) {
+      expect(info.w).toBe(CAVE_TEX.w);
+      expect(info.h).toBe(CAVE_TEX.h);
+      expect(info.originX).toBe(CAVE_TEX.originX);
+      expect(info.originY).toBe(CAVE_TEX.originY);
+      expect(info.originNormX).toBeCloseTo(0.5, 6);
+      expect(info.originNormY).toBeCloseTo(CAVE_TEX.originY / CAVE_TEX.h, 6);
+    }
+    expect(art.hullCave.back.pxW).toBe(art.hullCave.front.pxW);
+    expect(art.hullCave.back.pxH).toBe(art.hullCave.front.pxH);
+    expect(art.hullCave.back.key).toBe(DEEP_CANAL_TEX.hullCaveBack);
+    expect(art.hullCave.front.key).toBe(DEEP_CANAL_TEX.hullCaveFront);
+  });
+});
+
+describe('which areas need the deep canal bake (issue #78)', () => {
+  it('gives Area 8 gliding trajineras, so the deep canal props are baked whatever its look', () => {
+    expect(DEEP_CANAL_AREA.layout.trajineras?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('leaves Areas 1 to 7 with no trajineras, no sunken hull cave and no deep canal props, so they bake as before', () => {
+    const earlier = AREAS.filter((area) => area.number < DEEP_CANAL_AREA.number);
+    expect(earlier.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    for (const area of earlier) {
+      const habitat = habitatById(area.habitatId);
+      expect(habitat, area.id).toBeDefined();
+      const look = habitatLook(area.look ?? habitat?.look ?? '');
+      expect(look.deepCanalProps, area.id).toBe(false);
+      expect(look.cave.kind, area.id).not.toBe('sunkenHull');
+      expect(area.layout.trajineras ?? [], area.id).toHaveLength(0);
+    }
+  });
+
+  it("bakes every size of Area 8's divider in the spring cave rock wall bake, one texture per size", () => {
+    const walls = DEEP_CANAL_AREA.layout.rockWalls ?? [];
+    expect(walls.length).toBeGreaterThan(0);
+    const sizes = walls.map((wall) => [wall.x1 - wall.x0, wall.y1 - wall.y0] as const);
+    const created: { key: string; w: number; h: number }[] = [];
+    vi.stubGlobal('Path2D', LogPath);
+    const art = bakeSpringCaveTextures(fakeScene(created), 2, sizes);
+    const unique = new Set(sizes.map(([w, h]) => rockWallSizeKey(w, h)));
+    expect(art.rockWalls.size).toBe(unique.size);
+    for (const [w, h] of sizes) {
+      const info = art.rockWalls.get(rockWallSizeKey(w, h));
+      expect(info, `${w}x${h}`).toBeDefined();
+      expect(info?.key).toBe(`${ROCK_WALL_KEY_PREFIX}${rockWallSizeKey(w, h)}`);
+    }
+    expect(created.filter((c) => c.key.startsWith(ROCK_WALL_KEY_PREFIX))).toHaveLength(unique.size);
   });
 });

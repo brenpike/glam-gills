@@ -38,6 +38,11 @@
  * the zone's bank overhangs as rock ledges. The canal, pond, dusk pond and chinampa say 'none' and
  * false, so their bakes are unchanged.
  *
+ * Deep canal props (issue #78): a look also says whether the deep canal props are baked for it
+ * (`deepCanalProps`: the gliding trajinera hull and its shadow, the moored hulls and the sunken hull
+ * cave, deepCanalTextures.ts). A look with the deep canal props draws the zone's bank overhangs as
+ * moored hulls. Every look so far says false, so its bakes are unchanged.
+ *
  * Area looks (issue #98): an area may use a variant of its habitat's look, such as
  * the pond at dusk ('pond-dusk', Area 3). A variant is a whole palette baked into the
  * background, haze and surface, never an overlay over gameplay depths. The dusk pond
@@ -78,9 +83,10 @@ export interface SkyLook {
 
 /**
  * The hiding place an area's cave is drawn as (guide 7e): the canal's rocks, the pond's hollow log,
- * the dusk pond's root arch, the chinampa's tangle of ahuejote roots, or the spring cave's side grotto.
+ * the dusk pond's root arch, the chinampa's tangle of ahuejote roots, the spring cave's side grotto,
+ * or the deep canal's sunken old trajinera hull.
  */
-export type CaveKind = 'rocks' | 'log' | 'rootArch' | 'rootTangle' | 'grotto';
+export type CaveKind = 'rocks' | 'log' | 'rootArch' | 'rootTangle' | 'grotto' | 'sunkenHull';
 /** Where a cave hangs: base centre on the bed, or top centre under the bank at the waterline. */
 export type CaveAnchor = 'bed' | 'bank';
 
@@ -177,6 +183,11 @@ export interface HabitatLook {
    * light; springCaveTextures.ts). Its bank overhangs are drawn as rock ledges.
    */
   readonly springCaveProps: boolean;
+  /**
+   * The area needs the deep canal props (gliding trajinera hull and shadow, moored hulls, sunken hull
+   * cave; deepCanalTextures.ts). Its bank overhangs are drawn as moored hulls.
+   */
+  readonly deepCanalProps: boolean;
 }
 
 /** Sky of the daytime looks: the prototype sky (guide 7a). */
@@ -219,6 +230,7 @@ const CANAL_LOOK: HabitatLook = Object.freeze({
   chinampaProps: false,
   rowDetails: 'none',
   springCaveProps: false,
+  deepCanalProps: false,
 });
 
 /**
@@ -295,6 +307,7 @@ const POND_LOOK: HabitatLook = Object.freeze({
   chinampaProps: false,
   rowDetails: 'none',
   springCaveProps: false,
+  deepCanalProps: false,
 });
 
 /**
@@ -388,6 +401,7 @@ const POND_DUSK_LOOK: HabitatLook = Object.freeze({
   chinampaProps: false,
   rowDetails: 'none',
   springCaveProps: false,
+  deepCanalProps: false,
 });
 
 /**
@@ -456,6 +470,7 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   chinampaProps: true,
   rowDetails: 'none',
   springCaveProps: false,
+  deepCanalProps: false,
 });
 
 /**
@@ -529,6 +544,7 @@ export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   chinampaProps: false,
   rowDetails: 'springCave',
   springCaveProps: true,
+  deepCanalProps: false,
 });
 
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {

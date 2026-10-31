@@ -3,7 +3,7 @@
  * Spot is in the shared pocket on the west side, and the safe area is its column. A solid old-stone
  * divider of rock walls splits the water from x 600 to x 3560 into a surface lane over it and a deep
  * lane under it; the lanes join again in the exit pocket on the east side. The divider runs at
- * y 340 to 380 and steps up to y 200 to 240 for most of a screen over `bass-1`. The surface lane
+ * y 340 to 380 and steps up to y 188 to 228 for most of a screen over `bass-1`. The surface lane
  * holds the punting poles, the moored boats and the gliding trajineras; the deep lane holds the black
  * bass, the sunken trajinera hull and the side-canal inflow. Each lane has its own tilapia and its
  * share of the carp. The main path runs along the surface lane, under the moored boats, to the exit.
@@ -170,15 +170,15 @@ const MOORED_EAST = mooredBoat(3100, 3500);
 
 /**
  * The old-stone divider (the owner's Q3), west to east: two low runs at y 340 to 380, the step up,
- * the raised run at y 200 to 240 over `bass-1`, the step down and two low runs. Every stone is 40 px
+ * the raised run at y 188 to 228 over `bass-1`, the step down and two low runs. Every stone is 40 px
  * thick and at most 640 px wide, and each touches the next, so no body passes between the lanes.
  */
 const DIVIDER: readonly Readonly<RockWall>[] = Object.freeze([
   dividerStone(600, 1240, 340, 380),
   dividerStone(1240, 1880, 340, 380),
-  dividerStone(1880, 1920, 200, 380),
-  dividerStone(1920, 2240, 200, 240),
-  dividerStone(2240, 2280, 200, 380),
+  dividerStone(1880, 1920, 188, 380),
+  dividerStone(1920, 2240, 188, 228),
+  dividerStone(2240, 2280, 188, 380),
   dividerStone(2280, 2920, 340, 380),
   dividerStone(2920, 3560, 340, 380),
 ]);
@@ -251,8 +251,7 @@ export const DEEP_CANAL_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
    * at the fork; `carp-2`, `carp-3` and `carp-4` in the deep lane, `carp-2` at the fork by the sunken
    * hull. Then both black bass in the deep lane on long open-water routes: `bass-0` by the inflow
    * and the join, and `bass-1` under the raised run, reaching up to y 257 so the bass reach the
-   * surface band. Every loop keeps its body clear of the divider, but `bass-1`'s top, 17 px under
-   * the raised run.
+   * surface band, 29 px under the raised run. Every loop keeps its body clear of the divider.
    */
   predatorRoutes: Object.freeze([
     loopRoute('carp-0', DEEP_CANAL_CARP, [[560, 130], [700, 130], [700, 306], [560, 306]]),

@@ -876,11 +876,11 @@ describe('snackTopSpeed and snackMagnetSpeed (ND-28)', () => {
 });
 
 describe('oneTimeDarts (ND-27)', () => {
-  it('gives Areas 1, 2, 6 and 7 none', () => {
+  it('gives Areas 1, 2, 6, 7 and 8 none', () => {
     for (const area of AREAS.filter((each) => !each.snackDart)) {
       expect(oneTimeDarts(area, buildZone(area.layout, 3))).toBeNull();
     }
-    expect(AREAS.filter((each) => !each.snackDart).map((each) => each.number)).toEqual([1, 2, 6, 7]);
+    expect(AREAS.filter((each) => !each.snackDart).map((each) => each.number)).toEqual([1, 2, 6, 7, 8]);
   });
 
   it.each(SEEDS)('gives Areas 3, 4 and 5 exactly today\'s darters, or none once the area has shrimp, for seed %i', (seed) => {

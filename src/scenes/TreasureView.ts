@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser';
 import type { ChinampaTextures } from '../art/chinampaTextures';
+import type { DeepCanalTextures } from '../art/deepCanalTextures';
 import { GAP_EDGE_FLARE, GAP_EDGE_W, OVERHANG_H, OVERHANG_W } from '../art/drawChinampa';
+import { MOORED_H, MOORED_W } from '../art/drawDeepCanal';
 import { ROOT_ARCH_ANCHOR_Y } from '../art/drawPond';
 import { ROCK_LEDGE_H, ROCK_LEDGE_W } from '../art/drawSpringCave';
 import type { CaveKind, HabitatLook } from '../art/habitatLook';
@@ -167,10 +169,18 @@ function springCaveTexturesFor(assets: GameAssets, what: string): SpringCaveText
   return assets.springCave;
 }
 
+/** The baked deep canal props. Throws when they were not baked. */
+function deepCanalTexturesFor(assets: GameAssets, what: string): DeepCanalTextures {
+  if (assets.deepCanal === null) {
+    throw new Error(`TreasureView: ${what} needs the baked deep canal textures`);
+  }
+  return assets.deepCanal;
+}
+
 /**
  * The back and front of the cave for `look`'s cave kind: the canal's small cave of rocks, the
- * pond's hollow log, the dusk pond's root arch, the chinampa's root tangle, or the spring cave's
- * side grotto.
+ * pond's hollow log, the dusk pond's root arch, the chinampa's root tangle, the spring cave's
+ * side grotto, or the deep canal's sunken old trajinera hull.
  */
 function caveTextures(assets: GameAssets, look: HabitatLook): { back: TexInfo; front: TexInfo } {
   const kind = look.cave.kind;
@@ -196,6 +206,8 @@ function caveTextures(assets: GameAssets, look: HabitatLook): { back: TexInfo; f
     }
     case 'grotto':
       return springCaveTexturesFor(assets, 'a "grotto" cave').grotto;
+    case 'sunkenHull':
+      return deepCanalTexturesFor(assets, 'a "sunkenHull" cave').hullCave;
   }
 }
 
@@ -217,9 +229,13 @@ function chinampaTexturesFor(assets: GameAssets, what: string): ChinampaTextures
 
 /**
  * The overhang texture for `look` and its nominal size: the spring cave's rock ledge for a look with
- * the spring cave props, else the chinampa's bank overhang.
+ * the spring cave props, the deep canal's moored hulls for a look with the deep canal props, else
+ * the chinampa's bank overhang.
  */
 function overhangArt(assets: GameAssets, look: HabitatLook): { info: TexInfo; w: number; h: number } {
+  if (look.deepCanalProps) {
+    return { info: deepCanalTexturesFor(assets, 'a row of moored boats').mooredHulls, w: MOORED_W, h: MOORED_H };
+  }
   if (look.springCaveProps) {
     return { info: springCaveTexturesFor(assets, 'a rock ledge').rockLedge, w: ROCK_LEDGE_W, h: ROCK_LEDGE_H };
   }
@@ -228,7 +244,7 @@ function overhangArt(assets: GameAssets, look: HabitatLook): { info: TexInfo; w:
 
 /**
  * One overhang sprite at each of the zone's bank overhang rects (a rock ledge for a look with the
- * spring cave props), stretched to the rect and drawn at the cave front's depth: above the hidden
+ * spring cave props, a row of moored hulls for a look with the deep canal props), stretched to the rect and drawn at the cave front's depth: above the hidden
  * treasure icons (DEPTH.hiddenTreasure) and under the haze, so what is under the bank reads as hidden
  * and tinted, like what is under the reeds. Placed from zone data only; a zone with no overhangs
  * places none.
@@ -277,8 +293,9 @@ function rarityOf(id: FindId): Rarity {
 /**
  * Draws the hidden treasures and their hiding places: the cave (the canal's small cave of rocks or
  * the pond's hollow log on the bed, the dusk pond's root arch under the bank, the chinampa's root
- * tangle, or the spring cave's side grotto; interior and front), the overhang under each of the
- * zone's overhanging banks (a rock ledge in the spring cave), the chinampa
+ * tangle, the spring cave's side grotto, or the deep canal's sunken old trajinera hull; interior and
+ * front), the overhang under each of the zone's overhanging banks (a rock ledge in the spring cave,
+ * moored hulls in the deep canal), the chinampa
  * edges either side of a current of a look with a gap (`HabitatLook.currentGap`), the
  * past-the-current marker, one treasure icon per catalogue find (hidden under cover, or revealed by
  * a crumble), the Dash pots, the hint stars, the dash-needed bubble and pot wobble, the crumble and

@@ -1,5 +1,5 @@
 /**
- * Worn looks of the forty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the forty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -9,7 +9,8 @@
  * wings, and the chinampa Area 5's Bee headband, Bandana, Sunflower sunglasses,
  * Embroidered shirt, Hummingbird tail ribbon and Rainbow serape cape, and the spring cave Area 6's
  * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, and the spring cave Area 7's
- * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, painted on the anchors
+ * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, and the deep canal Area 8's
+ * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -69,6 +70,13 @@
  * the stripe alpha, the goggles' yellow buckle, the lantern's flame and gem, and the cape's set
  * stones and gold band. The Cave goggles keep the glasses construction (clear lens tint, never
  * dark), so the eyes always show. No look has net-like lines.
+ *
+ * The Area 8 looks (issue #78) keep to the same footprints and rules. Their outer fills are the icons' own colours,
+ * imported by name from treasurePalette.ts (SAILOR_CAP_FILL, STRIPED_SCARF_FILL, MARIACHI_JACKET_FILL,
+ * CAPTAINS_HAT_FILL, FIN_STREAMER_FILLS, FIN_STREAMER_KNOT; each 9:1 or better with ink, none red), so a worn look
+ * and its icon cannot drift. Their other colours are internal details: ink at the stripe alpha (the cap's band, the
+ * scarf's stripes, the captain's band and peak), the jacket's turquoise braid (MARIACHI_BRAID) and silver studs
+ * (MARIACHI_STUD), and the streamers' gold tie band. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -122,6 +130,7 @@ import {
   BOW_FILL,
   BOW_GEM,
   CAVE_CRYSTAL_FILL,
+  CAPTAINS_HAT_FILL,
   CLIMBING_HELMET_FILL,
   CRYSTAL_CROWN_BAND,
   CRYSTAL_CUFF_BAND,
@@ -135,6 +144,8 @@ import {
   FEATHER_CAP_FILL,
   FEATHER_FILL,
   FIREFLY_CAPE_FILL,
+  FIN_STREAMER_FILLS,
+  FIN_STREAMER_KNOT,
   FIREFLY_GLOW,
   FLIPPER_RIDGE,
   FROGGY_BOOT,
@@ -152,6 +163,9 @@ import {
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_SOCK_FILL,
+  MARIACHI_BRAID,
+  MARIACHI_JACKET_FILL,
+  MARIACHI_STUD,
   MINERS_HELMET_FILL,
   NECKLACE_CORD,
   NECKLACE_SHELL,
@@ -162,8 +176,10 @@ import {
   PEBBLE_NECKLACE_STONE,
   POND_WEED_SCARF,
   RAINCOAT_FILL,
+  SAILOR_CAP_FILL,
   SOCK_FILL,
   SOCK_STRIPE_ALPHA,
+  STRIPED_SCARF_FILL,
   TANK_TOP_FILL,
   TREASURE_SHINE,
   TREASURE_STAR,
@@ -190,7 +206,7 @@ export const EXPLORER_VEST_BELT = '#b98a50';
 // The art-level outfit
 // ---------------------------------------------------------------------------
 
-/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/`, `chinampa/` or `spring-cave/`). */
+/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/`, `chinampa/`, `spring-cave/` or `deep-canal/`). */
 export type WearableArtSlug =
   | 'sun-hat'
   | 'shell-necklace'
@@ -232,12 +248,17 @@ export type WearableArtSlug =
   | 'pebble-necklace'
   | 'cave-goggles'
   | 'glow-tail-lantern'
-  | 'gemstone-cape';
+  | 'gemstone-cape'
+  | 'sailor-cap'
+  | 'striped-scarf'
+  | 'mariachi-jacket'
+  | 'captains-hat'
+  | 'rainbow-fin-streamers';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
- * chinampa Area 5's six, the spring cave Area 6's five and the spring cave Area 7's five last, so WEARABLE_ART_SLUGS
+ * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five and the deep canal Area 8's five last, so WEARABLE_ART_SLUGS
  * finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
@@ -282,6 +303,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'cave-goggles': 'face',
   'glow-tail-lantern': 'tail',
   'gemstone-cape': 'back',
+  'sailor-cap': 'head',
+  'striped-scarf': 'neck',
+  'mariachi-jacket': 'shirt',
+  'captains-hat': 'head',
+  'rainbow-fin-streamers': 'tail',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -3124,6 +3150,249 @@ function paintGemstoneCape(ctx: CanvasRenderingContext2D, box: BackFrameBox): vo
 }
 
 // ---------------------------------------------------------------------------
+// Head: Sailor cap (Common)
+// ---------------------------------------------------------------------------
+
+/** The flared brim band's corners, rear-top first, clockwise: wider at the top, so it flares as a turned-up brim; the front rises a little, as the Sun hat's brim does. */
+const SAILOR_BRIM: readonly Pt[] = [
+  { x: 18.6, y: -28.6 },
+  { x: 43.6, y: -29.4 },
+  { x: 40.6, y: -21.5 },
+  { x: 21.8, y: -21.5 },
+];
+/** The navy band's top y: it darkens the brim below this, so the upper brim stays colour for the swim view. */
+const SAILOR_BAND_TOP = -24.2;
+/** The cap's round crown: its base (x from, x to, y) sunk into the brim, and its top y. */
+const SAILOR_CROWN = { x0: 22.6, x1: 39.8, base: -27.6, top: -37.6 } as const;
+
+/**
+ * Common (issue #78): a #eef4ff pale blue-white sailor cap, a squat round crown on a flared brim band (wider at the
+ * top than the bottom), merged into one `blob` silhouette (ink 2.0 all outside the fill). The lower brim is the navy
+ * band: ink at the stripe alpha (the same colour darkened, not a second colour), clipped to the brim; one shine
+ * on the crown; no trim. Ink included it fills HEAD_FOOTPRINT: x about 17 to 45.6, lowest ink y -19.5 on the
+ * brim, as the Sun hat's, so the glasses keep their clearance; the crown's top is about y -39.6.
+ */
+function paintSailorCap(ctx: CanvasRenderingContext2D): void {
+  const brim = roundedPolygon(SAILOR_BRIM, 1.4);
+  const { x0, x1, base, top } = SAILOR_CROWN;
+  const mid = (x0 + x1) / 2;
+  const crown = new Path2D();
+  crown.moveTo(x0, base);
+  crown.bezierCurveTo(x0 - 0.6, base - (base - top) * 0.55, mid - 4.4, top, mid, top);
+  crown.bezierCurveTo(mid + 4.4, top, x1 + 0.6, base - (base - top) * 0.55, x1, base);
+  crown.closePath();
+  blobs(ctx, [brim, crown], SAILOR_CAP_FILL);
+  ctx.save();
+  ctx.clip(brim);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.fill(rectPath(16, SAILOR_BAND_TOP, 48, -21));
+  ctx.restore();
+  shine(ctx, 27, -33.4, 1.1, 3, 0.2);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Striped scarf (Common)
+// ---------------------------------------------------------------------------
+
+/** The stripes: x of each along the band, this wide and leaning this far along x across the band; ink at the stripe alpha. */
+const SCARF_STRIPE_XS: readonly number[] = [5, 10.9, 16.8, 22.7, 28.6, 34.5];
+const SCARF_STRIPE_W = 1.4;
+const SCARF_STRIPE_LEAN = 2.4;
+
+/**
+ * Common (issue #78): the Pond-weed scarf's band (the whole Neck footprint, under the chin and round the back of the
+ * neck, one `blob` with 0.6 of ink outside the fill, kept inside LW / 2 of the silhouette outline) in a #ffdbb0 pale
+ * apricot, with six leaning stripes across it in ink at the stripe alpha (the same colour darkened, not a second
+ * colour), clipped to it, and one shine. No trim. It keeps every clearance of the scarf's band, so it keeps off the
+ * gill-root zone and the cheek heart zone; the mouth paints over its front.
+ */
+function paintStripedScarf(ctx: CanvasRenderingContext2D): void {
+  const band = scarfBandPath();
+  silhouette(ctx, [{ path: band, fill: STRIPED_SCARF_FILL }], SCARF_OL);
+  ctx.save();
+  ctx.clip(band);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  for (const x of SCARF_STRIPE_XS) {
+    const stripe = new Path2D();
+    stripe.moveTo(x, 12);
+    stripe.lineTo(x + SCARF_STRIPE_W, 12);
+    stripe.lineTo(x + SCARF_STRIPE_W + SCARF_STRIPE_LEAN, 24);
+    stripe.lineTo(x + SCARF_STRIPE_LEAN, 24);
+    stripe.closePath();
+    ctx.fill(stripe);
+  }
+  ctx.restore();
+  shine(ctx, 14.5, 16.4, 2, 0.6);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Mariachi jacket (Rare)
+// ---------------------------------------------------------------------------
+
+/** The braid down the jacket's front: how wide it is, and how far behind the neckline's ink it stops. */
+const JACKET_BRAID_W = 3.2;
+const JACKET_BRAID_GAP = 0.8;
+/** Thin ink lines on each side of the braid, as the Raincoat's stripe. */
+const JACKET_BRAID_LW = 0.6;
+/** The jacket's shine sits this share of the Shirt's length from the rear, so the braid stays clear of it on a Baby's short Shirt, and is this share of the length long. */
+const JACKET_SHINE_AT = 0.17;
+const JACKET_SHINE_LONG = 0.14;
+/**
+ * The three silver studs down the braid: share of the inset ry above (-) or below (+) the centre line, and the radius.
+ * Flat discs with no ink ring, so they hide none of the braid's colour in the swim view.
+ */
+const JACKET_STUD_AT: readonly number[] = [-0.5, 0, 0.5];
+const JACKET_STUD_R = 0.85;
+
+/**
+ * Rare (issue #78): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) in a #fff0a8
+ * pale butter yellow, with one #2fb5a8 turquoise braid down the front of the jacket (the one trim band, between
+ * two 0.6 ink lines, clipped inside the silhouette, stopping 0.8 behind the neckline's ink) and three silver
+ * studs down it (pebble A discs, no ink ring: the icon's studs), one shine on the rear part of the jacket, clear of the braid even on a Baby's
+ * short Shirt. A vertical braid, so it is told from the Raincoat's hem stripe. It sits inside the silhouette, so it never reaches the torso edge band, the front line,
+ * the tail root or a leg. No sleeves.
+ */
+function paintMariachiJacket(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, MARIACHI_JACKET_FILL, () => {
+    const x1 = shirt.neckline.apexX - 2 * outline.half - JACKET_BRAID_GAP;
+    const x0 = x1 - JACKET_BRAID_W;
+    trimBand(ctx, { x0, x1, y0: e.cy - e.ry - 1, y1: e.cy + e.ry + 1 }, MARIACHI_BRAID, false, JACKET_BRAID_LW);
+    ctx.fillStyle = MARIACHI_STUD;
+    for (const at of JACKET_STUD_AT) ctx.fill(ellipsePath((x0 + x1) / 2, e.cy + e.ry * at, JACKET_STUD_R, JACKET_STUD_R));
+  });
+  const { half, xr, xf, topAt } = outline;
+  const length = xf - xr;
+  const xs = xr + length * JACKET_SHINE_AT;
+  const tilt = Math.atan(topAt(xs + 0.5) - topAt(xs - 0.5));
+  shine(ctx, xs, topAt(xs) + half + 2.2, Math.min(4, length * JACKET_SHINE_LONG), 1.3, tilt);
+}
+
+// ---------------------------------------------------------------------------
+// Head: Captain's hat (Epic)
+// ---------------------------------------------------------------------------
+
+/** The flat round top of the cap, flared out past its band: centre, radii and tilt (the front rises a little). */
+const CAPTAIN_TOP = { cx: 31.4, cy: -34.6, rx: 12.2, ry: 3.8, rot: -0.07 } as const;
+/** The cap's band: x from, x to, y from, y to and corner radius. The gem sits on its front. */
+const CAPTAIN_BAND = { x0: 21.6, x1: 40.6, y0: -34, y1: -21.5, r: 2 } as const;
+/** The peak (visor) that juts forward at the band's foot, rear-top first, clockwise. */
+const CAPTAIN_PEAK: readonly Pt[] = [
+  { x: 35.4, y: -27.2 },
+  { x: 43.2, y: -25.6 },
+  { x: 43.6, y: -22.6 },
+  { x: 35.4, y: -22.4 },
+];
+/** The badge gem on the band's front. */
+const CAPTAIN_GEM: Pt = { x: 32.6, y: -26.2 };
+/** The band's darker stripe (ink at the stripe alpha) sits between these y; the peak is darkened as a whole. */
+const CAPTAIN_STRIPE: readonly [number, number] = [-29.8, -22];
+
+/**
+ * Epic (issue #78): a #fff6dc pale cream peaked cap, a flat round top flared out over a straight band, with a
+ * peak jutting forward at its foot, merged into one `blob` silhouette (ink 2.0 all outside the fill). The band's
+ * lower part and the peak are darkened with ink at the stripe alpha (the same colour darkened, not a second
+ * colour), clipped to them; one rounded gem (radius 2.5, outline 1.2, the Golden bow's pink) on the band's front:
+ * the Epic detail. One shine on the top; no trim. Ink included it fills HEAD_FOOTPRINT: x about 17.2 to 45.6,
+ * lowest ink y -19.5 on the band, as the Sun hat's, so the glasses keep their clearance; the top is about y -40.
+ */
+function paintCaptainsHat(ctx: CanvasRenderingContext2D): void {
+  const top = ellipsePath(CAPTAIN_TOP.cx, CAPTAIN_TOP.cy, CAPTAIN_TOP.rx, CAPTAIN_TOP.ry, CAPTAIN_TOP.rot);
+  const band = roundRectPath(CAPTAIN_BAND.x0, CAPTAIN_BAND.y0, CAPTAIN_BAND.x1, CAPTAIN_BAND.y1, CAPTAIN_BAND.r);
+  const peak = roundedPolygon(CAPTAIN_PEAK, 1.2);
+  blobs(ctx, [band, peak, top], CAPTAINS_HAT_FILL);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.save();
+  ctx.clip(band);
+  ctx.fill(rectPath(CAPTAIN_BAND.x0 - 1, CAPTAIN_STRIPE[0], CAPTAIN_BAND.x1 + 1, CAPTAIN_STRIPE[1]));
+  ctx.restore();
+  ctx.fill(roundedPolygon(CAPTAIN_PEAK, 1.2));
+  ctx.restore();
+  shine(ctx, 24.6, -35.4, 1.1, 2.4, 1.2);
+  gem(ctx, CAPTAIN_GEM.x, CAPTAIN_GEM.y, BOW_GEM, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
+// Tail: Rainbow fin streamers (Legendary)
+// ---------------------------------------------------------------------------
+
+/** The tie, in the Tail frame: its centre (a little into the core, as the bow's knot) and radii. */
+const STREAMER_TIE: Pt = { x: 0, y: 1.4 };
+const STREAMER_TIE_RX = 3.2;
+const STREAMER_TIE_RY = 3.4;
+/**
+ * The six streamers, one rainbow colour each (FIN_STREAMER_FILLS: pink, orange, yellow, green, blue, violet): the axis
+ * angle from x' (toward the head) turned toward y' (down), and the length. Five fan toward the head, the one toward
+ * the tail tip is short (to x' about -5.1), as the Golden bow's, so a Dream marker star past it stays clear at
+ * every swim phase.
+ */
+const FIN_STREAMERS: readonly { readonly angle: number; readonly length: number }[] = [
+  { angle: -1.05, length: 11.2 },
+  { angle: -0.55, length: 13.4 },
+  { angle: -0.05, length: 14.2 },
+  { angle: 0.45, length: 13.2 },
+  { angle: 0.95, length: 10.8 },
+  { angle: Math.PI - 0.8, length: 6.6 },
+];
+/** A streamer's half width at its base and at its forked end, and how deep the fork cuts. */
+const FIN_BASE_HALF = 1.6;
+const FIN_END_HALF = 2.8;
+const FIN_FORK = 2.6;
+/** The Legendary star's centre: above the tie toward the tail tip, clear of every streamer. */
+const FIN_STAR: Pt = { x: -1, y: -12.6 };
+/** The gold tie band's colour width across the tie (x' from, x' to), and the thin ink lines each side of it. */
+const FIN_TIE_BAND: readonly [number, number] = [-1.1, 1.1];
+const FIN_LINE_LW = 0.6;
+
+/** One forked streamer from the tie, a closed path in the Tail frame. */
+function finStreamerPath(angle: number, length: number): Path2D {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const at = (a: number, b: number): Pt => ({ x: STREAMER_TIE.x + a * c - b * s, y: STREAMER_TIE.y + a * s + b * c });
+  return roundedPolygon(
+    [
+      at(0.5, -FIN_BASE_HALF),
+      at(length, -FIN_END_HALF),
+      at(length - FIN_FORK, 0),
+      at(length, FIN_END_HALF),
+      at(0.5, FIN_BASE_HALF),
+    ],
+    [0.6, 0.8, 0.5, 0.8, 0.6],
+  );
+}
+
+/**
+ * Legendary (issue #78): six forked ribbon streamers fanned from a tie on the tail, one pale rainbow colour each
+ * (FIN_STREAMER_FILLS: pink, orange, yellow, green, blue and violet, none red), merged into one `blob` silhouette
+ * (ink 2.0 all outside the fill). No ink lines cross the ribbons: they fan apart, so each pale colour is its own
+ * shape and the swim view keeps its colour. The tie is a silver-white knot (FIN_STREAMER_KNOT, so the gold reads in
+ * greyscale) with the Legendary trim: one #ffc12e gold band across it (between two 0.6 ink lines, clipped inside the
+ * knot) and one static 4-point star (R 3, outline 1.2) above it, outside the silhouette. One shine on the yellow
+ * streamer; no gem (the icon has one on its tie). Painted in the Tail frame (x' along the local tail direction toward
+ * the head, y' down). The streamer toward the tail tip is short, and the star is set over the root, not toward the
+ * tip, so a Dream marker star past it stays clear at every swim phase. Everything, ink included, stays within
+ * TAIL_SLOT_REACH of the anchor.
+ */
+function paintRainbowFinStreamers(ctx: CanvasRenderingContext2D): void {
+  const streamers = FIN_STREAMERS.map((f, i) => ({ path: finStreamerPath(f.angle, f.length), fill: FIN_STREAMER_FILLS[i] }));
+  const tie = ellipsePath(STREAMER_TIE.x, STREAMER_TIE.y, STREAMER_TIE_RX, STREAMER_TIE_RY);
+  silhouette(ctx, [...streamers, { path: tie, fill: FIN_STREAMER_KNOT }]);
+  ctx.save();
+  ctx.clip(tie);
+  trimBand(ctx, { x0: FIN_TIE_BAND[0], x1: FIN_TIE_BAND[1], y0: STREAMER_TIE.y - STREAMER_TIE_RY - 1, y1: STREAMER_TIE.y + STREAMER_TIE_RY + 1 }, GOLD_TRIM, false, FIN_LINE_LW);
+  ctx.restore();
+  const yellow = FIN_STREAMERS[2];
+  shine(ctx, STREAMER_TIE.x + yellow.length * 0.45, STREAMER_TIE.y - 0.3, 1.2, 0.5, yellow.angle);
+  legendStar(ctx, FIN_STAR.x, FIN_STAR.y, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -3277,6 +3546,21 @@ export function paintBodyWearable(
       inFrame(ctx, back.frame, () => paintGemstoneCape(ctx, back.box));
       break;
     }
+    case 'sailor-cap':
+      paintSailorCap(ctx);
+      break;
+    case 'striped-scarf':
+      paintStripedScarf(ctx);
+      break;
+    case 'mariachi-jacket':
+      paintMariachiJacket(ctx, look);
+      break;
+    case 'captains-hat':
+      paintCaptainsHat(ctx);
+      break;
+    case 'rainbow-fin-streamers':
+      inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintRainbowFinStreamers(ctx));
+      break;
     default:
       break;
   }

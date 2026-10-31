@@ -3,7 +3,7 @@
  * Decorations and Wearables, the eleven pond ones (issue #75), the eleven pond
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
- * and one Paint shell per Dream colour.
+ * the eleven deep canal Area 8 ones (issue #78), and one Paint shell per Dream colour.
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -45,6 +45,7 @@ import {
   BOAT_TRIM,
   BOW_FILL,
   BOW_GEM,
+  CAPTAINS_HAT_FILL,
   CASTLE_GEM,
   CASTLE_STONE,
   CASTLE_TRIM,
@@ -65,6 +66,7 @@ import {
   DREAM_RIM,
   DECOY_BEAK,
   DECOY_BODY,
+  DEEP_CANAL_WEIGHT,
   DREAM_STAR,
   DREAM_SWATCH,
   EXPLORER_VEST_FILL,
@@ -77,6 +79,9 @@ import {
   FIREFLY_JAR_GLASS,
   FIREFLY_JAR_LID,
   FIREFLY_SOCKET,
+  FIN_STREAMER_FILLS,
+  FIN_STREAMER_KNOT,
+  FLOWER_MARKET_HULL,
   FROG_STATUE_STONE,
   FROGGY_BOOT,
   GEM_GLINT,
@@ -105,6 +110,10 @@ import {
   LILY_PAD_SOCK_FILL,
   LOTUS_LANTERN_BODY,
   LOTUS_PETAL,
+  MARIACHI_JACKET_FILL,
+  MARIACHI_BRAID,
+  MARIACHI_STUD,
+  MARKET_LEAF,
   MINERS_HELMET_FILL,
   MOSS_BALL_FILL,
   MOSS_BALL_WEIGHT,
@@ -114,6 +123,9 @@ import {
   NECKLACE_SHELL,
   PAINT_SHELL_FILL,
   PAINT_SHELL_RIDGE,
+  PAINTED_OAR_BLADE,
+  PAINTED_OAR_WOOD,
+  PAPER_BOAT_FILL,
   PEARL_CHARM_CORD,
   PEARL_FILL,
   PEBBLE_NECKLACE_CORD,
@@ -125,8 +137,14 @@ import {
   RAINCOAT_FILL,
   PYRAMID_STONE,
   REED_BUNDLE_STALK,
+  SAILOR_CAP_FILL,
   SOCK_FILL,
+  STRIPED_SCARF_FILL,
   TANK_TOP_FILL,
+  TRAJINERA_ARCH,
+  TRAJINERA_BLOSSOM_PINK,
+  TRAJINERA_BLOSSOM_YELLOW,
+  TRAJINERA_HULL,
   TREASURE_SHINE,
   TREASURE_SILHOUETTE_FILL,
   TREASURE_STAR,
@@ -299,7 +317,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * The Decoration and Wearable slugs: the twelve canal ones (the text after `canal/`), then the
  * eleven pond ones and the eleven pond Area 3 ones (the text after `pond/`), then the eleven chinampa
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
- * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), in catalogue order.
+ * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
+ * Area 8 ones (the text after `deep-canal/`), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -379,7 +398,18 @@ export type TreasureItemSlug =
   | 'bubble-machine'
   | 'glow-tail-lantern'
   | 'underground-waterfall'
-  | 'gemstone-cape';
+  | 'gemstone-cape'
+  | 'flower-garland'
+  | 'paper-boat'
+  | 'sailor-cap'
+  | 'striped-scarf'
+  | 'little-trajinera'
+  | 'painted-oar'
+  | 'mariachi-jacket'
+  | 'trajinera-flower-arch'
+  | 'captains-hat'
+  | 'floating-flower-market'
+  | 'rainbow-fin-streamers';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -462,14 +492,25 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'glow-tail-lantern',
   'underground-waterfall',
   'gemstone-cape',
+  'flower-garland',
+  'paper-boat',
+  'sailor-cap',
+  'striped-scarf',
+  'little-trajinera',
+  'painted-oar',
+  'mariachi-jacket',
+  'trajinera-flower-arch',
+  'captains-hat',
+  'floating-flower-market',
+  'rainbow-fin-streamers',
 ];
 
 /**
- * All one hundred icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and eleven icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
- * items, the eleven spring cave Area 7 items, then the twenty-two Paint shells in Dream order (Moonstone,
- * Chocolate, Crystal shine and Glowworm are the spring cave's; the last two, Jade and Fiesta shine, the
- * deep canal's).
+ * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, then the twenty-two Paint
+ * shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last two,
+ * Jade and Fiesta shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -550,6 +591,9 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The six spring cave Area 7 Decorations (issue #105) end on the same 12.6 edge: the Mossy rock's foot, the Bubble
  * stone's base, the Ancient clay pot's foot, the Bubble machine's box and the Underground waterfall's plinth (Floor
  * items) and the tip of the Glowing stalactite (a Hanging item).
+ * The six deep canal Area 8 Decorations (issue #78) end on the same 12.6 edge: the Painted oar's blade foot and the
+ * Trajinera flower arch's deck (Floor items), the weights of the Paper boat, the Little trajinera and the Floating
+ * flower market (Floating items, so the box edge) and the lowest blossom of the Flower garland (a Hanging item).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -589,6 +633,12 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'glowing-stalactite': 12.6,
   'bubble-machine': 12.6,
   'underground-waterfall': 12.6,
+  'flower-garland': 12.6,
+  'paper-boat': 12.6,
+  'little-trajinera': 12.6,
+  'painted-oar': 12.6,
+  'trajinera-flower-arch': 12.6,
+  'floating-flower-market': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -3384,6 +3434,334 @@ function paintGemstoneCape(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 8 items (issue #78)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Every outer fill is one of the Area 8 fills of
+// treasurePalette.ts (9:1 or more with ink); the five Wearables' worn looks import the same names. Shape
+// carries the meaning: a hanging strand of blossoms, a folded paper boat, a sailor's cup cap, a striped
+// scarf with a long tail, a little trajinera under its flower arch (long and low, never the Toy boat's
+// pink bowl and white canopy), an oar standing blade down, a short charro jacket studded with silver, a flower
+// arch on a boat deck, a peaked captain's cap, a floating market barge heaped with blossoms and six ribbons
+// of rainbow. The Jade Paint shell uses the generic Paint shell painter (below).
+
+/**
+ * A thin ink cord from (x, fromY) down to a pebble A weight whose bottom is the 12.6 box edge: the Floating
+ * anchor of the Area 8 boats, like the Wooden duck decoy's.
+ */
+function boatTether(pen: Pen, x: number, fromY: number): void {
+  const { ctx, k } = pen;
+  const weightR = 1.7;
+  const weightY = AREA3_FOOT_Y - weightR;
+  const cord = new Path2D();
+  cord.moveTo(x, fromY);
+  cord.quadraticCurveTo(x + 2.6, (fromY + weightY) / 2, x, weightY - weightR);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  ctx.stroke(place(cord, k));
+  outerShape(pen, place(ellipse(x, weightY, weightR, weightR), k), DEEP_CANAL_WEIGHT, ITEM_LW);
+}
+
+/** The Painted oar's round blade end in its own frame (before it leans): radius 4.6 round (0, 8.43), so its lowest point is 12.6 once leaned by 0.32. */
+const OAR_BLADE_R = 4.6;
+const OAR_BLADE_END_Y = (AREA3_FOOT_Y - OAR_BLADE_R) / Math.cos(0.32);
+
+/**
+ * Common, Hanging: a strand of four blossoms strung one under another on a thin ink string from a pebble A hook
+ * ring on its top-centre: pink and marigold in turn, three green leaves between them. One shine on the top
+ * blossom. The lowest blossom is the lowest fill edge.
+ */
+function paintFlowerGarland(pen: Pen): void {
+  const { ctx, k } = pen;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  ctx.stroke(place(line(0, -10, 0, 8), k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, FIREFLY_HOOK), DETAIL_LW);
+  for (const [y, deg] of [
+    [-3.2, 64],
+    [2, -64],
+    [6.9, 64],
+  ] as const) {
+    outerShape(pen, place(pointedPetal(0, y, deg, 8.4, 5.2), k), PLANT_LEAF, ITEM_LW);
+  }
+  for (const [y, fill] of [
+    [-5.8, LOTUS_PETAL],
+    [-0.6, MARIGOLD_PETAL],
+    [4.6, LOTUS_PETAL],
+    [9.2, MARIGOLD_PETAL],
+  ] as const) {
+    outerShape(pen, place(blossomPath(0, y, 3.4), k), fill, ITEM_LW);
+  }
+  shine(pen, -1, -6.4, 0.5, 1, 0.4);
+}
+
+/**
+ * Common, Floating: a folded paper boat in pale paper blue: a wide hull with a flat top and a tall triangular sail
+ * standing on it, one ink crease down the sail and one across the hull (1.2), a thin ink cord and a pebble A
+ * weight hanging below. One shine on the sail. The hull rides across the waterline, 20 below the top of the 80
+ * box; the weight is the lowest fill edge, the box edge.
+ */
+function paintPaperBoat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const wy = waterlineY(INK_OUT_SHAPE);
+  const top = wy - 0.6;
+  const bottom = top + 6.4;
+  boatTether(pen, 0, bottom - 0.4);
+  const sail = roundedPolygon(pts(1.6, -12.4, 9.4, top + 0.8, -6.2, top + 0.8), [0.8, 1, 1]);
+  silhouette(pen, place(sail, k), PAPER_BOAT_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(1.6, -10, 1.6, top + 1), k));
+  });
+  const hull = roundedPolygon(pts(-12.4, top, 12.4, top, 8.2, bottom, -8.2, bottom), [1.4, 1.4, 1.8, 1.8]);
+  silhouette(pen, place(hull, k), PAPER_BOAT_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(-13, top + 2.6, 13, top + 2.6), k));
+  });
+  shine(pen, -1.4, -6.6, 0.7, 1.9, 0.25);
+}
+
+/**
+ * Common: a sailor's cup cap in pale sailor white: a crown peeking over a flaring cup with a turned-up brim, a
+ * small ink anchor (1.6) on the front. One shine.
+ */
+function paintSailorCap(pen: Pen): void {
+  const { ctx, k } = pen;
+  outerShape(pen, place(ellipse(0, -7.2, 8.2, 4.6), k), SAILOR_CAP_FILL, ITEM_LW);
+  const cup = roundedPolygon(pts(-13.4, -6.2, 13.4, -6.2, 8.6, 9.4, -8.6, 9.4), [2.6, 2.6, 2.6, 2.6]);
+  outerShape(pen, place(cup, k), SAILOR_CAP_FILL, ITEM_LW);
+  detail(pen, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    const anchor = new Path2D();
+    anchor.moveTo(0, -0.4);
+    anchor.lineTo(0, 6);
+    anchor.moveTo(-1.8, 1.2);
+    anchor.lineTo(1.8, 1.2);
+    anchor.moveTo(-3, 3.6);
+    anchor.quadraticCurveTo(0, 8.2, 3, 3.6);
+    ell(anchor, 0, -1.6, 1.2, 1.2);
+    ctx.stroke(place(anchor, k));
+  });
+  shine(pen, -8, -2.6, 0.9, 2, 0.3);
+}
+
+/**
+ * Common: a coral scarf wrapped in a sagging band with a knot and one long tail hanging from it, stripes of ink
+ * (alpha 0.30) across both. One coral and one shine on the band.
+ */
+function paintStripedScarf(pen: Pen): void {
+  const { ctx, k } = pen;
+  const stripes = (): void => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const x of [-9.4, -5.2, -1, 3.2, 7.4]) ctx.fillRect(x * k, -14 * k, 2.2 * k, 12 * k);
+    for (const y of [1.6, 6.4]) ctx.fillRect(1 * k, y * k, 10 * k, 2.4 * k);
+    ctx.globalAlpha = 1;
+  };
+  const tail = roundedPolygon(pts(2.2, -4, 9.6, -4, 10.4, 12.6, 3.6, 12.6), [1, 1, 1.6, 1.6]);
+  silhouette(pen, place(tail, k), STRIPED_SCARF_FILL, ITEM_LW, stripes);
+  const drape = new Path2D();
+  drape.moveTo(-12.6, -10.6);
+  drape.bezierCurveTo(-8, -10.6, -6, -5.4, 0, -5.4);
+  drape.bezierCurveTo(6, -5.4, 8, -10.6, 12.6, -10.6);
+  drape.lineTo(12.6, -4.4);
+  drape.bezierCurveTo(8, -4.4, 6, 1, 0, 1);
+  drape.bezierCurveTo(-6, 1, -8, -4.4, -12.6, -4.4);
+  drape.closePath();
+  silhouette(pen, place(drape, k), STRIPED_SCARF_FILL, ITEM_LW, stripes);
+  shine(pen, -8.6, -7.6, 1.8, 0.7, 0.35);
+}
+
+/**
+ * Rare, Floating: a little trajinera: a long low cream hull with both ends turned up, one yellow trim band along
+ * it, and a flower arch standing over its deck: a pale teal ring with three blossoms (yellow at the top, pink
+ * either side). A thin ink cord and a pebble A weight hang below. One shine on the hull. The deck sits just under
+ * the waterline, 20 below the top of the 80 box; the weight is the lowest fill edge, the box edge.
+ */
+function paintLittleTrajinera(pen: Pen): void {
+  const { k } = pen;
+  const deck = -3.4;
+  boatTether(pen, 0, 3);
+  const arch = new Path2D();
+  arch.moveTo(-9.4, -0.6);
+  arch.lineTo(-9.4, deck);
+  arch.ellipse(0, deck, 9.4, 8.6, 0, Math.PI, TAU, false);
+  arch.lineTo(9.4, -0.6);
+  arch.lineTo(5, -0.6);
+  arch.lineTo(5, deck);
+  arch.ellipse(0, deck, 5, 4, 0, 0, Math.PI, true);
+  arch.lineTo(-5, -0.6);
+  arch.closePath();
+  outerShape(pen, place(arch, k), TRAJINERA_ARCH, ITEM_LW);
+  outerShape(pen, place(blossomPath(0, -9.6, 3), k), TRAJINERA_BLOSSOM_YELLOW, ITEM_LW);
+  for (const x of [-5.9, 5.9]) outerShape(pen, place(blossomPath(x, -7.2, 2.6), k), TRAJINERA_BLOSSOM_PINK, ITEM_LW);
+  const hull = new Path2D();
+  hull.moveTo(-12.6, -7);
+  hull.quadraticCurveTo(0, 0.2, 12.6, -7);
+  hull.bezierCurveTo(12.4, -1.6, 10, 3.4, 5.6, 3.4);
+  hull.lineTo(-5.6, 3.4);
+  hull.bezierCurveTo(-10, 3.4, -12.4, -1.6, -12.6, -7);
+  hull.closePath();
+  silhouette(pen, place(hull, k), TRAJINERA_HULL, ITEM_LW, () => trimBand(pen, -0.2, 1.8, BOAT_TRIM));
+  shine(pen, -7.4, -2.8, 1.5, 0.6, 0.35);
+}
+
+/**
+ * Rare, Floor: an oar leaning a little, blade down: a T-shaped grip and a straight shaft in pale carved wood over a
+ * pale teal paddle blade with a round end, one yellow trim band across the blade square to the oar. One shine on the
+ * blade. The round end of the blade is the lowest fill edge.
+ */
+function paintPaintedOar(pen: Pen): void {
+  const { ctx, k } = pen;
+  const rot = 0.32;
+  const shift = 1.2;
+  const at = (p: Path2D): Path2D => place(p, k, shift, 0, rot);
+  const grip = roundedPolygon(pts(-4.6, -11.7, 4.6, -11.7, 4.6, -8.7, -4.6, -8.7), 1.4);
+  outerShape(pen, at(grip), PAINTED_OAR_WOOD, ITEM_LW);
+  const shaft = roundedPolygon(pts(-1.9, -9.4, 1.9, -9.4, 1.9, 4, -1.9, 4), 1);
+  outerShape(pen, at(shaft), PAINTED_OAR_WOOD, ITEM_LW);
+  const blade = new Path2D();
+  blade.moveTo(-1.9, 0.4);
+  blade.bezierCurveTo(-5, 2.2, -4.6, 4.2, -4.6, OAR_BLADE_END_Y);
+  blade.arc(0, OAR_BLADE_END_Y, OAR_BLADE_R, Math.PI, 0, true);
+  blade.bezierCurveTo(4.6, 4.2, 5, 2.2, 1.9, 0.4);
+  blade.closePath();
+  silhouette(pen, at(blade), PAINTED_OAR_BLADE, ITEM_LW, () => {
+    ctx.save();
+    ctx.translate(shift * k, 0);
+    ctx.rotate(rot);
+    trimBand(pen, 5, 7.6, BOAT_TRIM);
+    ctx.restore();
+  });
+  const lx = -1.9;
+  const ly = 10.6;
+  shine(pen, lx * Math.cos(rot) - ly * Math.sin(rot) + shift, lx * Math.sin(rot) + ly * Math.cos(rot), 0.6, 1.6, rot);
+}
+
+/**
+ * Rare: a short charro jacket in pale butter yellow: a V neck, wide sleeves and a cropped hem, with one turquoise
+ * braid (the one trim band, between two 1.2 ink lines) down the front and three silver studs (pebble A, ink 1.2)
+ * set on it. One shine on the left shoulder.
+ */
+function paintMariachiJacket(pen: Pen): void {
+  const { ctx, k } = pen;
+  const jacket = roundedPolygon(
+    pts(-4.6, -10.4, 0, -5.4, 4.6, -10.4, 12.4, -7.4, 12.4, 4.6, 8.2, 4.6, 8.2, 10.6, -8.2, 10.6, -8.2, 4.6, -12.4, 4.6, -12.4, -7.4),
+    [1.2, 1.2, 1.2, 2.4, 1.2, 1, 2, 2, 1, 1.2, 2.4],
+  );
+  silhouette(pen, place(jacket, k), MARIACHI_JACKET_FILL, ITEM_LW, () => trimBandX(pen, -1.9, 1.9, MARIACHI_BRAID));
+  detail(pen, () => {
+    for (const y of [-1.6, 2.6, 6.8]) shape(ctx, place(ellipse(0, y, 0.9, 0.9), k), MARIACHI_STUD, BAND_LW);
+  });
+  shine(pen, -9.6, -3.4, 0.9, 2.2, 0.1);
+}
+
+/**
+ * Epic, Floor: a flower arch on a boat deck: a cream deck (a boat's trapezoid) under a pale teal ring of an arch
+ * with its opening, five blossoms on the ring (a pink one at the top, yellow and pink either side), and one aqua
+ * gem set on the deck in the opening. One shine on the left pillar. The deck is the lowest fill edge.
+ */
+function paintTrajineraFlowerArch(pen: Pen): void {
+  const { k } = pen;
+  const cy = -0.1;
+  const deck = roundedPolygon(pts(-12.6, 7.8, 12.6, 7.8, 10.6, 12.6, -10.6, 12.6), [1.4, 1.4, 2.2, 2.2]);
+  outerShape(pen, place(deck, k), TRAJINERA_HULL, ITEM_LW);
+  const arch = new Path2D();
+  arch.moveTo(-11.4, 8.4);
+  arch.lineTo(-11.4, cy);
+  arch.arc(0, cy, 11.4, Math.PI, TAU, false);
+  arch.lineTo(11.4, 8.4);
+  arch.lineTo(6.8, 8.4);
+  arch.lineTo(6.8, cy);
+  arch.arc(0, cy, 6.8, 0, Math.PI, true);
+  arch.lineTo(-6.8, 8.4);
+  arch.closePath();
+  outerShape(pen, place(arch, k), TRAJINERA_ARCH, ITEM_LW);
+  const mid = 9.1;
+  for (const [deg, r, fill] of [
+    [-80, 2.6, TRAJINERA_BLOSSOM_PINK],
+    [-40, 2.8, TRAJINERA_BLOSSOM_YELLOW],
+    [80, 2.6, TRAJINERA_BLOSSOM_PINK],
+    [40, 2.8, TRAJINERA_BLOSSOM_YELLOW],
+    [0, 3.4, TRAJINERA_BLOSSOM_PINK],
+  ] as const) {
+    const a = rad(deg);
+    outerShape(pen, place(blossomPath(mid * Math.sin(a), cy - mid * Math.cos(a), r), k), fill, ITEM_LW);
+  }
+  gem(pen, 0, 6, CASTLE_GEM);
+  shine(pen, -9.2, 4.6, 0.6, 1.8, 0);
+}
+
+/**
+ * Epic: a captain's peaked cap in pale cream: a crown flaring toward its flat top over a straight band, and a
+ * round visor curving out under the band, the band and the visor the same cream darkened with ink (alpha 0.30),
+ * and one aqua gem set on the band. One shine on the crown.
+ */
+function paintCaptainsHat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const darken = (): void => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(-ICON_BOX * k, -ICON_BOX * k, 2 * ICON_BOX * k, 2 * ICON_BOX * k);
+    ctx.globalAlpha = 1;
+  };
+  silhouette(pen, place(ellipse(0, 8, 12.6, 4.6), k), CAPTAINS_HAT_FILL, ITEM_LW, darken);
+  const crown = roundedPolygon(pts(-9.4, 4, -12.2, -6, -8, -12.4, 8, -12.4, 12.2, -6, 9.4, 4), [1.6, 3.4, 3, 3, 3.4, 1.6]);
+  outerShape(pen, place(crown, k), CAPTAINS_HAT_FILL, ITEM_LW);
+  const band = roundedPolygon(pts(-10, -0.8, 10, -0.8, 9.6, 6.4, -9.6, 6.4), [1, 1, 1.6, 1.6]);
+  silhouette(pen, place(band, k), CAPTAINS_HAT_FILL, ITEM_LW, darken);
+  gem(pen, 0, 2.8, CASTLE_GEM);
+  shine(pen, -6.6, -6.4, 0.9, 2.4, 0.3);
+}
+
+/**
+ * Legendary, Floating: a floating flower market: a pale teal barge with both ends turned up, one gold band along
+ * it and one pink gem on its side, heaped with three blossoms (a tall pink one between two yellow) and two green
+ * leaves, a thin ink cord and a pebble A weight hanging below, and one 4-point star. One shine on the barge. The
+ * deck is on the waterline, 20 below the top of the 80 box; the weight is the lowest fill edge.
+ */
+function paintFloatingFlowerMarket(pen: Pen): void {
+  const { k } = pen;
+  const deck = waterlineY(INK_OUT_SHAPE);
+  boatTether(pen, 0, 5.2);
+  for (const [x, deg] of [
+    [-3.4, -22],
+    [3.4, 22],
+  ] as const) {
+    outerShape(pen, place(pointedPetal(x, deck + 0.6, deg, 6.4, 4.8), k), MARKET_LEAF, ITEM_LW);
+  }
+  const hull = roundedPolygon(pts(-12.6, deck, 12.6, deck, 10.8, 5.6, -10.8, 5.6), [1.6, 1.6, 2.4, 2.4]);
+  silhouette(pen, place(hull, k), FLOWER_MARKET_HULL, ITEM_LW, () => trimBand(pen, 2.2, 4.6, GOLD_TRIM));
+  outerShape(pen, place(blossomPath(0, -9, 3.6), k), TRAJINERA_BLOSSOM_PINK, ITEM_LW);
+  for (const x of [-6.6, 6.6]) outerShape(pen, place(blossomPath(x, -7.4, 3), k), TRAJINERA_BLOSSOM_YELLOW, ITEM_LW);
+  gem(pen, 0, -1.4, PYRAMID_GEM);
+  shine(pen, -8, -2.8, 0.8, 1.6, 0.3);
+  legendStar(pen, 9.8, -9.8);
+}
+
+/**
+ * Legendary: rainbow fin streamers: six pale ribbons (pink, orange, yellow, green, blue and violet, left to right)
+ * curving down and out from a silver-white tie across the top, the tie with one gold band, one pink gem and, beside
+ * it, one 4-point star. One shine on the tie.
+ */
+function paintRainbowFinStreamers(pen: Pen): void {
+  const { k } = pen;
+  const ends = [-10.2, -6.2, -2.1, 2.1, 6.2, 10.2];
+  const starts = [-5.6, -3.4, -1.1, 1.1, 3.4, 5.6];
+  FIN_STREAMER_FILLS.forEach((fill, i) => {
+    const bend = (i - 2.5) * 0.6;
+    outerShape(pen, place(rootRibbon(starts[i], -4, starts[i] + bend, 4.4, ends[i], 11.4, 3.4, 3.4), k), fill, ITEM_LW);
+  });
+  const tie = roundedPolygon(pts(-8.2, -12.6, 8.2, -12.6, 8.2, -3, -8.2, -3), 2.4);
+  silhouette(pen, place(tie, k), FIN_STREAMER_KNOT, ITEM_LW, () => trimBand(pen, -5.8, -3.6, GOLD_TRIM));
+  gem(pen, 0, -9, PYRAMID_GEM);
+  shine(pen, -6.4, -10, 0.7, 1.4, 0.2);
+  legendStar(pen, 9.8, -9.8);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -4039,6 +4417,39 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'gemstone-cape':
       paintGemstoneCape({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'flower-garland':
+      paintFlowerGarland({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'paper-boat':
+      paintPaperBoat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'sailor-cap':
+      paintSailorCap({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'striped-scarf':
+      paintStripedScarf({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-trajinera':
+      paintLittleTrajinera({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'painted-oar':
+      paintPaintedOar({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'mariachi-jacket':
+      paintMariachiJacket({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'trajinera-flower-arch':
+      paintTrajineraFlowerArch({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'captains-hat':
+      paintCaptainsHat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'floating-flower-market':
+      paintFloatingFlowerMarket({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'rainbow-fin-streamers':
+      paintRainbowFinStreamers({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }
