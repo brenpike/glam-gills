@@ -128,7 +128,9 @@ export type PredatorEvent =
 
 /**
  * World context a predator step needs. `bounds` limits the predator centre. `rockWalls`, when set,
- * are solid rock (ND-12): no move carries the centre into a wall grown by bodyRadius.
+ * are solid rock (ND-12): no move carries the centre into, or through, a wall grown by bodyRadius.
+ * The whole straight path of every move is checked against each grown wall, and the move stops on
+ * the face it reaches and slides along it.
  */
 export interface PredatorContext {
   safeArea: SafeArea;
@@ -167,6 +169,7 @@ interface PhaseStep {
 
 const MAX_PHASE_STEPS = 8;
 const PROGRESS_EPSILON = 1e-9;
+const NO_ROCK: readonly Readonly<RockWall>[] = Object.freeze([]);
 /**
  * Slack in px for the chase: a chase stops this far inside the lungeRange, so float error never
  * leaves it just outside reach, and a chaser counts as within its leash up to this far past it.
@@ -432,8 +435,10 @@ export function phaseProgress(state: PredatorState): number {
  * it to patrol.
  *
  * All movement is clamped to `bounds` and kept clear of the safe area grown by `bodyRadius`,
- * so the body never overlaps the safe area. Callers should cap dt (for example SWIM.dtMax)
- * so strike contact is sampled finely.
+ * so the body never overlaps the safe area: the whole straight path of every move is checked
+ * against the grown safe area, and the move stops on the face it reaches and slides along it
+ * (`moveClamped`). Callers should cap dt (for example SWIM.dtMax) so strike contact is sampled
+ * finely.
  *
  * Shared rules (`ctx.rules`, see `PredatorRules`): with `sightCover`, a target in cover
  * (`ctx.targetInCover`) counts as not exposed, so it gates the warning start, the end-of-warning
@@ -453,8 +458,9 @@ export function phaseProgress(state: PredatorState): number {
  * Rock (ND-12), for every species: a target behind rock (`ctx.targetBehindRock`) counts as not
  * exposed, so it starts no warning, cancels a warning at its end, is not chased and is never hit. A
  * strike also never connects while rock lies between its striking point and the target after the
- * move (`crossesRock` with `ctx.rockWalls`). Every move (patrol, chase, strike, cooldown, glide)
- * stops at the face of each rock wall grown by bodyRadius, sliding along it as along the safe area.
+ * move (`crossesRock` with `ctx.rockWalls`). Every move (patrol, chase, strike, cooldown, glide) is
+ * checked along its whole straight path against each rock wall grown by bodyRadius, and stops at the
+ * face it reaches, sliding along it as along the safe area.
  * With no rock walls nothing changes.
  */
 export function stepPredator(
@@ -777,57 +783,108 @@ function swimRoute(state: PredatorState, dt: number, ctx: PredatorContext): Pred
 }
 
 /**
- * Moves `from` by `delta`, clamping the result to `ctx.bounds` and keeping it out of the
- * safe area grown by `bodyRadius`. Resolves one axis at a time, stopping on the face of the
- * keep-out box the mover approached from, so it slides along the box instead of crossing it.
- * Each rock wall in `ctx.rockWalls`, grown by `bodyRadius`, stops the move the same way at the face
- * it is approached from, judged along the whole move so a long move never passes through it. A wall
- * whose grown box already holds the centre does not stop it, so a predator inside one can leave.
+ * Moves `from` by `delta`, clamping the target to `ctx.bounds` on each axis, then keeping the centre
+ * out of the safe area and each rock wall in `ctx.rockWalls`, every box grown by `bodyRadius`. The
+ * whole straight path of the move, from `from` to the clamped target, is checked against the open
+ * inside of every grown box: the move stops on the face of the first box it would enter, then slides
+ * along that face toward the target's other coordinate, and that slide is checked against every box
+ * in the same way. It stops at most twice, so at a joint of two boxes it ends on both faces. Edges
+ * count as outside: a move along a face, or through a grown corner point, is not stopped. When it
+ * would enter on both axes at once, the vertical (x) face stops it. A wall whose grown box already
+ * holds `from` does not stop it, so a predator inside one can leave. A start inside the grown safe
+ * area keeps the target's y, and its x unless that lies strictly between the grown safe area's left
+ * and right faces, which moves it to the right face.
  */
 function moveClamped(from: Point, delta: Point, ctx: PredatorContext): Point {
   // Grown boxes are compared through `margin` rather than built, so a move allocates no box (hot path).
   const margin = ctx.tuning.bodyRadius;
   const { bounds, safeArea } = ctx;
-  const rock = ctx.rockWalls;
-  let x = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
-  if (strictlyInsideGrown(x, from.y, safeArea, margin)) {
-    x = from.x <= safeArea.x0 - margin ? safeArea.x0 - margin : safeArea.x1 + margin;
-  }
-  if (rock) {
-    for (const wall of rock) {
-      if (between(from.y, wall.y0 - margin, wall.y1 + margin)) {
-        x = stopAtFace(from.x, x, wall.x0 - margin, wall.x1 + margin);
-      }
+  const walls = ctx.rockWalls ?? NO_ROCK;
+  const fromInSafeArea = strictlyInsideGrown(from.x, from.y, safeArea, margin);
+  let endX = clamp(from.x + delta.x, bounds.minX, bounds.maxX);
+  let endY = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
+  if (fromInSafeArea && endX > safeArea.x0 - margin && endX < safeArea.x1 + margin) endX = safeArea.x1 + margin;
+  let x = from.x;
+  let y = from.y;
+  for (let contact = 0; contact < 2; contact++) {
+    const dx = endX - x;
+    const dy = endY - y;
+    if (dx === 0 && dy === 0) break;
+    let share = Infinity;
+    let onX = false;
+    let face = 0;
+    for (let i = -1; i < walls.length; i++) {
+      const box = i < 0 ? safeArea : walls[i];
+      if (pathMissesGrown(x, y, endX, endY, box, margin)) continue;
+      const holdsFrom = i < 0 ? fromInSafeArea : strictlyInsideGrown(from.x, from.y, box, margin);
+      if (holdsFrom) continue;
+      const entry = entryShare(x, y, dx, dy, box, margin);
+      if (entry === Infinity || entry > share) continue;
+      const boxOnX = entersOnXFace(x, y, dx, dy, box, margin);
+      if (entry === share && (onX || !boxOnX)) continue;
+      share = entry;
+      onX = boxOnX;
+      face = boxOnX ? (dx > 0 ? box.x0 - margin : box.x1 + margin) : dy > 0 ? box.y0 - margin : box.y1 + margin;
+    }
+    if (share === Infinity) break;
+    if (onX) {
+      y += share * dy;
+      x = face;
+      endX = face;
+    } else {
+      x += share * dx;
+      y = face;
+      endY = face;
     }
   }
-  let y = clamp(from.y + delta.y, bounds.minY, bounds.maxY);
-  if (strictlyInsideGrown(x, y, safeArea, margin)) {
-    y = from.y <= safeArea.y0 - margin ? safeArea.y0 - margin : safeArea.y1 + margin;
-  }
-  if (rock) {
-    for (const wall of rock) {
-      if (between(x, wall.x0 - margin, wall.x1 + margin)) {
-        y = stopAtFace(from.y, y, wall.y0 - margin, wall.y1 + margin);
-      }
-    }
-  }
-  return { x, y };
+  return { x: endX, y: endY };
 }
 
 /**
- * Where a one-axis move from `from` to `to` ends against the span (lo, hi): at `lo` or `hi` when it
- * starts on or outside that face and would pass it, else at `to`. A start strictly inside the span
- * is not stopped.
+ * Whether the box spanned by the path from (x, y) to (endX, endY) stays off the open inside of `box`
+ * grown by `margin`, so the path cannot enter it.
  */
-function stopAtFace(from: number, to: number, lo: number, hi: number): number {
-  if (from <= lo && to > lo) return lo;
-  if (from >= hi && to < hi) return hi;
-  return to;
+function pathMissesGrown(x: number, y: number, endX: number, endY: number, box: SafeArea, margin: number): boolean {
+  return (
+    Math.max(x, endX) <= box.x0 - margin ||
+    Math.min(x, endX) >= box.x1 + margin ||
+    Math.max(y, endY) <= box.y0 - margin ||
+    Math.min(y, endY) >= box.y1 + margin
+  );
 }
 
-/** Whether `value` is strictly between `lo` and `hi`. */
-function between(value: number, lo: number, hi: number): boolean {
-  return value > lo && value < hi;
+/**
+ * The share of the move from (x, y) by (dx, dy) at which it enters the open inside of `box` grown by
+ * `margin`, at least 0; Infinity when it never does before its end. A start already inside counts as
+ * entering at 0.
+ */
+function entryShare(x: number, y: number, dx: number, dy: number, box: SafeArea, margin: number): number {
+  const enter = Math.max(slabEntry(x, dx, box.x0 - margin, box.x1 + margin), slabEntry(y, dy, box.y0 - margin, box.y1 + margin));
+  const exit = Math.min(slabExit(x, dx, box.x0 - margin, box.x1 + margin), slabExit(y, dy, box.y0 - margin, box.y1 + margin));
+  return enter < exit && exit > 0 && enter < 1 ? Math.max(enter, 0) : Infinity;
+}
+
+/** Whether the move from (x, y) by (dx, dy) enters `box` grown by `margin` through an x face, x winning a tie. */
+function entersOnXFace(x: number, y: number, dx: number, dy: number, box: SafeArea, margin: number): boolean {
+  return slabEntry(x, dx, box.x0 - margin, box.x1 + margin) >= slabEntry(y, dy, box.y0 - margin, box.y1 + margin);
+}
+
+/**
+ * The share of a one-axis move from `start` by `delta` at which it enters the open span (lo, hi):
+ * -Infinity for a still start inside, Infinity for a still start outside.
+ */
+function slabEntry(start: number, delta: number, lo: number, hi: number): number {
+  if (delta === 0) return start > lo && start < hi ? -Infinity : Infinity;
+  return ((delta > 0 ? lo : hi) - start) / delta;
+}
+
+/**
+ * The share of a one-axis move from `start` by `delta` at which it leaves the open span (lo, hi):
+ * Infinity for a still start inside, -Infinity for a still start outside.
+ */
+function slabExit(start: number, delta: number, lo: number, hi: number): number {
+  if (delta === 0) return start > lo && start < hi ? Infinity : -Infinity;
+  return ((delta > 0 ? hi : lo) - start) / delta;
 }
 
 /** Whether (x, y) is strictly inside `box` grown by `margin` on every side. */

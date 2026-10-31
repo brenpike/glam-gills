@@ -24,7 +24,7 @@ import { legSwimTuning } from './legs';
 import { mobileSnackAvoid, type MobileSnackAvoid } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardPeriod, movingHazardSweep } from './movingHazards';
 import { blockAtRock, bodyInAnyRock } from './pebble';
-import { BLACK_BASS_SPECIES, CARP_SPECIES, crossesRock, routeLoopDistance } from './predators';
+import { BLACK_BASS_SPECIES, CARP_SPECIES, crossesRock, routeLoopDistance, type PredatorState } from './predators';
 import { DT, EXTRA_SEEDS, START_STEP, fairnessZone, isSafeStart, loopSeconds, poolSpots, ringPoints, tailSteps, tilapiaOf } from './riskFairness';
 import { RESCUE } from './rescue';
 import { createShrimpFlicks, stepShrimpFlicks, type ShrimpFlickState } from './shrimpFlick';
@@ -91,16 +91,25 @@ const LOOKAHEAD_STEPS = deepCanal.parkSteps + MOVE_STEPS;
 const THREAT_TUNINGS = [tilapiaOf(deepCanal.zone), ...deepCanal.zone.predatorRoutes.map((route) => route.species.tuning)];
 /** Px within which a predator is a threat to swim away from: the longest chase sight. */
 const THREAT_RANGE = Math.max(...THREAT_TUNINGS.map((tuning) => tuning.chase?.sight ?? 0));
-/** Px a swimmer and a predator can close in LOOKAHEAD_STEPS at most: both at top speed (a chase or a Tail Dash), then the longest strike and hit. */
-const QUIET_PREDATOR_DISTANCE =
-  (LOOKAHEAD_STEPS * DT + SWIM.dashDuration) * (SWIM.dashSpeed + Math.max(...THREAT_TUNINGS.map((tuning) => tuning.chase?.speed ?? 0))) +
-  Math.max(...THREAT_TUNINGS.map((tuning) => tuning.lungeSpeed * tuning.lungeDuration + tuning.hitRadius));
-/** Px a swimmer can close on a pole's sweep in LOOKAHEAD_STEPS at most, plus its touch reach. */
-const QUIET_POLE_DISTANCE = (LOOKAHEAD_STEPS * DT + SWIM.dashDuration) * SWIM.dashSpeed + PUNTING_POLE.touchReach;
+/** Px/s of the fastest chase of the zone. */
+const TOP_CHASE_SPEED = Math.max(...THREAT_TUNINGS.map((tuning) => tuning.chase?.speed ?? 0));
+/** Px of the longest strike and hit of the zone. */
+const LONGEST_STRIKE = Math.max(...THREAT_TUNINGS.map((tuning) => tuning.lungeSpeed * tuning.lungeDuration + tuning.hitRadius));
+/** Seconds of the shortest warning of the zone: the least max(windup, minWindup) over THREAT_TUNINGS. */
+const MIN_WARNING = Math.min(...THREAT_TUNINGS.map((tuning) => Math.max(tuning.windup, tuning.minWindup)));
 /** The turns from the aim each move tries, in order: straight on, 45 degrees either way, waiting (null), 90 degrees either way, back. */
 const MOVE_TURNS: readonly (number | null)[] = [0, Math.PI / 4, -Math.PI / 4, null, Math.PI / 2, -Math.PI / 2, Math.PI];
 const { exit } = DEEP_CANAL_AREA;
 const rocks = deepCanal.zone.rockWalls ?? [];
+/** Each punting pole's sweep. */
+const POLE_SWEEPS = (deepCanal.zone.movingHazards ?? []).map((spawn) => movingHazardSweep(spawn));
+/** The unit way of each of the ESCAPE_DIRECTIONS a swim away is tried in, in order. */
+const ESCAPE_WAYS: readonly Point[] = Array.from({ length: ESCAPE_DIRECTIONS }, (_, index) => {
+  const angle = (index * 2 * Math.PI) / ESCAPE_DIRECTIONS;
+  return { x: Math.cos(angle), y: Math.sin(angle) };
+});
+/** Each visit target's nearest open safe start, found once, by `x,y` of the target. */
+const OPEN_SAFE_STARTS = new Map<string, Point>();
 const bounds = swimBounds(deepCanal.zone);
 const snackAvoid: MobileSnackAvoid = mobileSnackAvoid(deepCanal.zone);
 const dividerWest = Math.min(...rocks.map((stone) => stone.x0));
@@ -304,9 +313,7 @@ function escapeSteer(swimmer: Swimmer): Point {
   const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
   let best = { x: 0, y: 0 };
   let farthest = -Infinity;
-  for (let index = 0; index < ESCAPE_DIRECTIONS; index++) {
-    const angle = (index * 2 * Math.PI) / ESCAPE_DIRECTIONS;
-    const way = { x: Math.cos(angle), y: Math.sin(angle) };
+  for (const way of ESCAPE_WAYS) {
     const probe = { x: pos.x + way.x * ESCAPE_PROBE, y: pos.y + way.y * ESCAPE_PROBE };
     const inWater = probe.x >= bounds.minX && probe.x <= bounds.maxX && probe.y >= bounds.minY && probe.y <= bounds.maxY;
     const distance = Math.hypot(probe.x - threat.x, probe.y - threat.y);
@@ -317,20 +324,66 @@ function escapeSteer(swimmer: Swimmer): Point {
   return best;
 }
 
-/** Whether no predator or pole can reach the swimmer within LOOKAHEAD_STEPS, however it swims. */
-function isOutOfEveryReach(swimmer: Swimmer): boolean {
-  const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
-  const nearPredator = swimmer.encounter.predators.some((predator) => Math.hypot(predator.pos.x - pos.x, predator.pos.y - pos.y) <= QUIET_PREDATOR_DISTANCE);
-  const nearPole = (deepCanal.zone.movingHazards ?? []).some((spawn) => shapeDistance(pos, movingHazardSweep(spawn)) <= QUIET_POLE_DISTANCE);
-  return !nearPredator && !nearPole;
+/** Px a swimmer and a predator can close in `steps` frames at most: both at top speed (a chase or a Tail Dash), then the longest strike and hit. */
+function quietPredatorDistance(steps: number): number {
+  return (steps * DT + SWIM.dashDuration) * (SWIM.dashSpeed + TOP_CHASE_SPEED) + LONGEST_STRIKE;
 }
 
-/** Whether swimming away from the nearest threat from `swimmer` takes no hit for LOOKAHEAD_STEPS. */
+/** Px a swimmer can close on a pole's sweep in `steps` frames at most, plus its touch reach. */
+function quietPoleDistance(steps: number): number {
+  return (steps * DT + SWIM.dashDuration) * SWIM.dashSpeed + PUNTING_POLE.touchReach;
+}
+
+/**
+ * Seconds before `predator` can first connect, by its phase clock: at once in a strike, at the end
+ * of a warning, and after the shortest warning (MIN_WARNING) from patrol or once a cooldown ends.
+ */
+function secondsToConnect(predator: PredatorState): number {
+  switch (predator.phase) {
+    case 'lunge':
+      return 0;
+    case 'telegraph':
+      return predator.duration - predator.elapsed;
+    case 'cooldown':
+      return predator.duration - predator.elapsed + MIN_WARNING;
+    case 'patrol':
+      return MIN_WARNING;
+  }
+}
+
+/**
+ * Whether no predator or pole can reach the swimmer within `steps` frames, however it swims: every
+ * pole sweep is farther than the swimmer can close in them, and every predator is either farther
+ * than the two can close in them or cannot connect by its phase clock until a frame after them
+ * (one frame of margin for the sum of frame times).
+ */
+function isOutOfEveryReach(swimmer: Swimmer, steps: number): boolean {
+  const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
+  const predatorReach = quietPredatorDistance(steps);
+  const clearSeconds = (steps + 1) * DT;
+  const nearPredator = swimmer.encounter.predators.some(
+    (predator) => Math.hypot(predator.pos.x - pos.x, predator.pos.y - pos.y) <= predatorReach && secondsToConnect(predator) < clearSeconds,
+  );
+  if (nearPredator) return false;
+  const poleReach = quietPoleDistance(steps);
+  return !POLE_SWEEPS.some((sweep) => shapeDistance(pos, sweep) <= poleReach);
+}
+
+/**
+ * Whether swimming away from the nearest threat from `swimmer` takes no hit for LOOKAHEAD_STEPS.
+ * Before each frame it stops, true, once no predator or pole can reach the swimmer in the frames
+ * left (isOutOfEveryReach): no hit can follow, so the early stop gives the same answer as the full
+ * rollout.
+ */
 function escapes(swimmer: Swimmer): boolean {
-  if (isOutOfEveryReach(swimmer)) return true;
-  let current: Swimmer | null = swimmer;
-  for (let step = 0; step < LOOKAHEAD_STEPS && current; step++) current = stepSwimmer(current, escapeSteer(current), false);
-  return current !== null;
+  let current = swimmer;
+  for (let step = 0; step < LOOKAHEAD_STEPS; step++) {
+    if (isOutOfEveryReach(current, LOOKAHEAD_STEPS - step)) return true;
+    const next = stepSwimmer(current, escapeSteer(current), false);
+    if (!next) return false;
+    current = next;
+  }
+  return true;
 }
 
 /** `way` turned by `angle` radians; still for a null angle. */
@@ -605,12 +658,22 @@ function nearestOpenSafeStart(target: Point, zone: ZoneLayout): Point {
   throw new Error(`nearestOpenSafeStart: no safe start for (${target.x}, ${target.y})`);
 }
 
+/** The nearest open safe start to `target` in the default Area 8 zone, found once per target. */
+function cachedOpenSafeStart(target: Point): Point {
+  const key = `${target.x},${target.y}`;
+  const known = OPEN_SAFE_STARTS.get(key);
+  if (known) return known;
+  const found = nearestOpenSafeStart(target, deepCanal.zone);
+  OPEN_SAFE_STARTS.set(key, found);
+  return found;
+}
+
 /**
  * A visit to `target` with `tuning` from its nearest open safe start after waiting there
  * `startSteps`, then waiting there again for the park steps; null on a hit.
  */
 function visitFrom(target: Point, reach: number, legendary: boolean, tuning: SwimTuning, startSteps: number): SwimRun<VisitState> | null {
-  const from = nearestOpenSafeStart(target, deepCanal.zone);
+  const from = cachedOpenSafeStart(target);
   const start = parkSwimmer(createSwimmer(from, tuning), startSteps);
   if (!start) return null;
   const initial = { reached: false, nearest: Math.hypot(target.x - from.x, target.y - from.y) };
@@ -637,15 +700,33 @@ function loopCentre(route: TilapiaRoute): Point {
  * every event from the warning on, the hit included; throws when the predator never warns.
  */
 function swimAwayFromWarning(route: TilapiaRoute): EncounterEvent[] {
+  const warned = waitForWarning(route);
+  return [...warned.events, ...listEscapeEvents(warned.swimmer)];
+}
+
+/**
+ * The one-leg axolotl in the middle of a loop, waiting from a fresh encounter, at the frame its
+ * predator warns, with that frame's events; throws when the predator never warns.
+ */
+function waitForWarning(route: TilapiaRoute): { swimmer: Swimmer; events: EncounterEvent[] } {
   const wait = loopCentre(route);
   let encounter = createEncounter(deepCanal.zone);
   for (let step = 0; step < Math.ceil((2 * deepCanal.startWindow) / DT); step++) {
     const result = stepEncounter(encounter, wait, DT, deepCanal.ctx);
     encounter = result.state;
     if (!result.events.some((event) => event.type === 'telegraph' && event.sourceId === route.id)) continue;
-    return [...result.events, ...listEscapeEvents({ ...createSwimmer(wait, oneLeg), encounter, time: (step + 1) * DT })];
+    return { swimmer: { ...createSwimmer(wait, oneLeg), encounter, time: (step + 1) * DT }, events: result.events };
   }
   throw new Error(`swimAwayFromWarning: ${route.id} never warns`);
+}
+
+/** One frame of a swim away from the nearest threat, with the current and stopped at the rock: the swimmer after it and the frame's encounter events. */
+function stepEscape(swimmer: Swimmer): { swimmer: Swimmer; events: EncounterEvent[] } {
+  const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
+  const swum = stepSwim(swimmer.swim, escapeSteer(swimmer), { current: currentAt(pos, deepCanal.zone.currents), dragMul: 1, bounds, dashing: false }, DT, oneLeg);
+  const blocked = blockAtRock(pos, swum, rocks);
+  const result = stepEncounter(swimmer.encounter, blocked, DT, deepCanal.ctx);
+  return { swimmer: { ...swimmer, swim: { ...swum, x: blocked.x, y: blocked.y }, encounter: result.state, time: swimmer.time + DT }, events: result.events };
 }
 
 /** Every encounter event while `swimmer` swims away from the nearest threat for the park steps, the hit included. */
@@ -653,14 +734,25 @@ function listEscapeEvents(swimmer: Swimmer): EncounterEvent[] {
   let current = swimmer;
   const events: EncounterEvent[] = [];
   for (let step = 0; step < deepCanal.parkSteps; step++) {
-    const pos = { x: current.swim.x, y: current.swim.y };
-    const swum = stepSwim(current.swim, escapeSteer(current), { current: currentAt(pos, deepCanal.zone.currents), dragMul: 1, bounds, dashing: false }, DT, oneLeg);
-    const blocked = blockAtRock(pos, swum, rocks);
-    const result = stepEncounter(current.encounter, blocked, DT, deepCanal.ctx);
-    events.push(...result.events);
-    current = { ...current, swim: { ...swum, x: blocked.x, y: blocked.y }, encounter: result.state, time: current.time + DT };
+    const stepped = stepEscape(current);
+    events.push(...stepped.events);
+    current = stepped.swimmer;
   }
   return events;
+}
+
+/** The swimmer at every frame of a warning and swim-away: from the warning frame on, swimming away from the nearest threat for the park steps. */
+function listEscapeSwimmers(route: TilapiaRoute): Swimmer[] {
+  const swimmers = [waitForWarning(route).swimmer];
+  for (let step = 0; step < deepCanal.parkSteps; step++) swimmers.push(stepEscape(swimmers[swimmers.length - 1]).swimmer);
+  return swimmers;
+}
+
+/** The reference for escapes: whether swimming away from the nearest threat takes no hit for all LOOKAHEAD_STEPS frames, with no early stop. */
+function escapesInFull(swimmer: Swimmer): boolean {
+  let current: Swimmer | null = swimmer;
+  for (let step = 0; step < LOOKAHEAD_STEPS && current; step++) current = stepSwimmer(current, escapeSteer(current), false);
+  return current !== null;
 }
 
 /** Every encounter event, in order, while the axolotl waits at `at` for `seconds` from a fresh Area 8 encounter. */
@@ -723,9 +815,19 @@ describe('risk fairness on the default Area 8 zone', () => {
     expect(bodyInAnyRock(start, rocks)).toBe(false);
   });
 
-  it.each(spots)('lets the axolotl grab $id and swim back to its safe start without a hit for some start time, a Legendary with one Tail Dash', (spot) => {
+  // After predators stopped cutting rock corners (swept moves), the search for this one spot takes about 58 s alone
+  // and once took 145.6 s in a full run. The owner chose a longer limit over changing the search on 2026-10-31.
+  // Nothing it proves changed.
+  const SLOW_VISIT_SPOT_ID = 'deep-canal-1/spot-current-2';
+  const SLOW_VISIT_TIMEOUT = 240_000;
+
+  const VISIT_TITLE = 'lets the axolotl grab $id and swim back to its safe start without a hit for some start time, a Legendary with one Tail Dash';
+  const expectFourLegVisit = (spot: (typeof spots)[number]): void => {
     expect(visitSpot(spot, fourLegs), `${spot.id} (${spot.rarity}) is hit at every start time`).not.toBeNull();
-  }, 120_000);
+  };
+
+  it.each(spots.filter((spot) => spot.id !== SLOW_VISIT_SPOT_ID))(VISIT_TITLE, expectFourLegVisit, 120_000);
+  it.each(spots.filter((spot) => spot.id === SLOW_VISIT_SPOT_ID))(VISIT_TITLE, expectFourLegVisit, SLOW_VISIT_TIMEOUT);
 
   it.each(spots)('keeps $id at least the turn clearance from every tilapia, carp and bass waypoint', (spot) => {
     expect(turnDistance(spot, [...zone.tilapiaRoutes, ...zone.predatorRoutes])).toBeGreaterThanOrEqual(RISK.turnClearance);
@@ -776,6 +878,12 @@ describe('beating Area 8 with one leg', () => {
       expect(events.filter((event) => event.type === 'hit')).toEqual([]);
     },
   );
+
+  it('gives the same swim-away answer with the early stop as the full rollout at every frame of each warning and swim-away', () => {
+    for (const route of [...zone.tilapiaRoutes, ...zone.predatorRoutes]) {
+      listEscapeSwimmers(route).forEach((swimmer, frame) => expect(escapes(swimmer), `${route.id} frame ${frame}`).toBe(escapesInFull(swimmer)));
+    }
+  });
 });
 
 describe('Area 8 risk fairness on other seeds', () => {

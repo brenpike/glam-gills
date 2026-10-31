@@ -9,6 +9,7 @@ import {
   TILAPIA_FACT,
   TILAPIA_MEET_RANGE,
 } from './factCards';
+import { DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import { routeDistance } from './hiding';
 import {
   BLACK_BASS_SPECIES,
@@ -1438,5 +1439,327 @@ describe('rock walls stop every move (ND-12)', () => {
     const plain = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES));
     const empty = runStalker(createPredator(route, BLACK_BASS_SPECIES.id), target, 4, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [], targetBehindRock: false }));
     expect(empty).toEqual(plain);
+  });
+});
+
+/** A box as the rock tests use it: a wall, or a safe area. */
+type SweepBox = Readonly<{ x0: number; x1: number; y0: number; y1: number }>;
+
+/** Far from every test box: no warning starts at it. */
+const SWEEP_NOWHERE: Point = { x: -50000, y: -50000 };
+const SWEEP_BOUNDS: PredatorContext['bounds'] = { minX: -10000, maxX: 10000, minY: -10000, maxY: 10000 };
+const SWEEP_FAR_SAFE: PredatorContext['safeArea'] = { x0: -9000, x1: -8900, y0: -9000, y1: -8900 };
+
+/** A context whose patrol covers any test move in one step, so one patrol step is one whole move. */
+function sweepCtx(margin: number, extra: Partial<PredatorContext> = {}): PredatorContext {
+  return {
+    safeArea: SWEEP_FAR_SAFE,
+    bounds: SWEEP_BOUNDS,
+    tuning: { ...TEST_TUNING, bodyRadius: margin, patrolSpeed: 1e6 },
+    ...extra,
+  };
+}
+
+/** Where one move from `from` straight to `to` ends: one patrol step toward `to` as its waypoint. */
+function moveOnce(from: Point, to: Point, ctx: PredatorContext): Point {
+  const state: PredatorState = { ...createPredator({ id: 'sweep', waypoints: [from, to] }, 'sweep'), waypointIndex: 1 };
+  return stepPredator(state, SWEEP_NOWHERE, STALKER_DT, ctx).state.pos;
+}
+
+/** `box` grown by `margin` on every side. */
+function grownBox(box: SweepBox, margin: number): SweepBox {
+  return { x0: box.x0 - margin, x1: box.x1 + margin, y0: box.y0 - margin, y1: box.y1 + margin };
+}
+
+/** Whether `pos` is strictly inside `box`. */
+function strictlyInside(pos: Point, box: SweepBox): boolean {
+  return pos.x > box.x0 && pos.x < box.x1 && pos.y > box.y0 && pos.y < box.y1;
+}
+
+/**
+ * The shares of the one-axis move from `start` by `delta` that lie strictly inside (lo, hi), as
+ * [first, last]; empty (first >= last) when none do.
+ */
+function openSlabShares(start: number, delta: number, lo: number, hi: number): [number, number] {
+  if (delta === 0) return start > lo && start < hi ? [-Infinity, Infinity] : [Infinity, -Infinity];
+  const atLo = (lo - start) / delta;
+  const atHi = (hi - start) / delta;
+  return [Math.min(atLo, atHi), Math.max(atLo, atHi)];
+}
+
+/** Whether some point of the segment from `from` to `to` lies strictly inside `box`: edges and corners count as outside. */
+function segmentEntersOpenBox(from: Point, to: Point, box: SweepBox): boolean {
+  const [xFirst, xLast] = openSlabShares(from.x, to.x - from.x, box.x0, box.x1);
+  const [yFirst, yLast] = openSlabShares(from.y, to.y - from.y, box.y0, box.y1);
+  return Math.max(xFirst, yFirst, 0) < Math.min(xLast, yLast, 1);
+}
+
+/** The four corners of `box`, each with the signs pointing out of the box along x and y. */
+function boxCorners(box: SweepBox): { corner: Point; outX: -1 | 1; outY: -1 | 1 }[] {
+  return [
+    { corner: { x: box.x0, y: box.y0 }, outX: -1, outY: -1 },
+    { corner: { x: box.x1, y: box.y0 }, outX: 1, outY: -1 },
+    { corner: { x: box.x0, y: box.y1 }, outX: -1, outY: 1 },
+    { corner: { x: box.x1, y: box.y1 }, outX: 1, outY: 1 },
+  ];
+}
+
+/** Sixteen directions a quarter of a right angle apart, the first straight right. */
+const SIXTEEN_DIRECTIONS: readonly Point[] = Array.from({ length: 16 }, (_, i) => ({
+  x: Math.cos((i * Math.PI) / 8),
+  y: Math.sin((i * Math.PI) / 8),
+}));
+/** Move lengths in px for the sweeps: short moves up to 24 px, then one longer move. */
+const SWEEP_LENGTHS: readonly number[] = [1, 6, 12, 24, 160];
+/** Start offsets in px from a corner along each axis. */
+const SWEEP_OFFSETS: readonly number[] = [-24, -8, -1, 0, 1, 8, 24];
+
+/**
+ * Moves from every start around `corners` (none strictly inside a grown box) in sixteen directions
+ * and every SWEEP_LENGTHS length, checking each move against the grown boxes `grown`. Returns how
+ * many moves it made and a description of each move that broke a rule.
+ */
+function sweepAroundCorners(corners: readonly Point[], grown: readonly SweepBox[], ctx: PredatorContext): { moves: number; broken: string[] } {
+  const broken: string[] = [];
+  let moves = 0;
+  for (const corner of corners) {
+    for (const offsetX of SWEEP_OFFSETS) {
+      for (const offsetY of SWEEP_OFFSETS) {
+        const from: Point = { x: corner.x + offsetX, y: corner.y + offsetY };
+        if (grown.some((box) => strictlyInside(from, box))) continue;
+        moves += sweepFrom(from, grown, ctx, broken);
+      }
+    }
+  }
+  return { moves, broken };
+}
+
+/**
+ * Makes the moves from `from` in sixteen directions and every SWEEP_LENGTHS length, adding to
+ * `broken` each one that ends strictly inside a grown box, whose straight line from `from` enters
+ * one, or whose clear path enters none yet ends short of its target. Returns how many moves it made.
+ */
+function sweepFrom(from: Point, grown: readonly SweepBox[], ctx: PredatorContext, broken: string[]): number {
+  let moves = 0;
+  for (const direction of SIXTEEN_DIRECTIONS) {
+    for (const length of SWEEP_LENGTHS) {
+      const to: Point = { x: from.x + direction.x * length, y: from.y + direction.y * length };
+      const end = moveOnce(from, to, ctx);
+      const entered = grown.some((box) => strictlyInside(end, box) || segmentEntersOpenBox(from, end, box));
+      const clear = !grown.some((box) => segmentEntersOpenBox(from, to, box));
+      const short = clear && (Math.abs(end.x - to.x) > 1e-9 || Math.abs(end.y - to.y) > 1e-9);
+      if (entered || short) broken.push(`from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) ended at (${end.x}, ${end.y})`);
+      moves++;
+    }
+  }
+  return moves;
+}
+
+describe('every move is checked along its whole straight path (ND-12)', () => {
+  const margin = 10;
+  const wall = { x0: 100, x1: 140, y0: 100, y1: 200 };
+  const grown = grownBox(wall, margin);
+  const ctx = sweepCtx(margin, { rockWalls: [wall] });
+
+  it('stops a move at each grown corner on the face it reaches first, then slides to the target', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const ontoY = { from: { x: corner.x + 10 * outX, y: corner.y + 20 * outY }, to: { x: corner.x - 20 * outX, y: corner.y - 10 * outY } };
+      const yEnd = moveOnce(ontoY.from, ontoY.to, ctx);
+      expect(yEnd.y).toBe(corner.y);
+      expect(yEnd.x).toBe(ontoY.to.x);
+      expect(segmentEntersOpenBox(ontoY.from, yEnd, grown)).toBe(false);
+      const ontoX = { from: { x: corner.x + 20 * outX, y: corner.y + 10 * outY }, to: { x: corner.x - 10 * outX, y: corner.y - 20 * outY } };
+      const xEnd = moveOnce(ontoX.from, ontoX.to, ctx);
+      expect(xEnd.x).toBe(corner.x);
+      expect(xEnd.y).toBe(ontoX.to.y);
+      expect(segmentEntersOpenBox(ontoX.from, xEnd, grown)).toBe(false);
+    }
+  });
+
+  it('lets a move that passes outside a grown corner end at its target', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const from: Point = { x: corner.x + 10 * outX, y: corner.y - 5 * outY };
+      const to: Point = { x: corner.x - 10 * outX, y: corner.y + 15 * outY };
+      expect(segmentEntersOpenBox(from, to, grown)).toBe(false);
+      expect(moveOnce(from, to, ctx)).toEqual(to);
+    }
+  });
+
+  it('does not stop a move that only grazes a grown corner point', () => {
+    for (const { corner, outX, outY } of boxCorners(grown)) {
+      const from: Point = { x: corner.x + 10 * outX, y: corner.y - 10 * outY };
+      const to: Point = { x: corner.x - 10 * outX, y: corner.y + 10 * outY };
+      expect(moveOnce(from, to, ctx)).toEqual(to);
+    }
+  });
+
+  it('stops a move clipping a grown corner that both old per-axis checks missed', () => {
+    const from: Point = { x: grown.x1 - 10, y: grown.y0 - 1 };
+    const to: Point = { x: grown.x1 + 1, y: grown.y0 + 8 };
+    expect(segmentEntersOpenBox(from, to, grown)).toBe(true);
+    expect(moveOnce(from, to, ctx)).toEqual({ x: to.x, y: grown.y0 });
+  });
+});
+
+describe("Area 8's divider stops every move along its whole path (ND-12)", () => {
+  const stones = DEEP_CANAL_LAYOUT.rockWalls ?? [];
+
+  /** Every grown face crossing on the edge of a grown stone: each corner of the union, convex and concave. */
+  function dividerCorners(grown: readonly SweepBox[]): Point[] {
+    const xs = [...new Set(grown.flatMap((box) => [box.x0, box.x1]))];
+    const ys = [...new Set(grown.flatMap((box) => [box.y0, box.y1]))];
+    const onEdge = (pos: Point): boolean =>
+      grown.some((box) => pos.x >= box.x0 && pos.x <= box.x1 && pos.y >= box.y0 && pos.y <= box.y1) &&
+      !grown.some((box) => strictlyInside(pos, box));
+    return xs.flatMap((x) => ys.map((y) => ({ x, y }))).filter(onEdge);
+  }
+
+  it('is all seven stones, with the stepped joints at x 1880 to 2280', () => {
+    expect(stones).toHaveLength(7);
+    expect(stones.filter((stone) => stone.x0 >= 1880 && stone.x1 <= 2280)).toHaveLength(3);
+  });
+
+  it('never lets a move end in or pass through a grown stone, around every corner, in sixteen directions', () => {
+    for (const margin of [TILAPIA.bodyRadius, BLACK_BASS.bodyRadius, CARP.bodyRadius]) {
+      const grown = stones.map((stone) => grownBox(stone, margin));
+      const corners = dividerCorners(grown);
+      expect(corners.length, `margin ${margin}`).toBeGreaterThanOrEqual(16);
+      const { moves, broken } = sweepAroundCorners(corners, grown, sweepCtx(margin, { rockWalls: stones }));
+      expect(moves, `margin ${margin}`).toBeGreaterThan(0);
+      expect(broken, `margin ${margin}`).toEqual([]);
+    }
+  });
+
+  it('stops a diagonal move into each concave joint on both faces', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const ctx = sweepCtx(margin, { rockWalls: stones });
+    const joints = [
+      { corner: { x: 1880 - margin, y: 340 - margin }, inX: 1, inY: 1 },
+      { corner: { x: 1920 + margin, y: 228 + margin }, inX: -1, inY: -1 },
+      { corner: { x: 2240 - margin, y: 228 + margin }, inX: 1, inY: -1 },
+      { corner: { x: 2280 + margin, y: 340 - margin }, inX: -1, inY: 1 },
+    ];
+    for (const { corner, inX, inY } of joints) {
+      const from: Point = { x: corner.x - 20 * inX, y: corner.y - 10 * inY };
+      const to: Point = { x: corner.x + 10 * inX, y: corner.y + 20 * inY };
+      expect(moveOnce(from, to, ctx), `joint (${corner.x}, ${corner.y})`).toEqual(corner);
+      const level: Point = { x: corner.x - 10 * inX, y: corner.y - 20 * inY };
+      const deep: Point = { x: corner.x + 20 * inX, y: corner.y + 10 * inY };
+      expect(moveOnce(level, deep, ctx), `joint (${corner.x}, ${corner.y})`).toEqual(corner);
+    }
+  });
+});
+
+describe('every move mode goes round a grown rock corner (ND-12)', () => {
+  /** The top right corner of DIVIDER grown by `margin`. */
+  function topRight(margin: number): Point {
+    return { x: DIVIDER.x1 + margin, y: DIVIDER.y0 - margin };
+  }
+
+  /** A start 8 px left of and 4 px above the grown top right corner: heading down right it meets the top face 4 px from the corner. */
+  function besideCorner(margin: number): Point {
+    const corner = topRight(margin);
+    return { x: corner.x - 8, y: corner.y - 4 };
+  }
+
+  /** A route from `start` heading down and to the right. */
+  function diagonalRoute(species: Readonly<PredatorSpecies>, start: Point): PredatorRoute {
+    return { id: `${species.id}-corner`, waypoints: [start, { x: start.x + 300, y: start.y + 300 }], species };
+  }
+
+  /** Checks no step of `run` from `start` enters DIVIDER grown by `margin`, and that it ends down and right of the corner. */
+  function expectRoundCorner(run: StalkerRun, start: Point, margin: number, mode: string): void {
+    const grown = grownBox(DIVIDER, margin);
+    let previous = start;
+    for (const pos of run.positions) {
+      expect(segmentEntersOpenBox(previous, pos, grown), `${mode} from (${previous.x}, ${previous.y}) to (${pos.x}, ${pos.y})`).toBe(false);
+      previous = pos;
+    }
+    const corner = topRight(margin);
+    expect(run.state.pos.x, mode).toBeGreaterThan(corner.x);
+    expect(run.state.pos.y, mode).toBeGreaterThan(corner.y);
+  }
+
+  const DOWN_RIGHT: Point = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+
+  it('patrol', () => {
+    const margin = TILAPIA.bodyRadius;
+    const start = besideCorner(margin);
+    const state = createPredator(diagonalRoute(TILAPIA_SPECIES, start), TILAPIA_SPECIES.id);
+    const run = runStalker(state, SWEEP_NOWHERE, 2, rockCtx(TILAPIA_SPECIES, { rockWalls: [DIVIDER] }));
+    expect(run.events).toEqual([]);
+    expectRoundCorner(run, start, margin, 'patrol');
+  });
+
+  it('cooldown swim on the route, for a species with neither slow turn nor still cooldown', () => {
+    expect(TILAPIA_SPECIES.rules?.slowTurn).toBeUndefined();
+    expect(TILAPIA_SPECIES.rules?.stillCooldown).toBeUndefined();
+    const margin = TILAPIA.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(TILAPIA_SPECIES, start), TILAPIA_SPECIES.id), phase: 'cooldown', elapsed: 0, duration: TILAPIA.cooldown };
+    const run = runStalker(state, SWEEP_NOWHERE, 1, rockCtx(TILAPIA_SPECIES, { rockWalls: [DIVIDER] }));
+    expect(run.state.phase).toBe('cooldown');
+    expectRoundCorner(run, start, margin, 'cooldown swim');
+  });
+
+  it('chase', () => {
+    const chaser = tunedSpecies(BLACK_BASS_SPECIES, { ...BLACK_BASS, chase: BLACK_BASS_CHASE });
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const reach = BLACK_BASS_CHASE.sight - 1;
+    const target: Point = { x: start.x + DOWN_RIGHT.x * reach, y: start.y + DOWN_RIGHT.y * reach };
+    const state = createPredator(diagonalRoute(chaser, start), chaser.id);
+    const run = runStalker(state, target, 1, rockCtx(chaser, { rockWalls: [DIVIDER] }), 'telegraphStart');
+    expectRoundCorner(run, start, margin, 'chase');
+  });
+
+  it('lunge', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(BLACK_BASS_SPECIES, start), BLACK_BASS_SPECIES.id), phase: 'lunge', elapsed: 0, duration: BLACK_BASS.lungeDuration, aim: DOWN_RIGHT };
+    const run = runStalker(state, SWEEP_NOWHERE, BLACK_BASS.lungeDuration, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] }), 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    expectRoundCorner(run, start, margin, 'lunge');
+  });
+
+  it('slow turn glide', () => {
+    const margin = BLACK_BASS.bodyRadius;
+    const start = besideCorner(margin);
+    const state: PredatorState = { ...createPredator(diagonalRoute(BLACK_BASS_SPECIES, start), BLACK_BASS_SPECIES.id), phase: 'cooldown', elapsed: 0, duration: BLACK_BASS.cooldown, glide: DOWN_RIGHT };
+    const run = runStalker(state, SWEEP_NOWHERE, BLACK_BASS.cooldown, rockCtx(BLACK_BASS_SPECIES, { rockWalls: [DIVIDER] }), 'cooldownEnd');
+    expect(run.events).toEqual([{ type: 'cooldownEnd' }]);
+    expectRoundCorner(run, start, margin, 'slow turn glide');
+  });
+});
+
+describe('the safe area stops every move along its whole path', () => {
+  const margin = 10;
+
+  it('never lets a diagonal move enter the grown safe area at an exposed corner', () => {
+    const safeArea = { x0: 0, x1: 200, y0: 300, y1: 500 };
+    const grown = grownBox(safeArea, margin);
+    const ctx = sweepCtx(margin, { safeArea, bounds: { minX: 0, maxX: 1000, minY: 0, maxY: 1000 } });
+    const exposed = [{ x: grown.x1, y: grown.y0 }, { x: grown.x1, y: grown.y1 }];
+    const { moves, broken } = sweepAroundCorners(exposed, [grown], ctx);
+    expect(moves).toBeGreaterThan(0);
+    expect(broken).toEqual([]);
+    const from: Point = { x: grown.x1 - 10, y: grown.y0 - 10 };
+    const to: Point = { x: grown.x1 + 5, y: grown.y0 + 10 };
+    expect(segmentEntersOpenBox(from, to, grown)).toBe(true);
+    expect(moveOnce(from, to, ctx)).toEqual({ x: to.x, y: grown.y0 });
+  });
+
+  it('stops a move at the face of a full-height safe area and slides along it exactly as before', () => {
+    const ctx = sweepCtx(margin, { safeArea: CTX.safeArea, bounds: CTX.bounds });
+    const face = CTX.safeArea.x1 + margin;
+    const moves: { from: Point; to: Point; end: Point }[] = [
+      { from: { x: 230, y: 150 }, to: { x: 190, y: 170 }, end: { x: face, y: 170 } },
+      { from: { x: 230, y: 250 }, to: { x: 150, y: 120 }, end: { x: face, y: 120 } },
+      { from: { x: 230, y: 290 }, to: { x: 190, y: 330 }, end: { x: face, y: CTX.bounds.maxY } },
+      { from: { x: 230, y: 110 }, to: { x: 100, y: 50 }, end: { x: face, y: CTX.bounds.minY } },
+      { from: { x: face, y: 200 }, to: { x: face, y: 260 }, end: { x: face, y: 260 } },
+      { from: { x: 300, y: 200 }, to: { x: 250, y: 260 }, end: { x: 250, y: 260 } },
+    ];
+    for (const { from, to, end } of moves) expect(moveOnce(from, to, ctx)).toEqual(end);
   });
 });
