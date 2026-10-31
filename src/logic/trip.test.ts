@@ -2905,6 +2905,51 @@ describe('gliding trajineras in the trip (issue #78, ND-8)', () => {
     expect(result.state.trajineras?.cooldowns).toEqual([0]);
   });
 
+  it('holds the axolotl out of the hull on every step, cooldown steps included', () => {
+    const steps = Math.ceil(TRAJINERAS.pushCooldown / DT) + 1;
+    const below: Point = { x: 700, y: SURF + 60 + TRAJINERAS.bodyReach };
+    let state = createTrip(boatZone);
+    let pushes = 0;
+    for (let step = 0; step <= steps; step++) {
+      const result = stepAt(state, underHull);
+      expect(result.outOfHull).toEqual(below);
+      if (result.pushed) pushes += 1;
+      state = result.state;
+    }
+    expect(pushes).toBe(2);
+  });
+
+  it('holds the axolotl out of the hull on a bump step, where the bump impulse wins and no cooldown starts', () => {
+    const edgeBoat = trajineraSpawn('canal/trajinera-2', -2, { x0: 200, x1: 480, direction: 'right' });
+    const edge: TripSource = { ...zone, tilapiaRoutes: [{ id: 'edge', waypoints: [{ x: 324, y: 130 }] }], trajineras: [edgeBoat] };
+    const pos: Point = { x: 300, y: 130 };
+    const result = stepAt(createTrip(edge), pos);
+    const noBoats = stepAt(createTrip({ ...edge, trajineras: [] }), pos);
+    expect(result.events.map((event) => event.type)).toEqual(['bump']);
+    expect(result.outOfHull).toEqual({ x: 300, y: SURF + 60 + TRAJINERAS.bodyReach });
+    expect(result).not.toHaveProperty('pushed');
+    expect(result.impulse).toEqual(noBoats.impulse);
+    expect(result.state.trajineras?.cooldowns).toEqual([0]);
+  });
+
+  it('sets no outOfHull key clear of the hull or in a trip with no boats', () => {
+    expect(stepAt(createTrip(boatZone), clear)).not.toHaveProperty('outOfHull');
+    expect(stepAt(createTrip(zone), underHull)).not.toHaveProperty('outOfHull');
+  });
+
+  it('gives outOfHull equal to pushed.to on a push step, as its own copy', () => {
+    const result = stepAt(createTrip(boatZone), underHull);
+    expect(result.pushed).toBeDefined();
+    expect(result.outOfHull).toEqual(result.pushed?.to);
+    expect(result.outOfHull).not.toBe(result.pushed?.to);
+  });
+
+  it('refuses boats with rock under the hull band', () => {
+    const rock = { x0: 700, x1: 760, y0: SURF + 70, y1: 318 };
+    expect(() => createTrip({ ...boatZone, rockWalls: [rock] })).toThrow(RangeError);
+    expect(() => createTrip({ ...boatZone, rockWalls: [rock] })).toThrow(/meets rock/);
+  });
+
   it('never changes Star 3: a push is not a leg lost', () => {
     const pushed = stepAt(createTrip(boatZone), underHull).state;
     expect(beatArea(pushed, { specialTreasureId: PLANT }).state.ending?.stars?.legsOrRescue).toBe(true);

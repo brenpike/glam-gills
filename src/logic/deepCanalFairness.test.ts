@@ -5,10 +5,10 @@
  * riskFairness.ts, with the rock rule in force: no predator senses, chases or strikes through the
  * divider, and no swim passes through it. Each lane is full of chasing predators that out-swim a
  * one-leg axolotl, so a straight swim from a safe start cannot prove a spot fair here. Instead a
- * search swims the real rules frame by frame (the swim, the current, the rock, the trajinera push and
- * the encounter) and keeps a move only when, after it, swimming straight away from the nearest
- * threat survives the longest warning and strike: the skill of baiting a warning and leaving its
- * reach. It proves the area can be beaten with one leg on the full route, every snack in both lanes
+ * search swims the real rules frame by frame (the swim, the current, the rock, the encounter, and the
+ * trajinera push and hold that keeps the body out of every hull) and keeps a move only when, after
+ * it, swimming straight away from the nearest threat survives the longest warning and strike: the
+ * skill of baiting a warning and leaving its reach. It proves the area can be beaten with one leg on the full route, every snack in both lanes
  * eaten before the exit opens, that every strike can be avoided by swimming away, and that every
  * spot and stranding place can be reached and left without a hit.
  */
@@ -29,7 +29,7 @@ import { DT, EXTRA_SEEDS, START_STEP, fairnessZone, isSafeStart, loopSeconds, po
 import { RESCUE } from './rescue';
 import { createShrimpFlicks, stepShrimpFlicks, type ShrimpFlickState } from './shrimpFlick';
 import { startDashVelocity, stepSwim, type SwimState } from './swimPhysics';
-import { createTrajineraLane, pushFromTrajineras, tickTrajineraLane, type TrajineraLane } from './trajineras';
+import { createTrajineraLane, stepTrajineraLane, type TrajineraLane } from './trajineras';
 import { BLACK_BASS_CHASE, FINDS, RISK, SWIM, TILAPIA_CHASE, type SwimTuning } from './tuning';
 import { normalize } from './vec';
 import { DEFAULT_ZONE_SEED, buildZone, swimBounds, type HidingSpot, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
@@ -73,11 +73,13 @@ const ESCAPE_DIRECTIONS = 16;
 /** First start time in seconds, as measured, for a one-leg swim of each lane to the exit without a hit. */
 const ONE_LEG_LANE_START = { surface: 0, deep: 0 };
 /** One-leg seconds along each lane to the exit with every threat playing, as measured. */
-const ONE_LEG_LANE_SECONDS = { surface: 67.9, deep: 47.5 };
+// Surface measured again after the hull hold, PR #195 review: 67.9 to 63.6.
+const ONE_LEG_LANE_SECONDS = { surface: 63.6, deep: 47.5 };
 /** First start time in seconds, as measured, for the one-leg full route without a hit. */
 const FULL_ROUTE_START = 0;
 /** One-leg seconds of the full route, every snack eaten, to the exit, as measured. */
-const FULL_ROUTE_SECONDS = 224.6;
+// Measured again after the hull hold, PR #195 review: 224.6 to 223.2.
+const FULL_ROUTE_SECONDS = 223.2;
 
 const deepCanal = fairnessZone(buildZone(DEEP_CANAL_LAYOUT, DEFAULT_ZONE_SEED));
 const oneLeg = legSwimTuning(1);
@@ -261,27 +263,45 @@ function createSwimmer(at: Point, tuning: SwimTuning): Swimmer {
   };
 }
 
+/** One frame of a swimmer: the swimmer after it and the frame's encounter events, the hit included. */
+interface SwimmerFrame {
+  swimmer: Swimmer;
+  events: EncounterEvent[];
+}
+
 /**
- * One frame as the swim scene plays it: swim steered by `steer` with the current (dashing when
- * `dashing`), stop at the rock with the blocked velocity zeroed, step the encounter, then a bump
- * sets the velocity, else the first ready trajinera whose hull touches the axolotl pushes it aside.
- * Returns the swimmer after it, or null on a hit.
+ * The only frame of a swimmer, as the swim scene plays it: swim steered by `steer` with the current
+ * (dashing when `dashing`); stop at the rock; step the encounter at the blocked point; then step
+ * the trajineras (stepTrajineraLane): cooldowns tick, the first ready hull touching the blocked
+ * point pushes unless a bump came, and the body is held out of every hull, the held point becoming
+ * the swimmer's place. The velocity is zeroed on each axis the rock or the hold changed; then a bump
+ * sets it, else a push. Never stops on a hit: the hit is in the events.
  */
-function stepSwimmer(swimmer: Swimmer, steer: Point, dashing: boolean): Swimmer | null {
-  const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
-  const env = { current: currentAt(pos, deepCanal.zone.currents), dragMul: 1, bounds, dashing };
-  const swum = stepSwim(swimmer.swim, steer, env, DT, swimmer.tuning);
-  const blocked = blockAtRock(pos, swum, rocks);
-  const vx = blocked.x === swum.x ? swum.vx : 0;
-  const vy = blocked.y === swum.y ? swum.vy : 0;
+function stepFrame(swimmer: Swimmer, steer: Point, dashing: boolean): SwimmerFrame {
+  const from = swimmer.swim;
+  const env = { current: currentAt(from, deepCanal.zone.currents), dragMul: 1, bounds, dashing };
+  const swum = stepSwim(from, steer, env, DT, swimmer.tuning);
+  const blocked = blockAtRock(from, swum, rocks);
   const time = swimmer.time + DT;
   const result = stepEncounter(swimmer.encounter, blocked, DT, deepCanal.ctx);
-  if (result.events.some((event) => event.type === 'hit')) return null;
-  const ticked = tickTrajineraLane(swimmer.boats, DT);
-  const pushed = result.impulse ? null : pushFromTrajineras(ticked, blocked, time);
-  const impulse = result.impulse ?? pushed?.push.impulse ?? { x: vx, y: vy };
-  const swim = { ...swum, x: blocked.x, y: blocked.y, vx: impulse.x, vy: impulse.y };
-  return { ...swimmer, swim, encounter: result.state, boats: pushed ? pushed.lane : ticked, time };
+  const boats = stepTrajineraLane(swimmer.boats, blocked, DT, time, result.impulse !== undefined);
+  const held = boats.pos;
+  const impulse = result.impulse ?? boats.push?.impulse;
+  const vx = impulse ? impulse.x : blocked.x === swum.x && held.x === blocked.x ? swum.vx : 0;
+  const vy = impulse ? impulse.y : blocked.y === swum.y && held.y === blocked.y ? swum.vy : 0;
+  const swim = { ...swum, x: held.x, y: held.y, vx, vy };
+  return { swimmer: { ...swimmer, swim, encounter: result.state, boats: boats.lane, time }, events: result.events };
+}
+
+/** Whether an encounter event is a hit. */
+function isHitEvent(event: EncounterEvent): boolean {
+  return event.type === 'hit';
+}
+
+/** The swimmer after one frame (stepFrame), the trajinera hold included, or null on a hit. */
+function stepSwimmer(swimmer: Swimmer, steer: Point, dashing: boolean): Swimmer | null {
+  const frame = stepFrame(swimmer, steer, dashing);
+  return frame.events.some(isHitEvent) ? null : frame.swimmer;
 }
 
 /** The swimmer after waiting where it is for `steps`, or null on a hit. */
@@ -720,13 +740,12 @@ function waitForWarning(route: TilapiaRoute): { swimmer: Swimmer; events: Encoun
   throw new Error(`swimAwayFromWarning: ${route.id} never warns`);
 }
 
-/** One frame of a swim away from the nearest threat, with the current and stopped at the rock: the swimmer after it and the frame's encounter events. */
-function stepEscape(swimmer: Swimmer): { swimmer: Swimmer; events: EncounterEvent[] } {
-  const pos = { x: swimmer.swim.x, y: swimmer.swim.y };
-  const swum = stepSwim(swimmer.swim, escapeSteer(swimmer), { current: currentAt(pos, deepCanal.zone.currents), dragMul: 1, bounds, dashing: false }, DT, oneLeg);
-  const blocked = blockAtRock(pos, swum, rocks);
-  const result = stepEncounter(swimmer.encounter, blocked, DT, deepCanal.ctx);
-  return { swimmer: { ...swimmer, swim: { ...swum, x: blocked.x, y: blocked.y }, encounter: result.state, time: swimmer.time + DT }, events: result.events };
+/**
+ * One frame of a swim away from the nearest threat (stepFrame: the current, the rock, the trajinera
+ * push and hold): the swimmer after it and the frame's encounter events, not stopping on a hit.
+ */
+function stepEscape(swimmer: Swimmer): SwimmerFrame {
+  return stepFrame(swimmer, escapeSteer(swimmer), false);
 }
 
 /** Every encounter event while `swimmer` swims away from the nearest threat for the park steps, the hit included. */

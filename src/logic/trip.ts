@@ -57,8 +57,7 @@ import {
 } from './tripBag';
 import {
   createTrajineraLane,
-  pushFromTrajineras,
-  tickTrajineraLane,
+  stepTrajineraLane,
   type TrajineraLane,
   type TrajineraPush,
 } from './trajineras';
@@ -147,7 +146,9 @@ export interface CarryState {
  * so every plant is unlit at a new trip. `darkHintTime` is the hint clock (stepDarkHintClock) in
  * seconds and `darkHint` the unlit plant the hint points at, or null (issue #77, ND-8).
  * `trajineras` is the trip's gliding trajineras and their push cooldowns, or null when the area has
- * none (issue #78, ND-8); each boat's hull is where trajineraHull puts it at `elementTime`.
+ * none (issue #78, ND-8); each boat's hull is where trajineraHull puts it at `elementTime`, and it is
+ * solid: each swimming step holds the axolotl centre out of it (stepTrajineraLane), and the hold is
+ * the step result's `outOfHull`. The lane's rules (createTrajineraLane) leave every hull a way down.
  */
 export interface TripState {
   phase: TripPhase;
@@ -252,13 +253,17 @@ export type TripEvent =
  * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump or a
  * trajinera push that did not bank: the velocity in px/s to give the axolotl. `pushed` is set only
  * on a swimming step where a gliding trajinera's hull pushed the axolotl aside (issue #78, ND-8),
- * and `impulse` is then that push's.
+ * and `impulse` is then that push's. `outOfHull` is set only on a swimming step that neither banks
+ * nor starts the carry and where a gliding trajinera's hull held the axolotl out (issue #78, ND-8,
+ * ND-9): the axolotl centre after the hold, a copy, which differs from `axolotlPos`; on a push step
+ * it equals `pushed.to`. Each optional key is absent, never undefined-valued, when not set.
  */
 export interface TripStepResult {
   state: TripState;
   events: TripEvent[];
   impulse?: Vec2;
   pushed?: TrajineraPush;
+  outOfHull?: Point;
 }
 
 type PassedEncounterEvent = Exclude<EncounterEvent, { type: 'carriedHome' }>;
@@ -299,7 +304,9 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. The source's gliding
  * trajineras are the trip's, each push cooldown at 0, kept in the swim bounds of the source's width
  * and bed top and out of its rock walls. Throws when a pool cannot be placed, `options.area` is not
- * the source's area, or the source has trajineras but no width or bed top.
+ * the source's area, or the source has trajineras but no width or bed top. Throws createTrajineraLane's
+ * RangeError when, for some boat, the row a body reach under its hull band is out of the swim bounds
+ * or meets rock, or two boats' spans are less than twice the body reach apart.
  */
 export function createTrip(
   source: TripSource,
@@ -577,11 +584,15 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * step while the axolotl centre is in the dark water, and goes back to 0 on a new light or out of
  * the dark; then `darkHint` is the plant darkHintPlant picks. A step that ends the trip, a paused
  * step, the banked card and the carry leave the hint clock and the hint as they were.
- * Gliding trajineras (issue #78, ND-8): each push cooldown counts down by the capped step; then,
- * on a step with no bump impulse, the first ready boat whose hull at the new element time touches
- * the axolotl centre pushes it aside (pushFromTrajineras): `pushed` and `impulse` are set and that
- * boat's cooldown starts. A push never costs a leg, never counts as a hit, drops no find, starts no
- * protected time and emits no event; a step that ends the trip never pushes.
+ * Gliding trajineras (issue #78, ND-8, ND-9), after the encounter (stepTrajineraLane at the new
+ * element time): each push cooldown counts down by the capped step; then, on a step with no bump
+ * impulse, the first ready boat whose hull touches the axolotl centre pushes it aside: `pushed` and
+ * `impulse` are set and that boat's cooldown starts. Then, whatever the cooldowns and the bump, the
+ * hull is solid: the axolotl centre is held out of every hull, down or sideways and never up, and
+ * when that moves it `outOfHull` is the held place (`pushed.to` on a push step). A bump impulse
+ * still wins over a push, and the hold never changes the impulse. A push or a hold never costs a
+ * leg, never counts as a hit, drops no find, starts no protected time and emits no event; a step
+ * that ends the trip neither pushes nor holds, and a banking step drops both.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -868,7 +879,10 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const ghostNets = stepSnag(state.ghostNets, input.axolotlPos, step, elementTime, events);
   const met = meetThreats(state.met, result.state, state.elements, input.axolotlPos, elementTime, ctx.encounter);
   const glow = stepGlowPlants(state, input.axolotlPos, step);
-  const boats = stepTrajineras(state.trajineras, input.axolotlPos, step, elementTime, result.impulse !== undefined);
+  const boats =
+    state.trajineras === null
+      ? NO_TRAJINERA_LANE_STEP
+      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, result.impulse !== undefined);
   const inside = isInHomeSpot(input.axolotlPos, state.homeSpot);
   const next: TripState = {
     ...state,
@@ -885,35 +899,25 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
     trajineras: boats.lane,
   };
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
-  if (result.impulse) return { state: next, events, impulse: result.impulse };
-  if (boats.push) return { state: next, events, impulse: { ...boats.push.impulse }, pushed: boats.push };
-  return { state: next, events };
-}
-
-/** The gliding trajineras after one swimming step, and the push it gave, if any. */
-interface TrajineraStep {
-  lane: TrajineraLane | null;
-  push: TrajineraPush | null;
+  const stepped: TripStepResult = { state: next, events };
+  if (result.impulse) {
+    stepped.impulse = result.impulse;
+  } else if (boats.push) {
+    stepped.impulse = { ...boats.push.impulse };
+    stepped.pushed = boats.push;
+  }
+  const outOfHull = movedOutOfHull(boats.pos, input.axolotlPos);
+  if (outOfHull) stepped.outOfHull = outOfHull;
+  return stepped;
 }
 
 // INVARIANT: frozen and shared; a trip with no trajineras steps them with no allocation.
-const NO_TRAJINERA_STEP: Readonly<TrajineraStep> = Object.freeze({ lane: null, push: null });
+const NO_TRAJINERA_LANE_STEP = Object.freeze({ lane: null, pos: null, push: null });
 
-/**
- * Counts every push cooldown down by `step` seconds, then, unless `bumped`, finds the push of the
- * first ready boat whose hull at `elementTime` touches `pos` (issue #78, ND-8).
- */
-function stepTrajineras(
-  lane: TrajineraLane | null,
-  pos: Point,
-  step: number,
-  elementTime: number,
-  bumped: boolean,
-): Readonly<TrajineraStep> {
-  if (lane === null) return NO_TRAJINERA_STEP;
-  const ticked = tickTrajineraLane(lane, step);
-  const pushed = bumped ? null : pushFromTrajineras(ticked, pos, elementTime);
-  return pushed ? { lane: pushed.lane, push: pushed.push } : { lane: ticked, push: null };
+/** A copy of `held`, the body centre after the trajinera hold, when it moved from `pos`; null when it did not or there was no hold. */
+function movedOutOfHull(held: Readonly<Point> | null, pos: Readonly<Point>): Point | null {
+  if (held === null || (held.x === pos.x && held.y === pos.y)) return null;
+  return { x: held.x, y: held.y };
 }
 
 /**
