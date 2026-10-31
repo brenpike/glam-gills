@@ -644,7 +644,9 @@ export class SwimScene extends Phaser.Scene {
    * BlackBassView reuses its sprites and allocates only its render argument object. TrajineraView
    * reuses its sprites and allocates its render argument object and, per boat, trajineraHull's and
    * trajineraShadow's results; a push adds one trajineraHull result for its ripple. Bounded by the
-   * area's boat count: the same class as the residual below.
+   * area's boat count: the same class as the residual below. The trip step builds each boat's hull
+   * only near the surface (a body a full body reach under the hull band finds none), and a hold adds
+   * one point and one swim state (holdOutOfHull) on a frame the hull moved the axolotl.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -1258,9 +1260,10 @@ export class SwimScene extends Phaser.Scene {
   }
 
   /**
-   * Steps the trip. Swimming: a bump sets the swim velocity, and a Tail Dash active this step can
-   * break Dash pots. Banked, carrying or ended: the trip places the axolotl, still. The carry
-   * advances only with this frame `dt`, so pause freezes it.
+   * Steps the trip. Swimming: a gliding trajinera's hull that held the axolotl out puts it at the
+   * held place (stepTrip's `outOfHull`), then a bump or push sets the swim velocity, and a Tail Dash
+   * active this step can break Dash pots. Banked, carrying or ended: the trip places the axolotl,
+   * still. The carry advances only with this frame `dt`, so pause freezes it.
    */
   private advanceTrip(dt: number): void {
     const input: TripInput = {
@@ -1271,6 +1274,7 @@ export class SwimScene extends Phaser.Scene {
     const result = stepTrip(this.trip, input, dt, this.tripCtx);
     this.trip = result.state;
     if (this.trip.phase === 'swimming') {
+      if (result.outOfHull) this.swim = this.holdOutOfHull(this.swim, result.outOfHull);
       if (result.impulse) {
         this.swim = { ...this.swim, vx: result.impulse.x, vy: result.impulse.y };
       }
@@ -1289,6 +1293,20 @@ export class SwimScene extends Phaser.Scene {
     };
     this.applyDashPotTip(stepDashPotTip(this.dashPotTip, tipInput));
     this.syncSnapshot();
+  }
+
+  /**
+   * The swim state `swum` put at `held`, the place a gliding trajinera's hull held the axolotl out
+   * to, with the velocity zeroed on each axis the hold changed. The scene does no hull math.
+   */
+  private holdOutOfHull(swum: SwimState, held: Vec2): SwimState {
+    return {
+      ...swum,
+      x: held.x,
+      y: held.y,
+      vx: held.x === swum.x ? swum.vx : 0,
+      vy: held.y === swum.y ? swum.vy : 0,
+    };
   }
 
   /**
