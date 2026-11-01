@@ -17,7 +17,7 @@ import {
   predatorTypeCount,
 } from './dangerBar';
 import { DEV_DANGER_AREA } from './devAreas';
-import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
+import { ANCHOR_DROP, MUD_SEEP, PUNTING_POLE, movingHazardSpawn } from './movingHazards';
 import {
   BLACK_BASS_SPECIES,
   CARP_SPECIES,
@@ -126,6 +126,15 @@ describe('movingHazardTypeCount', () => {
     const mixed = [pole('p-1', 100), movingHazardSpawn('j-1', OTHER_TYPE, 300, 0)];
     expect(movingHazardTypeCount(layout({ movingHazards: mixed }))).toBe(2);
   });
+
+  it('counts the anchor drop and the mud seep each as a type of its own', () => {
+    const anchor = movingHazardSpawn('a-1', ANCHOR_DROP, 300, 0);
+    const seep = movingHazardSpawn('s-1', MUD_SEEP, 500, 0, undefined, WORLD_H);
+    expect(movingHazardTypeCount(layout({ movingHazards: [pole('p-1', 100), anchor] }))).toBe(2);
+    expect(movingHazardTypeCount(layout({ movingHazards: [pole('p-1', 100), seep] }))).toBe(2);
+    expect(movingHazardTypeCount(layout({ movingHazards: [anchor, seep] }))).toBe(2);
+    expect(movingHazardTypeCount(layout({ movingHazards: [pole('p-1', 100), anchor, seep, movingHazardSpawn('a-2', ANCHOR_DROP, 700, 1)] }))).toBe(3);
+  });
 });
 
 describe('longestQuietStretch', () => {
@@ -179,21 +188,23 @@ describe('longestQuietStretch', () => {
 });
 
 /**
- * The dev danger area (PRD open question 262, ND-15) shows every danger part: 6 moving threats, 3
- * predator species and 1 moving hazard type, and a 899 px quiet stretch along its main path from
- * the second pole's reach, down the dive and along the bottom row to the last tilapia's reach.
- * 'the dev danger area, whole water' below checks it against the bar.
+ * The dev danger area (PRD open question 262, ND-15) shows every danger part: 8 moving threats, 3
+ * predator species and 3 moving hazard types (the punting pole, the anchor drop and the mud seep),
+ * and a 899 px quiet stretch along its main path from the second pole's reach, down the dive and
+ * along the bottom row to the last tilapia's reach. The anchor drop's reach stays clear of the main
+ * path and the mud seep sits past that stretch, so neither changes it. 'the dev danger area, whole
+ * water' below checks it against the bar.
  */
 describe('the dev danger area', () => {
   const zone = buildZone(DEV_DANGER_AREA.layout, DEFAULT_ZONE_SEED);
 
-  it('has 6 moving threats: two tilapia, a garter snake, a carp and two punting poles', () => {
-    expect(movingThreatCount(zone)).toBe(6);
+  it('has 8 moving threats: two tilapia, a garter snake, a carp, two punting poles, an anchor drop and a mud seep', () => {
+    expect(movingThreatCount(zone)).toBe(8);
   });
 
-  it('has 3 predator species and 1 moving hazard type', () => {
+  it('has 3 predator species and 3 moving hazard types', () => {
     expect(predatorTypeCount(zone)).toBe(3);
-    expect(movingHazardTypeCount(zone)).toBe(1);
+    expect(movingHazardTypeCount(zone)).toBe(3);
   });
 
   it('has a longest quiet stretch of about 899 px', () => {
@@ -473,6 +484,13 @@ describe('meetsWholeWaterDangerBar', () => {
     expect(meetsWholeWaterDangerBar(wholeBarWater())).toBe(true);
   });
 
+  it('passes with its pole swapped for one anchor drop, or for one mud seep on the bed', () => {
+    const anchored = wholeBarWater(0, { movingHazards: [movingHazardSpawn('a-1', ANCHOR_DROP, 460, 0)] });
+    expect(meetsWholeWaterDangerBar(anchored)).toBe(true);
+    const seeped = wholeBarWater(0, { movingHazards: [movingHazardSpawn('s-1', MUD_SEEP, 460, 0, undefined, wholeBarWater().bedTop)] });
+    expect(meetsWholeWaterDangerBar(seeped)).toBe(true);
+  });
+
   it('passes exactly when the longest quiet swim is at most one screen across', () => {
     const outcomes = [200, 300, 400, 450, 500].map((gap) => {
       const layout = wholeBarWater(gap);
@@ -548,7 +566,9 @@ describe('meetsWholeWaterRampBar', () => {
 /**
  * The dev danger area's whole water (issue #130, ND-9), read from its threats, size and safe area
  * only. It is not expected to meet the new bar: its longest quiet swim runs from the top row to
- * the bottom right corner, its tilapia loops each sit in one band, and it has one carp of 4.
+ * the bottom right corner, under the anchor drop's tip (13 px longer than without it), its tilapia
+ * loops each sit in one band, and it has one carp of 4. The floor rule reads only predators and
+ * home, so the mud seep leaves the floor lane as it was.
  */
 describe('the dev danger area, whole water', () => {
   const zone = buildZone(DEV_DANGER_AREA.layout, DEFAULT_ZONE_SEED);
@@ -563,10 +583,10 @@ describe('the dev danger area, whole water', () => {
     movingHazards: zone.movingHazards,
   };
 
-  it('has a longest quiet swim of about 2235 px, from the top row to the bottom right corner', () => {
+  it('has a longest quiet swim of about 2248 px, from the top row to the bottom right corner', () => {
     const swim = longestQuietSwim(devWater);
     const bounds = swimBounds(devWater);
-    expect(swim?.length).toBeCloseTo(2235.1, 1);
+    expect(swim?.length).toBeCloseTo(2248.4, 1);
     expect(swim?.from).toEqual({ x: 1048, y: bounds.minY });
     expect(swim?.to).toEqual({ x: bounds.maxX, y: bounds.maxY });
   });

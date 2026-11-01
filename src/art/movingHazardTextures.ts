@@ -4,7 +4,8 @@
  *
  * Looks are data. MOVING_HAZARD_LOOKS maps a look id (MovingHazardType.look in
  * src/logic/movingHazards.ts) to its four parts and where they sit along the shaft. A new look is
- * one painter file plus one entry here. The scene bakes only the looks the areas use, and draws the textures baked for a
+ * one painter file plus one entry here. The looks are the punting pole, the stalactite drip, the
+ * geyser vent, the anchor drop and the mud seep. The scene bakes only the looks the areas use, and draws the textures baked for a
  * hazard type's look.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale`, so a sprite shows at logical
@@ -12,6 +13,21 @@
  */
 import * as Phaser from 'phaser';
 import { PUNTING_POLES } from '../logic/tuning';
+import {
+  ANCHOR_BOW_TEX,
+  ANCHOR_CUE_ALONG,
+  ANCHOR_CUE_TEX,
+  ANCHOR_REST_BACK,
+  ANCHOR_RING_ALONG,
+  ANCHOR_RING_TEX,
+  ANCHOR_SHAFT_LENGTH,
+  ANCHOR_SHAFT_PAST_BASE,
+  ANCHOR_SHAFT_TEX,
+  paintAnchorBow,
+  paintAnchorCue,
+  paintAnchorRing,
+  paintAnchorShaft,
+} from './drawAnchorDrop';
 import type { TexSize } from './canvasKit';
 import {
   GEYSER_BUBBLES_RISE,
@@ -26,6 +42,21 @@ import {
   paintGeyserColumn,
   paintGeyserRing,
 } from './drawGeyserVent';
+import {
+  MUD_COLUMN_LENGTH,
+  MUD_COLUMN_TEX,
+  MUD_FLAKES_TEX,
+  MUD_MOUND_TEX,
+  MUD_REST_BACK,
+  MUD_RING_ALONG,
+  MUD_RING_TEX,
+  MUD_SHADOW_ALONG,
+  MUD_SHAFT_PAST_BASE,
+  paintMudColumn,
+  paintMudFlakes,
+  paintMudMound,
+  paintMudRing,
+} from './drawMudSeep';
 import {
   POLE_SHAFT_LENGTH,
   PUNTING_BOW_TEX,
@@ -174,6 +205,52 @@ export const MOVING_HAZARD_LOOKS: Readonly<Record<string, MovingHazardLook>> = O
       shadowAlong: GEYSER_BUBBLES_RISE,
       ringAlong: GEYSER_MOUTH_RISE,
       shaftLength: GEYSER_COLUMN_LENGTH,
+      stacks: false,
+    },
+  },
+  'anchor-drop': {
+    id: 'anchor-drop',
+    parts: {
+      bow: { tex: ANCHOR_BOW_TEX, paint: paintAnchorBow },
+      shadow: { tex: ANCHOR_CUE_TEX, paint: paintAnchorCue },
+      shaft: { tex: ANCHOR_SHAFT_TEX, paint: paintAnchorShaft },
+      ring: { tex: ANCHOR_RING_TEX, paint: paintAnchorRing },
+    },
+    /**
+     * The base is the water surface under the moored canoe; the chain runs up 8 px past it, behind
+     * the hull. At rest and in the warning no chain shows: the two links hang 56 px below the base
+     * and the ripple lines spread 20 px below it. The shaft goes down from the base, so along is
+     * px down.
+     */
+    place: {
+      shaftPastBase: ANCHOR_SHAFT_PAST_BASE,
+      restBack: ANCHOR_REST_BACK,
+      shadowAlong: ANCHOR_CUE_ALONG,
+      ringAlong: ANCHOR_RING_ALONG,
+      shaftLength: ANCHOR_SHAFT_LENGTH,
+      stacks: false,
+    },
+  },
+  'mud-seep': {
+    id: 'mud-seep',
+    parts: {
+      bow: { tex: MUD_MOUND_TEX, paint: paintMudMound },
+      shadow: { tex: MUD_FLAKES_TEX, paint: paintMudFlakes },
+      shaft: { tex: MUD_COLUMN_TEX, paint: paintMudColumn },
+      ring: { tex: MUD_RING_TEX, paint: paintMudRing },
+    },
+    /**
+     * The base is the bed top under the mound; the bubble column runs down 14 px past it, inside
+     * the mound. At rest and in the warning no column shows: the silt flakes lift 36 px above the
+     * base and the crack rings the mound 2 px above it. The shaft goes up from the base, so along
+     * is px up.
+     */
+    place: {
+      shaftPastBase: MUD_SHAFT_PAST_BASE,
+      restBack: MUD_REST_BACK,
+      shadowAlong: MUD_SHADOW_ALONG,
+      ringAlong: MUD_RING_ALONG,
+      shaftLength: MUD_COLUMN_LENGTH,
       stacks: false,
     },
   },

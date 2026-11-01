@@ -12,7 +12,7 @@ import {
 } from './collectibles';
 import { DEV_AREAS, DEV_AREAS_MARK, DEV_DANGER_AREA, DEV_TEST_AREA, devAreaById } from './devAreas';
 import { createEncounterContext } from './encounter';
-import { SHRIMP_FACT, TADPOLE_FACT } from './factCards';
+import { ANCHOR_DROP_FACT, MUD_SEEP_FACT, SHRIMP_FACT, TADPOLE_FACT } from './factCards';
 import { hazardSweep, type HazardShape } from './hazards';
 import { coversAt, routeDistance, spotMatchesLabels } from './hiding';
 import { NET_CURRENT_CLEARANCE } from './layoutGaps';
@@ -570,8 +570,16 @@ describe('DEV_DANGER_AREA', () => {
     }
   });
 
-  it('has the tilapia, the garter snake, the carp, the ghost net and the punting pole as threats', () => {
-    expect(threatIds(DEV_DANGER_AREA.layout)).toEqual(['tilapia', 'garter-snake', 'carp', 'ghost-net', 'punting-pole']);
+  it('has the tilapia, the garter snake, the carp, the ghost net, the punting pole, the anchor drop and the mud seep as threats', () => {
+    expect(threatIds(DEV_DANGER_AREA.layout)).toEqual([
+      'tilapia',
+      'garter-snake',
+      'carp',
+      'ghost-net',
+      'punting-pole',
+      'anchor-drop',
+      'mud-seep',
+    ]);
     expect(zone.tilapiaRoutes.map((route) => route.id)).toEqual(['tilapia-0', 'tilapia-1']);
     expect(zone.predatorRoutes.map((route) => route.id)).toEqual(['garter-snake-0', 'carp-0']);
   });
@@ -599,11 +607,19 @@ describe('DEV_DANGER_AREA', () => {
     }
   });
 
-  it('has two punting poles in the top row, 2 s out of step', () => {
-    const poles = zone.movingHazards ?? [];
-    expect(poles.map((pole) => [pole.id, pole.type.id, pole.x, pole.offset])).toEqual([
+  it('has two punting poles in the top row, 2 s out of step, then one anchor drop and one mud seep on the bed', () => {
+    const spawns = zone.movingHazards ?? [];
+    expect(spawns.map((spawn) => [spawn.id, spawn.type.id, spawn.x, spawn.offset])).toEqual([
       ['dev-danger-area/punting-pole-1', 'punting-pole', 1150, 0],
       ['dev-danger-area/punting-pole-2', 'punting-pole', 1350, 2],
+      ['dev-danger-area/anchor-drop-1', 'anchor-drop', 1600, 1],
+      ['dev-danger-area/mud-seep-1', 'mud-seep', 2350, 0],
+    ]);
+    expect(spawns.map((spawn) => [spawn.depth, spawn.baseY])).toEqual([
+      [undefined, undefined],
+      [undefined, undefined],
+      [undefined, undefined],
+      [undefined, zone.bedTop],
     ]);
   });
 
@@ -676,12 +692,12 @@ describe.each(ZONE_SEEDS)('dev danger zone for seed %i', (seed) => {
     }
   });
 
-  it('keeps every net and pole sweep in the water and off the safe area', () => {
+  it('keeps every net and moving hazard sweep in the water and off the safe area', () => {
     const sweeps = [
       ...zone.hazards.map((hazard) => ({ id: hazard.id, box: rectOf(hazardSweep(hazard)) })),
       ...(zone.movingHazards ?? []).map((spawn) => ({ id: spawn.id, box: movingHazardSweep(spawn) })),
     ];
-    expect(sweeps).toHaveLength(5);
+    expect(sweeps).toHaveLength(7);
     for (const { id, box } of sweeps) {
       expect(boxInside(box, waterBox(zone)), id).toBe(true);
       expect(boxesOverlap(box, zone.safeArea), id).toBe(false);
@@ -783,5 +799,7 @@ describe('dev danger area scripted swim', () => {
     expect(log.eaten).toContain('shrimp');
     expect(log.cardsDue).toContain(TADPOLE_FACT.id);
     expect(log.cardsDue).toContain(SHRIMP_FACT.id);
+    expect(log.cardsDue).toContain(ANCHOR_DROP_FACT.id);
+    expect(log.cardsDue).toContain(MUD_SEEP_FACT.id);
   });
 });

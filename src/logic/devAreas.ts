@@ -7,7 +7,14 @@ import { CANAL_TREASURES, CHINAMPA_TREASURES } from './catalogue';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, NetDrift } from './hazards';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
-import { PUNTING_POLE, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
+import {
+  ANCHOR_DROP,
+  MUD_SEEP,
+  PUNTING_POLE,
+  movingHazardSpawn,
+  type MovingHazardSpawn,
+  type MovingHazardType,
+} from './movingHazards';
 import { CARP_SPECIES, GARTER_SNAKE_SPECIES, tunedSpecies, type PredatorRoute, type PredatorSpecies } from './predators';
 import {
   CARP,
@@ -210,9 +217,13 @@ function devDangerNet(
   });
 }
 
-/** One punting pole, id `dev-danger-area/punting-pole-<n>`, at `x`, its cycle starting at `offset` seconds. */
-function devDangerPole(index: number, x: number, offset: number): Readonly<MovingHazardSpawn> {
-  return Object.freeze(movingHazardSpawn(`${DEV_DANGER_AREA_ID}/punting-pole-${index}`, PUNTING_POLE, x, offset));
+/**
+ * One moving hazard of `type`, id `dev-danger-area/<type id>-<n>`, at `x`, its cycle starting at
+ * `offset` seconds, with the type's depth; `baseY` is the floor or roof it starts from, absent for a
+ * surface type.
+ */
+function devDangerMover(type: Readonly<MovingHazardType>, index: number, x: number, offset: number, baseY?: number): Readonly<MovingHazardSpawn> {
+  return Object.freeze(movingHazardSpawn(`${DEV_DANGER_AREA_ID}/${type.id}-${index}`, type, x, offset, undefined, baseY));
 }
 
 /** One predator route of `species`, through the waypoints as [x, y] pairs. */
@@ -227,7 +238,8 @@ function devDangerRoute(id: string, species: Readonly<PredatorSpecies>, points: 
  * out as numbers; it never refers to a real area's layout objects. The main path runs right along
  * the top row under the banks, past `tilapia-0`, then through the second tadpole loop round both
  * punting poles, dives, runs right along the bottom row through the gap current, then drops to a lane
- * along the bed under `tilapia-1` to the exit. The root tangle sits beside the carp, and the banks in the
+ * along the bed under `tilapia-1` and across the mud seep to the exit. The root tangle sits beside the
+ * carp, the anchor drop hangs in the top row just right of where the path dives, and the banks in the
  * top right, past the garter snake, are a dead end with the Rare spots.
  */
 const DEV_DANGER_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
@@ -337,8 +349,17 @@ const DEV_DANGER_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([2660, 110, 'rare', false] as const),
     Object.freeze([2780, 110, 'rare', false] as const),
   ]),
-  /** Two punting poles in the top row over the main path, 2 s out of step (ND-9). */
-  movingHazards: Object.freeze([devDangerPole(1, 1150, 0), devDangerPole(2, 1350, 2)]),
+  /**
+   * Two punting poles in the top row over the main path, 2 s out of step (ND-9); then the anchor
+   * drop in the top row of the snake's bank-less column, just right of where the main path dives,
+   * and the mud seep on the bed of the bottom row, across the bed lane past `tilapia-1` (issue #194).
+   */
+  movingHazards: Object.freeze([
+    devDangerMover(PUNTING_POLE, 1, 1150, 0),
+    devDangerMover(PUNTING_POLE, 2, 1350, 2),
+    devDangerMover(ANCHOR_DROP, 1, 1600, 1),
+    devDangerMover(MUD_SEEP, 1, 2350, 0, 678),
+  ]),
   /**
    * Three tadpoles on 5-point wander loops (DEV_DANGER_LOOPS), out of step, offset (n - 1) x lap / 3
    * (ND-24), and three shrimp on 4-spot homes (ND-25; issue #131, ND-5), with Area 5's rules: one
@@ -359,7 +380,8 @@ const DEV_DANGER_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
 
 /**
  * The dev danger area (PRD open question 262, ND-15), Area 98: every danger part and mobile snack in
- * one chinampa area, for play-testing them together. Never in AREAS; loads in dev builds only, with
+ * one chinampa area, for play-testing them together: two punting poles, an anchor drop and a mud seep
+ * among its moving hazards (issue #194). Never in AREAS; loads in dev builds only, with
  * `?area=dev-danger-area`. Its snacks drift with Area 4's numbers and it has no one-time darters.
  */
 export const DEV_DANGER_AREA: Readonly<AreaData> = Object.freeze({
