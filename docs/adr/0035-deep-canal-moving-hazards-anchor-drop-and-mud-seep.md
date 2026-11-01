@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-01
+- Updated: 2026-11-01. The owner approved both fact cards' copy (PRD open questions 592 and 593).
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (kid safety, which keeps the new hazards and their cards gentle), [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (the moving hazard type and its shaft rule, which both new hazards use as they are, and ids that are fixed for good once saved), [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (the danger bar's whole-water test, which counts them), [ADR 0028](0028-descent-areas-crayfish-and-dark-water.md) (the stalactite drip and the geyser vent, the last moving hazard types added), [ADR 0030](0030-spring-cave-danger-tuning.md) (the drip's and the geyser's fixed art lengths, which these follow)
 
 This ADR records the build choices for issue #194: two new moving hazard types for the deep canal, the anchor drop and the mud seep, each with its own fact card and art. Q1 to Q3 are the owner's decisions on #194 (2026-11-01). Every value here is provisional, and the owner can tune any of them once a real area places them.
@@ -16,7 +17,7 @@ The danger bar asks each area for at least one moving hazard type that costs a l
 
 - The anchor drop (`'anchor-drop'` in code, `ANCHOR_DROP` in `src/logic/movingHazards.ts`): a boat's anchor lowered on its chain from the surface to the canal bed, then pulled back up.
 - The mud seep (`'mud-seep'` in code, `MUD_SEEP`): a seep in the canal floor that sends a column of bubbles up out of the mud.
-- Each has its own fact card in `src/logic/factCards.ts`. The anchor card is titled "Anchors". The mud seep card is titled "Mud bubbles", and its card id stays `'mud-seep'`. Both cards' copy is provisional, with its sources and the points for the owner to check in the code comments.
+- Each has its own fact card in `src/logic/factCards.ts`. The anchor card is titled "Anchors". The mud seep card is titled "Mud bubbles", and its card id stays `'mud-seep'`. The owner approved both cards' copy (PRD open questions 592 and 593), with its sources and the points the owner checked in the code comments.
 
 **The existing shaft rule, with no new movement shape (owner Q2).** Both types are plain moving hazard types on the shared rule of [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md): a straight shaft that goes out from its base on a fixed cycle of rest, warning, out, hold and back. The whole drawn shaft costs a leg on touch, so for the anchor drop the chain costs a leg as well as the anchor. There is no end-only touch and no swing or arc. Their values:
 
