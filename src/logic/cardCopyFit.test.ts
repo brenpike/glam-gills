@@ -19,7 +19,9 @@ import {
   type TextFit,
 } from './cardFit';
 import {
+  ANCHOR_DROP_FACT,
   CARP_FACT,
+  MUD_SEEP_FACT,
   PUNTING_POLE_FACT,
   REFUGE_FACT_CARDS,
   SHRIMP_FACT,
@@ -621,6 +623,47 @@ describe('danger pass fact card copy fit (C13)', () => {
     { cssW: 1024, cssH: 768 },
   ])('shows every danger pass fact card body in full at the body width at $cssW x $cssH', (canvas) => {
     for (const card of DANGER_PASS_FACT_CARDS) {
+      const combination = factCardCombination(card, canvas);
+      const fit = fitCard(combination.availH, combination.sections);
+      expect(fit.clipped, card.id).toBe(false);
+      expect(fit.bodyVariant, card.id).toBe(0);
+    }
+  });
+});
+
+/** The moving hazard fact cards not yet in any area, for the dev-only anchor drop and mud seep (issue #194). */
+const DEV_MOVING_HAZARD_FACT_CARDS: readonly Readonly<FactCard>[] = [ANCHOR_DROP_FACT, MUD_SEEP_FACT];
+
+describe('dev-only moving hazard fact card copy fit (issue #194)', () => {
+  it('checks the anchor and the mud seep fact cards', () => {
+    expect(DEV_MOVING_HAZARD_FACT_CARDS.map((card) => card.id)).toEqual(['anchor-drop', 'mud-seep']);
+  });
+
+  it('fits both cards on every supported canvas without clipping', () => {
+    const problems = supportedCanvases().flatMap((canvas) =>
+      DEV_MOVING_HAZARD_FACT_CARDS.flatMap((card) => {
+        const combination = factCardCombination(card, canvas);
+        return fitProblems(combination, fitCard(combination.availH, combination.sections));
+      }),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  it.each([SMALLEST_CANVAS.landscape, SMALLEST_CANVAS.portrait])('shows both cards in full at $cssW x $cssH', (canvas) => {
+    for (const card of DEV_MOVING_HAZARD_FACT_CARDS) {
+      const combination = factCardCombination(card, canvas);
+      const fit = fitCard(combination.availH, combination.sections);
+      const wrapW = factCardBodyWrapWidths(canvas.cssW)[fit.bodyVariant];
+      expect(fit.clipped, card.id).toBe(false);
+      expect(fit.bodyLines, card.id).toBe(bodyFit(card.body, wrapW).lines);
+    }
+  });
+
+  it.each([
+    { cssW: 800, cssH: 600 },
+    { cssW: 1024, cssH: 768 },
+  ])('shows both card bodies in full at the body width at $cssW x $cssH', (canvas) => {
+    for (const card of DEV_MOVING_HAZARD_FACT_CARDS) {
       const combination = factCardCombination(card, canvas);
       const fit = fitCard(combination.availH, combination.sections);
       expect(fit.clipped, card.id).toBe(false);

@@ -10,7 +10,15 @@ import {
 } from './hazardSounds';
 import type { ElementSpawn, MatPair } from './hazards';
 import { hyacinthMatSpawn } from './hyacinthMats';
-import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardSpawn, type MovingHazardSpawn } from './movingHazards';
+import {
+  ANCHOR_DROP,
+  GEYSER_VENT,
+  MUD_SEEP,
+  PUNTING_POLE,
+  STALACTITE_DRIP,
+  movingHazardSpawn,
+  type MovingHazardSpawn,
+} from './movingHazards';
 import type { TripState } from './trip';
 import type { TripPhase } from './tripEvents';
 
@@ -194,6 +202,33 @@ describe('hazardSoundEdges: a roof or floor hazard warns where it really is (iss
   it('gives none when a geyser vent bursts, holds or falls back', () => {
     expect(poleEdges(2.55, 2.65, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
     expect(poleEdges(2.95, 3.05, { x: 0, y: 700, width: 960, height: 540 }, [VENT])).toBe(NO_HAZARD_EDGES);
+  });
+});
+
+describe('hazardSoundEdges: an anchor drop or a mud seep warns (issue #194)', () => {
+  /** Anchor drop cycle from offset 0: rest [0, 1.4), warn [1.4, 2.4); its chain x 495..505, y 80..280 below the surface. */
+  const ANCHOR = movingHazardSpawn('anchor-a', ANCHOR_DROP, 500, 0);
+  /** Mud seep cycle from offset 0: rest [0, 2.0), warn [2.0, 3.2); its column x 490..510, y 820..1000 over a floor at 1000. */
+  const SEEP = movingHazardSpawn('seep-a', MUD_SEEP, 500, 0, undefined, 1000);
+  const FLOOR_VIEW: ViewRect = { x: 0, y: 700, width: 960, height: 540 };
+
+  it('fires once when an on-screen anchor drop starts its warning', () => {
+    expect(poleEdges(1.35, 1.45, ON_SCREEN, [ANCHOR])).toEqual({ snagEnded: false, poleWarned: true, matsOpened: false });
+    expect(poleEdges(1.45, 1.55, ON_SCREEN, [ANCHOR])).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('gives none for an off-screen anchor drop', () => {
+    expect(poleEdges(1.35, 1.45, OFF_SCREEN, [ANCHOR])).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('fires once when a mud seep on screen over its floor starts its warning', () => {
+    expect(poleEdges(1.95, 2.05, FLOOR_VIEW, [SEEP])).toEqual({ snagEnded: false, poleWarned: true, matsOpened: false });
+    expect(poleEdges(2.05, 2.15, FLOOR_VIEW, [SEEP])).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('gives none for a mud seep off screen, beside the view or below a view of the surface', () => {
+    expect(poleEdges(1.95, 2.05, { ...FLOOR_VIEW, x: 1000 }, [SEEP])).toBe(NO_HAZARD_EDGES);
+    expect(poleEdges(1.95, 2.05, ON_SCREEN, [SEEP])).toBe(NO_HAZARD_EDGES);
   });
 });
 

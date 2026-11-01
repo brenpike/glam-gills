@@ -270,6 +270,71 @@ export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The anchor fact card, shown the first time the axolotl meets an anchor drop (PRD C13; issue #194,
+ * owner Q1 to Q3 of 2026-11-01). Provisional copy.
+ * Sources, checked 2026-11-01 (web research only; the game fetches nothing):
+ * Wikipedia, "Anchor", https://en.wikipedia.org/wiki/Anchor (an anchor is "a device, normally made of
+ * metal, used to secure a vessel to the bed of a body of water to prevent the craft from drifting due
+ * to wind or current"; the rode "can be made of rope, chain or a combination of rope and chain"; a
+ * deadweight anchor "relies solely on being a heavy weight"; "The weight of the anchor chain can be
+ * more than that of the anchor"; "to weigh anchor" is "to lift the anchor from the sea bed, allowing
+ * the ship or boat to move");
+ * Boat-ed (Kalkomey Enterprises), "Anchoring Your Boat", West Virginia Boater Safety Course,
+ * https://www.boat-ed.com/westvirginia/studyGuide/Anchoring-Your-Boat/10105201_50537/ ("slowly lower
+ * the anchor over the bow to the bottom");
+ * Boat-ed (Kalkomey Enterprises), "Retrieving an Anchor", New York Boater Safety Course,
+ * https://www.boat-ed.com/newyork/studyGuide/Retrieving-an-Anchor/10103501_41541/ ("Move the boat
+ * directly over the anchor while pulling in the line. Pulling the anchor straight up should break it
+ * free.").
+ * Owner to verify: "heavy" reads Wikipedia's deadweight anchor and chain weight, not every anchor;
+ * "on a chain" reads the rode of rope, chain or both; "the canal bed" reads the sources' bed or
+ * bottom of a body of water, as no source names canals or Xochimilco, and whether Xochimilco's
+ * boaters use anchors is not checked; "holds the boat still" reads "secure a vessel" and "prevent
+ * the craft from drifting"; "pull it back up" reads "to weigh anchor" and the Boat-ed retrieving step.
+ */
+export const ANCHOR_DROP_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'anchor-drop',
+  name: 'Anchor',
+  title: 'Anchors',
+  body: 'Boaters lower a heavy anchor on a chain down to the canal bed. It holds the boat still. When it is time to go, they pull it back up.',
+});
+
+/**
+ * The mud seep fact card, shown the first time the axolotl meets a mud seep (PRD C13; issue #194,
+ * owner Q1 to Q3 of 2026-11-01). Provisional copy.
+ * Sources, checked 2026-11-01 (web research only; the game fetches nothing):
+ * U.S. Geological Survey, "WaterWords-Methanogen", 2019-06-15,
+ * https://www.usgs.gov/news/waterwords-methanogen (a methanogen is a microbe that produces methane,
+ * found in wetlands among other places; "Methanogens help break down organic material in low oxygen
+ * environments");
+ * U.S. Geological Survey, "Marsh Gas" (image), https://www.usgs.gov/media/images/marsh-gas ("Bubbles
+ * of methane, also known as marsh gas, created by methanogens");
+ * Douglas Fox, Science News Explores, "Strange lake belches flammable gas in the high Arctic",
+ * 2019-04-25, https://www.snexplores.org/article/strange-lake-belches-flammable-gas-high-arctic
+ * ("single-celled microbes have begun dining on those plant remains"; "They break down the dead
+ * stuff into mush, like kitchen scraps in a compost heap"; the microbes "exhale methane"; bubbles
+ * "shoved their way up" "through the mud at the bottom of the lake" and "streamed up, popping at the
+ * surface");
+ * Wikipedia, "Wetland methane emissions", https://en.wikipedia.org/wiki/Wetland_methane_emissions
+ * ("Most methanogenesis, or methane production, occurs in oxygen-poor environments"; plants "provide
+ * much of the carbon needed for methane producing processes in wetlands"; bubbles come from "methane
+ * building up over time in the soil, forming pockets of methane gas").
+ * Owner to verify: "tiny living things, too small to see" reads the sources' microbes and
+ * single-celled microbes; "canal mud" reads wetland soil and lake-bottom mud, as no source names
+ * canals or Xochimilco; "old leaves and plants" reads organic material and plant remains; "full of"
+ * is not checked against a count; in the Science News Explores lake the plant-eating microbes are in
+ * thawing permafrost and the bubbling gas may come from a buried coal bed, so no one source shows the
+ * whole chain from plants in mud to bubbles; the Wikipedia bubbles are released into the air, not
+ * described rising through water.
+ */
+export const MUD_SEEP_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'mud-seep',
+  name: 'Mud seep',
+  title: 'Mud bubbles',
+  body: 'Canal mud is full of tiny living things, too small to see. They break down old leaves and plants and make gas that rises up as bubbles.',
+});
+
+/**
  * The underwater springs fact card, shown the first time the axolotl meets a pulsing current (PRD
  * C13; issue #105, the owner's text of 2026-10-22, ND-14).
  * Sources, checked 2026-10-28 (web research only, read through search summaries; the game fetches

@@ -8,6 +8,34 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import {
+  ANCHOR_BOW_TEX,
+  ANCHOR_CHAIN_W,
+  ANCHOR_CUE_ALONG,
+  ANCHOR_CUE_TEX,
+  ANCHOR_REST_BACK,
+  ANCHOR_RING_ALONG,
+  ANCHOR_RING_TEX,
+  ANCHOR_SHAFT_LENGTH,
+  ANCHOR_SHAFT_PAST_BASE,
+  ANCHOR_SHAFT_TEX,
+  ANCHOR_ART_DEPTH,
+  paintAnchorShaft,
+} from './drawAnchorDrop';
+import {
+  MUD_ART_DEPTH,
+  MUD_BUBBLE_R,
+  MUD_COLUMN_LENGTH,
+  MUD_COLUMN_TEX,
+  MUD_FLAKES_TEX,
+  MUD_MOUND_TEX,
+  MUD_REST_BACK,
+  MUD_RING_ALONG,
+  MUD_RING_TEX,
+  MUD_SHADOW_ALONG,
+  MUD_SHAFT_PAST_BASE,
+  paintMudColumn,
+} from './drawMudSeep';
+import {
   BOAT_FLOWER_CENTRE,
   BOAT_HULL,
   BOAT_ORANGE,
@@ -100,7 +128,9 @@ import {
 } from './movingHazardTextures';
 import { EYE, INK, LW, WHITE } from './palette';
 import type { TexSize } from './canvasKit';
-import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth, type MovingHazardSpawn, type MovingHazardType } from '../logic/movingHazards';
+import { ANCHOR_DROP, GEYSER_VENT, MUD_SEEP, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth, type MovingHazardSpawn, type MovingHazardType } from '../logic/movingHazards';
+import { AREAS } from '../logic/areas';
+import { DEV_AREAS } from '../logic/devAreas';
 import { SPRING_CAVE_2_LAYOUT } from '../logic/springCave2Layout';
 import { SPRING_CAVE_LAYOUT } from '../logic/springCaveLayout';
 import { PUNTING_POLES } from '../logic/tuning';
@@ -1151,10 +1181,24 @@ describe('look places (issue #77, ND-3)', () => {
   });
 
   it('names every logic type\'s look, and throws on an unknown one', () => {
-    for (const type of [PUNTING_POLE, STALACTITE_DRIP, GEYSER_VENT]) expect(MOVING_HAZARD_LOOKS[type.look].id).toBe(type.look);
-    expect(Object.keys(MOVING_HAZARD_LOOKS)).toEqual(['punting-pole', 'stalactite-drip', 'geyser-vent']);
+    for (const type of [PUNTING_POLE, STALACTITE_DRIP, GEYSER_VENT, ANCHOR_DROP, MUD_SEEP]) expect(MOVING_HAZARD_LOOKS[type.look].id).toBe(type.look);
+    expect(Object.keys(MOVING_HAZARD_LOOKS)).toEqual(['punting-pole', 'stalactite-drip', 'geyser-vent', 'anchor-drop', 'mud-seep']);
     expect(() => movingHazardLookPlace('gondola')).toThrow(/unknown moving hazard look "gondola"/);
     expect(() => movingHazardLookPlace('toString')).toThrow(/unknown moving hazard look/);
+  });
+
+  it('fits every moving hazard in every area and dev area in its look\'s art when the look does not stack, so MovingHazardView never throws on area data', () => {
+    // movingHazardSpawn only checks that a depth is above 0, and the logic cannot see the art, so this is the one check
+    // that a spawn's drawn length (its depth plus the shaft past the base) fits a look that does not stack.
+    const spawns = [...AREAS, ...DEV_AREAS]
+      .flatMap((area) => (area.layout.movingHazards ?? []).map((spawn) => [area.id, spawn] as const))
+      .filter(([, spawn]) => !movingHazardLookPlace(spawn.type.look).stacks);
+    // the drip, the geyser, the anchor drop and the mud seep are all placed somewhere, so each non-stacking look is checked
+    expect(new Set(spawns.map(([, spawn]) => spawn.type.look))).toEqual(new Set(['stalactite-drip', 'geyser-vent', 'anchor-drop', 'mud-seep']));
+    for (const [areaId, spawn] of spawns) {
+      const place = movingHazardLookPlace(spawn.type.look);
+      expect(movingHazardDepth(spawn) + place.shaftPastBase, `${areaId} ${spawn.id}`).toBeLessThanOrEqual(place.shaftLength);
+    }
   });
 
   it('bakes the four stalactite drip and geyser vent textures under their own keys', () => {
@@ -1163,5 +1207,105 @@ describe('look places (issue #77, ND-3)', () => {
       ['stalactite-drip', 'geyser-vent'].flatMap((look) => MOVING_HAZARD_PARTS.map((part) => movingHazardTextureKey(look, part))).sort(),
     );
     expect(Object.keys(baked)).toEqual(['stalactite-drip', 'geyser-vent']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Anchor drop and mud seep (issue #194)
+// ---------------------------------------------------------------------------
+
+describe('the anchor drop and mud seep looks (issue #194)', () => {
+  const anchor = MOVING_HAZARD_LOOKS['anchor-drop'];
+  const seep = MOVING_HAZARD_LOOKS['mud-seep'];
+
+  it('wires each look to its own four painters and frames, in the table\'s part order', () => {
+    expect(anchor.parts.bow.tex).toBe(ANCHOR_BOW_TEX);
+    expect(anchor.parts.shadow.tex).toBe(ANCHOR_CUE_TEX);
+    expect(anchor.parts.shaft.tex).toBe(ANCHOR_SHAFT_TEX);
+    expect(anchor.parts.ring.tex).toBe(ANCHOR_RING_TEX);
+    expect(seep.parts.bow.tex).toBe(MUD_MOUND_TEX);
+    expect(seep.parts.shadow.tex).toBe(MUD_FLAKES_TEX);
+    expect(seep.parts.shaft.tex).toBe(MUD_COLUMN_TEX);
+    expect(seep.parts.ring.tex).toBe(MUD_RING_TEX);
+    expect(anchor.parts.shaft.paint).toBe(paintAnchorShaft);
+    expect(seep.parts.shaft.paint).toBe(paintMudColumn);
+  });
+
+  it('names the looks the logic types name', () => {
+    expect(ANCHOR_DROP.look).toBe('anchor-drop');
+    expect(MUD_SEEP.look).toBe('mud-seep');
+    expect(anchor.id).toBe('anchor-drop');
+    expect(seep.id).toBe('mud-seep');
+  });
+
+  it('draws the chain as wide as the logic touches, and the bubble column no narrower than it', () => {
+    expect(ANCHOR_CHAIN_W).toBe(2 * ANCHOR_DROP.halfWidth);
+    // the column necks are 20.78 px and the bubbles 24 px: the art may be wider than the hit, never narrower
+    expect(2 * MUD_BUBBLE_R).toBeGreaterThanOrEqual(2 * MUD_SEEP.halfWidth);
+    const widths = record(paintMudColumn).ops.map((op) => opBounds(op)).map((box) => box.maxX - box.minX);
+    expect(Math.max(...widths)).toBeGreaterThanOrEqual(2 * MUD_SEEP.halfWidth);
+  });
+
+  it('fits the default and the deepest depth, plus the shaft past the base, in the art, so MovingHazardView never throws', () => {
+    const anchorPlace = movingHazardLookPlace(ANCHOR_DROP.look);
+    const seepPlace = movingHazardLookPlace(MUD_SEEP.look);
+    expect(ANCHOR_ART_DEPTH).toBe(320);
+    expect(MUD_ART_DEPTH).toBe(260);
+    for (const depth of [ANCHOR_DROP.depth, ANCHOR_ART_DEPTH]) {
+      expect(depth + anchorPlace.shaftPastBase).toBeLessThanOrEqual(anchorPlace.shaftLength);
+    }
+    for (const depth of [MUD_SEEP.depth, MUD_ART_DEPTH]) {
+      expect(depth + seepPlace.shaftPastBase).toBeLessThanOrEqual(seepPlace.shaftLength);
+    }
+  });
+
+  it('places the anchor drop from the painters\' constants: chain 8 px up behind the hull, cue 56 and ripple lines 20 px down', () => {
+    expect(anchor.place).toEqual({
+      shaftPastBase: ANCHOR_SHAFT_PAST_BASE,
+      restBack: ANCHOR_REST_BACK,
+      shadowAlong: ANCHOR_CUE_ALONG,
+      ringAlong: ANCHOR_RING_ALONG,
+      shaftLength: ANCHOR_SHAFT_LENGTH,
+      stacks: false,
+    });
+    expect([ANCHOR_SHAFT_PAST_BASE, ANCHOR_REST_BACK, ANCHOR_CUE_ALONG, ANCHOR_RING_ALONG]).toEqual([8, 8, 56, 20]);
+  });
+
+  it('places the mud seep from the painters\' constants: column 14 px down inside the mound, flakes 36 and crack 2 px up', () => {
+    expect(seep.place).toEqual({
+      shaftPastBase: MUD_SHAFT_PAST_BASE,
+      restBack: MUD_REST_BACK,
+      shadowAlong: MUD_SHADOW_ALONG,
+      ringAlong: MUD_RING_ALONG,
+      shaftLength: MUD_COLUMN_LENGTH,
+      stacks: false,
+    });
+    expect([MUD_SHAFT_PAST_BASE, MUD_REST_BACK, MUD_SHADOW_ALONG, MUD_RING_ALONG]).toEqual([14, 14, 36, 2]);
+  });
+
+  it('hides the chain and the column at rest and holds them back at the warning start, and never stacks', () => {
+    for (const look of ['anchor-drop', 'mud-seep']) {
+      const place = movingHazardLookPlace(look);
+      expect(place.restBack, look).toBe(place.shaftPastBase);
+      expect(place.stacks, look).toBe(false);
+      expect(place.shaftLength, look).toBeGreaterThan(place.shaftPastBase);
+    }
+  });
+
+  it('bakes exactly the eight textures of the two looks under their own keys', () => {
+    const { baked, created } = bakeOnly(['anchor-drop', 'mud-seep']);
+    expect([...created].sort()).toEqual(
+      [
+        'anchor-drop-bow',
+        'anchor-drop-ring',
+        'anchor-drop-shadow',
+        'anchor-drop-shaft',
+        'mud-seep-bow',
+        'mud-seep-ring',
+        'mud-seep-shadow',
+        'mud-seep-shaft',
+      ],
+    );
+    expect(Object.keys(baked)).toEqual(['anchor-drop', 'mud-seep']);
   });
 });

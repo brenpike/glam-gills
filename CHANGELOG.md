@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-11-01
+
+### Added
+
+- Two new deep canal moving hazards: a sinking anchor, dropped on a chain from a moored boat, and a mud seep that bursts bubbles up from the bed. Each has its own fact card.
+- For now they only appear in the developer test area. Area 9 will be the first area to use them.
+
 ## [0.59.0] - 2026-10-30
 
 ### Added

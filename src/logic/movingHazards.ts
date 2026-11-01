@@ -1,4 +1,11 @@
-import { GEYSER_FACT, PUNTING_POLE_FACT, STALACTITE_FACT, type FactCard } from './factCards';
+import {
+  ANCHOR_DROP_FACT,
+  GEYSER_FACT,
+  MUD_SEEP_FACT,
+  PUNTING_POLE_FACT,
+  STALACTITE_FACT,
+  type FactCard,
+} from './factCards';
 import type { HazardRect } from './hazards';
 import { PUNTING_POLES, TILAPIA } from './tuning';
 import { SURF, type Point } from './zone';
@@ -140,6 +147,55 @@ export const GEYSER_VENT: Readonly<MovingHazardType> = Object.freeze({
   touchReach: 18,
   meetRange: 180,
   fact: GEYSER_FACT,
+  dangerPart: true,
+});
+
+/**
+ * The anchor drop (issue #194, owner Q1 to Q3 of 2026-11-01): a boat's anchor lowered on its chain
+ * from the surface to the canal bed and pulled back up on a fixed cycle; the chain and the anchor both
+ * touch. Provisional values; tune in play. A 4.8 s cycle with the pole's 1.0 s warning, a 0.5 s drop,
+ * a 0.8 s hold and a slower 1.1 s pull back up, so the chain is out 2.4 s of every 4.8 s. As narrow as
+ * the pole (halfWidth 5, a 10 px chain) and 200 px deep by default; an area may set at most 320 px.
+ */
+export const ANCHOR_DROP: Readonly<MovingHazardType> = Object.freeze({
+  id: 'anchor-drop',
+  name: 'Anchor drop',
+  look: 'anchor-drop',
+  restFor: 1.4,
+  warnFor: 1.0,
+  jabFor: 0.5,
+  holdFor: 0.8,
+  liftFor: 1.1,
+  depth: 200,
+  halfWidth: 5,
+  touchReach: 18,
+  meetRange: 180,
+  fact: ANCHOR_DROP_FACT,
+  dangerPart: true,
+});
+
+/**
+ * The mud seep (issue #194, owner Q1 to Q3 of 2026-11-01): a seep in the canal floor sending a column
+ * of bubbles up from the mud on a fixed cycle; the whole column touches. Provisional values; tune in
+ * play. A 5.6 s cycle with the geyser's 1.2 s warning, as it rises from below, a 0.5 s rise, a 1.2 s
+ * hold and a 0.7 s fade, so the column is out 2.4 s of every 5.6 s. Narrower than the geyser column
+ * (halfWidth 10, a 20 px column) and 180 px high by default; an area may set at most 260 px.
+ */
+export const MUD_SEEP: Readonly<MovingHazardType> = Object.freeze({
+  id: 'mud-seep',
+  name: 'Mud seep',
+  look: 'mud-seep',
+  restFor: 2.0,
+  warnFor: 1.2,
+  jabFor: 0.5,
+  holdFor: 1.2,
+  liftFor: 0.7,
+  from: 'floor',
+  depth: 180,
+  halfWidth: 10,
+  touchReach: 18,
+  meetRange: 180,
+  fact: MUD_SEEP_FACT,
   dangerPart: true,
 });
 
