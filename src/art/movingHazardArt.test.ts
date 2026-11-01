@@ -129,6 +129,8 @@ import {
 import { EYE, INK, LW, WHITE } from './palette';
 import type { TexSize } from './canvasKit';
 import { ANCHOR_DROP, GEYSER_VENT, MUD_SEEP, PUNTING_POLE, STALACTITE_DRIP, movingHazardDepth, type MovingHazardSpawn, type MovingHazardType } from '../logic/movingHazards';
+import { AREAS } from '../logic/areas';
+import { DEV_AREAS } from '../logic/devAreas';
 import { SPRING_CAVE_2_LAYOUT } from '../logic/springCave2Layout';
 import { SPRING_CAVE_LAYOUT } from '../logic/springCaveLayout';
 import { PUNTING_POLES } from '../logic/tuning';
@@ -1183,6 +1185,20 @@ describe('look places (issue #77, ND-3)', () => {
     expect(Object.keys(MOVING_HAZARD_LOOKS)).toEqual(['punting-pole', 'stalactite-drip', 'geyser-vent', 'anchor-drop', 'mud-seep']);
     expect(() => movingHazardLookPlace('gondola')).toThrow(/unknown moving hazard look "gondola"/);
     expect(() => movingHazardLookPlace('toString')).toThrow(/unknown moving hazard look/);
+  });
+
+  it('fits every moving hazard in every area and dev area in its look\'s art when the look does not stack, so MovingHazardView never throws on area data', () => {
+    // movingHazardSpawn only checks that a depth is above 0, and the logic cannot see the art, so this is the one check
+    // that a spawn's drawn length (its depth plus the shaft past the base) fits a look that does not stack.
+    const spawns = [...AREAS, ...DEV_AREAS]
+      .flatMap((area) => (area.layout.movingHazards ?? []).map((spawn) => [area.id, spawn] as const))
+      .filter(([, spawn]) => !movingHazardLookPlace(spawn.type.look).stacks);
+    // the drip, the geyser, the anchor drop and the mud seep are all placed somewhere, so each non-stacking look is checked
+    expect(new Set(spawns.map(([, spawn]) => spawn.type.look))).toEqual(new Set(['stalactite-drip', 'geyser-vent', 'anchor-drop', 'mud-seep']));
+    for (const [areaId, spawn] of spawns) {
+      const place = movingHazardLookPlace(spawn.type.look);
+      expect(movingHazardDepth(spawn) + place.shaftPastBase, `${areaId} ${spawn.id}`).toBeLessThanOrEqual(place.shaftLength);
+    }
   });
 
   it('bakes the four stalactite drip and geyser vent textures under their own keys', () => {
