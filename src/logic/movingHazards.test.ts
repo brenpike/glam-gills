@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { GEYSER_FACT, PUNTING_POLE_FACT, STALACTITE_FACT } from './factCards';
+import { ANCHOR_DROP_FACT, GEYSER_FACT, MUD_SEEP_FACT, PUNTING_POLE_FACT, STALACTITE_FACT } from './factCards';
 import {
+  ANCHOR_DROP,
   GEYSER_VENT,
+  MUD_SEEP,
   PUNTING_POLE,
   STALACTITE_DRIP,
   movingHazardBaseY,
@@ -380,5 +382,173 @@ describe('a surface hazard keeps the surface as its base (issue #77, ND-3)', () 
     expect(() => movingHazardSpawn('b', GEYSER_VENT, 0, 0)).toThrow(/needs a finite baseY/);
     expect(() => movingHazardSpawn('b', GEYSER_VENT, 0, 0, undefined, Number.NaN)).toThrow(RangeError);
     expect(() => movingHazardSpawn('b', GEYSER_VENT, 0, 0, undefined, 900)).not.toThrow();
+  });
+});
+
+/** Points every 10 px along a shaft's centre line, from its base to its tip, both included. */
+function shaftLinePoints(x: number, baseY: number, tipY: number): { x: number; y: number }[] {
+  const steps = Math.ceil(Math.abs(tipY - baseY) / 10);
+  return Array.from({ length: steps + 1 }, (_unused, step) => ({ x, y: baseY + ((tipY - baseY) * step) / steps }));
+}
+
+describe('ANCHOR_DROP and MUD_SEEP (issue #194)', () => {
+  it('have their ids, names, looks, fact cards, bases and danger-part marks', () => {
+    expect([ANCHOR_DROP.id, ANCHOR_DROP.name, ANCHOR_DROP.look]).toEqual(['anchor-drop', 'Anchor drop', 'anchor-drop']);
+    expect([MUD_SEEP.id, MUD_SEEP.name, MUD_SEEP.look]).toEqual(['mud-seep', 'Mud seep', 'mud-seep']);
+    expect(ANCHOR_DROP.fact).toBe(ANCHOR_DROP_FACT);
+    expect(MUD_SEEP.fact).toBe(MUD_SEEP_FACT);
+    expect(ANCHOR_DROP).not.toHaveProperty('from');
+    expect([movingHazardFrom(ANCHOR_DROP), movingHazardFrom(MUD_SEEP)]).toEqual(['surface', 'floor']);
+    for (const type of [ANCHOR_DROP, MUD_SEEP]) {
+      expect(type.dangerPart, type.id).toBe(true);
+      expect(Object.isFrozen(type), type.id).toBe(true);
+    }
+  });
+
+  it('have their phase times, on cycles of 4.8 s and 5.6 s, each out 2.4 s', () => {
+    expect(ANCHOR_DROP).toMatchObject({ restFor: 1.4, warnFor: 1.0, jabFor: 0.5, holdFor: 0.8, liftFor: 1.1 });
+    expect(MUD_SEEP).toMatchObject({ restFor: 2.0, warnFor: 1.2, jabFor: 0.5, holdFor: 1.2, liftFor: 0.7 });
+    expect(movingHazardPeriod(ANCHOR_DROP)).toBeCloseTo(4.8, 9);
+    expect(movingHazardPeriod(MUD_SEEP)).toBeCloseTo(5.6, 9);
+    expect(ANCHOR_DROP.jabFor + ANCHOR_DROP.holdFor + ANCHOR_DROP.liftFor).toBeCloseTo(2.4, 9);
+    expect(MUD_SEEP.jabFor + MUD_SEEP.holdFor + MUD_SEEP.liftFor).toBeCloseTo(2.4, 9);
+  });
+
+  it('warn at least the 0.8 s floor', () => {
+    expect(ANCHOR_DROP.warnFor).toBeGreaterThanOrEqual(TILAPIA.minWindup);
+    expect(MUD_SEEP.warnFor).toBeGreaterThanOrEqual(TILAPIA.minWindup);
+  });
+
+  it('have their depths, widths, touch reaches and meet ranges', () => {
+    expect([ANCHOR_DROP.depth, ANCHOR_DROP.halfWidth, ANCHOR_DROP.touchReach, ANCHOR_DROP.meetRange]).toEqual([200, 5, 18, 180]);
+    expect([MUD_SEEP.depth, MUD_SEEP.halfWidth, MUD_SEEP.touchReach, MUD_SEEP.meetRange]).toEqual([180, 10, 18, 180]);
+  });
+
+  it('refuse a base for the anchor drop, and need a finite one for the mud seep', () => {
+    expect(() => movingHazardSpawn('a', ANCHOR_DROP, 0, 0, undefined, 200)).toThrow(/takes no baseY/);
+    expect(() => movingHazardSpawn('a', ANCHOR_DROP, 0, 0)).not.toThrow();
+    expect(() => movingHazardSpawn('m', MUD_SEEP, 0, 0)).toThrow(/needs a finite baseY/);
+    expect(() => movingHazardSpawn('m', MUD_SEEP, 0, 0, undefined, Number.NaN)).toThrow(RangeError);
+    expect(() => movingHazardSpawn('m', MUD_SEEP, 0, 0, undefined, Number.POSITIVE_INFINITY)).toThrow(RangeError);
+    expect(() => movingHazardSpawn('m', MUD_SEEP, 0, 0, undefined, 900)).not.toThrow();
+  });
+});
+
+describe('a surface hazard: the anchor drop (issue #194)', () => {
+  const ANCHOR = movingHazardSpawn('test/anchor-1', ANCHOR_DROP, POLE_X, 0);
+  /** Mid-phase times from offset 0: rest 0..1.4, warn 1.4..2.4, drop 2.4..2.9, hold 2.9..3.7, pull up 3.7..4.8. */
+  const MID_ANCHOR_REST = 0.7;
+  const MID_ANCHOR_WARN = 1.9;
+  const MID_DROP = 2.65;
+  const MID_ANCHOR_HOLD = 3.3;
+  const MID_PULL_UP = 4.25;
+  const BED_Y = SURF + ANCHOR_DROP.depth;
+
+  it('starts at the surface and goes down', () => {
+    expect(movingHazardBaseY(ANCHOR)).toBe(SURF);
+    expect(movingHazardDirection(ANCHOR)).toBe(1);
+    expect(ANCHOR).toEqual({ id: 'test/anchor-1', type: ANCHOR_DROP, x: POLE_X, offset: 0 });
+  });
+
+  it('runs rest, warn, jab, hold, lift over its 4.8 s cycle', () => {
+    const mids = [MID_ANCHOR_REST, MID_ANCHOR_WARN, MID_DROP, MID_ANCHOR_HOLD, MID_PULL_UP].map((t) => movingHazardPhase(ANCHOR, t));
+    expect(mids.map((mid) => mid.phase)).toEqual(['rest', 'warn', 'jab', 'hold', 'lift']);
+    for (const mid of mids) expect(mid.progress).toBeCloseTo(0.5, 9);
+    expect(movingHazardPhase(ANCHOR, movingHazardPeriod(ANCHOR_DROP))).toEqual({ phase: 'rest', progress: 0 });
+  });
+
+  it('drops to its depth, holds, and pulls back up', () => {
+    expect(movingHazardTipDepth(ANCHOR, MID_ANCHOR_REST)).toBe(0);
+    expect(movingHazardTipDepth(ANCHOR, MID_ANCHOR_WARN)).toBe(0);
+    expect(movingHazardTipDepth(ANCHOR, MID_DROP)).toBeCloseTo(100, 6);
+    expect(movingHazardTipDepth(ANCHOR, MID_ANCHOR_HOLD)).toBe(200);
+    expect(movingHazardTipDepth(ANCHOR, MID_PULL_UP)).toBeCloseTo(100, 6);
+  });
+
+  it('has its tip at the surface when not out, and at the canal bed when held', () => {
+    expect(movingHazardTip(ANCHOR, MID_ANCHOR_WARN)).toEqual({ x: POLE_X, y: SURF });
+    expect(movingHazardTip(ANCHOR, MID_ANCHOR_HOLD)).toEqual({ x: POLE_X, y: BED_Y });
+  });
+
+  it('is the chain from the surface to the anchor, and its sweep is that chain at full depth', () => {
+    expect(movingHazardShape(ANCHOR, MID_ANCHOR_REST)).toBeNull();
+    expect(movingHazardShape(ANCHOR, MID_ANCHOR_WARN)).toBeNull();
+    expect(movingHazardShape(ANCHOR, MID_DROP)?.y1).toBeCloseTo(SURF + 100, 6);
+    expect(movingHazardShape(ANCHOR, MID_ANCHOR_HOLD)).toEqual({ kind: 'rect', x0: 995, x1: 1005, y0: SURF, y1: BED_Y });
+    expect(movingHazardSweep(ANCHOR)).toEqual({ kind: 'rect', x0: 995, x1: 1005, y0: SURF, y1: BED_Y });
+  });
+
+  it('touches along the whole chain and the anchor, base to tip, and nowhere at rest or in the warning', () => {
+    const line = shaftLinePoints(POLE_X, SURF, BED_Y);
+    for (const point of line) {
+      expect(movingHazardTouches(ANCHOR, MID_ANCHOR_HOLD, point), `hold y=${point.y}`).toBe(true);
+      expect(movingHazardTouches(ANCHOR, MID_ANCHOR_REST, point), `rest y=${point.y}`).toBe(false);
+      expect(movingHazardTouches(ANCHOR, MID_ANCHOR_WARN, point), `warn y=${point.y}`).toBe(false);
+    }
+    expect(movingHazardTouches(ANCHOR, MID_ANCHOR_HOLD, { x: POLE_X, y: BED_Y + REACH })).toBe(true);
+    expect(movingHazardTouches(ANCHOR, MID_ANCHOR_HOLD, { x: POLE_X, y: BED_Y + REACH + 0.01 })).toBe(false);
+    expect(movingHazardTouches(ANCHOR, MID_ANCHOR_HOLD, { x: 1005 + REACH, y: SURF + 100 })).toBe(true);
+    expect(movingHazardTouches(ANCHOR, MID_ANCHOR_HOLD, { x: 1005 + REACH + 0.01, y: SURF + 100 })).toBe(false);
+  });
+});
+
+describe('a floor hazard: the mud seep (issue #194)', () => {
+  const FLOOR_Y = 1000;
+  const SEEP = movingHazardSpawn('test/seep-1', MUD_SEEP, POLE_X, 0, undefined, FLOOR_Y);
+  /** Mid-phase times from offset 0: rest 0..2.0, warn 2.0..3.2, rise 3.2..3.7, hold 3.7..4.9, fade 4.9..5.6. */
+  const MID_SEEP_REST = 1.0;
+  const MID_SEEP_WARN = 2.6;
+  const MID_RISE = 3.45;
+  const MID_SEEP_HOLD = 4.3;
+  const MID_FADE = 5.25;
+  const TOP_Y = FLOOR_Y - MUD_SEEP.depth;
+
+  it('starts at the floor and goes up', () => {
+    expect(movingHazardBaseY(SEEP)).toBe(FLOOR_Y);
+    expect(movingHazardDirection(SEEP)).toBe(-1);
+    expect(SEEP).toEqual({ id: 'test/seep-1', type: MUD_SEEP, x: POLE_X, offset: 0, baseY: FLOOR_Y });
+  });
+
+  it('runs rest, warn, jab, hold, lift over its 5.6 s cycle', () => {
+    const mids = [MID_SEEP_REST, MID_SEEP_WARN, MID_RISE, MID_SEEP_HOLD, MID_FADE].map((t) => movingHazardPhase(SEEP, t));
+    expect(mids.map((mid) => mid.phase)).toEqual(['rest', 'warn', 'jab', 'hold', 'lift']);
+    for (const mid of mids) expect(mid.progress).toBeCloseTo(0.5, 9);
+    expect(movingHazardPhase(SEEP, movingHazardPeriod(MUD_SEEP))).toEqual({ phase: 'rest', progress: 0 });
+  });
+
+  it('rises to its height, holds, and fades back to the floor', () => {
+    expect(movingHazardTipDepth(SEEP, MID_SEEP_REST)).toBe(0);
+    expect(movingHazardTipDepth(SEEP, MID_SEEP_WARN)).toBe(0);
+    expect(movingHazardTipDepth(SEEP, MID_RISE)).toBeCloseTo(90, 6);
+    expect(movingHazardTipDepth(SEEP, MID_SEEP_HOLD)).toBe(180);
+    expect(movingHazardTipDepth(SEEP, MID_FADE)).toBeCloseTo(90, 6);
+  });
+
+  it('has its tip at the floor when not out, and at the top of the column when held', () => {
+    expect(movingHazardTip(SEEP, MID_SEEP_WARN)).toEqual({ x: POLE_X, y: FLOOR_Y });
+    expect(movingHazardTip(SEEP, MID_SEEP_HOLD)).toEqual({ x: POLE_X, y: TOP_Y });
+  });
+
+  it('is a column from the floor to its top, and its sweep is that column at full height', () => {
+    expect(movingHazardShape(SEEP, MID_SEEP_REST)).toBeNull();
+    expect(movingHazardShape(SEEP, MID_SEEP_WARN)).toBeNull();
+    const rise = movingHazardShape(SEEP, MID_RISE);
+    expect(rise?.y0).toBeCloseTo(FLOOR_Y - 90, 6);
+    expect(rise?.y1).toBe(FLOOR_Y);
+    expect(movingHazardShape(SEEP, MID_SEEP_HOLD)).toEqual({ kind: 'rect', x0: 990, x1: 1010, y0: TOP_Y, y1: FLOOR_Y });
+    expect(movingHazardSweep(SEEP)).toEqual({ kind: 'rect', x0: 990, x1: 1010, y0: TOP_Y, y1: FLOOR_Y });
+  });
+
+  it('touches along the whole column, base to tip, and nowhere at rest or in the warning', () => {
+    const line = shaftLinePoints(POLE_X, FLOOR_Y, TOP_Y);
+    for (const point of line) {
+      expect(movingHazardTouches(SEEP, MID_SEEP_HOLD, point), `hold y=${point.y}`).toBe(true);
+      expect(movingHazardTouches(SEEP, MID_SEEP_REST, point), `rest y=${point.y}`).toBe(false);
+      expect(movingHazardTouches(SEEP, MID_SEEP_WARN, point), `warn y=${point.y}`).toBe(false);
+    }
+    expect(movingHazardTouches(SEEP, MID_SEEP_HOLD, { x: POLE_X, y: TOP_Y - REACH })).toBe(true);
+    expect(movingHazardTouches(SEEP, MID_SEEP_HOLD, { x: POLE_X, y: TOP_Y - REACH - 0.01 })).toBe(false);
+    expect(movingHazardTouches(SEEP, MID_SEEP_HOLD, { x: 1010 + REACH, y: FLOOR_Y - 40 })).toBe(true);
+    expect(movingHazardTouches(SEEP, MID_SEEP_HOLD, { x: 1010 + REACH + 0.01, y: FLOOR_Y - 40 })).toBe(false);
   });
 });

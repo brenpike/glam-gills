@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ANCHOR_DROP_FACT,
   AXOLOTL_REFUGES_FACT,
   BLACK_BASS_FACT,
   BLACK_BASS_MEET_RANGE,
@@ -17,6 +18,7 @@ import {
   GHOST_NET_FACT,
   HERON_FACT,
   HERON_MEET_RANGE,
+  MUD_SEEP_FACT,
   PLASTIC_WORM_FACT,
   PUNTING_POLE_FACT,
   REFUGE_FACT_CARDS,
@@ -27,6 +29,7 @@ import {
   TADPOLE_MEET_RANGE,
   TILAPIA_FACT,
   TILAPIA_MEET_RANGE,
+  UNDERWATER_SPRINGS_FACT,
   WATER_HYACINTH_FACT,
   meetsTilapia,
   metThreatIds,
@@ -466,6 +469,60 @@ describe('black bass fact card copy (issue #78)', () => {
     expect(BLACK_BASS_MEET_RANGE).toBe(180);
     expect(BLACK_BASS_MEET_RANGE).toBeGreaterThanOrEqual(BLACK_BASS.lungeRange);
   });
+});
+
+describe('anchor and mud seep fact card copy (issue #194)', () => {
+  it('has the anchor-drop id, name, title and body, and no hint of its own', () => {
+    expect(ANCHOR_DROP_FACT).toEqual({
+      id: 'anchor-drop',
+      name: 'Anchor',
+      title: 'Anchors',
+      body: 'Boaters lower a heavy anchor on a chain down to the canal bed. It holds the boat still. When it is time to go, they pull it back up.',
+    });
+    expect(ANCHOR_DROP_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(ANCHOR_DROP_FACT)).toBe(true);
+  });
+
+  it('has the mud-seep id, name, title and body, and no hint of its own', () => {
+    expect(MUD_SEEP_FACT).toEqual({
+      id: 'mud-seep',
+      name: 'Mud seep',
+      title: 'Mud bubbles',
+      body: 'Canal mud is full of tiny living things, too small to see. They break down old leaves and plants and make gas that rises up as bubbles.',
+    });
+    expect(MUD_SEEP_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(MUD_SEEP_FACT)).toBe(true);
+  });
+
+  it('has ids apart from the other cards and from each other', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      UNDERWATER_SPRINGS_FACT.id,
+      BLACK_BASS_FACT.id,
+      ...REFUGE_FACT_CARDS.map((card) => card.id),
+    ];
+    expect(others).not.toContain(ANCHOR_DROP_FACT.id);
+    expect(others).not.toContain(MUD_SEEP_FACT.id);
+    expect(ANCHOR_DROP_FACT.id).not.toBe(MUD_SEEP_FACT.id);
+  });
+
+  it.each([ANCHOR_DROP_FACT, MUD_SEEP_FACT].flatMap((card) => [card.name, card.title, card.body]))('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it.each([ANCHOR_DROP_FACT, MUD_SEEP_FACT].flatMap((card) => [card.name, card.title, card.body]))(
+    '"%s" has no fire, volcano or rot words',
+    (text) => {
+      expect(text).not.toMatch(/\b(fire|flam\w*|burn\w*|volcan\w*|lava|rot\w*|smell\w*|stink\w*)\b/i);
+    },
+  );
 });
 
 describe('refuge fact card copy', () => {
