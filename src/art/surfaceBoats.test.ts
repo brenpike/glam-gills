@@ -5,11 +5,14 @@
  * routes move. No Phaser is loaded.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { AREAS, habitatById, type AreaData } from '../logic/areas';
 import { DEEP_CANAL_LAYOUT } from '../logic/deepCanalLayout';
+import { DEV_AREAS } from '../logic/devAreas';
 import { PUNTING_POLE, STALACTITE_DRIP, movingHazardBaseY, movingHazardSpawn } from '../logic/movingHazards';
 import { trajineraSpawn } from '../logic/trajineras';
 import { SURF } from '../logic/zone';
 import { MOORED_HULL_TEX, TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
+import { habitatLook } from './habitatLook';
 import { MOVING_HAZARD_LOOKS } from './movingHazardTextures';
 import {
   MOORED_HULL_GAP,
@@ -159,5 +162,70 @@ describe('moored hulls on the current Area 8 layout', () => {
   it('still sets some whole hulls in Area 8; a short row may get the shade only', () => {
     const total = rects.reduce((sum, rect) => sum + mooredHullSlots(rect, spans, hullW).length, 0);
     expect(total).toBeGreaterThan(0);
+  });
+});
+
+/** Every area and dev area, each with its look resolved from its own look or its habitat's. */
+const ALL_AREAS: readonly Readonly<AreaData>[] = [...AREAS, ...DEV_AREAS];
+
+/** The look an area is drawn with: its own look variant, else its habitat's look. Throws for an unknown habitat. */
+function lookAreaUp(area: Readonly<AreaData>): ReturnType<typeof habitatLook> {
+  const habitat = habitatById(area.habitatId);
+  if (habitat === undefined) throw new Error(`area ${area.id} has unknown habitat ${area.habitatId}`);
+  return habitatLook(area.look ?? habitat.look);
+}
+
+/** True when two x-extents leave at least SURFACE_BOAT_GAP of water between them. */
+function isClearOf(a: Readonly<{ x0: number; x1: number }>, b: Readonly<{ x0: number; x1: number }>): boolean {
+  return a.x1 + SURFACE_BOAT_GAP <= b.x0 || b.x1 + SURFACE_BOAT_GAP <= a.x0;
+}
+
+/** A pair of span ids, sorted, as one string. */
+function namePair(first: string, second: string): string {
+  return [first, second].sort().join(' + ');
+}
+
+/** Every pair of surface boats in one area closer than SURFACE_BOAT_GAP, named by id with both extents. */
+function findCrowdedPairs(spans: readonly Readonly<SurfaceBoatSpan>[]): { pair: string; detail: string }[] {
+  const crowded: { pair: string; detail: string }[] = [];
+  for (let i = 0; i < spans.length; i++) {
+    for (let j = i + 1; j < spans.length; j++) {
+      const [a, b] = [spans[i], spans[j]];
+      if (isClearOf(a, b)) continue;
+      crowded.push({ pair: namePair(a.id, b.id), detail: `${a.id} ${a.x0}..${a.x1} and ${b.id} ${b.x0}..${b.x1}` });
+    }
+  }
+  return crowded;
+}
+
+/**
+ * The one known overlap: two Area 5 punting poles whose bows and shadows overlap, tracked by issue
+ * #198 (https://github.com/brenpike/glam-gills/issues/198). The test below fails once it is gone,
+ * so the exception is removed with the fix.
+ */
+const KNOWN_OVERLAP = namePair('chinampa-2/punting-pole-4', 'chinampa-2/punting-pole-5');
+
+describe('surface boats in every area', () => {
+  it('keeps every two surface boats in an area at least SURFACE_BOAT_GAP apart, except the one pair in issue #198', () => {
+    const crowded = ALL_AREAS.flatMap((area) => findCrowdedPairs(surfaceBoatSpans(area.layout)));
+    expect(crowded.filter((entry) => entry.pair !== KNOWN_OVERLAP).map((entry) => entry.detail)).toEqual([]);
+  });
+
+  it('still has the two Area 5 poles of issue #198 overlapping; remove the exception when they are fixed', () => {
+    const crowded = ALL_AREAS.flatMap((area) => findCrowdedPairs(surfaceBoatSpans(area.layout)));
+    expect(crowded.map((entry) => entry.pair)).toContain(KNOWN_OVERLAP);
+  });
+
+  it('keeps every gliding trajinera at least SURFACE_BOAT_GAP from every moored row in a deep canal area', () => {
+    const deepCanalAreas = ALL_AREAS.filter((area) => lookAreaUp(area).deepCanalProps);
+    expect(deepCanalAreas.length).toBeGreaterThan(0);
+    for (const area of deepCanalAreas) {
+      const boats = surfaceBoatSpans({ trajineras: area.layout.trajineras });
+      for (const boat of boats) {
+        for (const rect of area.layout.bankOverhangs ?? []) {
+          expect(isClearOf(boat, rect), `${area.id}: ${boat.id} ${boat.x0}..${boat.x1} and moored row ${rect.x0}..${rect.x1}`).toBe(true);
+        }
+      }
+    }
   });
 });
