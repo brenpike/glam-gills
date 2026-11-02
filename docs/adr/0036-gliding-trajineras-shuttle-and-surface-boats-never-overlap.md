@@ -33,7 +33,7 @@ The gliding hull was also painted as a striped 120 x 60 slab, with a dot row and
 
 **Area 8's routes move clear of every pole boat.** `trajinera-1` runs x 1320 to 1720, heading right first, offset 0 s, resting 2.0 s at each end. `trajinera-2` runs x 2700 to 3040, heading left first, offset 3 s, resting about 2.86 s. Each route, with its art, is clear of every pole's boat, every moored row and the raised stretch of the divider. The main path still runs under both hull bands.
 
-**Surface boats never overlap.** `src/art/surfaceBoats.ts` measures the x-extent of each surface boat's art: x − 74 to x + 82 for a punting pole (its bow and shadow frames), and the whole route widened by 10 px at each end for a gliding trajinera (its hull and shadow frames). A test over every area and every dev area keeps any two surface boats at least 8 px apart (`SURFACE_BOAT_GAP`). It has one named exception: Area 5's `chinampa-2/punting-pole-4` and `chinampa-2/punting-pole-5`, whose boats overlap (owner Q3, option A; issue #198). The test also checks that the exception still overlaps, so it fails when #198 is fixed and the exception must be removed then. Each gliding route is also kept at least 8 px from every moored row.
+**Surface boats never overlap.** `src/art/surfaceBoats.ts` measures the x-extent of each surface boat's art: x − 74 to x + 82 for a punting pole (its bow and shadow frames), and the whole route widened by 10 px at each end for a gliding trajinera (its hull and shadow frames). A test over every area and every dev area keeps any two surface boats at least 8 px apart (`SURFACE_BOAT_GAP`). It has one named exception: Area 5's `chinampa-2/punting-pole-4` and `chinampa-2/punting-pole-5`, whose boats overlap (owner Q3, option A; issue #198). The test also checks that the exception still overlaps, so it fails when #198 is fixed and the exception must be removed then. Resolved by issue #198 (2026-11-02, PRD open question 601): `chinampa-2/punting-pole-5` is removed, and the test has no exception. Each gliding route is also kept at least 8 px from every moored row.
 
 **Moored rows are whole boats in free water.** Each moored row is now a shade plus whole hulls.
 
@@ -51,7 +51,7 @@ The gliding hull was also painted as a striped 120 x 60 slab, with a dot row and
 - Area 8's golden snapshot was re-pinned by hand, for the new spans, the shuttle's pushes and their knock-on effects only. Area 8's one-leg times were measured again: the surface lane to the exit 63.6 s to 60.6 s, and the full route 223.2 s to 239.1 s. Both are still under their limits of 180 s and 360 s.
 - The hiding spots, the bank cover rects and the danger bar are unchanged. Snacks still keep clear of each hull band, the top 60 px of water under the whole span, which now sits on the new spans.
 - A new surface boat in any area is caught by the test if its art overlaps another surface boat's. Moored hulls take their places from the other boats, so moving a pole or a route moves the hulls with it.
-- Area 5's pole overlap stays until #198 fixes it.
+- Area 5's pole overlap stays until #198 fixes it. Resolved by issue #198 (2026-11-02): Area 5's fifth pole is removed, so Area 5 has four poles and no pole boats overlap.
 - The art style guide, the PRD (N3, the Tuning values and open questions 595 to 600) and CONTEXT.md describe the shuttle and the moored boats.
 
 ## Alternatives considered
@@ -63,4 +63,4 @@ The gliding hull was also painted as a striped 120 x 60 slab, with a dot row and
 | Keep the stretched moored texture and move the rows | The rows are the hiding spots' bank cover, so moving them changes the hiding spots and the fairness proofs. Squashed or stretched hulls would still show at other widths. |
 | Move the poles instead of the gliding routes | The poles' places meet the danger bar and the main path's 36 px gap. The gliding routes could move with less knock-on. |
 | A few snacks along the top of the water under the route (Q2, option B) | It changes the snack layout and the fairness proofs. It is kept as a follow-up in case the push still feels pointless after play-testing. |
-| Fix Area 5's pole overlap now (Q3) | It changes a finished area and its golden snapshot. It is tracked as issue #198 and named in the test. |
+| Fix Area 5's pole overlap now (Q3) | It changes a finished area and its golden snapshot. It is tracked as issue #198 and named in the test. Issue #198 has since fixed it (2026-11-02, PRD open question 601). |
