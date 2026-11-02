@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-11-01
+
+### Changed
+
+- The wording of the "Anchors" and "Mud bubbles" fact cards is final. Nothing changes in play.
+
 ## [0.60.0] - 2026-11-01
 
 ### Added

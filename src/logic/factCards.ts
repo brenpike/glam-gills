@@ -271,7 +271,8 @@ export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
 
 /**
  * The anchor fact card, shown the first time the axolotl meets an anchor drop (PRD C13; issue #194,
- * owner Q1 to Q3 of 2026-11-01). Provisional copy.
+ * owner Q1 to Q3 of 2026-11-01). The title and body are approved by the owner (2026-11-01, PRD open
+ * question 592).
  * Sources, checked 2026-11-01 (web research only; the game fetches nothing):
  * Wikipedia, "Anchor", https://en.wikipedia.org/wiki/Anchor (an anchor is "a device, normally made of
  * metal, used to secure a vessel to the bed of a body of water to prevent the craft from drifting due
@@ -286,7 +287,7 @@ export const GEYSER_FACT: Readonly<FactCard> = Object.freeze({
  * https://www.boat-ed.com/newyork/studyGuide/Retrieving-an-Anchor/10103501_41541/ ("Move the boat
  * directly over the anchor while pulling in the line. Pulling the anchor straight up should break it
  * free.").
- * Owner to verify: "heavy" reads Wikipedia's deadweight anchor and chain weight, not every anchor;
+ * The owner checked these points with the wording on 2026-11-01: "heavy" reads Wikipedia's deadweight anchor and chain weight, not every anchor;
  * "on a chain" reads the rode of rope, chain or both; "the canal bed" reads the sources' bed or
  * bottom of a body of water, as no source names canals or Xochimilco, and whether Xochimilco's
  * boaters use anchors is not checked; "holds the boat still" reads "secure a vessel" and "prevent
@@ -301,7 +302,8 @@ export const ANCHOR_DROP_FACT: Readonly<FactCard> = Object.freeze({
 
 /**
  * The mud seep fact card, shown the first time the axolotl meets a mud seep (PRD C13; issue #194,
- * owner Q1 to Q3 of 2026-11-01). Provisional copy.
+ * owner Q1 to Q3 of 2026-11-01). The title and body are approved by the owner (2026-11-01, PRD open
+ * question 593).
  * Sources, checked 2026-11-01 (web research only; the game fetches nothing):
  * U.S. Geological Survey, "WaterWords-Methanogen", 2019-06-15,
  * https://www.usgs.gov/news/waterwords-methanogen (a methanogen is a microbe that produces methane,
@@ -319,7 +321,7 @@ export const ANCHOR_DROP_FACT: Readonly<FactCard> = Object.freeze({
  * ("Most methanogenesis, or methane production, occurs in oxygen-poor environments"; plants "provide
  * much of the carbon needed for methane producing processes in wetlands"; bubbles come from "methane
  * building up over time in the soil, forming pockets of methane gas").
- * Owner to verify: "tiny living things, too small to see" reads the sources' microbes and
+ * The owner checked these points with the wording on 2026-11-01: "tiny living things, too small to see" reads the sources' microbes and
  * single-celled microbes; "canal mud" reads wetland soil and lake-bottom mud, as no source names
  * canals or Xochimilco; "old leaves and plants" reads organic material and plant remains; "full of"
  * is not checked against a count; in the Science News Explores lake the plant-eating microbes are in
