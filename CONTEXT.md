@@ -94,7 +94,7 @@ A floating mat of water hyacinth in the Chinampa gardens, Area 5's **Timing elem
 _Avoid_: wall, terrain
 
 **Gliding trajinera**:
-A painted trajinera boat that glides across a span of the surface lane of a **Two-lane area**, Area 8's **Timing element** (`'gliding-trajinera'` in code). A new crossing starts every 6 s; the boat glides at 70 px/s, its hull is 120 px long and blocks the top 60 px of water, and its shadow leads the hull by 1 s as the warning. A hull that touches the **Explorer** pushes it out the shortest way, down or sideways, at 120 px/s, with a 0.5 s cooldown per boat. A push is gentle: it never costs a leg, is never a **Hit**, drops no find and starts no **Protected time**, so the Shell **Perk** plays no part. It is reported as a trip result (`pushed`), not a trip event. Only the boat's bright painted bow shows, with no people and no fishing. It is not a **Moving hazard** and not a **Danger part**, so the **Danger bar** never counts it. Snacks keep clear of its hull band.
+A painted trajinera boat that shuttles back and forth over a span of the surface lane of a **Two-lane area**, Area 8's **Timing element** (`'gliding-trajinera'` in code). A new crossing starts every 6 s, each heading the other way from the last: the whole boat rests at the end it starts from, at least 1 s, then glides at 70 px/s and reaches the far end as the crossing ends. It is always drawn whole, never cut off at its span's ends. Its hull is 120 px long and blocks the top 60 px of water under it. Its shadow is the whole hull 1 s later, as the warning: it slides out from under a resting boat 1 s before the boat moves, with no fade. A hull that touches the **Explorer** pushes it out the shortest way, down or sideways, at 120 px/s, with a 0.5 s cooldown per boat. A push is gentle: it never costs a leg, is never a **Hit**, drops no find and starts no **Protected time**, so the Shell **Perk** plays no part. It is reported as a trip result (`pushed`), not a trip event. Only the boat's bright painted bow shows, with no people and no fishing. It is not a **Moving hazard** and not a **Danger part**, so the **Danger bar** never counts it. Snacks keep clear of its hull band.
 _Avoid_: moving hazard, barge, punting pole (the pole is a **Moving hazard**), moored trajinera
 
 **Puzzle element**:
@@ -134,7 +134,7 @@ The solid line of **Rock walls** that splits a **Two-lane area** into its lanes 
 _Avoid_: wall alone, floor, ceiling
 
 **Moored trajinera**:
-A painted trajinera tied up at the bank of the surface lane (`bankOverhangs` in area data), scenery that gives the water under it bank cover for **Hiding spots**. It never moves, never pushes and is not a **Timing element**.
+A painted trajinera tied up at the bank of the surface lane (`bankOverhangs` in area data), scenery that gives the water under it bank cover for **Hiding spots**. It never moves, never pushes and is not a **Timing element**. A row of them is a shade over the whole bank cover with whole, unstretched boats only in the free water between the other surface boats, so no surface boat overlaps another; a short row may show the shade only.
 _Avoid_: gliding trajinera (that is the moving boat), anchor drop's boat (that boat is part of an **Anchor drop**, a **Moving hazard**, not scenery)
 
 **Sunken trajinera**:
