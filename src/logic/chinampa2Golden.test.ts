@@ -4,6 +4,21 @@
  * and common carp, punting poles, mobile snacks, water hyacinth mats, gap current and ghost nets
  * included, played along a fixed scripted swim that parks by every tilapia, snake and carp (issue
  * #118, ND-13; issue #135, ND-8). Any change here means a shared rule changed chinampa-2 behaviour.
+ *
+ * Re-pinned by hand on 2026-11-02, when Area 5's fifth punting pole (chinampa-2/punting-pole-5,
+ * x 1840) was removed so the pole boats stop overlapping (issue #198). The scripted swim now runs
+ * through four poles' sweeps. Only these entries changed, each for that reason:
+ * - Projection: the default zone loses the punting-pole-5 entry, and every extra seed's hash and
+ *   length change because its zone loses the same pole.
+ * - Placements: spot-bank-4's nearest-threat distance went from 175 to 255 when pole 5 was removed,
+ *   which rescales the Common pool's risk weights in placement.ts; no spot's risk band changed.
+ *   So some draws among spot-bank-1..6 move: 8 default seeds, 3 banked-treasure seeds, 8
+ *   returned-treasure seeds, and the extra-seed placement hash (length unchanged). Treasure ids,
+ *   their order and count, the cave and current spots, +pot and every spot-bank-7..14 spot stay
+ *   put.
+ * - Trip trace: at 299s pole 5 is no longer met, so punting-pole drops from that line's met list;
+ *   pole 4 is met at 300s as before.
+ *   The encounter trace did not change.
  */
 import { describe, expect, it } from 'vitest';
 import { CHINAMPA_2_TREASURES } from './catalogue';
@@ -325,7 +340,7 @@ describe('chinampa-2 golden', () => {
 
   it("scripts a swim that runs through every punting pole's sweep", () => {
     const spawns = defaultZone.movingHazards ?? [];
-    expect(spawns).toHaveLength(5);
+    expect(spawns).toHaveLength(4);
     for (const spawn of spawns) {
       expect(positions.some((pos) => shapeDistance(pos, movingHazardSweep(spawn)) === 0)).toBe(true);
     }

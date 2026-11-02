@@ -184,40 +184,23 @@ function isClearOf(a: Readonly<{ x0: number; x1: number }>, b: Readonly<{ x0: nu
   return a.x1 + SURFACE_BOAT_GAP <= b.x0 || b.x1 + SURFACE_BOAT_GAP <= a.x0;
 }
 
-/** A pair of span ids, sorted, as one string. */
-function namePair(first: string, second: string): string {
-  return [first, second].sort().join(' + ');
-}
-
 /** Every pair of surface boats in one area closer than SURFACE_BOAT_GAP, named by id with both extents. */
-function findCrowdedPairs(spans: readonly Readonly<SurfaceBoatSpan>[]): { pair: string; detail: string }[] {
-  const crowded: { pair: string; detail: string }[] = [];
+function findCrowdedPairs(spans: readonly Readonly<SurfaceBoatSpan>[]): string[] {
+  const crowded: string[] = [];
   for (let i = 0; i < spans.length; i++) {
     for (let j = i + 1; j < spans.length; j++) {
       const [a, b] = [spans[i], spans[j]];
       if (isClearOf(a, b)) continue;
-      crowded.push({ pair: namePair(a.id, b.id), detail: `${a.id} ${a.x0}..${a.x1} and ${b.id} ${b.x0}..${b.x1}` });
+      crowded.push(`${a.id} ${a.x0}..${a.x1} and ${b.id} ${b.x0}..${b.x1}`);
     }
   }
   return crowded;
 }
 
-/**
- * The one known overlap: two Area 5 punting poles whose bows and shadows overlap, tracked by issue
- * #198 (https://github.com/brenpike/glam-gills/issues/198). The test below fails once it is gone,
- * so the exception is removed with the fix.
- */
-const KNOWN_OVERLAP = namePair('chinampa-2/punting-pole-4', 'chinampa-2/punting-pole-5');
-
 describe('surface boats in every area', () => {
-  it('keeps every two surface boats in an area at least SURFACE_BOAT_GAP apart, except the one pair in issue #198', () => {
+  it('keeps every two surface boats in an area at least SURFACE_BOAT_GAP apart', () => {
     const crowded = ALL_AREAS.flatMap((area) => findCrowdedPairs(surfaceBoatSpans(area.layout)));
-    expect(crowded.filter((entry) => entry.pair !== KNOWN_OVERLAP).map((entry) => entry.detail)).toEqual([]);
-  });
-
-  it('still has the two Area 5 poles of issue #198 overlapping; remove the exception when they are fixed', () => {
-    const crowded = ALL_AREAS.flatMap((area) => findCrowdedPairs(surfaceBoatSpans(area.layout)));
-    expect(crowded.map((entry) => entry.pair)).toContain(KNOWN_OVERLAP);
+    expect(crowded).toEqual([]);
   });
 
   it('keeps every gliding trajinera at least SURFACE_BOAT_GAP from every moored row in a deep canal area', () => {
