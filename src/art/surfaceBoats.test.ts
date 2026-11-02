@@ -163,6 +163,10 @@ describe('moored hulls on the current Area 8 layout', () => {
     const total = rects.reduce((sum, rect) => sum + mooredHullSlots(rect, spans, hullW).length, 0);
     expect(total).toBeGreaterThan(0);
   });
+
+  it('sets the 4 hulls ADR 0036 records: one west, none in the short row, one middle, two east', () => {
+    expect(rects.map((rect) => mooredHullSlots(rect, spans, hullW).length)).toEqual([1, 0, 1, 2]);
+  });
 });
 
 /** Every area and dev area, each with its look resolved from its own look or its habitat's. */

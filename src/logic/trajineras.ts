@@ -195,7 +195,8 @@ export function trajineraHeading(boat: Readonly<TrajineraSpawn>, t: number): Gli
  * `period` seconds after, heading as trajineraHeading says: the hull rests at the span's end it
  * starts from for trajineraRest seconds, then glides at `speed` and reaches the far end as the
  * crossing ends, so the next crossing starts back from there. The schedule repeats every two
- * periods; any `t` is valid, negative included.
+ * periods; any finite `t` is valid, negative included. Element time is always finite, so a
+ * non-finite `t` is not checked for.
  */
 export function trajineraHull(
   boat: Readonly<TrajineraSpawn>,
