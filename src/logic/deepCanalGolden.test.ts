@@ -6,6 +6,17 @@
  * hull glides over and pushes the axolotl aside, swims on to the exit pocket, then goes back west
  * along the deep lane and parks by every black bass loop (issue #78). Any change here means a shared
  * rule changed deep-canal-1 behaviour.
+ *
+ * Re-pinned by hand on 2026-11-01, when the trajineras began to shuttle whole and rest at each end,
+ * and Area 8's routes moved clear of every pole's boat (trajinera-1 1250..1550 to 1320..1720,
+ * trajinera-2 2700..3000 to 2700..3040). Only these entries changed, each for that reason:
+ * - Projection: the default zone's two new spans, and every extra seed's hash; seed 1234's length
+ *   too, as a worm or bug start that fell in a new hull band moved out of it.
+ *   Placements did not change.
+ * - Encounter trace: the script now waits at the new span middles (x 1520 and x 2870), so the swim
+ *   and every threat's meeting with it shift.
+ * - Trip trace: the shuttling hulls push at new frames and places, the first trips end a few frames
+ *   later, and the met and legsLost lines after them follow.
  */
 import { describe, expect, it } from 'vitest';
 import { DEEP_CANAL_TREASURES } from './catalogue';

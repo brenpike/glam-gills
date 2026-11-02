@@ -351,18 +351,47 @@ describe('gliding trajinera hull (guide 7b, 10; issue #78, ND-8)', () => {
     expect(ys[2].bottom).toBeGreaterThanOrEqual(TRAJINERAS.hullDepth);
   });
 
-  it('paints a row of white dots on the teal band, inside the hull', () => {
-    const whites = fills(painted).filter((p) => p.style === WHITE && p.cmds[0][0] === 'moveTo' && p.cmds[1][0] === 'ellipse');
-    // The flower centres are white too and sit above the water line; the dots are below it.
-    const dots = whites.filter((p) => extentOf(p.cmds).minY > 0);
-    expect(dots.length).toBeGreaterThanOrEqual(8);
-    for (const dot of dots) {
-      const e = extentOf(dot.cmds);
-      expect(e.minX).toBeGreaterThan(hull.minX);
-      expect(e.maxX).toBeLessThan(hull.maxX);
-      expect(e.minY).toBeGreaterThan(30);
-      expect(e.maxY).toBeLessThan(TRAJINERAS.hullDepth - 12);
+  it('keeps the painted bands in the top 30 px under the rail and runs teal to the bottom', () => {
+    const bands = fills(painted).filter((p) => p.cmds[0][0] === 'fillRect' && [BOAT_PINK, BOAT_ORANGE, BOAT_TEAL].includes(p.style));
+    const [pink, orange, teal] = bands.map((b) => ({ top: b.cmds[0][2], bottom: b.cmds[0][2] + b.cmds[0][4] }));
+    expect(orange.bottom - pink.top).toBeLessThanOrEqual(30);
+    expect(teal.top).toBeLessThanOrEqual(pink.top + 30);
+    // The teal body is the larger part of the depth below the stripe.
+    expect(Math.min(teal.bottom, TRAJINERAS.hullDepth) - teal.top).toBeGreaterThan(orange.bottom - pink.top);
+  });
+
+  it('has no white dot row and no vertical seams: two or three lengthwise plank lines on the teal body instead', () => {
+    // The flower centres are the only white fills, and they sit above the water line.
+    const whiteBelow = fills(painted).filter((p) => p.style === WHITE && extentOf(p.cmds).minY > 0);
+    expect(whiteBelow).toHaveLength(0);
+    const planks = strokes(painted).filter((p) => p.style === BOAT_SEAM);
+    expect(planks.length).toBeGreaterThanOrEqual(2);
+    expect(planks.length).toBeLessThanOrEqual(3);
+    const tealTop = fills(painted).find((p) => p.style === BOAT_TEAL && p.cmds[0][0] === 'fillRect')!.cmds[0][2];
+    for (const plank of planks) {
+      const [a, b] = pointsOf(plank.cmds);
+      expect(a.y, 'lengthwise (horizontal)').toBe(b.y);
+      expect(a.y).toBeGreaterThan(tealTop);
+      expect(a.y).toBeLessThan(TRAJINERAS.hullDepth - 4);
+      expect(a.x).toBeLessThan(hull.minX);
+      expect(b.x).toBeGreaterThan(hull.maxX);
+      // Alpha detail line, never ink.
+      expect(alphaOf(plank.style)).toBeLessThan(1);
     }
+  });
+
+  it('rounds the lower corner on the prow side (radius 24) more than the stern side (radius 12)', () => {
+    const cmds = hullFill.cmds;
+    const depth = TRAJINERAS.hullDepth;
+    const half = TRAJINERAS.hullLength / 2;
+    // The bottom edge's straight run starts 12 in from the stern and ends 24 in from the prow.
+    const flat = pointsOf(cmds).filter((p) => p.y === depth);
+    expect(Math.min(...flat.map((p) => p.x))).toBe(-half + 12);
+    expect(Math.max(...flat.map((p) => p.x))).toBe(half - 24);
+    // The straight sides end where the corner curves start: 12 up at the stern, 24 up at the prow.
+    const sides = (x: number) => pointsOf(cmds).filter((p) => p.x === x && p.y > 0).map((p) => p.y);
+    expect(Math.max(...sides(-half).filter((y) => y < depth))).toBe(depth - 12);
+    expect(Math.max(...sides(half).filter((y) => y < depth))).toBe(depth - 24);
   });
 
   it('paints a flower arch of five flowers, a prow ball and no faces, people or text', () => {

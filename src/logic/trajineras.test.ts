@@ -611,9 +611,9 @@ describe('the solid hull (blockAtTrajineras, stepTrajineraLane)', () => {
   it("never ends a frame touching Area 8's trajinera-1 while Up is held through the cooldown (the review's case)", () => {
     let current = createTrajineraLane(AREA_8_BOATS, BOUNDS, AREA_8_ROCKS);
     const boat = current.boats[0];
-    expect(boat.trajinera).toEqual({ x0: 1250, x1: 1550, direction: 'right' });
+    expect(boat.trajinera).toEqual({ x0: 1320, x1: 1720, direction: 'right' });
     expect(boat.offset).toBe(0);
-    let state = restingAt({ x: 1390, y: 157 });
+    let state = restingAt({ x: 1460, y: 157 });
     let pushes = 0;
     let cooldownHolds = 0;
     for (let frame = 0; frame < 60; frame++) {

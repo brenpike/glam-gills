@@ -103,8 +103,9 @@ export const TRAJINERA_HULL_W: number = TRAJINERAS.hullLength;
 export const TRAJINERA_HULL_H: number = TRAJINERAS.hullDepth;
 const HALF_L = TRAJINERA_HULL_W / 2;
 const DEPTH = TRAJINERA_HULL_H;
-/** Corner radius of the hull's lower corners. */
-const HULL_CORNER = 12;
+/** Corner radius of the hull's lower corners: round at the prow end (+x), tighter at the stern, so the hull points the way it glides. */
+const HULL_CORNER_PROW = 24;
+const HULL_CORNER_STERN = 12;
 /** Height of the stern rail above the water line, and of the raised prow tip. */
 const STERN_TOP = -8;
 const PROW_TIP_Y = -26;
@@ -129,16 +130,19 @@ const FLOWER_CENTRE_R = 1.8;
 const FLOWER_LW = 2.4;
 /** The prow ball at the raised end. */
 const PROW_BALL: readonly [number, number, number] = [HALF_L - PROW_RUN - 8, PROW_TIP_Y - 1, 5];
-/** The painted bands down the hull: top y, bottom y and colour, clipped to the hull. The cream shows above them. */
+/**
+ * The painted bands down the hull: top y, bottom y and colour, clipped to the hull. The cream rail
+ * shows above them. Pink and orange are a slim stripe in the top 22 px under the rail, as on the
+ * punting pole's boat; teal runs on to the bottom, so the long low body reads as one painted hull.
+ */
 const GLIDER_BANDS: readonly (readonly [number, number, string])[] = [
   [8, 19, BOAT_PINK],
   [19, 30, BOAT_ORANGE],
   [30, DEPTH + 8, BOAT_TEAL],
 ];
-/** White dots on the teal band: a row of them across the hull. */
-const GLIDER_DOT_Y = 44;
-const GLIDER_DOT_R = 2.2;
-const GLIDER_DOT_STEP = 11;
+/** Lengthwise plank lines on the teal body, y below the water line. Alpha detail lines, never ink. */
+const GLIDER_PLANK_Y: readonly number[] = [41, 51];
+const GLIDER_PLANK_W = 1.6;
 /** Width of the ink gunwale line under the cream rail, on the gliding and the moored hulls. */
 export const RAIL_LINE_W = 2;
 
@@ -177,14 +181,14 @@ function gliderArchPath(): Path2D {
   return path;
 }
 
-/** The hull: a rounded flat bottom at the hull depth, straight sides, a low stern rail and a raised prow at +x. */
+/** The hull: a flat bottom at the hull depth, a lower corner of radius 24 at the prow and 12 at the stern, straight sides, a low stern rail and a raised prow at +x. */
 function gliderHullPath(): Path2D {
   const p = new Path2D();
   p.moveTo(-HALF_L, STERN_TOP);
-  p.lineTo(-HALF_L, DEPTH - HULL_CORNER);
-  p.quadraticCurveTo(-HALF_L, DEPTH, -HALF_L + HULL_CORNER, DEPTH);
-  p.lineTo(HALF_L - HULL_CORNER, DEPTH);
-  p.quadraticCurveTo(HALF_L, DEPTH, HALF_L, DEPTH - HULL_CORNER);
+  p.lineTo(-HALF_L, DEPTH - HULL_CORNER_STERN);
+  p.quadraticCurveTo(-HALF_L, DEPTH, -HALF_L + HULL_CORNER_STERN, DEPTH);
+  p.lineTo(HALF_L - HULL_CORNER_PROW, DEPTH);
+  p.quadraticCurveTo(HALF_L, DEPTH, HALF_L, DEPTH - HULL_CORNER_PROW);
   p.lineTo(HALF_L, PROW_FOOT);
   p.quadraticCurveTo(HALF_L, PROW_TIP_Y, HALF_L - PROW_RUN, PROW_TIP_Y);
   p.quadraticCurveTo(0, -4, -HALF_L, STERN_TOP);
@@ -195,7 +199,7 @@ function gliderHullPath(): Path2D {
 /**
  * Paint the gliding trajinera hull around its anchor. Layer order, back to front: the flower arch
  * (one inked teal tube), the hull (a BOAT_HULL blob, ink LW all round), the painted bands clipped to
- * the hull (pink, orange, teal), a row of white dots on the teal band, three plank seams, one shine
+ * the hull (pink, orange, teal), two lengthwise plank lines on the teal body, one shine
  * along the rail, the prow ball and five flowers on the arch. No people, no faces, no text.
  */
 export function paintTrajineraHull(ctx: CanvasRenderingContext2D): void {
@@ -210,15 +214,9 @@ export function paintTrajineraHull(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = colour;
     ctx.fillRect(-HALF_L - 4, top, TRAJINERA_HULL_W + 8, bottom - top);
   }
-  ctx.fillStyle = WHITE;
-  for (let x = -HALF_L + GLIDER_DOT_STEP; x < HALF_L - GLIDER_DOT_STEP / 2; x += GLIDER_DOT_STEP) {
-    const dot = new Path2D();
-    ell(dot, x, GLIDER_DOT_Y, GLIDER_DOT_R, GLIDER_DOT_R);
-    ctx.fill(dot);
-  }
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = GLIDER_PLANK_W;
   ctx.strokeStyle = BOAT_SEAM;
-  for (const x of [-HALF_L * 0.5, 0, HALF_L * 0.5]) ctx.stroke(line(x, 8, x, DEPTH));
+  for (const y of GLIDER_PLANK_Y) ctx.stroke(line(-HALF_L - 4, y, HALF_L + 4, y));
   // The gunwale line: a thin ink line under the cream rail, so the rail reads light over dark in greyscale.
   ctx.lineWidth = RAIL_LINE_W;
   ctx.strokeStyle = INK;

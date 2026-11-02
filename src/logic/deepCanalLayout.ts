@@ -184,13 +184,15 @@ const DIVIDER: readonly Readonly<RockWall>[] = Object.freeze([
 ]);
 
 /**
- * The two gliding trajineras (issue #78, ND-8), half a crossing out of step: `trajinera-1` gliding
- * right over `carp-0`'s east side and `tilapia-0`'s west side, `trajinera-2` gliding left over
- * `carp-1`. Each span is 300 px, clear of every pole, every moored boat and the raised run.
+ * The two gliding trajineras (issue #78, ND-8), half a crossing out of step, each shuttling whole
+ * between its span's ends: `trajinera-1` from `punting-pole-1`'s boat to the raised moored boat, over
+ * `tilapia-0`, on a 400 px span with a 2 s rest at each end; `trajinera-2` between the middle and
+ * east moored boats, over `carp-1`, on a 340 px span with about a 2.86 s rest. Each route is clear of
+ * every pole's boat, every moored boat and the raised run.
  */
 const TRAJINERAS: readonly Readonly<TrajineraSpawn>[] = Object.freeze([
-  trajineraAt(1, 0, 1250, 1550, 'right'),
-  trajineraAt(2, 3, 2700, 3000, 'left'),
+  trajineraAt(1, 0, 1320, 1720, 'right'),
+  trajineraAt(2, 3, 2700, 3040, 'left'),
 ]);
 
 /** The deep canal's Area 8, as area data: 8 screens across, 2 down. */
