@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-11-01
+
+### Fixed
+
+- Area 8's moored boats no longer overlap the punting pole boats or squash together. They are drawn as whole boats in the open water between them.
+- Each gliding boat now glides back and forth in full view, rests at each end and shows its shadow before it moves, instead of popping out of invisible lines.
+- The gliding boat now looks like a painted trajinera instead of a striped box.
+
 ## [0.60.1] - 2026-11-01
 
 ### Changed

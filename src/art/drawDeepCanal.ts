@@ -1,8 +1,8 @@
 /**
  * Deep canal props (issue #78, STEP-006; guide 3g, 7 and 10): the gliding trajinera hull and its
- * leading shadow, the moored hulls that cover the Common and Rare spots and hang over the banks,
- * the sunken old trajinera hull cave (back and front), the old canal-bed stones, and the side-canal
- * inflow marks.
+ * leading shadow, the moored shade that covers the Common and Rare spots and hangs over the banks,
+ * the whole moored hulls set on it, the sunken old trajinera hull cave (back and front), the old
+ * canal-bed stones, and the side-canal inflow marks.
  *
  * Every value is derived (provisional). Presentational only: no Phaser, no game state, no
  * randomness. The painters take an explicit context and draw at logical scale; the bakes belong to
@@ -34,7 +34,7 @@
 import { TRAJINERAS } from '../logic/trajineras';
 import { TAU, blob, ell, frameFromBounds, inkMany, line, seg, shape, type Seg, type TexSize } from './canvasKit';
 import { CAVE_H, CAVE_TEX, CAVE_W } from './drawFinds';
-import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_TEAL, BOAT_YELLOW, POLE_WOOD } from './drawPuntingPole';
+import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_TEAL, BOAT_YELLOW } from './drawPuntingPole';
 import { OUTFLOW_TEX, paintSpringOutflow } from './drawSpringCave';
 import { INK, LW, WHITE } from './palette';
 
@@ -103,8 +103,9 @@ export const TRAJINERA_HULL_W: number = TRAJINERAS.hullLength;
 export const TRAJINERA_HULL_H: number = TRAJINERAS.hullDepth;
 const HALF_L = TRAJINERA_HULL_W / 2;
 const DEPTH = TRAJINERA_HULL_H;
-/** Corner radius of the hull's lower corners. */
-const HULL_CORNER = 12;
+/** Corner radius of the hull's lower corners: round at the prow end (+x), tighter at the stern, so the hull points the way it glides. */
+const HULL_CORNER_PROW = 24;
+const HULL_CORNER_STERN = 12;
 /** Height of the stern rail above the water line, and of the raised prow tip. */
 const STERN_TOP = -8;
 const PROW_TIP_Y = -26;
@@ -129,16 +130,19 @@ const FLOWER_CENTRE_R = 1.8;
 const FLOWER_LW = 2.4;
 /** The prow ball at the raised end. */
 const PROW_BALL: readonly [number, number, number] = [HALF_L - PROW_RUN - 8, PROW_TIP_Y - 1, 5];
-/** The painted bands down the hull: top y, bottom y and colour, clipped to the hull. The cream shows above them. */
+/**
+ * The painted bands down the hull: top y, bottom y and colour, clipped to the hull. The cream rail
+ * shows above them. Pink and orange are a slim stripe in the top 22 px under the rail, as on the
+ * punting pole's boat; teal runs on to the bottom, so the long low body reads as one painted hull.
+ */
 const GLIDER_BANDS: readonly (readonly [number, number, string])[] = [
   [8, 19, BOAT_PINK],
   [19, 30, BOAT_ORANGE],
   [30, DEPTH + 8, BOAT_TEAL],
 ];
-/** White dots on the teal band: a row of them across the hull. */
-const GLIDER_DOT_Y = 44;
-const GLIDER_DOT_R = 2.2;
-const GLIDER_DOT_STEP = 11;
+/** Lengthwise plank lines on the teal body, y below the water line. Alpha detail lines, never ink. */
+const GLIDER_PLANK_Y: readonly number[] = [41, 51];
+const GLIDER_PLANK_W = 1.6;
 /** Width of the ink gunwale line under the cream rail, on the gliding and the moored hulls. */
 export const RAIL_LINE_W = 2;
 
@@ -177,14 +181,14 @@ function gliderArchPath(): Path2D {
   return path;
 }
 
-/** The hull: a rounded flat bottom at the hull depth, straight sides, a low stern rail and a raised prow at +x. */
+/** The hull: a flat bottom at the hull depth, a lower corner of radius 24 at the prow and 12 at the stern, straight sides, a low stern rail and a raised prow at +x. */
 function gliderHullPath(): Path2D {
   const p = new Path2D();
   p.moveTo(-HALF_L, STERN_TOP);
-  p.lineTo(-HALF_L, DEPTH - HULL_CORNER);
-  p.quadraticCurveTo(-HALF_L, DEPTH, -HALF_L + HULL_CORNER, DEPTH);
-  p.lineTo(HALF_L - HULL_CORNER, DEPTH);
-  p.quadraticCurveTo(HALF_L, DEPTH, HALF_L, DEPTH - HULL_CORNER);
+  p.lineTo(-HALF_L, DEPTH - HULL_CORNER_STERN);
+  p.quadraticCurveTo(-HALF_L, DEPTH, -HALF_L + HULL_CORNER_STERN, DEPTH);
+  p.lineTo(HALF_L - HULL_CORNER_PROW, DEPTH);
+  p.quadraticCurveTo(HALF_L, DEPTH, HALF_L, DEPTH - HULL_CORNER_PROW);
   p.lineTo(HALF_L, PROW_FOOT);
   p.quadraticCurveTo(HALF_L, PROW_TIP_Y, HALF_L - PROW_RUN, PROW_TIP_Y);
   p.quadraticCurveTo(0, -4, -HALF_L, STERN_TOP);
@@ -195,7 +199,7 @@ function gliderHullPath(): Path2D {
 /**
  * Paint the gliding trajinera hull around its anchor. Layer order, back to front: the flower arch
  * (one inked teal tube), the hull (a BOAT_HULL blob, ink LW all round), the painted bands clipped to
- * the hull (pink, orange, teal), a row of white dots on the teal band, three plank seams, one shine
+ * the hull (pink, orange, teal), two lengthwise plank lines on the teal body, one shine
  * along the rail, the prow ball and five flowers on the arch. No people, no faces, no text.
  */
 export function paintTrajineraHull(ctx: CanvasRenderingContext2D): void {
@@ -210,15 +214,9 @@ export function paintTrajineraHull(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = colour;
     ctx.fillRect(-HALF_L - 4, top, TRAJINERA_HULL_W + 8, bottom - top);
   }
-  ctx.fillStyle = WHITE;
-  for (let x = -HALF_L + GLIDER_DOT_STEP; x < HALF_L - GLIDER_DOT_STEP / 2; x += GLIDER_DOT_STEP) {
-    const dot = new Path2D();
-    ell(dot, x, GLIDER_DOT_Y, GLIDER_DOT_R, GLIDER_DOT_R);
-    ctx.fill(dot);
-  }
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = GLIDER_PLANK_W;
   ctx.strokeStyle = BOAT_SEAM;
-  for (const x of [-HALF_L * 0.5, 0, HALF_L * 0.5]) ctx.stroke(line(x, 8, x, DEPTH));
+  for (const y of GLIDER_PLANK_Y) ctx.stroke(line(-HALF_L - 4, y, HALF_L + 4, y));
   // The gunwale line: a thin ink line under the cream rail, so the rail reads light over dark in greyscale.
   ctx.lineWidth = RAIL_LINE_W;
   ctx.strokeStyle = INK;
@@ -331,17 +329,18 @@ export function paintTrajineraShadow(ctx: CanvasRenderingContext2D): void {
 }
 
 // ---------------------------------------------------------------------------
-// Moored hulls: cover over the spots and the bank overhang
+// Moored boats: the shade over the spots and the bank overhang, and whole hulls on it
 // ---------------------------------------------------------------------------
 
 /**
  * The water under a row of moored boats, as a rect of the zone: nominal 440 x 60, stretched to the
- * rect like the bank overhang and the rock ledge. The one texture serves both uses: the cover over
- * the Common and Rare spots, and the overhang on a bank.
+ * rect like the bank overhang and the rock ledge. The shade is the cover over the Common and Rare
+ * spots and the overhang on a bank; the scene sets whole, unstretched hulls on it where no other
+ * surface boat is (surfaceBoats.ts mooredHullSlots).
  */
 export const MOORED_W = 440;
 export const MOORED_H = 60;
-/** Texture frame of the moored hulls. Anchor is the top-left corner of the rect, like the chinampa overhang. */
+/** Texture frame of the moored shade. Anchor is the top-left corner of the rect, like the chinampa overhang. */
 export const MOORED_TEX: TexSize = frameFromBounds(0, 0, MOORED_W, MOORED_H, PAD);
 /** The shade under the boats, [y as a fraction of the height, alpha]: nearly solid over the spots, fading to nothing at the bottom. */
 export const MOORED_SHADE_STOPS: readonly (readonly [number, number])[] = [
@@ -349,31 +348,36 @@ export const MOORED_SHADE_STOPS: readonly (readonly [number, number])[] = [
   [0.8, 0.8],
   [1, 0],
 ];
+/** One moored hull's length along the water line, px. */
+export const MOORED_HULL_W = 120;
 /** How deep a moored hull hangs below the water line, px: above the spots, which sit about 30 down. */
 export const MOORED_HULL_DEPTH = 26;
 /** Width of a moored hull's lower corner curve. */
 const MOORED_CORNER = 16;
 const MOORED_LW = LW * 0.8;
-
-interface MooredHull {
-  /** Left end, px from the rect's left. */
-  readonly x0: number;
-  readonly w: number;
-  /** The three painted bands, top to bottom. */
-  readonly bands: readonly [string, string, string];
-}
-
 /**
- * Three hulls side by side, in drawing order, with 14 px between them, each with its own order of
- * the three paint colours so they do not read as one. All inside the rect (x 8 to 432).
+ * The three orders of the paint colours down a moored hull, top to bottom: the scene gives
+ * neighbouring hulls different orders, so they do not read as one.
  */
-export const MOORED_HULLS: readonly MooredHull[] = [
-  { x0: 8, w: 132, bands: [BOAT_PINK, BOAT_ORANGE, BOAT_TEAL] },
-  { x0: 154, w: 132, bands: [BOAT_TEAL, BOAT_PINK, BOAT_ORANGE] },
-  { x0: 300, w: 132, bands: [BOAT_ORANGE, BOAT_TEAL, BOAT_PINK] },
+export const MOORED_HULL_BANDS: readonly (readonly [string, string, string])[] = [
+  [BOAT_PINK, BOAT_ORANGE, BOAT_TEAL],
+  [BOAT_TEAL, BOAT_PINK, BOAT_ORANGE],
+  [BOAT_ORANGE, BOAT_TEAL, BOAT_PINK],
 ];
 /** Band edges down a moored hull, px below the water line. The cream rail shows above the first. */
 const MOORED_BAND_EDGES: readonly [number, number, number, number] = [9, 15, 21, MOORED_HULL_DEPTH + 4];
+/**
+ * Texture frame of one moored hull (provisional): the hull, MOORED_HULL_W wide and hanging
+ * MOORED_HULL_DEPTH from the water line, with its ink on the lower edge and ends, plus 4 px of
+ * padding. Anchor is the hull's left end on the water line, local (0, 0). Never stretched.
+ */
+export const MOORED_HULL_TEX: TexSize = frameFromBounds(
+  -MOORED_LW / 2,
+  0,
+  MOORED_HULL_W + MOORED_LW / 2,
+  MOORED_HULL_DEPTH + MOORED_LW / 2,
+  PAD,
+);
 
 /** The shade's outline: flat along the waterline, its sides sloping in toward the bottom. */
 function mooredShadePath(): Path2D {
@@ -388,87 +392,74 @@ function mooredShadePath(): Path2D {
 }
 
 /** A moored hull hanging from the water line: flat on top, a rounded flat bottom. Open it is the inked edge; closed along the water line it is the fill. */
-function mooredHullPath(hull: MooredHull, closed: boolean): Path2D {
-  const { x0, w } = hull;
-  const x1 = x0 + w;
+function mooredHullPath(closed: boolean): Path2D {
+  const x1 = MOORED_HULL_W;
   const p = new Path2D();
   p.moveTo(x1, 0);
   p.quadraticCurveTo(x1 - 1, MOORED_HULL_DEPTH - MOORED_CORNER * 0.4, x1 - MOORED_CORNER, MOORED_HULL_DEPTH);
-  p.lineTo(x0 + MOORED_CORNER, MOORED_HULL_DEPTH);
-  p.quadraticCurveTo(x0 + 1, MOORED_HULL_DEPTH - MOORED_CORNER * 0.4, x0, 0);
+  p.lineTo(MOORED_CORNER, MOORED_HULL_DEPTH);
+  p.quadraticCurveTo(1, MOORED_HULL_DEPTH - MOORED_CORNER * 0.4, 0, 0);
   if (closed) p.closePath();
   return p;
 }
 
-/** Mooring ropes between neighbouring hulls: a short tan tube a hull to the next, at 5 px below the water line. */
-function mooringRopes(): Seg[] {
-  const ropes: Seg[] = [];
-  for (let i = 0; i + 1 < MOORED_HULLS.length; i++) {
-    const a = MOORED_HULLS[i];
-    const b = MOORED_HULLS[i + 1];
-    const p = new Path2D();
-    p.moveTo(a.x0 + a.w - 4, 5);
-    p.quadraticCurveTo((a.x0 + a.w + b.x0) / 2, 11, b.x0 + 4, 5);
-    ropes.push(seg(p, 3, POLE_WOOD, 1.6));
-  }
-  return ropes;
-}
-
 /**
- * Paint the moored hulls with the rect's top-left at local (0, 0), the water line: a blue-green
- * shade over the water that hides what is under the boats (guide 7e, cover), the mooring ropes, and
- * three brightly painted hulls hanging from the water line, each a cream rail over three painted
- * bands, with plank seams, a shine and a prow ball. The hulls are filled to the water line and inked
- * along their lower edge and both ends, so no dark line crosses the surface above them. Drawn above
- * hidden treasures and under the haze, so it is scenery and no cue object.
+ * Paint the moored shade with the rect's top-left at local (0, 0), the water line: a blue-green
+ * shade over the water that hides what is under the boats (guide 7e, cover), nearly solid over the
+ * spots and fading to nothing at the bottom. No ink. Drawn above hidden treasures and under the
+ * haze, so it is scenery and no cue object.
  */
-export function paintMooredHulls(ctx: CanvasRenderingContext2D): void {
+export function paintMooredShade(ctx: CanvasRenderingContext2D): void {
   const [r, g, b] = DEEP_CANAL_SHADE_RGB;
   const grad = ctx.createLinearGradient(0, 0, 0, MOORED_H);
   for (const [t, a] of MOORED_SHADE_STOPS) grad.addColorStop(t, `rgba(${r},${g},${b},${a})`);
   ctx.fillStyle = grad;
   ctx.fill(mooredShadePath());
+}
 
-  inkMany(ctx, mooringRopes());
+/**
+ * Paint one moored hull with its left end on the water line at local (0, 0): a brightly painted
+ * hull hanging from the water line, a cream rail over the three `bands` (top to bottom), with plank
+ * seams, a shine and a prow ball. The hull is filled to the water line and inked along its lower
+ * edge and both ends, so no dark line crosses the surface above it.
+ */
+export function paintMooredHull(ctx: CanvasRenderingContext2D, bands: readonly [string, string, string]): void {
+  const fill = mooredHullPath(true);
+  ctx.fillStyle = BOAT_HULL;
+  ctx.fill(fill);
 
-  for (const hull of MOORED_HULLS) {
-    const fill = mooredHullPath(hull, true);
-    ctx.fillStyle = BOAT_HULL;
-    ctx.fill(fill);
+  ctx.save();
+  ctx.clip(fill);
+  const [e0, e1, e2, e3] = MOORED_BAND_EDGES;
+  const edges = [
+    [e0, e1],
+    [e1, e2],
+    [e2, e3],
+  ] as const;
+  edges.forEach(([top, bottom], i) => {
+    ctx.fillStyle = bands[i];
+    ctx.fillRect(-2, top, MOORED_HULL_W + 4, bottom - top);
+  });
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = BOAT_SEAM;
+  for (const f of [0.25, 0.5, 0.75]) ctx.stroke(line(MOORED_HULL_W * f, e0, MOORED_HULL_W * f, MOORED_HULL_DEPTH));
+  // The gunwale line: a thin ink line under the cream rail, so the rail reads light over dark in greyscale.
+  ctx.lineWidth = RAIL_LINE_W;
+  ctx.strokeStyle = INK;
+  ctx.stroke(line(-2, e0, MOORED_HULL_W + 2, e0));
+  ctx.restore();
 
-    ctx.save();
-    ctx.clip(fill);
-    const [e0, e1, e2, e3] = MOORED_BAND_EDGES;
-    const edges = [
-      [e0, e1],
-      [e1, e2],
-      [e2, e3],
-    ] as const;
-    edges.forEach(([top, bottom], i) => {
-      ctx.fillStyle = hull.bands[i];
-      ctx.fillRect(hull.x0 - 2, top, hull.w + 4, bottom - top);
-    });
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = BOAT_SEAM;
-    for (const f of [0.25, 0.5, 0.75]) ctx.stroke(line(hull.x0 + hull.w * f, e0, hull.x0 + hull.w * f, MOORED_HULL_DEPTH));
-    // The gunwale line: a thin ink line under the cream rail, so the rail reads light over dark in greyscale.
-    ctx.lineWidth = RAIL_LINE_W;
-    ctx.strokeStyle = INK;
-    ctx.stroke(line(hull.x0 - 2, e0, hull.x0 + hull.w + 2, e0));
-    ctx.restore();
+  ctx.lineWidth = MOORED_LW;
+  ctx.strokeStyle = INK;
+  ctx.stroke(mooredHullPath(false));
 
-    ctx.lineWidth = MOORED_LW;
-    ctx.strokeStyle = INK;
-    ctx.stroke(mooredHullPath(hull, false));
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = BOAT_SHINE;
+  ctx.stroke(line(16, 3, 44, 3));
 
-    ctx.lineWidth = 2.4;
-    ctx.strokeStyle = BOAT_SHINE;
-    ctx.stroke(line(hull.x0 + 16, 3, hull.x0 + 44, 3));
-
-    const ball = new Path2D();
-    ell(ball, hull.x0 + hull.w - 5, 7, 3.6, 3.6);
-    shape(ctx, ball, BOAT_ORANGE, 1.8);
-  }
+  const ball = new Path2D();
+  ell(ball, MOORED_HULL_W - 5, 7, 3.6, 3.6);
+  shape(ctx, ball, BOAT_ORANGE, 1.8);
 }
 
 // ---------------------------------------------------------------------------

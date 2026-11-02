@@ -74,12 +74,14 @@ const ESCAPE_DIRECTIONS = 16;
 const ONE_LEG_LANE_START = { surface: 0, deep: 0 };
 /** One-leg seconds along each lane to the exit with every threat playing, as measured. */
 // Surface measured again after the hull hold, PR #195 review: 67.9 to 63.6.
-const ONE_LEG_LANE_SECONDS = { surface: 63.6, deep: 47.5 };
+// Surface measured again on 2026-11-01, as the trajineras now shuttle whole and rest at each end, on new spans clear of the pole boats: 63.6 to 60.6.
+const ONE_LEG_LANE_SECONDS = { surface: 60.6, deep: 47.5 };
 /** First start time in seconds, as measured, for the one-leg full route without a hit. */
 const FULL_ROUTE_START = 0;
 /** One-leg seconds of the full route, every snack eaten, to the exit, as measured. */
 // Measured again after the hull hold, PR #195 review: 224.6 to 223.2.
-const FULL_ROUTE_SECONDS = 223.2;
+// Measured again on 2026-11-01, as the trajineras now shuttle whole and rest at each end, on new spans clear of the pole boats: 223.2 to 239.1.
+const FULL_ROUTE_SECONDS = 239.1;
 
 const deepCanal = fairnessZone(buildZone(DEEP_CANAL_LAYOUT, DEFAULT_ZONE_SEED));
 const oneLeg = legSwimTuning(1);

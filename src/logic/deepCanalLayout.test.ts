@@ -51,7 +51,7 @@ import { RESCUE, areaStrandingChance } from './rescue';
 import { isShrimpFlickLandingClear } from './shrimpFlick';
 import { SPRING_CAVE_2_CARP, SPRING_CAVE_2_LAYOUT } from './springCave2Layout';
 import { stepSwim, type SwimState } from './swimPhysics';
-import { GLIDING_TRAJINERA, TRAJINERAS, TRAJINERA_MAX_SPAN, trajineraHullBand, trajineras } from './trajineras';
+import { GLIDING_TRAJINERA, TRAJINERAS, TRAJINERA_MAX_SPAN, trajineraHullBand, trajineraRest, trajineras } from './trajineras';
 import { BLACK_BASS, BLACK_BASS_CHASE, CARP, FINDS, LEGS, RISK, SHRIMP, SWIM, TADPOLES, TILAPIA, TILAPIA_CHASE, tripTreasureTuning } from './tuning';
 import { normalize } from './vec';
 import {
@@ -723,15 +723,18 @@ describe('Area 8 lanes of threats', () => {
 });
 
 describe('Area 8 gliding trajineras', () => {
-  it('glides two boats out of step across spans of at most 300 px in the surface lane, west and east of the raised run and clear of the moored boats', () => {
-    expect(TRAJINERA_MAX_SPAN).toBe(300);
+  it('shuttles two boats out of step across spans longer than a hull and at most 470 px in the surface lane, each resting at least restMin, west and east of the raised run and clear of the moored boats', () => {
+    expect(TRAJINERA_MAX_SPAN).toBe(470);
     expect(boats.map((boat) => [boat.offset, boat.trajinera])).toEqual([
-      [0, { x0: 1250, x1: 1550, direction: 'right' }],
-      [3, { x0: 2700, x1: 3000, direction: 'left' }],
+      [0, { x0: 1320, x1: 1720, direction: 'right' }],
+      [3, { x0: 2700, x1: 3040, direction: 'left' }],
     ]);
+    expect(boats.map((boat) => boat.trajinera.x1 - boat.trajinera.x0)).toEqual([400, 340]);
     expect(boats[1].offset - boats[0].offset).toBe(GLIDING_TRAJINERA.period / 2);
     for (const boat of boats) {
+      expect(boat.trajinera.x1 - boat.trajinera.x0, boat.id).toBeGreaterThan(TRAJINERAS.hullLength);
       expect(boat.trajinera.x1 - boat.trajinera.x0, boat.id).toBeLessThanOrEqual(TRAJINERA_MAX_SPAN);
+      expect(trajineraRest(boat), boat.id).toBeGreaterThanOrEqual(TRAJINERAS.restMin);
       const band = trajineraHullBand(boat);
       expect(band.x1 < raisedWest || band.x0 > raisedEast, boat.id).toBe(true);
       expect(band.x0, boat.id).toBeGreaterThan(dividerWest);
