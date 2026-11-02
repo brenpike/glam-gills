@@ -1,14 +1,14 @@
 /**
  * Pure gliding trajinera rules (issue #78, ND-8 and ND-9): Area 8's timing element. Painted boats
- * glide across a span of the surface lane on a schedule, and each hull blocks the top of the water
- * as it passes. The hull is solid: every frame the body is held out of it the shortest way, down or
+ * shuttle back and forth across a span of the surface lane on a schedule, always whole, resting at
+ * each end, and each hull blocks the top of the water where it is. The hull is solid: every frame the body is held out of it the shortest way, down or
  * sideways and never up (blockAtTrajineras). A hull touch is also a gentle push aside, the feel on
  * top of the hold, with a short cooldown per boat: never a leg, never a hit, never a dropped find
  * and never protected time. The boat's shadow leads its hull as the warning. Boats only, never
  * fishing (the lures are Area 10's, #108). A boat is never a hazard spawn or a moving hazard, so the
  * danger bar never counts it.
  */
-import type { ElementSpawn, ElementType, HazardRect, TrajineraCrossing } from './hazards';
+import type { ElementSpawn, ElementType, GlideDirection, HazardRect, TrajineraCrossing } from './hazards';
 import { PEBBLES, bodyInAnyRock, type RockWall } from './pebble';
 import type { Vec2 } from './vec';
 import { SURF, type Point, type SwimBounds } from './zone';
@@ -23,6 +23,8 @@ export interface TrajineraTuning {
   hullDepth: number;
   /** Seconds of travel the shadow leads the hull by: the warning. */
   shadowLead: number;
+  /** The shortest rest in seconds at each end of a span, at least `shadowLead`: TRAJINERA_MAX_SPAN's rest. */
+  restMin: number;
   /** Speed in px/s of a push; at most the tilapia bump speed. */
   pushSpeed: number;
   /** Seconds after a boat pushes before that boat can push again. */
@@ -37,7 +39,8 @@ export interface TrajineraTuning {
 
 /**
  * Provisional trajinera values (issue #78, ND-8 and ND-9); tune in play. Boats glide at 70 px/s
- * and each hull blocks the top 60 px of water. The shadow leads the hull by 1 s of travel, 70 px.
+ * and each hull blocks the top 60 px of water. The shadow leads the hull by 1 s of travel, 70 px,
+ * and a boat rests at least 1 s at each end, so its shadow slides out before it moves.
  * The hull is solid and holds the body out every frame; on top of the hold, the push is 120 px/s,
  * gentler than the tilapia's 160 px/s bump, with a 0.5 s cooldown per boat. bodyReach is the
  * pebble's, the Medium body's half height.
@@ -47,6 +50,7 @@ export const TRAJINERAS: Readonly<TrajineraTuning> = Object.freeze({
   hullLength: 120,
   hullDepth: 60,
   shadowLead: 1,
+  restMin: 1,
   pushSpeed: 120,
   pushCooldown: 0.5,
   bodyReach: PEBBLES.bodyReach,
@@ -57,7 +61,7 @@ export const TRAJINERAS: Readonly<TrajineraTuning> = Object.freeze({
 /**
  * The gliding trajinera (issue #78, ND-8), a timing element: a new crossing starts every 6 s
  * (`period`), with no fact card and no meet range, so it is never met. `activeFor` equals `period`
- * because the crossing clock always runs; trajineraHull says when the hull is in its span. It has no
+ * because the crossing clock always runs and the hull is always in its span (trajineraHull). It has no
  * sweep (elementSweep), so it is never a mat; its hull band (trajineraHullBand) is what the snacks
  * keep clear of. Each spawn carries its own `trajinera` crossing.
  */
@@ -69,9 +73,12 @@ export const GLIDING_TRAJINERA: Readonly<ElementType> = Object.freeze({
   activeFor: 6,
 });
 
-/** The longest span in px a hull crosses within one crossing period, nose in to tail out. */
+/**
+ * The longest span in px, 470: one hull length plus the glide of one crossing period less the
+ * shortest rest (`restMin`), so a boat on it still rests `restMin` seconds at each end.
+ */
 export const TRAJINERA_MAX_SPAN: number =
-  TRAJINERAS.speed * GLIDING_TRAJINERA.period - TRAJINERAS.hullLength;
+  TRAJINERAS.hullLength + TRAJINERAS.speed * (GLIDING_TRAJINERA.period - TRAJINERAS.restMin);
 
 /** A gliding trajinera element, with its crossing. */
 export type TrajineraSpawn = ElementSpawn & { trajinera: TrajineraCrossing };
@@ -116,14 +123,18 @@ interface HullWay {
 }
 
 /**
- * A gliding trajinera element (GLIDING_TRAJINERA) crossing `crossing`, `offset` seconds into its
- * crossing clock. Throws RangeError for a span that is not finite, has no width or is longer than
- * TRAJINERA_MAX_SPAN, a direction that is not 'left' or 'right', or an offset that is not finite.
+ * A gliding trajinera element (GLIDING_TRAJINERA) shuttling over `crossing`, `offset` seconds into
+ * its crossing clock. Throws RangeError for a span that is not finite, is not longer than a hull or
+ * is longer than TRAJINERA_MAX_SPAN, a direction that is not 'left' or 'right', or an offset that
+ * is not finite.
  */
 export function trajineraSpawn(id: string, offset: number, crossing: Readonly<TrajineraCrossing>): TrajineraSpawn {
   const { x0, x1, direction } = crossing;
   if (!Number.isFinite(x0) || !Number.isFinite(x1) || !(x1 > x0)) {
     throw new RangeError(`trajineraSpawn: ${id} needs a finite span with x0 < x1, got ${x0}..${x1}`);
+  }
+  if (!(x1 - x0 > TRAJINERAS.hullLength)) {
+    throw new RangeError(`trajineraSpawn: ${id} span ${x1 - x0} px is not longer than the ${TRAJINERAS.hullLength} px hull`);
   }
   if (x1 - x0 > TRAJINERA_MAX_SPAN) {
     throw new RangeError(`trajineraSpawn: ${id} span ${x1 - x0} px is over ${TRAJINERA_MAX_SPAN} px`);
@@ -152,41 +163,64 @@ export function trajineraHullBand(
 }
 
 /**
- * The hull at element time `t`, clipped to the span, or null while it is out of the span. Each
- * crossing starts at `offset` and every `period` seconds after: the nose enters the span's
- * upstream end and glides at `speed` until the tail leaves the far end. Any `t` is valid.
+ * Seconds the boat rests at each end of its span in every crossing: the crossing period less the
+ * glide of the span less one hull length at `speed`. At least `restMin` on a span TRAJINERA_MAX_SPAN
+ * allows.
+ */
+export function trajineraRest(
+  boat: Readonly<TrajineraSpawn>,
+  tuning: Pick<TrajineraTuning, 'speed' | 'hullLength'> = TRAJINERAS,
+): number {
+  const { x0, x1 } = boat.trajinera;
+  return boat.type.period - (x1 - x0 - tuning.hullLength) / tuning.speed;
+}
+
+/** The crossing number at element time `t`: 0 for the one that starts at `offset`, negative before it. */
+function crossingIndex(boat: Readonly<TrajineraSpawn>, t: number): number {
+  return Math.floor((t - boat.offset) / boat.type.period);
+}
+
+/**
+ * The way the boat heads at element time `t`: the crossing's `direction` in the crossing that starts
+ * at `offset` and every second crossing from it, before or after, and the other way in the rest.
+ */
+export function trajineraHeading(boat: Readonly<TrajineraSpawn>, t: number): GlideDirection {
+  const { direction } = boat.trajinera;
+  if (crossingIndex(boat, t) % 2 === 0) return direction;
+  return direction === 'right' ? 'left' : 'right';
+}
+
+/**
+ * The whole hull at element time `t`, never clipped. Each crossing starts at `offset` and every
+ * `period` seconds after, heading as trajineraHeading says: the hull rests at the span's end it
+ * starts from for trajineraRest seconds, then glides at `speed` and reaches the far end as the
+ * crossing ends, so the next crossing starts back from there. The schedule repeats every two
+ * periods; any `t` is valid, negative included.
  */
 export function trajineraHull(
   boat: Readonly<TrajineraSpawn>,
   t: number,
   tuning: Pick<TrajineraTuning, 'speed' | 'hullLength' | 'hullDepth'> = TRAJINERAS,
-): HazardRect | null {
+): HazardRect {
   const { period } = boat.type;
-  const { x0, x1, direction } = boat.trajinera;
-  const phase = (((t - boat.offset) % period) + period) % period;
-  const travelled = tuning.speed * phase;
-  if (!(travelled > 0) || travelled >= x1 - x0 + tuning.hullLength) return null;
-  const nose = direction === 'right' ? x0 + travelled : x1 - travelled;
-  const tail = direction === 'right' ? nose - tuning.hullLength : nose + tuning.hullLength;
-  return {
-    kind: 'rect',
-    x0: Math.max(x0, Math.min(nose, tail)),
-    x1: Math.min(x1, Math.max(nose, tail)),
-    y0: SURF,
-    y1: SURF + tuning.hullDepth,
-  };
+  const { x0, x1 } = boat.trajinera;
+  const travel = x1 - x0 - tuning.hullLength;
+  const phase = Math.min(period, Math.max(0, t - boat.offset - crossingIndex(boat, t) * period));
+  const glided = Math.min(travel, Math.max(0, phase - trajineraRest(boat, tuning)) * tuning.speed);
+  const left = trajineraHeading(boat, t) === 'right' ? x0 + glided : x1 - tuning.hullLength - glided;
+  return { kind: 'rect', x0: left, x1: left + tuning.hullLength, y0: SURF, y1: SURF + tuning.hullDepth };
 }
 
 /**
- * The shadow at element time `t`, the warning: where the hull will be `shadowLead` seconds later,
- * so it leads the hull by `shadowLead` seconds of travel and shows before the hull enters. Null
- * while that place is out of the span.
+ * The shadow at element time `t`, the warning: the whole hull `shadowLead` seconds later, so it
+ * leads a gliding hull by `shadowLead` seconds of travel and slides out from under a resting hull
+ * `shadowLead` seconds before it moves.
  */
 export function trajineraShadow(
   boat: Readonly<TrajineraSpawn>,
   t: number,
   tuning: Pick<TrajineraTuning, 'speed' | 'hullLength' | 'hullDepth' | 'shadowLead'> = TRAJINERAS,
-): HazardRect | null {
+): HazardRect {
   return trajineraHull(boat, t + tuning.shadowLead, tuning);
 }
 
@@ -289,8 +323,8 @@ function clearOfHull(out: Readonly<HullWay>, hull: Readonly<HazardRect>, tuning:
 
 /**
  * The push from the boat's hull at element time `t` on the body centred on `pos`, ignoring the
- * cooldown: the impulse points from `pos` to pushOutOfHull's way at `pushSpeed`. Null when the hull
- * is out of its span, the body does not touch it or no way out is open.
+ * cooldown: the impulse points from `pos` to pushOutOfHull's way at `pushSpeed`. Null when the body
+ * does not touch the hull or no way out is open.
  */
 export function trajineraPush(
   boat: Readonly<TrajineraSpawn>,
@@ -303,16 +337,16 @@ export function trajineraPush(
   return pushFromHull(boat, trajineraHull(boat, t, tuning), pos, bounds, rocks, tuning);
 }
 
-/** trajineraPush with the boat's hull already found: null when `hull` is null. */
+/** trajineraPush with the boat's hull already found. */
 function pushFromHull(
   boat: Readonly<TrajineraSpawn>,
-  hull: Readonly<HazardRect> | null,
+  hull: Readonly<HazardRect>,
   pos: Readonly<Point>,
   bounds: Readonly<SwimBounds>,
   rocks: readonly Readonly<RockWall>[],
   tuning: Readonly<TrajineraTuning>,
 ): TrajineraPush | null {
-  if (hull === null || !bodyTouchesHull(pos, hull, tuning)) return null;
+  if (!bodyTouchesHull(pos, hull, tuning)) return null;
   const to = pushOutOfHull(pos, hull, bounds, rocks, tuning);
   if (to === null) return null;
   // INVARIANT: `to` is a full body reach from the hull and a touching body is closer, so length > 0.
@@ -416,7 +450,7 @@ export function pushFromTrajineras(
 function pushFromReadyBoat(
   lane: TrajineraLane,
   pos: Readonly<Point>,
-  hullOf: (index: number) => HazardRect | null,
+  hullOf: (index: number) => HazardRect,
   tuning: Readonly<TrajineraTuning>,
 ): TrajineraLanePush | null {
   for (let index = 0; index < lane.boats.length; index++) {
@@ -439,14 +473,14 @@ function pushFromReadyBoat(
 function holdOutOfHulls(
   lane: TrajineraLane,
   pos: Readonly<Point>,
-  hulls: readonly (HazardRect | null)[],
+  hulls: readonly HazardRect[],
   tuning: Pick<TrajineraTuning, 'bodyReach'>,
 ): Point {
   let held: Point = { x: pos.x, y: pos.y };
-  const touches = (hull: HazardRect | null): boolean => hull !== null && bodyTouchesHull(held, hull, tuning);
+  const touches = (hull: HazardRect): boolean => bodyTouchesHull(held, hull, tuning);
   for (let index = 0; index < hulls.length; index++) {
     const hull = hulls[index];
-    if (hull === null || !bodyTouchesHull(pos, hull, tuning)) continue;
+    if (!bodyTouchesHull(pos, hull, tuning)) continue;
     const out = wayOutOfHull(pos, hull, lane.bounds, lane.rocks, tuning);
     if (out === null) {
       throw new Error(`blockAtTrajineras: no way out of ${lane.boats[index].id}'s hull is open at (${pos.x}, ${pos.y})`);
@@ -465,13 +499,13 @@ function laneHulls(
   lane: TrajineraLane,
   t: number,
   tuning: Pick<TrajineraTuning, 'speed' | 'hullLength' | 'hullDepth'>,
-): (HazardRect | null)[] {
+): HazardRect[] {
   return lane.boats.map((boat) => trajineraHull(boat, t, tuning));
 }
 
 /**
- * The body centred on `pos` held out of every hull at element time `t` (trajineraHull, clipped to
- * its span, never bobbed): the hull is solid every frame, whatever the push cooldown. A copy of
+ * The body centred on `pos` held out of every hull at element time `t` (trajineraHull, whole and
+ * never bobbed): the hull is solid every frame, whatever the push cooldown. A copy of
  * `pos` when the body touches no hull; else pushOutOfHull's way out of the hull it touches, down or
  * sideways and never up, within the lane's bounds and out of its rocks. The result never touches
  * any hull (bodyTouchesHull is false), even at a fractional hull edge. createTrajineraLane's rules

@@ -2,13 +2,14 @@ import * as Phaser from 'phaser';
 import type { ChinampaTextures } from '../art/chinampaTextures';
 import type { DeepCanalTextures } from '../art/deepCanalTextures';
 import { GAP_EDGE_FLARE, GAP_EDGE_W, OVERHANG_H, OVERHANG_W } from '../art/drawChinampa';
-import { MOORED_H, MOORED_W } from '../art/drawDeepCanal';
+import { MOORED_H, MOORED_HULL_TEX, MOORED_W } from '../art/drawDeepCanal';
 import { ROOT_ARCH_ANCHOR_Y } from '../art/drawPond';
 import { ROCK_LEDGE_H, ROCK_LEDGE_W } from '../art/drawSpringCave';
 import type { CaveKind, HabitatLook } from '../art/habitatLook';
 import { DEPTH } from '../art/layers';
 import type { PondTextures } from '../art/pondTextures';
 import type { SpringCaveTextures } from '../art/springCaveTextures';
+import { mooredHullSlots, surfaceBoatSpans } from '../art/surfaceBoats';
 import type { TexInfo } from '../art/textures';
 import { treasureById, treasureSlug, type Rarity } from '../logic/catalogue';
 import type { DarkWaterPart } from '../logic/glowPlants';
@@ -20,7 +21,7 @@ import { canalGlowShows, canalTreasureLook, rarityGlowAlpha } from '../logic/rar
 import type { TripEvent } from '../logic/trip';
 import { isHeld, type FindId, type Holdings } from '../logic/tripBag';
 import type { Vec2 } from '../logic/vec';
-import type { CurrentZone, Point, ZoneLayout } from '../logic/zone';
+import type { BankOverhang, CurrentZone, Point, ZoneLayout } from '../logic/zone';
 import type { GameAssets } from './BootScene';
 import { faceSprite } from './spriteFacing';
 
@@ -229,37 +230,61 @@ function chinampaTexturesFor(assets: GameAssets, what: string): ChinampaTextures
 
 /**
  * The overhang texture for `look` and its nominal size: the spring cave's rock ledge for a look with
- * the spring cave props, the deep canal's moored hulls for a look with the deep canal props, else
- * the chinampa's bank overhang.
+ * the spring cave props, else the chinampa's bank overhang. A look with the deep canal props draws
+ * moored boats instead (placeMooredBoats).
  */
 function overhangArt(assets: GameAssets, look: HabitatLook): { info: TexInfo; w: number; h: number } {
-  if (look.deepCanalProps) {
-    return { info: deepCanalTexturesFor(assets, 'a row of moored boats').mooredHulls, w: MOORED_W, h: MOORED_H };
-  }
   if (look.springCaveProps) {
     return { info: springCaveTexturesFor(assets, 'a rock ledge').rockLedge, w: ROCK_LEDGE_W, h: ROCK_LEDGE_H };
   }
   return { info: chinampaTexturesFor(assets, 'a bank overhang').overhang, w: OVERHANG_W, h: OVERHANG_H };
 }
 
+/** One sprite of `info` (nominal `w` x `h`) at the rect's top-left, stretched to the rect, at the cave front's depth. */
+function placeStretched(scene: Phaser.Scene, info: TexInfo, rect: Readonly<BankOverhang>, w: number, h: number): void {
+  scene.add
+    .image(rect.x0, rect.y0, info.key)
+    .setOrigin(info.originNormX, info.originNormY)
+    .setScale((rect.x1 - rect.x0) / w / info.scale, (rect.y1 - rect.y0) / h / info.scale)
+    .setDepth(DEPTH.caveFront);
+}
+
 /**
- * One overhang sprite at each of the zone's bank overhang rects (a rock ledge for a look with the
- * spring cave props, a row of moored hulls for a look with the deep canal props), stretched to the rect and drawn at the cave front's depth: above the hidden
- * treasure icons (DEPTH.hiddenTreasure) and under the haze, so what is under the bank reads as hidden
- * and tinted, like what is under the reeds. Placed from zone data only; a zone with no overhangs
- * places none.
+ * The moored boats on each of `overhangs`, west to east: the shade stretched to the rect, then a
+ * whole hull at 1:1 at each slot clear of every other surface boat's art (surfaceBoatSpans,
+ * mooredHullSlots), its band order the running slot index mod the number of orders. A rect with
+ * no room clear of the other boats gets the shade only. All at the cave front's depth.
+ */
+function placeMooredBoats(scene: Phaser.Scene, art: DeepCanalTextures, zone: ZoneLayout, overhangs: readonly Readonly<BankOverhang>[]): void {
+  const spans = surfaceBoatSpans(zone);
+  const westToEast = [...overhangs].sort((a, b) => a.x0 - b.x0);
+  let slotIndex = 0;
+  for (const rect of westToEast) {
+    placeStretched(scene, art.mooredShade, rect, MOORED_W, MOORED_H);
+    for (const slotX of mooredHullSlots(rect, spans, MOORED_HULL_TEX.w)) {
+      const hull = art.mooredHulls[slotIndex % art.mooredHulls.length];
+      bakedImage(scene, hull, slotX + hull.originX, rect.y0, DEPTH.caveFront);
+      slotIndex++;
+    }
+  }
+}
+
+/**
+ * The art at each of the zone's bank overhang rects, drawn at the cave front's depth: above the
+ * hidden treasure icons (DEPTH.hiddenTreasure) and under the haze, so what is under the bank reads
+ * as hidden and tinted, like what is under the reeds. One overhang sprite stretched to each rect (a
+ * rock ledge for a look with the spring cave props), or moored boats for a look with the deep canal
+ * props (placeMooredBoats). Placed from zone data only; a zone with no overhangs places none.
  */
 function placeBankOverhangs(scene: Phaser.Scene, assets: GameAssets, zone: ZoneLayout, look: HabitatLook): void {
   const overhangs = zone.bankOverhangs;
   if (overhangs === undefined || overhangs.length === 0) return;
-  const { info, w, h } = overhangArt(assets, look);
-  for (const rect of overhangs) {
-    scene.add
-      .image(rect.x0, rect.y0, info.key)
-      .setOrigin(info.originNormX, info.originNormY)
-      .setScale((rect.x1 - rect.x0) / w / info.scale, (rect.y1 - rect.y0) / h / info.scale)
-      .setDepth(DEPTH.caveFront);
+  if (look.deepCanalProps) {
+    placeMooredBoats(scene, deepCanalTexturesFor(assets, 'a row of moored boats'), zone, overhangs);
+    return;
   }
+  const { info, w, h } = overhangArt(assets, look);
+  for (const rect of overhangs) placeStretched(scene, info, rect, w, h);
 }
 
 /**

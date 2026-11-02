@@ -16,9 +16,11 @@ import {
   stepTrajineraLane,
   tickTrajineraLane,
   trajineraBob,
+  trajineraHeading,
   trajineraHull,
   trajineraHullBand,
   trajineraPush,
+  trajineraRest,
   trajineraShadow,
   trajineraSpawn,
   trajineras,
@@ -31,13 +33,13 @@ import { SURF, areaSize, swimBounds, type CurrentZone, type Point, type SwimBoun
 const BOUNDS: SwimBounds = swimBounds(areaSize(8, 2));
 const REACH = TRAJINERAS.bodyReach;
 const HULL_BOTTOM = SURF + TRAJINERAS.hullDepth;
-const RIGHT = trajineraSpawn('deep/boat-1', 0, { x0: 1000, x1: 1280, direction: 'right' });
-const LEFT = trajineraSpawn('deep/boat-2', 3, { x0: 2000, x1: 2280, direction: 'left' });
+/** Spans of 330 px: each crossing rests 3 s at its start end, then glides 210 px in 3 s. */
+const RIGHT = trajineraSpawn('deep/boat-1', 0, { x0: 1000, x1: 1330, direction: 'right' });
+const LEFT = trajineraSpawn('deep/boat-2', 3, { x0: 2000, x1: 2330, direction: 'left' });
 
-function hullAt(boat: TrajineraSpawn, t: number): HazardRect {
-  const hull = trajineraHull(boat, t);
-  if (hull === null) throw new Error(`expected a hull for ${boat.id} at ${t}`);
-  return hull;
+/** The whole hull rect with its west edge at `x0`. */
+function hullFrom(x0: number): HazardRect {
+  return { kind: 'rect', x0, x1: x0 + TRAJINERAS.hullLength, y0: SURF, y1: HULL_BOTTOM };
 }
 
 describe('trajinera tuning (issue #78, ND-8, ND-9)', () => {
@@ -63,9 +65,16 @@ describe('trajinera tuning (issue #78, ND-8, ND-9)', () => {
     expect(TRAJINERAS.bodyReach).toBe(PEBBLES.bodyReach);
   });
 
-  it('fits a hull across the longest span within one crossing period', () => {
-    expect(TRAJINERA_MAX_SPAN + TRAJINERAS.hullLength).toBe(TRAJINERAS.speed * GLIDING_TRAJINERA.period);
-    expect(TRAJINERA_MAX_SPAN).toBeGreaterThan(0);
+  it('rests at least 1 s at each end, no less than the shadow lead', () => {
+    expect(TRAJINERAS.restMin).toBe(1);
+    expect(TRAJINERAS.restMin).toBeGreaterThanOrEqual(TRAJINERAS.shadowLead);
+  });
+
+  it('sets the longest span to a hull plus the glide of a crossing less the shortest rest, 470 px', () => {
+    expect(TRAJINERA_MAX_SPAN).toBe(
+      TRAJINERAS.hullLength + TRAJINERAS.speed * (GLIDING_TRAJINERA.period - TRAJINERAS.restMin),
+    );
+    expect(TRAJINERA_MAX_SPAN).toBe(470);
   });
 });
 
@@ -95,12 +104,15 @@ describe('trajineraSpawn', () => {
     expect(boat.trajinera).not.toBe(crossing);
   });
 
-  it('takes a span of exactly TRAJINERA_MAX_SPAN', () => {
+  it('takes a span of exactly TRAJINERA_MAX_SPAN, and one just longer than a hull', () => {
     expect(() => trajineraSpawn('boat', 0, { x0: 0, x1: TRAJINERA_MAX_SPAN, direction: 'right' })).not.toThrow();
+    expect(() => trajineraSpawn('boat', 0, { x0: 0, x1: TRAJINERAS.hullLength + 1, direction: 'right' })).not.toThrow();
   });
 
   it.each([
     ['no width', { x0: 100, x1: 100 }],
+    ['a span as long as a hull', { x0: 100, x1: 100 + TRAJINERAS.hullLength }],
+    ['a span shorter than a hull', { x0: 100, x1: 200 }],
     ['a reversed span', { x0: 300, x1: 100 }],
     ['a span that is not finite', { x0: 100, x1: Number.POSITIVE_INFINITY }],
     ['a NaN edge', { x0: Number.NaN, x1: 100 }],
@@ -110,12 +122,12 @@ describe('trajineraSpawn', () => {
   });
 
   it('refuses a direction that is not left or right', () => {
-    const crossing = { x0: 0, x1: 100, direction: 'up' } as unknown as TrajineraSpawn['trajinera'];
+    const crossing = { x0: 0, x1: 200, direction: 'up' } as unknown as TrajineraSpawn['trajinera'];
     expect(() => trajineraSpawn('boat', 0, crossing)).toThrow(RangeError);
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY])('refuses offset %s', (offset) => {
-    expect(() => trajineraSpawn('boat', offset, { x0: 0, x1: 100, direction: 'right' })).toThrow(RangeError);
+    expect(() => trajineraSpawn('boat', offset, { x0: 0, x1: 200, direction: 'right' })).toThrow(RangeError);
   });
 });
 
@@ -129,12 +141,12 @@ describe('trajineras', () => {
 
 describe('trajineraHullBand', () => {
   it('is the span across the top 60 px of water', () => {
-    expect(trajineraHullBand(RIGHT)).toEqual({ kind: 'rect', x0: 1000, x1: 1280, y0: SURF, y1: SURF + 60 });
+    expect(trajineraHullBand(RIGHT)).toEqual({ kind: 'rect', x0: 1000, x1: 1330, y0: SURF, y1: SURF + 60 });
   });
 
-  it.each([0.5, 1, 2.75, 4, 5.3])('holds the hull at %s s', (t) => {
+  it.each([0.5, 1, 2.75, 4, 5.3, 7, 10.5, -1])('holds the hull at %s s', (t) => {
     const band = trajineraHullBand(RIGHT);
-    const hull = hullAt(RIGHT, t);
+    const hull = trajineraHull(RIGHT, t);
     expect(hull.x0).toBeGreaterThanOrEqual(band.x0);
     expect(hull.x1).toBeLessThanOrEqual(band.x1);
     expect(hull.y0).toBe(band.y0);
@@ -142,50 +154,100 @@ describe('trajineraHullBand', () => {
   });
 });
 
+describe('trajineraRest', () => {
+  it('is the crossing period less the glide of the span less a hull', () => {
+    expect(trajineraRest(RIGHT)).toBe(3);
+    const short = trajineraSpawn('boat', 0, { x0: 0, x1: 280, direction: 'right' });
+    expect(trajineraRest(short)).toBeCloseTo(6 - 160 / 70, 9);
+  });
+
+  it('is the shortest rest on the longest span', () => {
+    const longest = trajineraSpawn('boat', 0, { x0: 0, x1: TRAJINERA_MAX_SPAN, direction: 'left' });
+    expect(trajineraRest(longest)).toBeCloseTo(TRAJINERAS.restMin, 9);
+  });
+});
+
+describe('trajineraHeading', () => {
+  it('heads the crossing direction first, then turns every crossing', () => {
+    for (const t of [0, 5.99, 12, 17.5, -12, -6.01]) expect(trajineraHeading(RIGHT, t), `${t}`).toBe('right');
+    for (const t of [6, 11.99, 18, -0.01, -6]) expect(trajineraHeading(RIGHT, t), `${t}`).toBe('left');
+  });
+
+  it('turns a left boat from its offset', () => {
+    expect(trajineraHeading(LEFT, 3)).toBe('left');
+    expect(trajineraHeading(LEFT, 8.99)).toBe('left');
+    expect(trajineraHeading(LEFT, 9)).toBe('right');
+    expect(trajineraHeading(LEFT, 2.99)).toBe('right');
+  });
+});
+
 describe('trajineraHull', () => {
-  it('has no hull at the very start of a crossing', () => {
-    expect(trajineraHull(RIGHT, 0)).toBeNull();
+  it('rests whole at the start end from the start of a crossing for trajineraRest seconds', () => {
+    for (const t of [0, 1, 2.5, 3]) expect(trajineraHull(RIGHT, t), `${t}`).toEqual(hullFrom(1000));
   });
 
-  it('glides the nose in from the upstream end at 70 px/s, clipped to the span', () => {
-    expect(hullAt(RIGHT, 1)).toEqual({ kind: 'rect', x0: 1000, x1: 1070, y0: SURF, y1: HULL_BOTTOM });
-    expect(hullAt(RIGHT, 2)).toEqual({ kind: 'rect', x0: 1020, x1: 1140, y0: SURF, y1: HULL_BOTTOM });
+  it('then glides whole at 70 px/s', () => {
+    expect(trajineraHull(RIGHT, 4)).toEqual(hullFrom(1070));
+    expect(trajineraHull(RIGHT, 4.5)).toEqual(hullFrom(1105));
+    expect(trajineraHull(RIGHT, 5)).toEqual(hullFrom(1140));
   });
 
-  it('glides the tail out of the far end', () => {
-    expect(hullAt(RIGHT, 5).x0).toBeCloseTo(1230, 9);
-    expect(hullAt(RIGHT, 5).x1).toBe(1280);
+  it('reaches the far end exactly as the crossing ends', () => {
+    expect(trajineraHull(RIGHT, 6 - 1e-9).x1).toBeCloseTo(1330, 6);
+    expect(trajineraHull(RIGHT, 6)).toEqual(hullFrom(1210));
   });
 
-  it('is gone once the tail leaves the span, until the next crossing', () => {
-    const crossing = (280 + TRAJINERAS.hullLength) / TRAJINERAS.speed;
-    expect(crossing).toBeLessThan(GLIDING_TRAJINERA.period);
-    expect(trajineraHull(RIGHT, crossing - 0.01)).not.toBeNull();
-    expect(trajineraHull(RIGHT, crossing)).toBeNull();
-    expect(trajineraHull(RIGHT, 5.9999)).toBeNull();
+  it('turns and rests at the far end, then glides back to the start end', () => {
+    for (const t of [6, 7.5, 9]) expect(trajineraHull(RIGHT, t), `${t}`).toEqual(hullFrom(1210));
+    expect(trajineraHull(RIGHT, 10)).toEqual(hullFrom(1140));
+    expect(trajineraHull(RIGHT, 12 - 1e-9).x0).toBeCloseTo(1000, 6);
+    expect(trajineraHull(RIGHT, 12)).toEqual(hullFrom(1000));
   });
 
-  it('repeats every crossing period, for any time, negative included', () => {
-    for (const t of [0.4, 1, 3.3, 5.5]) {
-      const hull = hullAt(RIGHT, t);
-      for (const later of [hullAt(RIGHT, t + 6), hullAt(RIGHT, t - 60)]) {
+  it('never jumps: from crossing to crossing it moves at most 70 px/s', () => {
+    const step = 0.01;
+    for (let t = -13; t < 13; t += step) {
+      const now = trajineraHull(RIGHT, t);
+      const next = trajineraHull(RIGHT, t + step);
+      expect(Math.abs(next.x0 - now.x0), `${t}`).toBeLessThanOrEqual(TRAJINERAS.speed * step + 1e-6);
+    }
+  });
+
+  it('repeats every two crossing periods, for any time, negative included', () => {
+    for (const t of [0.4, 3.3, 4.5, 7, 10.5, 11.9]) {
+      const hull = trajineraHull(RIGHT, t);
+      for (const later of [trajineraHull(RIGHT, t + 12), trajineraHull(RIGHT, t - 12), trajineraHull(RIGHT, t - 60)]) {
         expect(later.x0).toBeCloseTo(hull.x0, 9);
         expect(later.x1).toBeCloseTo(hull.x1, 9);
         expect(later.y0).toBe(hull.y0);
         expect(later.y1).toBe(hull.y1);
       }
     }
+    expect(trajineraHull(RIGHT, 1 + 6)).not.toEqual(trajineraHull(RIGHT, 1));
+    expect(trajineraHull(RIGHT, -1)).toEqual(trajineraHull(RIGHT, 11));
   });
 
-  it('glides a left boat in from the right end', () => {
-    const boat = trajineraSpawn('boat', 0, { x0: 2000, x1: 2280, direction: 'left' });
-    expect(hullAt(boat, 1)).toEqual({ kind: 'rect', x0: 2210, x1: 2280, y0: SURF, y1: HULL_BOTTOM });
-    expect(hullAt(boat, 2)).toEqual({ kind: 'rect', x0: 2140, x1: 2260, y0: SURF, y1: HULL_BOTTOM });
+  it('is never null and never clipped: always a whole hull within the span', () => {
+    for (const boat of [RIGHT, LEFT]) {
+      const { x0, x1 } = boat.trajinera;
+      for (let t = -13; t < 13; t += 0.07) {
+        const hull = trajineraHull(boat, t);
+        expect(hull, `${boat.id} at ${t}`).not.toBeNull();
+        expect(hull.x0).toBeGreaterThanOrEqual(x0);
+        expect(hull.x1).toBeLessThanOrEqual(x1);
+        expect(hull.x1 - hull.x0).toBeCloseTo(TRAJINERAS.hullLength, 9);
+        expect(hull.y0).toBe(SURF);
+        expect(hull.y1).toBe(HULL_BOTTOM);
+      }
+    }
   });
 
-  it('starts each crossing at its offset', () => {
-    expect(trajineraHull(LEFT, 3)).toBeNull();
-    expect(hullAt(LEFT, 4)).toEqual({ kind: 'rect', x0: 2210, x1: 2280, y0: SURF, y1: HULL_BOTTOM });
+  it('starts a left boat at the right end at its offset and glides it left', () => {
+    for (const t of [3, 4.5, 6]) expect(trajineraHull(LEFT, t), `${t}`).toEqual(hullFrom(2210));
+    expect(trajineraHull(LEFT, 7)).toEqual(hullFrom(2140));
+    expect(trajineraHull(LEFT, 9)).toEqual(hullFrom(2000));
+    expect(trajineraHull(LEFT, 10)).toEqual(hullFrom(2000));
+    expect(trajineraHull(LEFT, 2)).toEqual(hullFrom(2140));
   });
 
   it('keeps two boats with offsets 0 and 3 out of step', () => {
@@ -198,22 +260,32 @@ describe('trajineraHull', () => {
 });
 
 describe('trajineraShadow', () => {
-  it('leads the hull by 70 px mid-crossing', () => {
-    const shadow = trajineraShadow(RIGHT, 2);
-    expect(shadow).toEqual({ kind: 'rect', x0: 1090, x1: 1210, y0: SURF, y1: HULL_BOTTOM });
-    expect(shadow?.x1).toBe(hullAt(RIGHT, 2).x1 + 70);
+  it('is the hull 1 s later, across every turn', () => {
+    for (let t = -7; t < 13; t += 0.11) {
+      expect(trajineraShadow(RIGHT, t)).toEqual(trajineraHull(RIGHT, t + 1));
+    }
   });
 
-  it('shows 1 s before the hull enters, as the warning', () => {
-    expect(trajineraHull(RIGHT, 5.5 + 6)).not.toBeNull();
-    expect(trajineraHull(RIGHT, 6)).toBeNull();
-    expect(trajineraShadow(RIGHT, 5.5)).toEqual(trajineraHull(RIGHT, 6.5));
-    expect(trajineraShadow(RIGHT, 5.5)).not.toBeNull();
+  it('leads a gliding hull by 70 px', () => {
+    expect(trajineraShadow(RIGHT, 4)).toEqual(hullFrom(1140));
+    expect(trajineraShadow(RIGHT, 4).x0).toBe(trajineraHull(RIGHT, 4).x0 + 70);
+    expect(trajineraShadow(RIGHT, 10).x0).toBe(trajineraHull(RIGHT, 10).x0 - 70);
   });
 
   it('leads a left boat to the left', () => {
-    const boat = trajineraSpawn('boat', 0, { x0: 2000, x1: 2280, direction: 'left' });
-    expect(trajineraShadow(boat, 2)?.x0).toBe(hullAt(boat, 2).x0 - 70);
+    expect(trajineraShadow(LEFT, 7).x0).toBe(trajineraHull(LEFT, 7).x0 - 70);
+  });
+
+  it('hides under a resting hull, then slides out 1 s before the hull moves, as the warning', () => {
+    expect(trajineraShadow(RIGHT, 1)).toEqual(trajineraHull(RIGHT, 1));
+    expect(trajineraShadow(RIGHT, 2)).toEqual(hullFrom(1000));
+    expect(trajineraShadow(RIGHT, 2.5)).toEqual(hullFrom(1035));
+    expect(trajineraHull(RIGHT, 2.5)).toEqual(hullFrom(1000));
+  });
+
+  it('waits at the far end for the last 1 s of the glide', () => {
+    expect(trajineraShadow(RIGHT, 5.5)).toEqual(hullFrom(1210));
+    expect(trajineraHull(RIGHT, 5.5)).toEqual(hullFrom(1175));
   });
 });
 
@@ -233,7 +305,7 @@ describe('trajineraBob', () => {
   });
 
   it('never moves the hull: reduced motion leaves the glide as it is', () => {
-    expect(trajineraHull(RIGHT, 2)).toEqual(hullAt(RIGHT, 2));
+    expect(trajineraHull(RIGHT, 4)).toEqual(hullFrom(1070));
   });
 });
 
@@ -306,7 +378,7 @@ describe('trajineraPush', () => {
   });
 
   it('never pushes harder than the tilapia bump', () => {
-    for (const pos of [{ x: 1022, y: 100 }, { x: 1138, y: 100 }, { x: 1080, y: 140 }]) {
+    for (const pos of [{ x: 1002, y: 100 }, { x: 1118, y: 100 }, { x: 1080, y: 140 }]) {
       const push = trajineraPush(RIGHT, pos, 2, BOUNDS, []);
       expect(push).not.toBeNull();
       expect(Math.hypot(push?.impulse.x ?? 0, push?.impulse.y ?? 0)).toBeCloseTo(TRAJINERAS.pushSpeed, 9);
@@ -315,15 +387,22 @@ describe('trajineraPush', () => {
   });
 
   it('pushes sideways ahead of the nose', () => {
-    const push = trajineraPush(RIGHT, { x: 1138, y: 100 }, 2, BOUNDS, []);
-    expect(push?.to).toEqual({ x: 1140 + REACH, y: 100 });
+    const push = trajineraPush(RIGHT, { x: 1188, y: 100 }, 4, BOUNDS, []);
+    expect(push?.to).toEqual({ x: 1190 + REACH, y: 100 });
     expect(push?.impulse).toEqual({ x: TRAJINERAS.pushSpeed, y: 0 });
   });
 
-  it('gives no push away from the hull or while the hull is out of its span', () => {
+  it('pushes from the hull resting at the far end, gently', () => {
+    const push = trajineraPush(RIGHT, { x: 1300, y: 130 }, 7.5, BOUNDS, []);
+    expect(push?.to).toEqual({ x: 1300, y: HULL_BOTTOM + REACH });
+    expect(push?.impulse).toEqual({ x: 0, y: TRAJINERAS.pushSpeed });
+  });
+
+  it('gives no push away from the hull, at rest or gliding', () => {
     expect(trajineraPush(RIGHT, { x: 1100, y: HULL_BOTTOM + REACH }, 2, BOUNDS, [])).toBeNull();
-    expect(trajineraPush(RIGHT, { x: 1100, y: 100 }, 0, BOUNDS, [])).toBeNull();
-    expect(trajineraPush(RIGHT, { x: 1200, y: 100 }, 1, BOUNDS, [])).toBeNull();
+    expect(trajineraPush(RIGHT, { x: 1200, y: 100 }, 2, BOUNDS, [])).toBeNull();
+    expect(trajineraPush(RIGHT, { x: 1100, y: 100 }, 7.5, BOUNDS, [])).toBeNull();
+    expect(trajineraPush(RIGHT, { x: 1030, y: 100 }, 4.5, BOUNDS, [])).toBeNull();
   });
 });
 
@@ -412,7 +491,7 @@ function restingAt(pos: Point): SwimState {
 function touchedHulls(lane: TrajineraLane, pos: Point, t: number): string[] {
   return lane.boats
     .map((boat) => trajineraHull(boat, t))
-    .filter((hull): hull is HazardRect => hull !== null && bodyTouchesHull(pos, hull))
+    .filter((hull) => bodyTouchesHull(pos, hull))
     .map((hull) => `(${pos.x}, ${pos.y}) touches ${hull.x0}..${hull.x1} at ${t}`);
 }
 
@@ -439,14 +518,14 @@ describe('the solid hull (blockAtTrajineras, stepTrajineraLane)', () => {
 
   it('holds the body below, left and right of a hull', () => {
     expect(blockAtTrajineras(lane, { x: 1080, y: 150 }, 2)).toEqual({ x: 1080, y: BAND_ROW });
-    expect(blockAtTrajineras(lane, { x: 1025, y: 100 }, 2)).toEqual({ x: 1020 - REACH, y: 100 });
-    expect(blockAtTrajineras(lane, { x: 1135, y: 100 }, 2)).toEqual({ x: 1140 + REACH, y: 100 });
+    expect(blockAtTrajineras(lane, { x: 1005, y: 100 }, 2)).toEqual({ x: 1000 - REACH, y: 100 });
+    expect(blockAtTrajineras(lane, { x: 1115, y: 100 }, 2)).toEqual({ x: 1120 + REACH, y: 100 });
   });
 
   it('never holds the body up, from the top of the swim bounds inside the band', () => {
-    const pos = { x: 1080, y: BOUNDS.minY };
+    const pos = { x: 1060, y: BOUNDS.minY };
     const held = blockAtTrajineras(lane, pos, 2);
-    expect(held).toEqual({ x: 1080, y: BAND_ROW });
+    expect(held).toEqual({ x: 1060, y: BAND_ROW });
     expect(held.y).toBeGreaterThanOrEqual(pos.y);
   });
 
@@ -474,18 +553,17 @@ describe('the solid hull (blockAtTrajineras, stepTrajineraLane)', () => {
   });
 
   it.each([
-    ['right', RIGHT, { x: 1100, y: 100 }, 0, 1280 + REACH],
+    ['right', RIGHT, { x: 1100, y: 100 }, 0, 1330 + REACH],
     ['left', LEFT, { x: 2140, y: 100 }, 3, 2000 - REACH],
   ])('holds a body parked in front of a boat gliding %s ahead of the nose', (direction, boat, parked, start, end) => {
     let current = createTrajineraLane([boat], BOUNDS, []);
     let pos: Point = parked;
-    for (let frame = 0; frame <= 360; frame++) {
+    for (let frame = 0; frame <= 420; frame++) {
       const t = start + frame * DT;
       const result = stepTrajineraLane(current, pos, DT, t, false);
       current = result.lane;
       pos = result.pos;
       const hull = trajineraHull(boat, t);
-      if (hull === null) continue;
       expect(bodyTouchesHull(pos, hull)).toBe(false);
       if (direction === 'right') expect(pos.x).toBeGreaterThanOrEqual(hull.x1 + REACH);
       else expect(pos.x).toBeLessThanOrEqual(hull.x0 - REACH);
@@ -493,19 +571,19 @@ describe('the solid hull (blockAtTrajineras, stepTrajineraLane)', () => {
     expect(pos).toEqual({ x: end, y: parked.y });
   });
 
-  it('never moves a body past either span end, while the clipped hull grows out of its span line', () => {
-    for (let t = 0; t < 6; t += 0.05) {
-      expect(blockAtTrajineras(lane, { x: 1280 + REACH, y: 100 }, t)).toEqual({ x: 1280 + REACH, y: 100 });
+  it('never moves a body past either span end, as the whole hull rests at each end', () => {
+    for (let t = -6; t < 12; t += 0.05) {
+      expect(blockAtTrajineras(lane, { x: 1330 + REACH, y: 100 }, t)).toEqual({ x: 1330 + REACH, y: 100 });
       expect(blockAtTrajineras(lane, { x: 1000 - REACH, y: 100 }, t)).toEqual({ x: 1000 - REACH, y: 100 });
     }
-    expect(hullAt(RIGHT, 0.1).x1 - hullAt(RIGHT, 0.1).x0).toBeCloseTo(7, 9);
-    expect(blockAtTrajineras(lane, { x: 1000 - REACH + 1, y: 100 }, 0.1)).toEqual({ x: 1000 - REACH, y: 100 });
+    expect(blockAtTrajineras(lane, { x: 1000 - REACH + 1, y: 100 }, 1)).toEqual({ x: 1000 - REACH, y: 100 });
+    expect(blockAtTrajineras(lane, { x: 1330 + REACH - 1, y: 100 }, 7)).toEqual({ x: 1330 + REACH, y: 100 });
   });
 
   it('takes the next nearest way when rock blocks the nearest', () => {
     const rock: RockWall = { x0: 960, x1: 990, y0: 90, y1: 120 };
     const walled = createTrajineraLane([RIGHT], BOUNDS, [rock]);
-    expect(blockAtTrajineras(lane, { x: 1025, y: 100 }, 2)).toEqual({ x: 1020 - REACH, y: 100 });
+    expect(blockAtTrajineras(lane, { x: 1025, y: 100 }, 2)).toEqual({ x: 1000 - REACH, y: 100 });
     expect(blockAtTrajineras(walled, { x: 1025, y: 100 }, 2)).toEqual({ x: 1025, y: BAND_ROW });
   });
 
@@ -559,13 +637,13 @@ describe('the solid hull (blockAtTrajineras, stepTrajineraLane)', () => {
 
   it('rounds a hold at a hull edge just under a power of two clear of the hull', () => {
     const edged = createTrajineraLane([EDGE, LEFT], BOUNDS, []);
-    const hull = hullAt(EDGE, 4);
+    const hull = trajineraHull(EDGE, 7);
     expect(hull.x1).toBe(floatBelow(1024, 3));
     const pos = { x: 1023, y: 100 };
     const raw = pushOutOfHull(pos, hull, BOUNDS, []);
     expect(raw).toEqual({ x: hull.x1 + REACH, y: 100 });
     expect(raw && bodyTouchesHull(raw, hull)).toBe(true);
-    const held = blockAtTrajineras(edged, pos, 4);
+    const held = blockAtTrajineras(edged, pos, 7);
     expect(bodyTouchesHull(held, hull)).toBe(false);
     expect(held.y).toBe(100);
     expect(held.x - (hull.x1 + REACH)).toBeLessThan(1e-9);
@@ -617,8 +695,8 @@ describe('createTrajineraLane rules', () => {
   });
 
   it('refuses rock meeting the band row within the body reach past a span end, and accepts it just clear', () => {
-    const meets: RockWall = { x0: 1280 + 2 * REACH - 1, x1: 1400, y0: 150, y1: 300 };
-    const clear: RockWall = { x0: 1280 + 2 * REACH, x1: 1400, y0: 150, y1: 300 };
+    const meets: RockWall = { x0: 1330 + 2 * REACH - 1, x1: 1450, y0: 150, y1: 300 };
+    const clear: RockWall = { x0: 1330 + 2 * REACH, x1: 1450, y0: 150, y1: 300 };
     expect(() => createTrajineraLane([RIGHT], BOUNDS, [meets])).toThrow(RangeError);
     expect(() => createTrajineraLane([RIGHT], BOUNDS, [clear])).not.toThrow();
   });
@@ -631,9 +709,9 @@ describe('createTrajineraLane rules', () => {
   });
 
   it('refuses spans closer than twice the body reach, overlap included', () => {
-    const near = trajineraSpawn('deep/near', 0, { x0: 1280 + 2 * REACH - 1, x1: 1500, direction: 'left' });
+    const near = trajineraSpawn('deep/near', 0, { x0: 1330 + 2 * REACH - 1, x1: 1550, direction: 'left' });
     const over = trajineraSpawn('deep/over', 0, { x0: 1200, x1: 1400, direction: 'left' });
-    const apart = trajineraSpawn('deep/apart', 0, { x0: 1280 + 2 * REACH, x1: 1500, direction: 'left' });
+    const apart = trajineraSpawn('deep/apart', 0, { x0: 1330 + 2 * REACH, x1: 1550, direction: 'left' });
     expect(() => createTrajineraLane([RIGHT, near], BOUNDS, [])).toThrow(RangeError);
     expect(() => createTrajineraLane([over, RIGHT], BOUNDS, [])).toThrow(RangeError);
     expect(() => createTrajineraLane([RIGHT, apart], BOUNDS, [])).not.toThrow();

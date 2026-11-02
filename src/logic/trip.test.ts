@@ -2823,7 +2823,11 @@ describe('glow-plants in the trip (issue #77, ND-8)', () => {
 });
 
 describe('gliding trajineras in the trip (issue #78, ND-8)', () => {
-  /** Offset -2 puts the hull 2 s into its crossing at element time 0: x 620 to 740, mid-span. */
+  /**
+   * Offset -2 puts the boat 2 s into its first crossing at element time 0, resting whole at the west
+   * end, x 600 to 720. It glides east from element time 1.71 to 4, rests at the east end, x 760 to
+   * 880, until 7.71 and glides back west by 10.
+   */
   const boat = trajineraSpawn('canal/trajinera-1', -2, { x0: 600, x1: 880, direction: 'right' });
   const boatZone: TripSource = { ...findZone, trajineras: [boat] };
   const underHull: Point = { x: 700, y: 130 };
@@ -2942,6 +2946,21 @@ describe('gliding trajineras in the trip (issue #78, ND-8)', () => {
     expect(result.pushed).toBeDefined();
     expect(result.outOfHull).toEqual(result.pushed?.to);
     expect(result.outOfHull).not.toBe(result.pushed?.to);
+  });
+
+  it('holds and pushes the axolotl out of the whole hull resting at the far end, gently', () => {
+    const atEastEnd = { ...createTrip(boatZone), elementTime: 6 - DT };
+    const underEastHull: Point = { x: 850, y: 130 };
+    const result = stepAt(atEastEnd, underEastHull);
+    expect(result.pushed).toMatchObject({ id: 'canal/trajinera-1', from: underEastHull, to: { x: 850, y: SURF + 60 + TRAJINERAS.bodyReach } });
+    expect(result.outOfHull).toEqual({ x: 850, y: SURF + 60 + TRAJINERAS.bodyReach });
+    expect(result.impulse).toEqual({ x: 0, y: TRAJINERAS.pushSpeed });
+    expect(result.events).toEqual([]);
+    expect(result.state.legsLost).toBe(0);
+    expect(isProtected(result.state.encounter.legs)).toBe(false);
+    const westEmpty = stepAt(atEastEnd, underHull);
+    expect(westEmpty).not.toHaveProperty('pushed');
+    expect(westEmpty).not.toHaveProperty('outOfHull');
   });
 
   it('refuses boats with rock under the hull band', () => {

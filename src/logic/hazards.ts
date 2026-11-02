@@ -160,9 +160,11 @@ export interface PebbleGroove {
 export type GlideDirection = 'left' | 'right';
 
 /**
- * A gliding trajinera's crossing (issue #78, ND-8): its hull glides across `x0..x1` in the surface
- * lane, in `direction`, once per crossing period (trajineras.ts). Not a sweep: the boat never hits
- * and never costs a leg; it only pushes the axolotl aside. Inclusive edges; `x0 < x1`.
+ * A gliding trajinera's crossing (issue #78, ND-8): its whole hull shuttles back and forth over
+ * `x0..x1` in the surface lane, one crossing per crossing period, resting at each end
+ * (trajineras.ts). `direction` is the heading of its first crossing, the one that starts at the
+ * element's offset; the next heads the other way. Not a sweep: the boat never hits and never costs
+ * a leg; it only pushes the axolotl aside. Inclusive edges; `x0 < x1`.
  */
 export interface TrajineraCrossing {
   x0: number;

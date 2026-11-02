@@ -35,8 +35,10 @@ import {
   HULL_CAVE_WOOD_DARK,
   HULL_CAVE_WOOD_LIGHT,
   MOORED_H,
-  MOORED_HULLS,
+  MOORED_HULL_BANDS,
   MOORED_HULL_DEPTH,
+  MOORED_HULL_TEX,
+  MOORED_HULL_W,
   MOORED_SHADE_STOPS,
   MOORED_TEX,
   RAIL_LINE_W,
@@ -56,7 +58,8 @@ import {
   paintCanalBedStones,
   paintHullCaveBack,
   paintHullCaveFront,
-  paintMooredHulls,
+  paintMooredHull,
+  paintMooredShade,
   paintSideCanalInflow,
   paintTrajineraHull,
   paintTrajineraShadow,
@@ -67,7 +70,7 @@ import { CAVE_TEX } from './drawFinds';
 import type { TexSize } from './canvasKit';
 import { TRAJINERAS } from '../logic/trajineras';
 import { INK, LW, WHITE } from './palette';
-import { DEEP_CANAL_TEX, bakeDeepCanalTextures } from './deepCanalTextures';
+import { DEEP_CANAL_TEX, MOORED_HULL_KEY_PREFIX, bakeDeepCanalTextures, mooredHullKey } from './deepCanalTextures';
 import { ROCK_WALL_KEY_PREFIX, bakeSpringCaveTextures, rockWallSizeKey } from './springCaveTextures';
 import { BASS_BODY } from './drawBlackBass';
 import {
@@ -468,8 +471,8 @@ describe('gliding trajinera shadow (guide 3g, 10; issue #78, ND-9)', () => {
 // Moored hulls
 // ---------------------------------------------------------------------------
 
-describe('moored trajinera hulls (guide 7e, 10; issue #78)', () => {
-  const painted = record(paintMooredHulls);
+describe('moored shade (guide 7e, 10; issue #78)', () => {
+  const painted = record(paintMooredShade);
 
   it('is the bank overhang frame: 440 x 60 plus 4 px padding, anchored at the top-left corner of the rect', () => {
     expect(MOORED_W).toBe(440);
@@ -477,11 +480,12 @@ describe('moored trajinera hulls (guide 7e, 10; issue #78)', () => {
     expect(MOORED_TEX).toEqual({ w: 448, h: 68, originX: 4, originY: 4 });
   });
 
-  it('stays inside its frame, ink included', () => {
+  it('stays inside its frame', () => {
     expectInsideFrame(painted, MOORED_TEX);
   });
 
-  it('lays the shade first, from the deep blue-green, nearly solid over the spots and nothing at the bottom', () => {
+  it('is the shade alone: one fill from the deep blue-green, nearly solid over the spots and nothing at the bottom', () => {
+    expect(painted).toHaveLength(1);
     const shade = painted[0];
     expect(shade.op).toBe('fill');
     const [r, g, b] = DEEP_CANAL_SHADE_RGB;
@@ -502,74 +506,92 @@ describe('moored trajinera hulls (guide 7e, 10; issue #78)', () => {
     expect(b).toBeGreaterThan(g);
   });
 
-  it('hangs three hulls from the water line, each inside the rect, 14 px apart, above the spots', () => {
-    expect(MOORED_HULLS).toHaveLength(3);
-    MOORED_HULLS.forEach((hull, i) => {
-      expect(hull.x0).toBeGreaterThanOrEqual(0);
-      expect(hull.x0 + hull.w).toBeLessThanOrEqual(MOORED_W);
-      if (i > 0) expect(hull.x0 - (MOORED_HULLS[i - 1].x0 + MOORED_HULLS[i - 1].w)).toBe(14);
-    });
-    // The hull stops above where the spots sit (about 30 px down), so the shade, not the hull, covers them.
-    expect(MOORED_HULL_DEPTH).toBeLessThan(30);
-    const cream = fills(painted).filter((p) => p.style === BOAT_HULL);
-    expect(cream).toHaveLength(3);
-    for (const c of cream) {
-      const e = extentOf(c.cmds);
-      expect(e.minY).toBe(0);
-      expect(e.maxY).toBe(MOORED_HULL_DEPTH);
-    }
-  });
-
-  it('paints each hull brightly: a cream rail over three bands, each hull in its own order of pink, orange and teal', () => {
-    const bands = fills(painted).filter((p) => p.cmds[0][0] === 'fillRect');
-    expect(bands).toHaveLength(9);
-    const orders = MOORED_HULLS.map((h) => h.bands.join());
-    expect(new Set(orders).size).toBe(3);
-    MOORED_HULLS.forEach((hull, i) => {
-      expect(bands.slice(i * 3, i * 3 + 3).map((b) => b.style)).toEqual([...hull.bands]);
-      for (const colour of hull.bands) expect([BOAT_PINK, BOAT_ORANGE, BOAT_TEAL]).toContain(colour);
-      expect(new Set(hull.bands).size).toBe(3);
-    });
-    // The bands start under the cream rail, below the water line.
-    for (const b of bands) expect(b.cmds[0][2]).toBeGreaterThan(0);
-  });
-
-  it('inks each hull along its lower edge and both ends only, so no dark line crosses the surface', () => {
-    const hullInk = strokes(painted).filter((p) => p.style === INK && p.lineWidth === LW * 0.8);
-    expect(hullInk).toHaveLength(3);
-    for (const s of hullInk) {
-      expect(s.cmds.some(([name]) => name === 'closePath')).toBe(false);
-      // The path runs from the water line down one end, along the bottom and up the other: only its two ends are at y 0.
-      const atSurface = pointsOf(s.cmds).filter((p) => p.y === 0);
-      expect(atSurface).toHaveLength(2);
-    }
-  });
-
-  it('draws an ink gunwale line under each cream rail, so the rail reads light over dark in greyscale', () => {
-    const rails = strokes(painted).filter((p) => p.style === INK && p.lineWidth === RAIL_LINE_W);
-    expect(rails).toHaveLength(3);
-    for (const rail of rails) {
-      const [a, b] = pointsOf(rail.cmds);
-      expect(a.y).toBe(b.y);
-      expect(a.y).toBeGreaterThan(0);
-    }
-  });
-
-  it('ties the hulls with two mooring ropes, a tan tube with ink each side', () => {
-    const ropes = strokes(painted).filter((p) => p.style === POLE_WOOD);
-    expect(ropes).toHaveLength(2);
-    const ropeInk = strokes(painted).filter((p) => p.style === INK && p.lineWidth === 3 + 2 * 1.6);
-    expect(ropeInk).toHaveLength(2);
-  });
-
-  it('puts internal detail in alpha lines only (seams and shines), and the prow balls in orange', () => {
-    const detail = strokes(painted).filter((p) => p.style === BOAT_SEAM || p.style === BOAT_SHINE);
-    expect(detail.length).toBeGreaterThan(0);
-    expect(fills(painted).filter((p) => p.style === BOAT_ORANGE && p.cmds[0][0] === 'moveTo')).toHaveLength(3);
+  it('draws no hulls and no mooring ropes', () => {
+    expect(styleSet(painted).has(BOAT_HULL)).toBe(false);
+    expect(styleSet(painted).has(POLE_WOOD)).toBe(false);
+    expect(strokes(painted)).toHaveLength(0);
   });
 
   it('uses no randomness: the same call draws the same shapes', () => {
-    expect(signature(record(paintMooredHulls))).toBe(signature(painted));
+    expect(signature(record(paintMooredShade))).toBe(signature(painted));
+  });
+});
+
+describe('moored trajinera hull (guide 7e, 10; issue #78)', () => {
+  const paintedOf = (bands: readonly [string, string, string]): Painted[] => record((ctx) => paintMooredHull(ctx, bands));
+  const painted = paintedOf(MOORED_HULL_BANDS[0]);
+
+  it('is one hull 120 wide hanging 26 from the water line, framed with its ink and 4 px padding, anchored at its left end on the water line', () => {
+    expect(MOORED_HULL_W).toBe(120);
+    expect(MOORED_HULL_DEPTH).toBe(26);
+    expect(MOORED_HULL_TEX).toEqual({ w: 132, h: 36, originX: 6, originY: 4 });
+  });
+
+  it('stays inside its frame, ink included, for every band order', () => {
+    for (const bands of MOORED_HULL_BANDS) expectInsideFrame(paintedOf(bands), MOORED_HULL_TEX);
+  });
+
+  it('hangs from the water line, above the spots, its cream fill from x 0 to MOORED_HULL_W', () => {
+    // The hull stops above where the spots sit (about 30 px down), so the shade, not the hull, covers them.
+    expect(MOORED_HULL_DEPTH).toBeLessThan(30);
+    const cream = fills(painted).filter((p) => p.style === BOAT_HULL);
+    expect(cream).toHaveLength(1);
+    const e = extentOf(cream[0].cmds);
+    expect(e.minY).toBe(0);
+    expect(e.maxY).toBe(MOORED_HULL_DEPTH);
+    expect(e.minX).toBe(0);
+    expect(e.maxX).toBe(MOORED_HULL_W);
+  });
+
+  it('holds three band orders, each its own order of pink, orange and teal', () => {
+    expect(MOORED_HULL_BANDS).toHaveLength(3);
+    expect(new Set(MOORED_HULL_BANDS.map((bands) => bands.join())).size).toBe(3);
+    for (const bands of MOORED_HULL_BANDS) {
+      expect(new Set(bands).size).toBe(3);
+      for (const colour of bands) expect([BOAT_PINK, BOAT_ORANGE, BOAT_TEAL]).toContain(colour);
+    }
+  });
+
+  it('paints the hull brightly: a cream rail over the three bands it is given, top to bottom', () => {
+    for (const bands of MOORED_HULL_BANDS) {
+      const bandFills = fills(paintedOf(bands)).filter((p) => p.cmds[0][0] === 'fillRect');
+      expect(bandFills.map((b) => b.style)).toEqual([...bands]);
+      // The bands start under the cream rail, below the water line, and go down in order.
+      const tops = bandFills.map((b) => b.cmds[0][2]);
+      expect(tops[0]).toBeGreaterThan(0);
+      expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+    }
+  });
+
+  it('inks the hull along its lower edge and both ends only, so no dark line crosses the surface', () => {
+    const hullInk = strokes(painted).filter((p) => p.style === INK && p.lineWidth === LW * 0.8);
+    expect(hullInk).toHaveLength(1);
+    expect(hullInk[0].cmds.some(([name]) => name === 'closePath')).toBe(false);
+    // The path runs from the water line down one end, along the bottom and up the other: only its two ends are at y 0.
+    const atSurface = pointsOf(hullInk[0].cmds).filter((p) => p.y === 0);
+    expect(atSurface.map((p) => p.x).sort((a, b) => a - b)).toEqual([0, MOORED_HULL_W]);
+  });
+
+  it('draws an ink gunwale line under the cream rail, so the rail reads light over dark in greyscale', () => {
+    const rails = strokes(painted).filter((p) => p.style === INK && p.lineWidth === RAIL_LINE_W);
+    expect(rails).toHaveLength(1);
+    const [a, b] = pointsOf(rails[0].cmds);
+    expect(a.y).toBe(b.y);
+    expect(a.y).toBeGreaterThan(0);
+  });
+
+  it('has no mooring ropes: each hull stands alone', () => {
+    expect(styleSet(painted).has(POLE_WOOD)).toBe(false);
+  });
+
+  it('puts internal detail in alpha lines only (seams and shines), and one prow ball in orange', () => {
+    const detail = strokes(painted).filter((p) => p.style === BOAT_SEAM || p.style === BOAT_SHINE);
+    expect(detail.length).toBeGreaterThan(0);
+    expect(fills(painted).filter((p) => p.style === BOAT_ORANGE && p.cmds[0][0] === 'moveTo')).toHaveLength(1);
+  });
+
+  it('uses no randomness: the same call draws the same shapes', () => {
+    expect(signature(paintedOf(MOORED_HULL_BANDS[0]))).toBe(signature(painted));
   });
 });
 
@@ -883,7 +905,8 @@ describe('deep canal greyscale (guide 10)', () => {
   });
 
   it('outlines the gliding hull, the shadow, the moored hulls, the hull cave and the stones in ink', () => {
-    for (const paint of [paintTrajineraHull, paintTrajineraShadow, paintMooredHulls, paintHullCaveFront, (c: CanvasRenderingContext2D) => paintCanalBedStones(c)]) {
+    const mooredHulls = MOORED_HULL_BANDS.map((bands) => (c: CanvasRenderingContext2D) => paintMooredHull(c, bands));
+    for (const paint of [paintTrajineraHull, paintTrajineraShadow, ...mooredHulls, paintHullCaveFront, (c: CanvasRenderingContext2D) => paintCanalBedStones(c)]) {
       const inkStrokes = strokes(record(paint)).filter((s) => s.style === INK);
       expect(inkStrokes.length).toBeGreaterThan(0);
     }
@@ -941,17 +964,21 @@ describe('bakeDeepCanalTextures', () => {
     return { art, created };
   };
 
-  it('bakes every prop under its own fixed key', () => {
+  it('bakes every prop under its own fixed key, and one moored hull per band order', () => {
     const { created } = bakeAt(2);
-    expect(created.map((c) => c.key).sort()).toEqual(Object.values(DEEP_CANAL_TEX).sort());
+    const hullKeys = MOORED_HULL_BANDS.map((_, variant) => mooredHullKey(variant));
+    expect(created.map((c) => c.key).sort()).toEqual([...Object.values(DEEP_CANAL_TEX), ...hullKeys].sort());
     expect(new Set(created.map((c) => c.key)).size).toBe(created.length);
     expect(DEEP_CANAL_TEX.trajineraHull).toBe('deep-canal-trajinera-hull');
-    expect(DEEP_CANAL_TEX.mooredHulls).toBe('deep-canal-moored-hulls');
+    expect(DEEP_CANAL_TEX.mooredShade).toBe('deep-canal-moored-shade');
+    expect(MOORED_HULL_KEY_PREFIX).toBe('deep-canal-moored-hull-');
+    expect(hullKeys).toEqual(['deep-canal-moored-hull-0', 'deep-canal-moored-hull-1', 'deep-canal-moored-hull-2']);
+    expect(created.map((c) => c.key)).not.toContain('deep-canal-moored-hulls');
   });
 
   it('bakes each texture at the bake scale, its pixel size rounded up from its frame', () => {
     const { art, created } = bakeAt(3);
-    const infos = [art.trajineraHull, art.trajineraShadow, art.mooredHulls, art.hullCave.back, art.hullCave.front];
+    const infos = [art.trajineraHull, art.trajineraShadow, art.mooredShade, ...art.mooredHulls, art.hullCave.back, art.hullCave.front];
     for (const info of infos) {
       expect(info.scale).toBe(3);
       expect(info.pxW).toBe(Math.ceil(info.w * 3 - 1e-6));
@@ -977,14 +1004,27 @@ describe('bakeDeepCanalTextures', () => {
     expect(art.trajineraShadow.key).toBe(DEEP_CANAL_TEX.trajineraShadow);
   });
 
-  it('bakes the moored hulls anchored at the top-left corner of their rect, so they stretch like the bank overhang', () => {
-    const info = bakeAt(2).art.mooredHulls;
+  it('bakes the moored shade anchored at the top-left corner of its rect, so it stretches like the bank overhang', () => {
+    const info = bakeAt(2).art.mooredShade;
+    expect(info.key).toBe(DEEP_CANAL_TEX.mooredShade);
     expect(info.w).toBe(MOORED_TEX.w);
     expect(info.h).toBe(MOORED_TEX.h);
     expect(info.w).toBe(MOORED_W + 8);
     expect(info.h).toBe(MOORED_H + 8);
     expect(info.originNormX).toBeCloseTo(4 / MOORED_TEX.w, 6);
     expect(info.originNormY).toBeCloseTo(4 / MOORED_TEX.h, 6);
+  });
+
+  it('bakes three moored hulls in the hull frame, one per band order in order, anchored at the hull\'s left end on the water line', () => {
+    const hulls = bakeAt(2).art.mooredHulls;
+    expect(hulls).toHaveLength(MOORED_HULL_BANDS.length);
+    hulls.forEach((info, variant) => {
+      expect(info.key).toBe(mooredHullKey(variant));
+      expect(info.w).toBe(MOORED_HULL_TEX.w);
+      expect(info.h).toBe(MOORED_HULL_TEX.h);
+      expect(info.originX).toBe(MOORED_HULL_TEX.originX);
+      expect(info.originY).toBe(MOORED_HULL_TEX.originY);
+    });
   });
 
   it('bakes the hull cave back and front in the cave frame, anchored at the base centre', () => {
