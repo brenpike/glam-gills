@@ -176,7 +176,7 @@ const SNAKE_REACH = HIT_TARGET_LIMIT - SNAKE_STRETCH_Y;
 const DEEP_LANE_Y = 260;
 const SNAKE_IDS = ['garter-snake-0', 'garter-snake-1', 'garter-snake-2'];
 const CARP_IDS = [0, 1, 2, 3, 4].map((n) => `carp-${n}`);
-const POLE_IDS = [1, 2, 3, 4, 5].map((n) => `chinampa-2/punting-pole-${n}`);
+const POLE_IDS = [1, 2, 3, 4].map((n) => `chinampa-2/punting-pole-${n}`);
 
 const zone = buildZone(CHINAMPA_2_LAYOUT, DEFAULT_ZONE_SEED);
 const area4 = buildZone(CHINAMPA_LAYOUT, DEFAULT_ZONE_SEED);
@@ -560,7 +560,7 @@ describe('CHINAMPA_2_LAYOUT', () => {
     }
   });
 
-  it('has 32 snacks (7 worms, 6 bugs, 10 tadpoles and 9 shrimp), 5 ghost nets, 5 punting poles, 3 tilapia, 3 garter snakes, 5 carp, 2 mat pairs and 10 treasure slots, and no reeds, pads, plastic worms or heron', () => {
+  it('has 32 snacks (7 worms, 6 bugs, 10 tadpoles and 9 shrimp), 5 ghost nets, 4 punting poles, 3 tilapia, 3 garter snakes, 5 carp, 2 mat pairs and 10 treasure slots, and no reeds, pads, plastic worms or heron', () => {
     for (const seed of ALL_SEEDS) {
       const layout = chinampa2(seed);
       expect(layout.collectibles).toHaveLength(32);
@@ -602,7 +602,7 @@ describe('CHINAMPA_2_LAYOUT', () => {
     expect(CHINAMPA_2_TILAPIA.windup).toBeGreaterThan(CHINAMPA_2_TILAPIA.minWindup);
     expect(CHINAMPA_2_TILAPIA.minWindup).toBe(0.8);
     expect(CHINAMPA_2_TILAPIA.lungeDuration).toBe(0.4);
-    expect(zoneThreats(zone).map((threat) => threat.strike)).toEqual([150, 150, 150, 110, 110, 110, 125, 125, 125, 125, 125, 18, 18, 18, 18, 18]);
+    expect(zoneThreats(zone).map((threat) => threat.strike)).toEqual([150, 150, 150, 110, 110, 110, 125, 125, 125, 125, 125, 18, 18, 18, 18]);
     expect(zoneThreats(zone).slice(0, 3)).toMatchObject([
       { kind: 'route', tilapia: true, tuned: true },
       { kind: 'route', tilapia: true, tuned: true },
@@ -732,7 +732,7 @@ describe('Area 5 exit and safe area (ND-2)', () => {
     for (const sweep of sweepsOf(zone)) {
       expect(shapeDistance(exit, sweep)).toBeGreaterThan(exit.radius + GROW);
     }
-    expect(polesOf(zone)).toHaveLength(5);
+    expect(polesOf(zone)).toHaveLength(4);
     for (const spawn of polesOf(zone)) {
       expect(shapeDistance(exit, movingHazardSweep(spawn)), spawn.id).toBeGreaterThan(exit.radius + PUNTING_POLE.touchReach);
     }
@@ -833,10 +833,10 @@ describe('Area 5 danger bar (issue #118, ND-3, ND-9; issue #135, ND-6)', () => {
     expect([layout.width, layout.height, layout.bedTop]).toEqual([zone.width, zone.height, zone.bedTop]);
   });
 
-  it('has 16 moving threats for its 14 screens, 3 predator types and 1 moving hazard type, and every predator chases', () => {
+  it('has 15 moving threats for its 14 screens, 3 predator types and 1 moving hazard type, and every predator chases', () => {
     const screens = (zone.width / SCREEN_W) * (zone.height / WORLD_H);
     expect(screens).toBe(14);
-    expect(movingThreatCount(zone)).toBe(16);
+    expect(movingThreatCount(zone)).toBe(15);
     expect(movingThreatCount(zone)).toBeGreaterThanOrEqual(Math.ceil(0.75 * screens));
     expect(predatorTypeCount(zone)).toBe(3);
     expect(movingHazardTypeCount(zone)).toBe(1);
@@ -892,20 +892,19 @@ describe('Area 5 danger bar (issue #118, ND-3, ND-9; issue #135, ND-6)', () => {
 describe('Area 5 punting poles (issue #118, ND-6)', () => {
   const poles = polesOf(zone);
 
-  it('has five poles in x order, at fixed places, depths and offsets', () => {
+  it('has four poles in x order, at fixed places, depths and offsets', () => {
     expect(poles.map((spawn) => spawn.id)).toEqual(POLE_IDS);
     expect(poles.map((spawn) => [spawn.x, movingHazardDepth(spawn), spawn.offset])).toEqual([
       [476, 440, 0],
       [964, 400, 2],
       [1400, 360, 0],
       [1760, 340, 2],
-      [1840, 340, 0],
     ]);
     for (let i = 1; i < poles.length; i++) expect(poles[i].x, poles[i].id).toBeGreaterThan(poles[i - 1].x);
   });
 
   it('jabs each pole 2 s out of step with the next: offsets 0 and 2 in turn', () => {
-    expect(poles.map((spawn) => spawn.offset)).toEqual([0, 2, 0, 2, 0]);
+    expect(poles.map((spawn) => spawn.offset)).toEqual([0, 2, 0, 2]);
   });
 
   it('stands each pole in a column with no bank, its touch zone clear of the safe area and every overhang', () => {

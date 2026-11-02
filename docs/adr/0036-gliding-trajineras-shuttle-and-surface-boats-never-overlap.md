@@ -1,6 +1,6 @@
 # ADR 0036: Gliding trajineras shuttle and surface boats never overlap
 
-- Status: Accepted
+- Status: Accepted. Its one named exception, Area 5's pole boats, was resolved by issue #198 (2026-11-02; PRD open question 601).
 - Date: 2026-11-01
 - Amends: [ADR 0034](0034-two-lane-areas-black-bass-and-gliding-trajineras.md) (in part: how a gliding trajinera crosses its span and how it is drawn; its push, hold, lane, hull band and danger bar rules stay in force)
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (kid safety, which keeps the push gentle), [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (the punting pole, whose boat art the new check measures)

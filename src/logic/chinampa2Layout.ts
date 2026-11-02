@@ -9,9 +9,9 @@
  * beside the snakes and the carp there, and the root tangle in the bottom row are dead ends that
  * hold treasure spots. It meets the full danger bar with the whole-water test (issue #135, ND-6):
  * three chasing tilapia, three chasing garter snakes, five chasing common carp patrolling every
- * depth and five punting poles that jab down across both rows of the main path in the west half
- * (issue #118, ND-3; issue #135, ND-1 and ND-2), with tadpoles and shrimp among its snacks (issue
- * #118, ND-12).
+ * depth and four punting poles that jab down across both rows of the main path in the west half
+ * (issue #118, ND-3; issue #135, ND-1 and ND-2; issue #198), with tadpoles and shrimp among its
+ * snacks (issue #118, ND-12).
  */
 import { CHINAMPA_2_TREASURES } from './catalogue';
 import { GHOST_NET } from './ghostNets';
@@ -254,16 +254,16 @@ export const CHINAMPA_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     carpLoop(4, [[3049, 250], [3078, 250], [3078, 306], [3049, 306]]),
   ]),
   /**
-   * Five punting poles jabbing down from the surface across both rows of the main path in the west
+   * Four punting poles jabbing down from the surface across both rows of the main path in the west
    * half, each in a column with no bank, each sweep farther than every predator's strike reach from
    * its loop, clear of the mats, 2 s out of step with the next (issue #118, ND-6; issue #135, ND-1).
+   * A fifth pole at x 1840 was removed because its boat overlapped pole 4's (issue #198).
    */
   movingHazards: Object.freeze([
     puntingPoleAt(1, 476, 0, 440),
     puntingPoleAt(2, 964, 2, 400),
     puntingPoleAt(3, 1400, 0, 360),
     puntingPoleAt(4, 1760, 2, 340),
-    puntingPoleAt(5, 1840, 0, 340),
   ]),
   /**
    * Five ghost nets: one in the top row over the second mat pair, two in the bottom row past the
