@@ -58,9 +58,23 @@
  * front of the tilapia and the black bass, behind the heron stab, the halo and the axolotl, so a
  * pushed axolotl is never hidden by the boat. The surface and the pads draw over its rail at the
  * water line. Its push ripple uses `fx`. The black bass reuses `tilapia`.
+ * Area 9 (issue #107). `murkyCloud` (each murky patch's cloud and its dotted outline, ND-1) sits just
+ * above collectibles and below `darkWater` and every predator, moving hazard, the halo and the axolotl:
+ * the see-through cloud tints the scenery and the snacks in a patch, and every threat, its warning and
+ * the axolotl draw over it. The exit's gate and sign keep their `homeSpot` and `homeRing` depths, under
+ * the cloud; the cloud's densest place keeps ink at 3:1 or better, so the exit reads through it. The
+ * dim ring reuses `halo`, the ring meter `fx`, the warning's cheek tint `queasyTint` and its little
+ * bubbles `bubbles`. `bailingBoat` (a moored bailing boat's hull, ND-2) and `bailingShadow` (the
+ * bucket's warning shadow) share the moving hazard band: in front of the tilapia and the black bass,
+ * behind the heron stab, the halo and the axolotl. `bailingBucket` (the whole bucket on its rope) shares
+ * `halo`'s value: in front of the boat, behind the axolotl, so a peeking axolotl shows over the back of
+ * the rim. `bailingBucketFront` (the bucket's front wall and rim) sits over `queasyTint` and under
+ * bubbles, so the front wall covers a peeking axolotl and both cheek tints. The ripples and the landing
+ * splash use `fx`.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
  * < haze < trajineraShadow < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
- * < collectibles < darkWater < glowPlant < rock < tilapia < movingHazard = trajineraHull < heronStab < halo < friend < axolotl < queasyTint
+ * < collectibles < murkyCloud < darkWater < glowPlant < rock < tilapia < movingHazard = trajineraHull = bailingBoat = bailingShadow
+ * < heronStab < halo = bailingBucket < friend < axolotl < queasyTint < bailingBucketFront
  * < bubbles < surface < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
@@ -92,6 +106,8 @@ export const DEPTH = {
   /** Provisional. A pulsing vent's mouth, bubbles, streaks and surging band: above treasures, below collectibles. */
   pulsingCurrent: 29,
   collectibles: 30,
+  /** Provisional. Murky patch cloud and dotted outline: above collectibles, below the dark layer, every predator and the axolotl. */
+  murkyCloud: 31,
   /** Provisional. The dark layer over an area's dark part: above collectibles, below the glow-plants and the tilapia. */
   darkWater: 32,
   /** Provisional. Glow-plants and their hint: just above the dark layer, below the tilapia. */
@@ -104,15 +120,23 @@ export const DEPTH = {
   movingHazard: 36,
   /** Provisional. Gliding trajinera hull: the moving hazard band, behind the heron stab, the halo and the axolotl. */
   trajineraHull: 36,
+  /** Provisional. Moored bailing boat hull: the moving hazard band, behind the heron stab, the halo and the axolotl. */
+  bailingBoat: 36,
+  /** Provisional. Bailing bucket's warning shadow: the moving hazard band, behind the halo and the axolotl. */
+  bailingShadow: 36,
   /** Provisional. Wading heron stab head and neck piece: in front of the tilapia, behind the halo and the axolotl. */
   heronStab: 37,
   /** Provisional. Protected halo: behind the axolotl, in front of the tilapia. */
   halo: 38,
+  /** Provisional. Whole bailing bucket on its rope: in front of the boat, behind the axolotl. */
+  bailingBucket: 38,
   /** Provisional. Stranded axolotl: behind the axolotl, in front of the halo. */
   friend: 39,
   axolotl: 40,
   /** Provisional. Green cheek tint of a queasy axolotl: over the axolotl, under bubbles. */
   queasyTint: 41,
+  /** Provisional. Bailing bucket's front wall and rim, over a peeking axolotl and its cheek tints: under bubbles. */
+  bailingBucketFront: 42,
   bubbles: 50,
   surface: 60,
   pads: 70,

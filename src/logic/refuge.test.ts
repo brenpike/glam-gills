@@ -6,6 +6,7 @@ import {
   CHINAMPA_2_AREA,
   CHINAMPA_AREA,
   CHINAMPA_HABITAT,
+  DEEP_CANAL_2_AREA,
   DEEP_CANAL_AREA,
   DEEP_CANAL_HABITAT,
   HABITATS,
@@ -151,7 +152,10 @@ describe('refugeSections', () => {
       { areaId: SPRING_CAVE_AREA.id, areaNumber: 6, cleared: false },
       { areaId: SPRING_CAVE_2_AREA.id, areaNumber: 7, cleared: false },
     ]);
-    expect(deepCanal.batches).toEqual([{ areaId: DEEP_CANAL_AREA.id, areaNumber: 8, cleared: false }]);
+    expect(deepCanal.batches).toEqual([
+      { areaId: DEEP_CANAL_AREA.id, areaNumber: 8, cleared: false },
+      { areaId: DEEP_CANAL_2_AREA.id, areaNumber: 9, cleared: false },
+    ]);
   });
 
   it('hides every section on a fresh save', () => {
@@ -251,7 +255,7 @@ describe('refugeAreaLine (issue #113, ND-8)', () => {
   it('names the areas of a clean section', () => {
     const sections = refugeSections(beaten(...AREAS.map((area) => area.id)));
     expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean', 'clean', 'clean']);
-    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7', 'Area 8']);
+    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7', 'Areas 8 and 9']);
   });
 
   it('takes the area numbers from the area data', () => {

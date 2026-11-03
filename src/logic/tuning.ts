@@ -627,7 +627,8 @@ export const TRIP_TREASURES: Readonly<TripTreasureTuning> = Object.freeze({
  * The keys are the literal area ids because this file cannot import zone.ts or pondLayout.ts.
  * The pond, Area 2, has 7 slots, the pond at dusk, Area 3, has 8, the chinampa gardens, Area 4,
  * have 9, the chinampa gardens' Area 5 has 10, the spring cave, Area 6, has 11 (issue #77), and the
- * spring cave's Area 7 has 12 (issue #105) and the deep canal's Area 8 has 13 (issue #78).
+ * spring cave's Area 7 has 12 (issue #105), the deep canal's Area 8 has 13 (issue #78) and the deep
+ * canal's Area 9 has 14 (issue #107).
  */
 export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasureOverride>>> = Object.freeze({
   canal: Object.freeze({ slots: 6 }),
@@ -638,6 +639,7 @@ export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasu
   'spring-cave-1': Object.freeze({ slots: 11 }),
   'spring-cave-2': Object.freeze({ slots: 12 }),
   'deep-canal-1': Object.freeze({ slots: 13 }),
+  'deep-canal-2': Object.freeze({ slots: 14 }),
 });
 
 /**

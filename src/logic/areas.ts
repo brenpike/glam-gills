@@ -1,6 +1,7 @@
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import type { SnackDrift } from './collectibles';
+import { DEEP_CANAL_2_AREA_ID, DEEP_CANAL_2_LAYOUT } from './deepCanal2Layout';
 import { DEEP_CANAL_AREA_ID, DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import { REFUGE_FACT_CARDS, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT, type FactCard } from './factCards';
 import type { ElementSpawn, HazardSpawn } from './hazards';
@@ -35,7 +36,7 @@ export const CHINAMPA_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'chinampa
 /** The spring cave habitat, home of Areas 6 and 7. */
 export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
 
-/** The deep canal habitat, home of Area 8 (issue #78). */
+/** The deep canal habitat, home of Areas 8 and 9 (issues #78 and #107). */
 export const DEEP_CANAL_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
 
 /** Every habitat. */
@@ -289,6 +290,33 @@ export const DEEP_CANAL_AREA: Readonly<AreaData> = Object.freeze({
   strandingChance: 0.3,
 });
 
+/**
+ * Area 9, the deep canal again, the first hub area, where the murky water clouds the canal and the
+ * bailing buckets dip (issue #107).
+ */
+export const DEEP_CANAL_2_AREA: Readonly<AreaData> = Object.freeze({
+  id: DEEP_CANAL_2_AREA_ID,
+  number: 9,
+  habitatId: DEEP_CANAL_HABITAT.id,
+  layout: DEEP_CANAL_2_LAYOUT,
+  /**
+   * Provisional exit low at the end of the east branch, so its gate stands on the bed (issue #183),
+   * at the end of the main path: inside the swim bounds, out of the safe area and every predator's
+   * reach, clear of every anchor drop and mud seep, every murky patch and every catch box, and clear
+   * of every hiding spot by more than the exit radius plus the find pickup radius.
+   */
+  exit: Object.freeze({ x: 4200, y: 600, radius: 40 }),
+  specialTreasureId: 'deep-canal/little-bailing-bucket',
+  /**
+   * Provisional drift, a little faster than Area 8 (PRD H4): the same amplitudes with shorter
+   * periods. That is below the 18 px/s a one-leg axolotl makes against the side-canal inflow and at
+   * most half the 40 px/s Snack magnet pull. No snacks dart once: the shrimp replace the one-time
+   * darters.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.8, periodY: 5.44 }),
+  strandingChance: 0.3,
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -299,6 +327,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   SPRING_CAVE_AREA,
   SPRING_CAVE_2_AREA,
   DEEP_CANAL_AREA,
+  DEEP_CANAL_2_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */
