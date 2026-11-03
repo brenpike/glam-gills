@@ -20,7 +20,7 @@ import { badgeShape, rarityName } from './hints';
 import type { HudView, Size } from './hudLayout';
 import { REAL_MORPHS, axolotlFindId } from './morphs';
 import type { AreaStarsRecord } from './stars';
-import { CHEST_BUTTON, chestLayout, chestShowsTitle, hideChestTitle, type ChestLayout, type ChestMeasure } from './tankUi';
+import { CHEST_BUTTON, ICON_TILE, chestLayout, chestShowsTitle, hideChestTitle, type ChestLayout, type ChestMeasure } from './tankUi';
 import * as treasureChest from './treasureChest';
 import {
   CHEST_CATEGORIES,
@@ -104,11 +104,9 @@ function hintOf(sections: readonly ChestSection[], id: string): string | undefin
   return sections.flatMap((section): readonly ChestEntry[] => section.entries).find((entry) => entry.id === id)?.hint;
 }
 
-/** The Wearable detail text or Dream colour label of `entry`; none for a Decoration. */
+/** The Wearable detail text of `entry`; none for a Decoration or Dream colour. */
 function entryDetailTexts(entry: ChestEntry): string[] {
-  if ('detailText' in entry) return [entry.detailText];
-  if ('label' in entry) return [entry.label];
-  return [];
+  return 'detailText' in entry ? [entry.detailText] : [];
 }
 
 function collectListingText(sections: readonly ChestSection[]): string[] {
@@ -177,7 +175,7 @@ describe('treasure chest text', () => {
     expect(SHORT_SECTION_LINES).toEqual({
       decoration: 'Place them in decorate mode.',
       wearable: 'Wear them in Restyle for perks.',
-      dreamColour: 'Magic paints. Use in Restyle.',
+      dreamColour: 'Not in nature. Use in Restyle.',
     });
     for (const category of CHEST_CATEGORIES) {
       expect(sectionLine(category, 'full')).toBe(SECTION_LINES[category]);
@@ -297,6 +295,8 @@ describe('chestListing', () => {
     const [, wearables] = chestListing([]);
     const sunHat = wearables.entries.find((entry) => entry.id === 'canal/sun-hat');
     expect(sunHat).toEqual({
+      category: 'wearable',
+      areaId: CANAL_AREA.id,
       id: 'canal/sun-hat',
       name: UNFOUND_NAME,
       rarity: 'common',
@@ -315,9 +315,49 @@ describe('chestListing', () => {
     }
   });
 
-  it('labels an unfound Dream colour', () => {
-    const [, , dreamColours] = chestListing([]);
-    for (const entry of dreamColours.entries) expect(entry.label).toBe(DREAM_COLOUR_LABEL);
+  it('gives no entry a per-row label, found or not', () => {
+    for (const sections of [chestListing([]), chestListing(ALL_IDS)]) {
+      for (const section of sections) {
+        for (const entry of section.entries) expect('label' in entry, entry.id).toBe(false);
+      }
+    }
+  });
+
+  it('says not found in nature once in each Dream colours section line, full and short', () => {
+    expect(SECTION_LINES.dreamColour).toContain('Not found in nature!');
+    expect(SHORT_SECTION_LINES.dreamColour).toContain('Not in nature.');
+  });
+
+  it('gives every entry its section kind and the id of the area its hint names', () => {
+    for (const areas of [AREAS, [POND_2_AREA], []]) {
+      for (const section of chestListing([], areas)) {
+        for (const entry of section.entries) {
+          const area = entryAreaOf(section, entry, areas);
+          expect(entry.category, entry.id).toBe(section.category);
+          expect(entry.areaId, entry.id).toBe(area?.id ?? null);
+          const hint = area === undefined ? unfoundHint(entry.rarity) : areaHint(area, entry.rarity);
+          expect(entry.hint, entry.id).toBe(hint);
+        }
+      }
+    }
+  });
+
+  it('gives every real entry, found or not, the area that holds it', () => {
+    for (const banked of [[], ALL_IDS]) {
+      for (const section of chestListing(banked)) {
+        for (const entry of section.entries) {
+          expect(entry.category, entry.id).toBe(section.category);
+          expect(entry.areaId, entry.id).toBe(entryAreaOf(section, entry)?.id);
+        }
+      }
+    }
+  });
+
+  it('gives an entry no area holds a null area id', () => {
+    const [decorations, , dreamColours] = chestListing(ALL_IDS, [POND_2_AREA]);
+    expect(decorations.entries.find((entry) => entry.id === 'canal/toy-boat')?.areaId).toBeNull();
+    expect(dreamColours.entries.find((entry) => entry.id === 'lily-green')?.areaId).toBeNull();
+    expect(dreamColours.entries.find((entry) => entry.id === 'firefly-gold')?.areaId).toBe(POND_2_AREA.id);
   });
 
   it('shows everything found when everything is owned', () => {
@@ -374,6 +414,8 @@ describe('chestListing', () => {
     expect(ids).not.toContain('canal/paint-shell-hearts');
     expect(dreamColours.entries.filter((entry) => entry.found)).toEqual([
       {
+        category: 'dreamColour',
+        areaId: CANAL_AREA.id,
         id: 'hearts',
         name: 'Hearts',
         rarity: 'epic',
@@ -382,7 +424,6 @@ describe('chestListing', () => {
         found: true,
         hint: '',
         patterned: true,
-        label: DREAM_COLOUR_LABEL,
       },
     ]);
   });
@@ -522,13 +563,14 @@ describe('chestListing', () => {
       rarity: 'rare',
       found: false,
       hint: 'Lily pad pond: Area 2: look off the main path!',
-      label: DREAM_COLOUR_LABEL,
+      category: 'dreamColour',
+      areaId: POND_AREA.id,
     });
     expect(chestListing(canalShells)[2].countText).toBe('12 of 24 found');
     expect(lilyGreen(['pond/paint-shell-lily-green'])).toMatchObject({ name: 'Lily green', found: true, hint: '' });
   });
 
-  it('marks patterned and sheen Dream colours as patterned, and labels all 24', () => {
+  it('marks patterned and sheen Dream colours as patterned, all 24 in the Dream colours section', () => {
     const [, , dreamColours] = chestListing(PAINT_SHELLS.map((shell) => shell.id));
     expect(dreamColours.entries).toHaveLength(DREAM_COLOURS.length);
     for (const [index, entry] of dreamColours.entries.entries()) {
@@ -536,7 +578,7 @@ describe('chestListing', () => {
       expect(entry.id).toBe(colour.id);
       expect(entry.name).toBe(colour.name);
       expect(entry.patterned).toBe(colour.kind !== 'solid');
-      expect(entry.label).toBe(DREAM_COLOUR_LABEL);
+      expect(entry.category).toBe('dreamColour');
     }
   });
 });
@@ -749,7 +791,7 @@ describe('chestPages', () => {
     const pages = chestPages([dreamColours], 3);
     expect(pages.map((page) => page.entries.length)).toEqual([3, 3, 3, 3, 3, 3, 3, 3]);
     for (const page of pages) expect(page.section).toBe(dreamColours);
-    expect(pages.flatMap((page) => page.entries)).toEqual(dreamColours.entries);
+    expect(pages.flatMap((page): readonly ChestEntry[] => page.entries)).toEqual(dreamColours.entries);
   });
 
   it.each([
@@ -804,7 +846,7 @@ describe('chestPages', () => {
       ['dreamColour', 3],
     ]);
     for (const section of sections) {
-      const listed = pages.filter((page) => page.section === section).flatMap((page) => page.entries);
+      const listed = pages.filter((page) => page.section === section).flatMap((page): readonly ChestEntry[] => page.entries);
       expect(listed).toEqual(section.entries);
     }
   });
@@ -898,7 +940,7 @@ function largestSize(texts: readonly string[], px: number, wrapW: number, em: nu
   return { w: Math.max(...sizes.map((size) => size.w)), h: Math.max(...sizes.map((size) => size.h)) };
 }
 
-/** The chest measure with every heading at its fullest count and the `length` section lines. */
+/** The chest measure with every heading at its fullest count, the `length` section lines and the 48 x 48 Filter tile (ICON_TILE). */
 function chestMeasure(length: SectionLineLength): ChestMeasure {
   const headings = chestListing(ALL_IDS).map((section) => `${section.heading}: ${section.countText}`);
   const lines = CHEST_CATEGORIES.map((category) => sectionLine(category, length));
@@ -913,6 +955,7 @@ function chestMeasure(length: SectionLineLength): ChestMeasure {
     close: CHEST_BUTTON,
     back: CHEST_BUTTON,
     next: CHEST_BUTTON,
+    filter: { w: ICON_TILE.w, h: ICON_TILE.h },
   };
 }
 
@@ -938,11 +981,10 @@ function perkBlockHeight(slotText: string, perkLabel: string, textW: number): nu
 function detailBlocksHeight(entry: ChestEntry, textW: number): number {
   const detail = (text: string, em: number): number => estimateHeight(text, DETAIL_PX, textW, em);
   if (!entry.found) {
-    const second = 'detailText' in entry ? detail(entry.detailText, BOLD_EM) : 'label' in entry ? detail(entry.label, REGULAR_EM) : 0;
+    const second = 'detailText' in entry ? detail(entry.detailText, BOLD_EM) : 0;
     return detail(entry.hint, REGULAR_EM) + second;
   }
   if ('perk' in entry && entry.perk !== null) return perkBlockHeight(entry.slotName, perkText(entry.perk), textW);
-  if ('label' in entry) return detail(entry.label, REGULAR_EM);
   return 0;
 }
 
@@ -1000,13 +1042,17 @@ describe('Treasure Chest fit with every treasure listed', () => {
 
   it.each<[number, number, SectionLineLength, boolean]>([
     [460, 320, 'short', false],
+    [480, 320, 'short', false],
     [320, 440, 'short', false],
     [340, 440, 'short', false],
     [360, 440, 'short', false],
-    [320, 480, 'short', true],
+    [320, 480, 'short', false],
     [375, 440, 'short', true],
+    [375, 480, 'full', true],
     [460, 340, 'short', true],
     [460, 375, 'short', true],
+    [568, 320, 'short', true],
+    [568, 340, 'full', true],
     [800, 600, 'full', true],
     [1024, 768, 'full', true],
   ])('uses the %s x %s %s section lines, title shown: %s', (cssW, cssH, expected, showsTitle) => {
@@ -1015,9 +1061,52 @@ describe('Treasure Chest fit with every treasure listed', () => {
     expect(fit.showsTitle).toBe(showsTitle);
   });
 
-  it('hides the title only on 320x440, 340x440, 360x440, 460x320 and 480x320, where the short lines still leave no room for a row', () => {
+  it('uses the short section lines only on the canvases where the full ones leave no room for a row', () => {
+    const short = supportedCanvases().filter((view) => fitChest(view).length === 'short');
+    expect(short.map((view) => `${view.cssW}x${view.cssH}`)).toEqual([
+      '320x440',
+      '320x480',
+      '340x440',
+      '340x480',
+      '360x440',
+      '360x480',
+      '375x440',
+      '390x440',
+      '414x440',
+      '430x440',
+      '460x320',
+      '460x340',
+      '460x360',
+      '460x375',
+      '480x320',
+      '480x340',
+      '480x360',
+      '480x375',
+      '520x320',
+      '520x340',
+      '520x360',
+      '520x375',
+      '568x320',
+      '640x320',
+      '667x320',
+      '736x320',
+      '800x320',
+      '844x320',
+    ]);
+  });
+
+  it('hides the title only on the canvases where the short lines still leave no room for a row', () => {
     const hidden = supportedCanvases().filter((view) => !fitChest(view).showsTitle);
-    expect(hidden.map((view) => `${view.cssW}x${view.cssH}`)).toEqual(['320x440', '340x440', '360x440', '460x320', '480x320']);
+    expect(hidden.map((view) => `${view.cssW}x${view.cssH}`)).toEqual([
+      '320x440',
+      '320x480',
+      '340x440',
+      '340x480',
+      '360x440',
+      '460x320',
+      '480x320',
+      '520x320',
+    ]);
     for (const view of hidden) {
       const fit = fitChest(view);
       expect(fit.length).toBe('short');

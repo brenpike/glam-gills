@@ -46,12 +46,11 @@ export interface BookUnfoundMorphEntry {
 /** One real morph in the Collection Book. Every morph entry shows a picture (a silhouette when unfound). */
 export type BookMorphEntry = BookFoundMorphEntry | BookUnfoundMorphEntry;
 
-/** One Dream colour, listed apart from the morphs with the not-found-in-nature label (PRD C12, F15). */
+/** One Dream colour, listed apart from the morphs; its section's note says it is not found in nature (PRD C12, F15). */
 export interface BookDreamColourEntry {
   readonly id: DreamColourId;
   readonly name: string;
   readonly patterned: boolean;
-  readonly label: string;
 }
 
 /**
@@ -79,8 +78,10 @@ export interface BookSectionOf<C extends BookCategory, E extends BookEntry> {
 /** The Morphs section, heading e.g. 'Morphs: 2 of 8 found'. */
 export type BookMorphSection = BookSectionOf<'morph', BookMorphEntry>;
 
-/** The Dream colours section, heading 'Dream colours'. */
-export type BookDreamColourSection = BookSectionOf<'dreamColour', BookDreamColourEntry>;
+/** The Dream colours section, heading 'Dream colours', with the not-found-in-nature label once as its note (PRD C12, F15). */
+export interface BookDreamColourSection extends BookSectionOf<'dreamColour', BookDreamColourEntry> {
+  readonly note: string;
+}
 
 /** The Fact cards section, heading e.g. 'Facts: 2 of 2 found', short so a two-digit count stays on one line (PRD C14). */
 export type BookFactCardSection = BookSectionOf<'factCard', BookFactCardEntry>;
@@ -89,16 +90,13 @@ export type BookFactCardSection = BookSectionOf<'factCard', BookFactCardEntry>;
 export type BookSection = BookMorphSection | BookDreamColourSection | BookFactCardSection;
 
 /** One page of one section: the section and the slice of its entries shown on the page. */
-export interface BookPageOf<C extends BookCategory, E extends BookEntry> {
-  readonly section: BookSectionOf<C, E>;
-  readonly entries: readonly E[];
+export interface BookPageOf<S extends BookSection> {
+  readonly section: S;
+  readonly entries: S['entries'];
 }
 
 /** Any Collection Book page. */
-export type BookPage =
-  | BookPageOf<'morph', BookMorphEntry>
-  | BookPageOf<'dreamColour', BookDreamColourEntry>
-  | BookPageOf<'factCard', BookFactCardEntry>;
+export type BookPage = BookPageOf<BookMorphSection> | BookPageOf<BookDreamColourSection> | BookPageOf<BookFactCardSection>;
 
 /**
  * Featured entry sizes in CSS px: name bold 22, badge box 24, text regular 18, the picture widths
@@ -163,7 +161,7 @@ function createMorphEntry(morph: Readonly<RealMorph>, found: boolean): BookMorph
 }
 
 function createDreamColourEntry(colour: DreamColour): BookDreamColourEntry {
-  return { id: colour.id, name: colour.name, patterned: colour.kind !== 'solid', label: DREAM_COLOUR_LABEL };
+  return { id: colour.id, name: colour.name, patterned: colour.kind !== 'solid' };
 }
 
 /**
@@ -198,7 +196,8 @@ function countedHeading(name: string, entries: readonly { found: boolean }[]): s
 /**
  * The Collection Book sections, always Morphs, Dream colours, then Fact cards. Morphs lists the eight
  * real morphs in REAL_MORPHS order, found when in `foundMorphs` (duplicates and order ignored).
- * Dream colours lists every DREAM_COLOURS entry in catalogue order, each with DREAM_COLOUR_LABEL.
+ * Dream colours lists every DREAM_COLOURS entry in catalogue order, with DREAM_COLOUR_LABEL once as
+ * the section's note rather than on each entry.
  * Fact cards holds each card of `cards` in order (bookFactCards order by default: the area cards in
  * area-table order, then the refuge cards), found only when its id is in `metHazards`, with a
  * picture only when found and it has Book art (today the tilapia), and when unfound the card's own
@@ -216,15 +215,17 @@ export function bookListing(
   const factCards = [...cards.map((card) => createFactCardEntry(card, met.has(card.id))), createBoyOrGirlEntry()];
   return [
     { category: 'morph', heading: countedHeading(MORPHS_HEADING, morphs), entries: morphs },
-    { category: 'dreamColour', heading: DREAM_COLOURS_HEADING, entries: DREAM_COLOURS.map(createDreamColourEntry) },
+    {
+      category: 'dreamColour',
+      heading: DREAM_COLOURS_HEADING,
+      note: DREAM_COLOUR_LABEL,
+      entries: DREAM_COLOURS.map(createDreamColourEntry),
+    },
     { category: 'factCard', heading: countedHeading(FACT_CARDS_HEADING, factCards), entries: factCards },
   ];
 }
 
-function slicePages<C extends BookCategory, E extends BookEntry>(
-  section: BookSectionOf<C, E>,
-  perPage: number,
-): BookPageOf<C, E>[] {
+function slicePages<S extends BookSection>(section: S, perPage: number): BookPageOf<S>[] {
   const pageCount = Math.max(1, Math.ceil(section.entries.length / perPage));
   return Array.from({ length: pageCount }, (_, index) => ({
     section,

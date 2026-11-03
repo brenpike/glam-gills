@@ -257,6 +257,8 @@ export interface ChestMeasure {
   close: Size;
   back: Size;
   next: Size;
+  /** The Filter tile at the left of the page-text row; without it the row holds only the page text. */
+  filter?: Size;
 }
 
 /** The Treasure Chest layout. `list` is the room for entry rows. */
@@ -269,6 +271,8 @@ export interface ChestLayout {
   close: Rect;
   back: Rect;
   next: Rect;
+  /** The Filter tile, present only when ChestMeasure gives `filter`. */
+  filter?: Rect;
 }
 
 const KEY_ACTIONS: Readonly<Record<string, TankKey>> = Object.freeze({
@@ -845,7 +849,9 @@ export function trayPageOf(layout: Pick<DecorateLayout, 'pageCount' | 'pageSize'
  * the heading at the top left and the entry list below them. Landscape (`cssW > cssH`): a right
  * column with Close at the top and Back over Next at the bottom, and the page text under the list.
  * Portrait: the page text above a bottom row of Back, Next and Close (wrapping when it must).
- * Titles and headings are measured at the content width.
+ * Titles and headings are measured at the content width. With `measure.filter`, the Filter tile
+ * sits at the left of the page-text row and the page text centres in the rest of that row; the
+ * row is as tall as the taller of the two.
  */
 export function chestLayout(view: HudView, measure: ChestMeasure): ChestLayout {
   const panel: Rect = {
@@ -883,6 +889,19 @@ function chestContent(
   return { title, heading, list: { x: inner.x, y: listTop, w: contentW, h: Math.max(0, listBottom - listTop) } };
 }
 
+/** The page-text row with the Filter tile: the tile at `x`, the page text centred in the rest of `rowW`, both centred down a row ending at `bottom`. */
+function filterRow(filter: Size, pageText: Size, x: number, rowW: number, bottom: number): { filter: Rect; pageText: Rect; top: number } {
+  const rowH = Math.max(filter.h, pageText.h);
+  const top = bottom - rowH;
+  const restX = x + filter.w + UI.gap;
+  const restW = Math.max(0, rowW - filter.w - UI.gap);
+  return {
+    filter: { x, y: top + (rowH - filter.h) / 2, w: filter.w, h: filter.h },
+    pageText: { x: restX + (restW - pageText.w) / 2, y: top + (rowH - pageText.h) / 2, w: pageText.w, h: pageText.h },
+    top,
+  };
+}
+
 /** Landscape chest: the content and the page text on the left, the button column on the right. */
 function landscapeChest(panel: Rect, inner: Rect, measure: ChestMeasure): ChestLayout {
   const { close, back, next, pageText } = measure;
@@ -891,16 +910,19 @@ function landscapeChest(panel: Rect, inner: Rect, measure: ChestMeasure): ChestL
   const contentW = Math.max(0, inner.w - columnW - UI.gap);
   const bottom = inner.y + inner.h;
   const nextRect = inColumn(next, columnX, columnW, bottom - next.h);
-  const pageRect = inColumn(pageText, inner.x, contentW, bottom - pageText.h);
-  const content = chestContent(inner, contentW, pageRect.y - UI.gap, measure);
-  return {
-    panel,
-    ...content,
-    pageText: pageRect,
+  const buttons = {
     close: inColumn(close, columnX, columnW, inner.y),
     back: inColumn(back, columnX, columnW, nextRect.y - UI.gap - back.h),
     next: nextRect,
   };
+  if (measure.filter !== undefined) {
+    const row = filterRow(measure.filter, pageText, inner.x, contentW, bottom);
+    const content = chestContent(inner, contentW, row.top - UI.gap, measure);
+    return { panel, ...content, pageText: row.pageText, ...buttons, filter: row.filter };
+  }
+  const pageRect = inColumn(pageText, inner.x, contentW, bottom - pageText.h);
+  const content = chestContent(inner, contentW, pageRect.y - UI.gap, measure);
+  return { panel, ...content, pageText: pageRect, ...buttons };
 }
 
 /** Portrait chest: the content above the page text and the bottom button rows. */
@@ -910,6 +932,11 @@ function portraitChest(panel: Rect, inner: Rect, measure: ChestMeasure): ChestLa
   const buttonsH = bottomOfAll(buttons, 0);
   const shift = inner.y + inner.h - buttonsH;
   const [back, next, close] = buttons.map((rect) => ({ ...rect, y: rect.y + shift }));
+  if (measure.filter !== undefined) {
+    const row = filterRow(measure.filter, measure.pageText, inner.x, inner.w, shift - UI.gap);
+    const content = chestContent(inner, inner.w, row.top - UI.gap, measure);
+    return { panel, ...content, pageText: row.pageText, close, back, next, filter: row.filter };
+  }
   const pageTop = shift - UI.gap - measure.pageText.h;
   const pageText: Rect = { ...measure.pageText, x: centreX - measure.pageText.w / 2, y: pageTop };
   const content = chestContent(inner, inner.w, pageTop - UI.gap, measure);
@@ -927,7 +954,7 @@ export function chestShowsTitle(listH: number, rowH: number): boolean {
 /**
  * `chest` with its title hidden (PRD C11, as the Collection Book does in C14): the heading moves up
  * to `chest.title.y` (same x, width and height) and the list grows upward by
- * `chest.heading.y - chest.title.y`. Everything else is unchanged.
+ * `chest.heading.y - chest.title.y`. Everything else, the Filter tile included, is unchanged.
  */
 export function hideChestTitle(chest: ChestLayout): ChestLayout {
   const lift = chest.heading.y - chest.title.y;

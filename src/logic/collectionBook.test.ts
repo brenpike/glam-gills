@@ -260,12 +260,16 @@ function isInside(rect: Rect, bounds: Rect): boolean {
   );
 }
 
-/** Estimated height of a Dream colour row: name over the label, beside or under the 32 px swatch. */
-function dreamRowHeight(name: string, label: string, listW: number): number {
+/** Estimated height of a Dream colour row: the name beside the 32 px swatch. */
+function dreamRowHeight(name: string, listW: number): number {
   const wrapW = listW - ROW_LEAD_PX - ROW_LEAD_GAP;
   const nameH = estimateLines(name, ROW_NAME_PX, wrapW, BOLD_EM) * LINE_HEIGHT_EM * ROW_NAME_PX;
-  const labelH = estimateLines(label, BODY_PX, wrapW, REGULAR_EM) * LINE_HEIGHT_EM * BODY_PX;
-  return Math.max(ROW_LEAD_PX, nameH + labelH);
+  return Math.max(ROW_LEAD_PX, nameH);
+}
+
+/** Estimated height of the Dream colour note at the top of the list, wrapped at the list width, plus the gap under it. */
+function dreamNoteRoom(note: string, listW: number): number {
+  return estimateLines(note, BODY_PX, listW, REGULAR_EM) * LINE_HEIGHT_EM * BODY_PX + UI.gap;
 }
 
 /** Problems with one featured layout: not fitting, clipped text, small picture, or rects outside `area`. */
@@ -288,11 +292,20 @@ describe('collection book text', () => {
     expect(COLLECTION_BOOK_TITLE).toBe('Collection Book');
   });
 
-  it('labels Dream colours with the exact PRD wording and an em dash', () => {
-    const [, dreamColours] = bookListing([], []);
-    for (const entry of dreamColours.entries) {
-      expect(entry.label).toBe('Dream colour — not found in nature');
-      expect(entry.label).toContain('—');
+  it('notes the Dream colours section once with the exact PRD wording and an em dash', () => {
+    for (const [, dreamColours] of everyListing()) {
+      expect(dreamColours.note).toBe('Dream colour — not found in nature');
+      expect(dreamColours.note).toBe(DREAM_COLOUR_LABEL);
+      expect(dreamColours.note).toContain('—');
+    }
+  });
+
+  it('never repeats the not-found-in-nature label on a Dream colour entry', () => {
+    for (const [, dreamColours] of everyListing()) {
+      for (const entry of dreamColours.entries) {
+        expect(entry).not.toHaveProperty('label');
+        expect(Object.values(entry)).not.toContain(DREAM_COLOUR_LABEL);
+      }
     }
   });
 
@@ -410,7 +423,6 @@ describe('bookListing', () => {
           id: colour.id,
           name: colour.name,
           patterned: colour.kind !== 'solid',
-          label: DREAM_COLOUR_LABEL,
         })),
       );
     }
@@ -1106,14 +1118,15 @@ describe('collection book fit', () => {
     }
   });
 
-  it('gives at least one whole Dream colour row per page on every supported canvas', () => {
+  it('gives at least one whole Dream colour row per page under the note on every supported canvas', () => {
     const [, dreamColours] = bookListing([], []);
     const problems: string[] = [];
     for (const view of supportedCanvases()) {
       const { list } = chestLayout(view, BOOK_MEASURE);
-      const rowH = Math.max(...dreamColours.entries.map((entry) => dreamRowHeight(entry.name, entry.label, list.w)));
-      if (rowH > list.h || rowsPerPage(list.h, rowH, UI.gap) < 1) {
-        problems.push(`${view.cssW}x${view.cssH}: row ${rowH} in list ${list.h}`);
+      const rowsH = list.h - dreamNoteRoom(dreamColours.note, list.w);
+      const rowH = Math.max(...dreamColours.entries.map((entry) => dreamRowHeight(entry.name, list.w)));
+      if (rowH > rowsH || rowsPerPage(rowsH, rowH, UI.gap) < 1) {
+        problems.push(`${view.cssW}x${view.cssH}: row ${rowH} in ${rowsH} under the note`);
       }
     }
     expect(problems).toEqual([]);

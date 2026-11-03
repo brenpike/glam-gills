@@ -72,8 +72,8 @@ export interface TreasureChestTextures {
 
 /**
  * The texts of one entry row, and its images (null in the measuring probe). A found Wearable's slot
- * and perk are `slot`, `perkIcon` and `perk`; a found Dream colour's label, or an unfound entry's hint
- * and its slot or label, is `detail`. The unused ones stay empty.
+ * and perk are `slot`, `perkIcon` and `perk`; an unfound entry's hint, and an unfound Wearable's slot,
+ * is `detail`. The unused ones stay empty.
  */
 interface RowParts {
   lead: Phaser.GameObjects.Image | Phaser.GameObjects.Container | null;
@@ -126,7 +126,7 @@ function addRowLead(
   treasure: TreasureTextures,
   entry: ChestEntry,
 ): Phaser.GameObjects.Image | Phaser.GameObjects.Container {
-  if ('label' in entry) {
+  if (entry.category === 'dreamColour') {
     return entry.found ? addGlowingSwatch(scene, treasure, entry) : addCentredImage(scene, treasure.swatchSilhouette);
   }
   return entry.found
@@ -145,13 +145,12 @@ function perkOf(entry: ChestEntry): Perk | null {
 }
 
 /**
- * Detail text of an entry. Unfound: its hint, then a Wearable's slot name or a Dream colour's
- * label, one per line. Found: the Dream colour label, or none (a found Wearable has the slot and perk
- * line instead).
+ * Detail text of an entry. Unfound: its hint, then a Wearable's slot name, one per line. Found: none
+ * (a found Wearable has the slot and perk line instead).
  */
 function detailText(entry: ChestEntry): string {
-  if (entry.found) return 'label' in entry ? entry.label : '';
-  const second = 'detailText' in entry ? entry.detailText : 'label' in entry ? entry.label : '';
+  if (entry.found) return '';
+  const second = 'detailText' in entry ? entry.detailText : '';
   return [entry.hint, second].filter((line) => line !== '').join('\n');
 }
 

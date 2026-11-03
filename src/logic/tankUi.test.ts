@@ -136,6 +136,9 @@ const CHEST_MEASURE: ChestMeasure = {
   next: CHEST_BUTTON,
 };
 
+/** CHEST_MEASURE with the 48 x 48 Filter tile (ICON_TILE) in the page-text row. */
+const CHEST_FILTER_MEASURE: ChestMeasure = { ...CHEST_MEASURE, filter: { w: ICON_TILE.w, h: ICON_TILE.h } };
+
 /** Supported canvases from the width and height grid (art guide 1). */
 function supportedCanvases(): HudView[] {
   return CANVAS_WIDTHS.flatMap((cssW) =>
@@ -376,10 +379,13 @@ function trayPagesProblems(view: HudView, trayCount: number, maxTrayCount: numbe
   return Array.from({ length: first.pageCount }, (_, page) => page).flatMap((page) => decorateProblems(view, trayCount, maxTrayCount, page));
 }
 
-/** Every chest problem on one canvas, including fewer than two rows per page. */
-function chestProblems(view: HudView): string[] {
-  const label = `chest ${view.cssW}x${view.cssH}`;
-  const layout = chestLayout(view, CHEST_MEASURE);
+/**
+ * Every chest problem on one canvas measured with `measure`, including fewer than `minRows` rows of
+ * CHEST_ROW_H per page. The real one-whole-row fit with the Filter tile is the treasureChest.test sweep.
+ */
+function chestProblems(view: HudView, measure: ChestMeasure, minRows: number): string[] {
+  const label = `chest ${view.cssW}x${view.cssH}${measure.filter === undefined ? '' : ' with Filter'}`;
+  const layout = chestLayout(view, measure);
   const inner: Rect = {
     x: layout.panel.x + UI.pad,
     y: layout.panel.y + UI.pad,
@@ -390,6 +396,7 @@ function chestProblems(view: HudView): string[] {
     ['close', layout.close],
     ['back', layout.back],
     ['next', layout.next],
+    ...(layout.filter === undefined ? [] : [['filter', layout.filter] as [string, Rect]]),
   ];
   const all: [string, Rect][] = [
     ['title', layout.title],
@@ -403,8 +410,9 @@ function chestProblems(view: HudView): string[] {
     ...spacingProblems(label, inner, all),
     ...targetProblems(label, targets),
   ];
+  if ((measure.filter === undefined) !== (layout.filter === undefined)) problems.push(`${label}: filter rect does not match the measure`);
   const rows = rowsPerPage(layout.list.h, CHEST_ROW_H, UI.gap);
-  if (rows < 2) problems.push(`${label}: ${rows} row per page`);
+  if (rows < minRows) problems.push(`${label}: ${rows} row per page`);
   return problems;
 }
 
@@ -1220,8 +1228,51 @@ describe('chestLayout', () => {
   });
 
   it('fits on every supported canvas with at least two rows per page', () => {
-    const problems = supportedCanvases().flatMap(chestProblems);
+    const problems = supportedCanvases().flatMap((view) => chestProblems(view, CHEST_MEASURE, 2));
     expect(problems).toEqual([]);
+  });
+
+  it('fits the Filter tile on every supported canvas: inside the panel, at least 48 x 48, clear of the buttons, list and page text, with at least one row per page', () => {
+    const problems = supportedCanvases().flatMap((view) => chestProblems(view, CHEST_FILTER_MEASURE, 1));
+    expect(problems).toEqual([]);
+  });
+
+  it('gives no Filter rect without a Filter measure', () => {
+    for (const view of supportedCanvases()) {
+      expect(chestLayout(view, CHEST_MEASURE)).not.toHaveProperty('filter');
+    }
+  });
+
+  it.each([
+    { cssW: 460, cssH: 320 },
+    { cssW: 320, cssH: 440 },
+    { cssW: 1024, cssH: 768 },
+    { cssW: 390, cssH: 844 },
+  ])('puts the Filter tile at the left of the page-text row and centres the page text in the rest at $cssW x $cssH', (view) => {
+    const plain = chestLayout(view, CHEST_MEASURE);
+    const chest = chestLayout(view, CHEST_FILTER_MEASURE);
+    const filter = chest.filter as Rect;
+    const rowH = Math.max(filter.h, chest.pageText.h);
+    const rowTop = Math.min(filter.y, chest.pageText.y);
+    const rowRight = plain.list.x + plain.list.w;
+    expect(filter).toMatchObject({ x: plain.list.x, w: ICON_TILE.w, h: ICON_TILE.h });
+    expect(Math.max(bottomOf(filter), bottomOf(chest.pageText))).toBeCloseTo(bottomOf(plain.pageText), 9);
+    expect(Math.max(bottomOf(filter), bottomOf(chest.pageText)) - rowTop).toBeCloseTo(rowH, 9);
+    expect(filter.y + filter.h / 2).toBeCloseTo(chest.pageText.y + chest.pageText.h / 2, 9);
+    const restX = filter.x + filter.w + UI.gap;
+    expect(chest.pageText.x - restX).toBeCloseTo(rowRight - (chest.pageText.x + chest.pageText.w), 9);
+    expect(rowTop - bottomOf(chest.list)).toBeCloseTo(UI.gap, 9);
+    expect(bottomOf(plain.list) - bottomOf(chest.list)).toBeCloseTo(rowH - plain.pageText.h, 9);
+  });
+
+  it('keeps everything but the page-text row and the list where it is without the Filter tile', () => {
+    for (const view of supportedCanvases()) {
+      const plain = chestLayout(view, CHEST_MEASURE);
+      const { filter, ...chest } = chestLayout(view, CHEST_FILTER_MEASURE);
+      expect(filter).toBeDefined();
+      expect({ ...chest, pageText: plain.pageText, list: plain.list }).toEqual(plain);
+      expect(chest.list).toEqual({ ...plain.list, h: chest.list.h });
+    }
   });
 
   it.each([
@@ -1280,6 +1331,12 @@ describe('hideChestTitle', () => {
     expect(bottomOf(hidden.list)).toBe(bottomOf(chest.list));
     expect(hidden.list.y - bottomOf(hidden.heading)).toBe(chest.list.y - bottomOf(chest.heading));
     expect(hidden).toEqual({ ...chest, heading: hidden.heading, list: hidden.list });
+  });
+
+  it('carries the Filter tile through unchanged', () => {
+    const chest = chestLayout({ cssW: 460, cssH: 320 }, CHEST_FILTER_MEASURE);
+    expect(chest.filter).toBeDefined();
+    expect(hideChestTitle(chest).filter).toEqual(chest.filter);
   });
 
   it('leaves the chest it is given unchanged', () => {

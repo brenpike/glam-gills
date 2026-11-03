@@ -31,7 +31,7 @@ const TITLE_PX = 28;
 const HEADING_PX = 18;
 const PAGE_TEXT_PX = 18;
 const DREAM_NAME_PX = 20;
-const DREAM_LABEL_PX = 18;
+const DREAM_NOTE_PX = 18;
 const SWATCH_PX = 32;
 const SWATCH_GAP = 8;
 const BADGE_PX = 24;
@@ -58,11 +58,10 @@ interface FeatureSpec {
   pictureAt: ((size: PictureSize) => TexInfo) | null;
 }
 
-/** The texts of one Dream colour row, and its swatch (null in the measuring probe). */
+/** The name of one Dream colour row, and its swatch (null in the measuring probe). */
 interface DreamRowParts {
   swatch: Phaser.GameObjects.Image | null;
   name: Phaser.GameObjects.Text;
-  label: Phaser.GameObjects.Text;
 }
 
 /** Adds a centre-anchored image showing `info` at its logical size. */
@@ -93,17 +92,14 @@ function pictureSizeOf(rect: Rect): PictureSize {
 
 /**
  * Lays out one Dream colour row `rowW` wide from its top-left and returns its height: the 32 px
- * swatch at the left, the name beside it and the not-found-in-nature label under the name.
+ * swatch at the left and the name beside it.
  */
 function arrangeDreamRow(parts: DreamRowParts, rowW: number): number {
   const textX = SWATCH_PX + SWATCH_GAP;
-  const textW = rowW - textX;
-  const name = wrappedSize(parts.name, textW);
-  const label = wrappedSize(parts.label, textW);
+  const name = wrappedSize(parts.name, rowW - textX);
   parts.name.setPosition(textX, 0);
-  parts.label.setPosition(textX, name.h);
   parts.swatch?.setPosition(SWATCH_PX / 2, SWATCH_PX / 2);
-  return Math.max(SWATCH_PX, name.h + label.h);
+  return Math.max(SWATCH_PX, name.h);
 }
 
 /**
@@ -111,7 +107,8 @@ function arrangeDreamRow(parts: DreamRowParts, rowW: number): number {
  * takes every press, a white panel with the title, the section heading, one page, the page text,
  * and the Back, Close and Next buttons, in the Treasure Chest layout. A morph page shows its
  * portrait, name, 24 px badge and fun fact, or the silhouette, "???" and the rescue hint. Dream
- * colour pages list swatch rows with the not-found-in-nature label, as many as fit. The fact card
+ * colour pages show the section's not-found-in-nature note once at the top of the list, under the
+ * heading, then swatch and name rows, as many as fit under the note. The fact card
  * page shows the tilapia picture, name and fact, or "???" and the hint with no picture. A morph or
  * fact card page whose text does not fit under the title on a small canvas (the plastic worm card)
  * hides the "Collection Book" title and moves the section heading up to the title's top, giving the
@@ -132,6 +129,7 @@ export class CollectionBookView {
   private readonly pageLabel: Phaser.GameObjects.Text;
   private readonly featureName: Phaser.GameObjects.Text;
   private readonly featureText: Phaser.GameObjects.Text;
+  private readonly dreamNote: Phaser.GameObjects.Text;
   private readonly probe: DreamRowParts;
   private readonly buttons: readonly UiButton[];
   private view: SceneView;
@@ -142,6 +140,7 @@ export class CollectionBookView {
   private perPage = 1;
   private rowH = SWATCH_PX;
   private book: ChestLayout | null = null;
+  private dreamList: Rect | null = null;
   private pageItems: Phaser.GameObjects.GameObject[] = [];
   private pageTexts: Phaser.GameObjects.Text[] = [];
   private focusIndex = NEXT_INDEX;
@@ -169,6 +168,7 @@ export class CollectionBookView {
     this.pageLabel = scene.add.text(0, 0, '', uiTextStyle(PAGE_TEXT_PX, this.dpr, false));
     this.featureName = scene.add.text(0, 0, '', uiTextStyle(BOOK_FEATURE.namePx, this.dpr));
     this.featureText = scene.add.text(0, 0, '', uiTextStyle(BOOK_FEATURE.textPx, this.dpr, false));
+    this.dreamNote = scene.add.text(0, 0, '', uiTextStyle(DREAM_NOTE_PX, this.dpr, false));
     this.probe = this.createDreamRowParts(null);
     for (const text of this.probeTexts()) {
       text.setVisible(false);
@@ -187,6 +187,7 @@ export class CollectionBookView {
         this.pageLabel,
         this.featureName,
         this.featureText,
+        this.dreamNote,
         ...this.buttons.map((button) => button.container),
       ])
       .setDepth(depth)
@@ -216,9 +217,9 @@ export class CollectionBookView {
   }
 
   /**
-   * Lays the book out for `view` with chestLayout(), measures the tallest Dream colour row at the
-   * list width, and pages the listing with as many Dream colour rows as fit, staying on the same
-   * entry. Safe to call while closed; the next open() uses `view`.
+   * Lays the book out for `view` with chestLayout(), measures the Dream colour note and the tallest
+   * Dream colour row at the list width, and pages the listing with as many Dream colour rows as fit
+   * under the note, staying on the same entry. Safe to call while closed; the next open() uses `view`.
    */
   layout(view: SceneView): void {
     this.view = view;
@@ -236,8 +237,10 @@ export class CollectionBookView {
       next,
     });
     this.book = book;
+    const dreamList = this.measureDreamList(book.list);
+    this.dreamList = dreamList;
     this.rowH = this.measureDreamRowHeight(book.list.w);
-    this.perPage = rowsPerPage(book.list.h, this.rowH, UI.gap);
+    this.perPage = rowsPerPage(dreamList.h, this.rowH, UI.gap);
     this.pages = bookPages(this.sections, this.perPage);
     this.pageIndex = this.pageIndexFor(category, firstEntry);
     drawPanel(this.panel, book.panel.x, book.panel.y, book.panel.w, book.panel.h, UI_PANEL);
@@ -251,7 +254,7 @@ export class CollectionBookView {
 
   setResolution(dpr: number): void {
     this.dpr = dpr;
-    const fixedTexts = [this.title, this.heading, this.pageLabel, this.featureName, this.featureText];
+    const fixedTexts = [this.title, this.heading, this.pageLabel, this.featureName, this.featureText, this.dreamNote];
     for (const text of [...fixedTexts, ...this.probeTexts(), ...this.pageTexts]) {
       text.setResolution(dpr);
     }
@@ -283,7 +286,7 @@ export class CollectionBookView {
   }
 
   private probeTexts(): Phaser.GameObjects.Text[] {
-    return [this.probe.name, this.probe.label];
+    return [this.probe.name];
   }
 
   private createBookButton(
@@ -311,7 +314,6 @@ export class CollectionBookView {
     return {
       swatch,
       name: this.scene.add.text(0, 0, '', uiTextStyle(DREAM_NAME_PX, this.dpr)),
-      label: this.scene.add.text(0, 0, '', uiTextStyle(DREAM_LABEL_PX, this.dpr, false)),
     };
   }
 
@@ -326,6 +328,18 @@ export class CollectionBookView {
     return size;
   }
 
+  /**
+   * Sets the Dream colour note wrapped at `list.w` and returns the rect under it, `UI.gap` below,
+   * that the Dream colour rows fill. Throws when the listing has no Dream colours section.
+   */
+  private measureDreamList(list: Rect): Rect {
+    const section = this.sections.find((candidate) => candidate.category === 'dreamColour');
+    if (section?.category !== 'dreamColour') throw new Error('CollectionBookView: no Dream colours section');
+    this.dreamNote.setText(section.note);
+    const room = wrappedSize(this.dreamNote, list.w).h + UI.gap;
+    return { x: list.x, y: list.y + room, w: list.w, h: list.h - room };
+  }
+
   /** Height of the tallest Dream colour row at `rowW`; the swatch height when there are none. */
   private measureDreamRowHeight(rowW: number): number {
     let height = SWATCH_PX;
@@ -333,7 +347,6 @@ export class CollectionBookView {
       if (section.category !== 'dreamColour') continue;
       for (const entry of section.entries) {
         this.probe.name.setText(entry.name);
-        this.probe.label.setText(entry.label);
         height = Math.max(height, arrangeDreamRow(this.probe, rowW));
       }
     }
@@ -382,12 +395,13 @@ export class CollectionBookView {
     this.clearPage();
     this.featureName.setVisible(false);
     this.featureText.setVisible(false);
+    this.dreamNote.setVisible(false);
     switch (page.section.category) {
       case 'morph':
         this.showFeature(this.morphSpec(page.entries[0] as BookMorphEntry), book);
         return;
       case 'dreamColour':
-        this.showDreamRows(page.entries as readonly BookDreamColourEntry[], book.list);
+        this.showDreamPage(page.entries as readonly BookDreamColourEntry[], book.list);
         return;
       case 'factCard':
         this.showFeature(this.factCardSpec(page.entries[0] as BookFactCardEntry), book);
@@ -449,24 +463,26 @@ export class CollectionBookView {
     this.pageItems.push(image);
   }
 
-  /** Adds one Dream colour row per entry down `list`, `UI.gap` apart. */
-  private showDreamRows(entries: readonly BookDreamColourEntry[], list: Rect): void {
+  /** Shows the Dream colour note at the top of `list`, then one Dream colour row per entry under it, `UI.gap` apart. */
+  private showDreamPage(entries: readonly BookDreamColourEntry[], list: Rect): void {
+    const rows = this.dreamList;
+    if (rows === null) throw new Error('CollectionBookView.showDreamPage: not laid out');
+    this.dreamNote.setPosition(list.x, list.y).setVisible(true);
     entries.forEach((entry, index) => {
-      this.buildDreamRow(entry, list.x, list.y + index * (this.rowH + UI.gap), list.w);
+      this.buildDreamRow(entry, rows.x, rows.y + index * (this.rowH + UI.gap), rows.w);
     });
   }
 
-  /** Adds one Dream colour row at (`x`, `y`), `rowW` wide: its Treasure Chest swatch, name and label. */
+  /** Adds one Dream colour row at (`x`, `y`), `rowW` wide: its Treasure Chest swatch and name. */
   private buildDreamRow(entry: BookDreamColourEntry, x: number, y: number, rowW: number): void {
     const swatch = addCentredImage(this.scene, this.treasure.swatches[entry.id]);
     const parts = this.createDreamRowParts(swatch);
     parts.name.setText(entry.name);
-    parts.label.setText(entry.label);
     arrangeDreamRow(parts, rowW);
-    const row = this.scene.add.container(x, y, [swatch, parts.name, parts.label]);
+    const row = this.scene.add.container(x, y, [swatch, parts.name]);
     this.container.add(row);
     this.pageItems.push(row);
-    this.pageTexts.push(parts.name, parts.label);
+    this.pageTexts.push(parts.name);
   }
 
   private clearPage(): void {
