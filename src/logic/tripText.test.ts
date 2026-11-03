@@ -14,7 +14,6 @@ import {
   bankedBodyShort,
   arrivalText,
   describeTreasures,
-  tripBagStatus,
   type ArrivalReason,
   type ArrivalStars,
   type WaitingAxolotl,
@@ -130,7 +129,6 @@ function areaBeatenOutputs(names: readonly string[], total: number): string[] {
 
 function collectHelperOutputs(): string[] {
   const outputs: string[] = [];
-  for (const count of [0, 1, 2, 5]) outputs.push(tripBagStatus(count));
   for (const names of NAME_SAMPLES) {
     outputs.push(describeTreasures(names));
     for (const total of [0, 1, 4]) {
@@ -199,10 +197,7 @@ describe('trip text', () => {
       'GHOST_NET_BANNER',
       'GO_HOME_LABEL',
       'KEEP_EXPLORING_LABEL',
-      'LEGS_LABEL',
-      'NOT_SAFE_YET',
       'PLASTIC_WORM_BANNER',
-      'TRIP_BAG_LABEL',
       'TRIP_END_BODY',
       'TRIP_END_TITLE',
       'WENT_HOME_TITLE',
@@ -270,17 +265,6 @@ describe('describeTreasures', () => {
     expect(
       describeTreasures(['Sun hat', 'Pond plant', 'Toy boat', 'Heart glasses', 'Shell necklace']),
     ).toBe('Sun hat, Pond plant, Toy boat and 2 more');
-  });
-});
-
-describe('tripBagStatus', () => {
-  it('warns that carried finds are not safe yet', () => {
-    expect(tripBagStatus(2)).toContain('not safe yet');
-    expect(tripBagStatus(1)).toContain('not safe yet');
-  });
-
-  it('says the bag is empty when it holds nothing', () => {
-    expect(tripBagStatus(0)).toBe('empty');
   });
 });
 
