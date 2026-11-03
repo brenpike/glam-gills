@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.3] - 2026-11-02
+
+### Fixed
+
+- In Area 5, the punting pole boats no longer overlap. The fifth pole, which stood right beside the fourth, is gone, so Area 5 has four poles.
+
 ## [0.60.2] - 2026-11-01
 
 ### Fixed

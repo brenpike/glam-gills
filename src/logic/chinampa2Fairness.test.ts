@@ -105,7 +105,7 @@ describe('Area 5 risk fairness on other seeds', () => {
     expect(layout.hazards).toEqual(chinampa2.zone.hazards);
   });
 
-  // Three chasing tilapia and five poles make this search slower (issue #118, ND-14); the timeout only gives headroom, the check is unchanged.
+  // Three chasing tilapia and four poles make this search slower (issue #118, ND-14); the timeout only gives headroom, the check is unchanged.
   it.each(EXTRA_SEEDS)(
     'lets the axolotl grab every pool spot without a hit for seed %i',
     (seed) => {
