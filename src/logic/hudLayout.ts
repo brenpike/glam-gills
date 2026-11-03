@@ -38,7 +38,7 @@ export type HudView = StickView & { waterRows?: ScreenWaterRows };
 export const HUD = Object.freeze({
   margin: 16,
   gap: 12,
-  panelPad: 12,
+  panelPad: 6,
   ringGap: 8,
   ringTrackPx: 9,
   bannerPad: 12,
@@ -100,7 +100,6 @@ export interface HudControlSizes {
   dashCornerR: number;
   counter: Size;
   legs: Size;
-  bag: Size;
 }
 
 /** The Dash button, its ring and the ring's outer bounds. */
@@ -117,7 +116,6 @@ export interface DashLayout {
 export interface HudControls {
   counter: Rect;
   legs: Rect;
-  bag: Rect;
   pause: Rect;
   goHome: Rect;
   dash: DashLayout;
@@ -154,7 +152,7 @@ export const HUD_OVERLAY_PRIORITY: readonly HudOverlayId[] = Object.freeze(['fin
 /** The overlays that may retry at HUD.bannerRetryTextPx: the banners, never the find toast. */
 const RETRY_IDS: ReadonlySet<HudOverlayId> = new Set<HudOverlayId>(['snackBanner', 'hint']);
 
-/** Where a placed overlay sits: the top edge, the bottom edge or over the status panels. */
+/** Where a placed overlay sits: the top edge, the bottom edge or over the status row in the top band. */
 export type OverlayEdge = 'top' | 'bottom' | 'panel';
 
 /** One overlay to place: its id and its panel size when at most `maxW` wide. */
@@ -254,12 +252,29 @@ function dashRingRadius(buttonW: number, cornerR: number): number {
   return (buttonW / 2 - cornerR) * Math.SQRT2 + cornerR + HUD.ringGap;
 }
 
-/** Stacks the counter, legs and Trip Bag panels at the margin, a gap apart. */
-function statusPanelRects(sizes: HudControlSizes): { counter: Rect; legs: Rect; bag: Rect } {
-  const counter = { x: HUD.margin, y: HUD.margin, w: sizes.counter.w, h: sizes.counter.h };
-  const legs = { x: HUD.margin, y: bottomOf(counter) + HUD.gap, w: sizes.legs.w, h: sizes.legs.h };
-  const bag = { x: HUD.margin, y: bottomOf(legs) + HUD.gap, w: sizes.bag.w, h: sizes.bag.h };
-  return { counter, legs, bag };
+/** The snack counter and legs panels on the top row. */
+interface StatusPanels {
+  counter: Rect;
+  legs: Rect;
+}
+
+/** Returns the top of a row panel `panelH` tall: the margin, or centred down Pause's height when shorter. */
+function rowPanelTop(panelH: number, pauseH: number): number {
+  return HUD.margin + Math.max(0, (pauseH - panelH) / 2);
+}
+
+/** Puts the counter at the margin and the legs panel a gap to its right, on Pause's row. */
+function statusPanelRects(sizes: HudControlSizes): StatusPanels {
+  const { pause } = sizes;
+  const counter = { x: HUD.margin, y: rowPanelTop(sizes.counter.h, pause.h), w: sizes.counter.w, h: sizes.counter.h };
+  const legsX = counter.x + counter.w + HUD.gap;
+  const legs = { x: legsX, y: rowPanelTop(sizes.legs.h, pause.h), w: sizes.legs.w, h: sizes.legs.h };
+  return { counter, legs };
+}
+
+/** Returns the counter and legs panels as a list. */
+function panelList(panels: StatusPanels): Rect[] {
+  return [panels.counter, panels.legs];
 }
 
 /** Places Dash bottom-right with its ring's outer edge at the margin. */
@@ -272,25 +287,23 @@ function dashLayoutFor(view: HudView, sizes: HudControlSizes): DashLayout {
 }
 
 /**
- * Places Go home under Pause, dropped below the status panels when they would meet it. When that
- * would reach the Dash ring, it sits left of Pause on the top row; when the top row has no room
- * beside the snack counter either, it stacks right under Pause.
+ * Places Go home at the right margin: under Pause when its left edge is at least a gap right of the
+ * legs panel, otherwise dropped as low as it fits a gap above the Dash ring, never above the spot
+ * under Pause or into the status row. When neither fits above the Dash ring, it sits left of Pause
+ * on the top row; when the top row has no room right of the legs panel either, it stacks right
+ * under Pause.
  */
-function goHomeRect(
-  view: HudView,
-  sizes: HudControlSizes,
-  panels: { counter: Rect; legs: Rect; bag: Rect },
-  pause: Rect,
-  dash: DashLayout,
-): Rect {
+function goHomeRect(view: HudView, sizes: HudControlSizes, panels: StatusPanels, pause: Rect, dash: DashLayout): Rect {
   const { w, h } = sizes.goHome;
   const x = view.cssW - HUD.margin - w;
   const underPause = HUD.margin + pause.h + HUD.gap;
-  const panelsRight = HUD.margin + Math.max(panels.counter.w, panels.legs.w, panels.bag.w);
-  const y = x < panelsRight + HUD.gap ? Math.max(underPause, bottomOf(panels.bag) + HUD.gap) : underPause;
-  if (y + h + HUD.gap <= dash.bounds.y) return { x, y, w, h };
+  const legsRight = panels.legs.x + panels.legs.w;
+  const clearOfRow = x >= legsRight + HUD.gap;
+  const lowest = Math.max(underPause, ...panelList(panels).map((panel) => bottomOf(panel) + HUD.gap));
+  const y = clearOfRow ? underPause : dash.bounds.y - HUD.gap - h;
+  if (y >= lowest - FIT_EPSILON_PX && y + h + HUD.gap <= dash.bounds.y + FIT_EPSILON_PX) return { x, y, w, h };
   const topRowX = pause.x - HUD.gap - w;
-  if (topRowX >= HUD.margin + panels.counter.w + HUD.gap) return { x: topRowX, y: HUD.margin, w, h };
+  if (topRowX >= legsRight + HUD.gap) return { x: topRowX, y: HUD.margin, w, h };
   return { x: Math.max(HUD.margin, x), y: underPause, w, h };
 }
 
@@ -305,15 +318,16 @@ export function hudControls(view: HudView, sizes: HudControlSizes): HudControls 
   const pause = { x: view.cssW - HUD.margin - sizes.pause.w, y: HUD.margin, w: sizes.pause.w, h: sizes.pause.h };
   const dash = dashLayoutFor(view, sizes);
   const goHome = goHomeRect(view, sizes, panels, pause, dash);
-  const reserveTop = Math.max(bottomOf(panels.bag), bottomOf(goHome));
+  const rowBottom = Math.max(bottomOf(pause), ...panelList(panels).map(bottomOf));
+  const reserveTop = Math.max(rowBottom, bottomOf(goHome));
   const reserveRight = HUD.margin + dash.bounds.w;
   const stick = stickLayout(view, { top: reserveTop, right: reserveRight });
   return { ...panels, pause, goHome, dash, stick, stickBounds: stickFootprintRect(stick) };
 }
 
-/** Returns the bounding box of the snack counter, legs and Trip Bag panels. */
+/** Returns the bounding box of the snack counter and legs panels. */
 export function statusPanelsBox(controls: HudControls): Rect {
-  const panels = [controls.counter, controls.legs, controls.bag];
+  const panels = panelList(controls);
   const left = Math.min(...panels.map((panel) => panel.x));
   const top = Math.min(...panels.map((panel) => panel.y));
   const right = Math.max(...panels.map((panel) => panel.x + panel.w));
@@ -507,13 +521,13 @@ function freeRects(frame: Rect, grown: readonly Rect[]): Rect[] {
 }
 
 /**
- * Returns the open water of the play middle: the parts of it the snack counter, legs and Trip Bag
- * panels do not cover, one rect per span between two panel edges. Overlays never touch these.
+ * Returns the open water of the play middle: the parts of it the snack counter and legs panels do
+ * not cover, one rect per span between two panel edges. Overlays never touch these.
  */
 function openMiddleRects(view: HudView, controls: HudControls): Rect[] {
   const middle = playMiddle(view);
   if (!(middle.w > 0) || !(middle.h > 0)) return [];
-  const panels = [controls.counter, controls.legs, controls.bag];
+  const panels = panelList(controls);
   const stops = rowStops(middle, panels);
   const rects: Rect[] = [];
   for (let i = 0; i + 1 < stops.length; i++) rects.push(...freeInBand(middle, panels, stops[i], stops[i + 1]));
@@ -529,21 +543,23 @@ function keepsOffOpenMiddle(rect: Rect, openMiddle: readonly Rect[]): boolean {
 }
 
 /**
- * Returns the placement tiers in order: the top edge above the middle, the bottom edge below it,
- * over the Trip Bag, then over all the status panels. Each panel room is its panels grown by half
- * a gap, inside the margin frame; inside the play middle no tier covers open water.
+ * Returns the placement tiers in order: the top edge above the middle, clear of the status row; the
+ * bottom edge below the middle; then the top band (the frame top to a gap above the middle) over
+ * the status row, from the top-left. The control keep-outs bound every tier, so no tier covers a
+ * control; inside the play middle no tier covers open water.
  */
 function overlayTiers(view: HudView, controls: HudControls): OverlayTier[] {
   const frame = overlayFrame(view);
   const middle = playMiddle(view);
-  const panels = [controls.counter, controls.legs, controls.bag];
+  const panels = panelList(controls);
   const centredX = (size: Size): number => view.cssW / 2 - size.w / 2;
   const topBottom = middle.y - HUD.gap;
   const bottomTop = bottomOf(middle) + HUD.gap;
+  const topBand = { x: frame.x, y: frame.y, w: frame.w, h: topBottom - frame.y };
   return [
     {
       edge: 'top',
-      room: { x: frame.x, y: frame.y, w: frame.w, h: topBottom - frame.y },
+      room: topBand,
       extraObstacles: panels,
       anchorFor: (size) => ({ x: centredX(size), y: frame.y }),
     },
@@ -555,13 +571,7 @@ function overlayTiers(view: HudView, controls: HudControls): OverlayTier[] {
     },
     {
       edge: 'panel',
-      room: intersectRect(growRect(controls.bag, HUD.gap / 2), frame),
-      extraObstacles: [controls.counter, controls.legs],
-      anchorFor: () => ({ x: controls.bag.x, y: controls.bag.y }),
-    },
-    {
-      edge: 'panel',
-      room: intersectRect(growRect(statusPanelsBox(controls), HUD.gap / 2), frame),
+      room: topBand,
       extraObstacles: [],
       anchorFor: () => ({ x: frame.x, y: frame.y }),
     },
@@ -663,7 +673,8 @@ function fitOverlays(
 
 /**
  * Places the requested overlays in priority order, each in the first tier with room: the top edge
- * above the play middle, the bottom edge below it, over the Trip Bag, then over the status panels.
+ * above the play middle, clear of the status row; the bottom edge below it; then the top band over
+ * the status row.
  * In every tier, inside the play middle an overlay covers only the status panels themselves.
  * A banner (snackBanner or hint) with no place at HUD.bannerTextPx tries every tier again with its
  * retryBoxAt size at HUD.bannerRetryTextPx, if given; the find toast never retries or shrinks.

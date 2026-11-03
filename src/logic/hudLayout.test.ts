@@ -28,14 +28,18 @@ import {
 } from './hudLayout';
 import { ALL_SNACKS_BANNER } from './tripText';
 
+/**
+ * Control and panel sizes as HudScene lays them out: Pause is the 48 x 48 icon-only tile; the
+ * counter is 6 + 28 + 6 + a two-digit count + 6 wide and the legs panel 6 + 4 x 28 + 3 x 4 + 6, both
+ * 48 tall.
+ */
 const SIZES: HudControlSizes = {
-  pause: { w: 160, h: 51.2 },
+  pause: { w: 48, h: 48 },
   goHome: { w: 200, h: 64 },
   dash: { w: 80, h: 80 },
   dashCornerR: 24,
-  counter: { w: 120, h: 56 },
-  legs: { w: 170, h: 56 },
-  bag: { w: 200, h: 56 },
+  counter: { w: 70, h: 48 },
+  legs: { w: 136, h: 48 },
 };
 
 const SMALLEST: HudView = { cssW: 460, cssH: 320 };
@@ -133,11 +137,6 @@ function expectAllClear(view: HudView, keepOuts: readonly Rect[], rects: readonl
   }
 }
 
-/** Returns the rect grown by `by` on every side. */
-function grownBy(rect: Rect, by: number): Rect {
-  return { x: rect.x - by, y: rect.y - by, w: rect.w + 2 * by, h: rect.h + 2 * by };
-}
-
 /** Whether `rect` lies inside `frame`. */
 function liesInside(rect: Rect, frame: Rect): boolean {
   return (
@@ -158,14 +157,10 @@ function overlaps(rect: Rect, other: Rect): boolean {
   );
 }
 
-/** The Trip Bag tier room: the bag grown by half a gap. */
-function bagRoom(controls: HudControls): Rect {
-  return grownBy(controls.bag, HUD.gap / 2);
-}
-
-/** The status panels tier room: the panels' bounding box grown by half a gap. */
-function panelsRoom(controls: HudControls): Rect {
-  return grownBy(statusPanelsBox(controls), HUD.gap / 2);
+/** The status row place: the top band, from the margin frame top to a gap above the play middle. */
+function topBand(view: HudView): Rect {
+  const top = HUD.margin;
+  return { x: HUD.margin, y: top, w: view.cssW - 2 * HUD.margin, h: playMiddle(view).y - HUD.gap - top };
 }
 
 /** Sorted distinct cut points: `lo`, `hi` and every edge strictly between them. */
@@ -174,13 +169,13 @@ function cutsBetween(lo: number, hi: number, edges: readonly number[]): number[]
 }
 
 /**
- * Whether the part of `rect` inside the play middle lies on the snack counter, legs and Trip Bag
- * panels themselves (no open water): every cell of the grid cut at the panel edges has its centre
- * on a panel.
+ * Whether the part of `rect` inside the play middle lies on the snack counter and legs panels
+ * themselves (no open water): every cell of the grid cut at the panel edges has its centre on a
+ * panel.
  */
 function coversOnlyPanelsInMiddle(rect: Rect, view: HudView, controls: HudControls): boolean {
   const middle = playMiddle(view);
-  const panels = [controls.counter, controls.legs, controls.bag];
+  const panels = [controls.counter, controls.legs];
   const left = Math.max(rect.x, middle.x);
   const right = Math.min(rect.x + rect.w, middle.x + middle.w);
   const top = Math.max(rect.y, middle.y);
@@ -200,31 +195,46 @@ function coversOnlyPanelsInMiddle(rect: Rect, view: HudView, controls: HudContro
   return true;
 }
 
-/** Problems with one placement: over open water in the middle, or over the counter or legs outside T4. */
+/**
+ * Problems with one placement: over open water in the middle, or over the counter or legs anywhere
+ * but the status row place in the top band.
+ */
 function placementProblems(view: HudView, controls: HudControls, placement: HudOverlayPlacement): string[] {
   const { id, rect, edge } = placement;
   if (rect === null) return edge === null ? [] : [`${id}: edge ${edge} without a rect`];
   const problems: string[] = [];
   if (!coversOnlyPanelsInMiddle(rect, view, controls)) problems.push(`${id} over open water in the middle`);
   const overPanels = overlaps(rect, controls.counter) || overlaps(rect, controls.legs);
-  if (overPanels && !liesInside(rect, panelsRoom(controls))) problems.push(`${id} over the counter or legs`);
+  if (overPanels && (edge !== 'panel' || !liesInside(rect, topBand(view)))) problems.push(`${id} over the counter or legs`);
   return problems;
 }
 
 describe('hudControls', () => {
   const controls = hudControls(SMALLEST, SIZES);
 
-  it('places Pause top-right and Go home under it on the smallest canvas', () => {
-    expect(controls.pause).toEqual({ x: 284, y: 16, w: 160, h: 51.2 });
+  it('places Pause top-right and drops Go home a gap above the Dash ring on the smallest canvas', () => {
+    // Go home's left edge (244) is under a gap right of the legs panel (234), so it drops.
+    expect(controls.pause).toEqual({ x: 396, y: 16, w: 48, h: 48 });
     expect(controls.goHome.x).toBeCloseTo(244, 9);
-    expect(controls.goHome.y).toBeCloseTo(79.2, 9);
+    expect(controls.goHome.y).toBeCloseTo(109.75, 2);
+    expect(controls.goHome.y + controls.goHome.h + HUD.gap).toBeCloseTo(controls.dash.bounds.y, 9);
   });
 
-  it('stacks the status panels at the margin a gap apart', () => {
-    expect(controls.counter).toEqual({ x: 16, y: 16, w: 120, h: 56 });
-    expect(controls.legs).toEqual({ x: 16, y: 84, w: 170, h: 56 });
-    expect(controls.bag).toEqual({ x: 16, y: 152, w: 200, h: 56 });
-    expect(controls.bag.y + controls.bag.h).toBe(208);
+  it('places Go home under Pause when it clears the legs panel by a gap', () => {
+    const wide = hudControls({ cssW: 800, cssH: 600 }, SIZES);
+    expect(wide.pause).toEqual({ x: 736, y: 16, w: 48, h: 48 });
+    expect(wide.goHome).toEqual({ x: 584, y: 76, w: 200, h: 64 });
+  });
+
+  it('puts the counter at the margin and the legs a gap to its right, on one row', () => {
+    expect(controls.counter).toEqual({ x: 16, y: 16, w: 70, h: 48 });
+    expect(controls.legs).toEqual({ x: 98, y: 16, w: 136, h: 48 });
+  });
+
+  it('centres a panel shorter than Pause down Pause\'s height', () => {
+    const short = hudControls(SMALLEST, { ...SIZES, counter: { w: 70, h: 40 } });
+    expect(short.counter).toEqual({ x: 16, y: 20, w: 70, h: 40 });
+    expect(short.legs).toEqual({ x: 98, y: 16, w: 136, h: 48 });
   });
 
   it('rings Dash clear of its rounded corners, outer edge at the margin', () => {
@@ -236,12 +246,13 @@ describe('hudControls', () => {
     expect(dash.button.x + dash.button.w / 2).toBeCloseTo(dash.centre.x, 9);
   });
 
-  it('shrinks the swim pad clear of the panels and the Dash ring', () => {
+  it('shrinks the swim pad clear of the status row, Go home and the Dash ring', () => {
+    // The reserve top is Go home's bottom, 173.75, so the pad footprint is (320 - 173.75 - 12 - 16) / 2.
     const { stick, stickBounds } = controls;
-    expect(stick.centre.x).toBeCloseTo(70.04, 2);
-    expect(stick.centre.y).toBeCloseTo(249.96, 2);
-    expect(stickBounds.w / 2).toBeCloseTo(54.04, 2);
-    expect(stickBounds.y).toBeCloseTo(195.92, 2);
+    expect(stick.centre.x).toBeCloseTo(75.13, 2);
+    expect(stick.centre.y).toBeCloseTo(244.87, 2);
+    expect(stickBounds.w / 2).toBeCloseTo(59.13, 2);
+    expect(stickBounds.y).toBeCloseTo(185.75, 2);
   });
 
   it('moves Go home to the top row when under Pause would reach the Dash ring', () => {
@@ -250,8 +261,9 @@ describe('hudControls', () => {
     expect(short.goHome.x).toBeCloseTo(short.pause.x - HUD.gap - SIZES.goHome.w, 9);
   });
 
-  it('stacks Go home right under Pause when the top row has no room either', () => {
+  it('stacks Go home right under Pause when dropping would put it above there and the top row has no room either', () => {
     const tight = hudControls({ cssW: 400, cssH: 260 }, SIZES);
+    expect(tight.dash.bounds.y - HUD.gap - SIZES.goHome.h).toBeLessThan(HUD.margin + SIZES.pause.h + HUD.gap);
     expect(tight.goHome.x).toBe(400 - HUD.margin - SIZES.goHome.w);
     expect(tight.goHome.y).toBeCloseTo(HUD.margin + SIZES.pause.h + HUD.gap, 9);
   });
@@ -459,8 +471,8 @@ describe('playMiddle with scrolled water rows', () => {
 });
 
 describe('statusPanelsBox', () => {
-  it('bounds the counter, legs and Trip Bag', () => {
-    expect(statusPanelsBox(hudControls(SMALLEST, SIZES))).toEqual({ x: 16, y: 16, w: 200, h: 192 });
+  it('bounds the counter and legs', () => {
+    expect(statusPanelsBox(hudControls(SMALLEST, SIZES))).toEqual({ x: 16, y: 16, w: 218, h: 48 });
   });
 });
 
@@ -496,17 +508,6 @@ describe('placeHudOverlays', () => {
     expect(rect.x + rect.w / 2).toBeCloseTo(view.cssW / 2, 9);
   });
 
-  it('puts a short toast over the Trip Bag when the Trip Bag is above the middle', () => {
-    const view = { cssW: 320, cssH: 568 };
-    const controls = hudControls(view, SIZES);
-    const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
-    const [placed] = placeHudOverlays(view, controls, keepOuts, requestsFor(['findToast'], SMALL_TEXTS));
-    expect(controls.bag.y + controls.bag.h).toBeLessThanOrEqual(playMiddle(view).y);
-    expect(placed.edge).toBe('panel');
-    expect(liesInside(placed.rect as Rect, bagRoom(controls))).toBe(true);
-    expect(placed.rect).toMatchObject({ x: controls.bag.x, y: controls.bag.y });
-  });
-
   it('puts a short toast over the status panels above the middle at 460 x 320', () => {
     const controls = hudControls(SMALLEST, SIZES);
     for (const goHomeVisible of [true, false]) {
@@ -514,25 +515,30 @@ describe('placeHudOverlays', () => {
       const [placed] = placeHudOverlays(SMALLEST, controls, keepOuts, requestsFor(['findToast'], SMALL_TEXTS));
       const rect = placed.rect as Rect;
       expect(placed.edge).toBe('panel');
-      expect(liesInside(rect, panelsRoom(controls))).toBe(true);
+      expect(liesInside(rect, topBand(SMALLEST))).toBe(true);
       expect(rect).toMatchObject({ x: HUD.margin, y: HUD.margin });
       expect(rect.y + rect.h).toBeLessThanOrEqual(playMiddle(SMALLEST).y);
     }
   });
 
-  it('shows a two-line toast at 460 x 320 over the status panels, above the middle', () => {
+  it('shows a real-length toast at 460 x 320 on one line over the status row, above the middle', () => {
+    // The top band is 428 wide, so the 16-character name (176) and the badge and detail line
+    // (24 + 6 + 158.4) need no wrap: 8 + 32 + 8 + 188.4 + 8 wide, 4 + 25 + 24 + 4 tall.
     const controls = hudControls(SMALLEST, SIZES);
     for (const goHomeVisible of [true, false]) {
       const keepOuts = controlKeepOuts(controls, { goHomeVisible });
       const [placed] = placeHudOverlays(SMALLEST, controls, keepOuts, requestsFor(['findToast'], REAL_TEXTS));
       const rect = placed.rect as Rect;
       expect(placed.edge).toBe('panel');
-      expect(rect).toEqual({ x: HUD.margin, y: HUD.margin, w: 206, h: 103 });
+      expect(rect.x).toBe(HUD.margin);
+      expect(rect.y).toBe(HUD.margin);
+      expect(rect.w).toBeCloseTo(244.4, 9);
+      expect(rect.h).toBe(57);
       expect(rect.y + rect.h).toBeLessThanOrEqual(playMiddle(SMALLEST).y);
     }
   });
 
-  it('holds a toast at 460 x 320 rather than reach past the legs into the middle', () => {
+  it('holds a toast at 460 x 320 rather than reach into the middle', () => {
     const controls = hudControls(SMALLEST, SIZES);
     const box = (): Size => ({ w: 206, h: 130 });
     for (const goHomeVisible of [true, false]) {
@@ -546,42 +552,41 @@ describe('placeHudOverlays', () => {
   });
 
   it('never puts an overlay over open water in the middle from a panel place (finding a336ac95)', () => {
-    // Before the fix, the status panels place took a 206 x 103 box at (16, 79.2): its lower part
-    // covered the middle beside the legs and in the gap above the Trip Bag. With the middle measured
-    // on the water that box ends above it, so this box is 120 tall: its lower part reaches the open
-    // water beside the Trip Bag.
+    // Before the fix, the status panels place took a box whose lower part covered the open water of
+    // the middle. The panel place is now the top band, which ends a gap above the middle (179.4 at
+    // 320 x 440), so this box, 180 tall from the margin, would reach the middle and has no place.
     const controls = hudControls(PORTRAIT, SIZES);
     const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
-    const box = (): Size => ({ w: 206, h: 120 });
+    const box = (): Size => ({ w: 206, h: 180 });
     const [placed] = placeHudOverlays(PORTRAIT, controls, keepOuts, [{ id: 'findToast', boxAt: box }]);
     expect(placed).toEqual({ id: 'findToast', rect: null, edge: null, textPx: null });
-    const offending = { x: HUD.margin, y: 79.2, w: 206, h: 120 };
+    const offending = { x: HUD.margin, y: HUD.margin, w: 206, h: 180 };
     expect(coversOnlyPanelsInMiddle(offending, PORTRAIT, controls)).toBe(false);
   });
 
-  it('shows a short toast at 320 x 440 over the status panels, above the middle the Trip Bag reaches into', () => {
+  it('shows a short toast at 320 x 440 on the top edge, centred, a gap under the status row', () => {
     const controls = hudControls(PORTRAIT, SIZES);
     const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
     const [placed] = placeHudOverlays(PORTRAIT, controls, keepOuts, requestsFor(['findToast'], SMALL_TEXTS));
     const rect = placed.rect as Rect;
-    expect(controls.bag.y + controls.bag.h).toBeGreaterThan(playMiddle(PORTRAIT).y);
-    expect(placed.edge).toBe('panel');
-    expect(rect.x).toBe(HUD.margin);
-    expect(rect.y).toBeCloseTo(79.2, 9);
-    expect(rect).toMatchObject({ w: 185, h: 57 });
-    expect(rect.y + rect.h).toBeLessThanOrEqual(playMiddle(PORTRAIT).y);
+    expect(placed.edge).toBe('top');
+    expect(rect).toEqual({ x: 67.5, y: 76, w: 185, h: 57 });
+    expect(rect.y).toBe(controls.legs.y + controls.legs.h + HUD.gap);
+    expect(rect.y + rect.h).toBeLessThanOrEqual(playMiddle(PORTRAIT).y - HUD.gap);
   });
 
-  it('may cover the status panels themselves inside the middle', () => {
+  it('fills the top band over the status row, ending a gap above the middle, and no further', () => {
     const view = { cssW: 460, cssH: 320 };
     const controls = hudControls(view, SIZES);
-    const box = (): Size => ({ w: controls.legs.w, h: controls.legs.y + controls.legs.h - HUD.margin });
-    const [placed] = placeHudOverlays(view, controls, [], [{ id: 'findToast', boxAt: box }]);
-    const rect = placed.rect as Rect;
+    const band = topBand(view);
+    const [placed] = placeHudOverlays(view, controls, [], [{ id: 'findToast', boxAt: () => ({ w: band.w, h: band.h }) }]);
     expect(placed.edge).toBe('panel');
-    expect(rect).toEqual({ x: HUD.margin, y: HUD.margin, w: controls.legs.w, h: box().h });
-    expect(rect.y + rect.h).toBeGreaterThan(playMiddle(view).y);
-    expect(coversOnlyPanelsInMiddle(rect, view, controls)).toBe(true);
+    expect(placed.rect).toEqual(band);
+    expect(band.y + band.h).toBeCloseTo(playMiddle(view).y - HUD.gap, 9);
+    expect(overlaps(band, controls.counter) && overlaps(band, controls.legs)).toBe(true);
+    const taller = (): Size => ({ w: band.w, h: band.h + 1 });
+    const [held] = placeHudOverlays(view, controls, [], [{ id: 'findToast', boxAt: taller }]);
+    expect(held).toEqual({ id: 'findToast', rect: null, edge: null, textPx: null });
   });
 
   it('answers in request order', () => {
@@ -741,19 +746,24 @@ describe('placeHudOverlays', () => {
   });
 
   it('places a banner with real text at 20 px only where it has no place at 24 px', () => {
+    // The block leaves a strip from the margin down to between the 20 px and 24 px heights at the
+    // full frame width. Beside the status row the banner wraps to two lines at both sizes, too tall
+    // for the strip, so only the status row place over the panels takes it, at 20 px.
     const view = { cssW: 800, cssH: 600 };
     const controls = hudControls(view, SIZES);
-    const stripW = view.cssW - 2 * HUD.margin - (controls.counter.x + controls.counter.w + HUD.gap - HUD.margin);
+    const stripW = view.cssW - 2 * HUD.margin;
     const box = boxFor('snackBanner', REAL_TEXTS)(stripW);
     const retryBox = bannerBoxFor('snackBanner', REAL_TEXTS, HUD.bannerRetryTextPx)(stripW);
     expect(retryBox.h).toBeLessThan(box.h);
     const stripH = (box.h + retryBox.h) / 2;
+    const besideRowW = view.cssW - HUD.margin - (controls.legs.x + controls.legs.w + HUD.gap);
+    expect(bannerBoxFor('snackBanner', REAL_TEXTS, HUD.bannerRetryTextPx)(besideRowW).h).toBeGreaterThan(stripH);
     const blockTop = HUD.margin + stripH + HUD.gap;
     const keepOuts = [{ x: 0, y: blockTop, w: view.cssW, h: view.cssH - blockTop }];
     const [placed] = placeHudOverlays(view, controls, keepOuts, requestsFor(['snackBanner'], REAL_TEXTS));
-    expect(placed.edge).toBe('top');
+    expect(placed.edge).toBe('panel');
     expect(placed.textPx).toBe(HUD.bannerRetryTextPx);
-    expect(placed.rect).toMatchObject({ y: HUD.margin, w: retryBox.w, h: retryBox.h });
+    expect(placed.rect).toEqual({ x: HUD.margin, y: HUD.margin, w: retryBox.w, h: retryBox.h });
     const [held] = placeHudOverlays(view, controls, keepOuts, [{ id: 'snackBanner', boxAt: boxFor('snackBanner', REAL_TEXTS) }]);
     expect(held).toEqual({ id: 'snackBanner', rect: null, edge: null, textPx: null });
   });

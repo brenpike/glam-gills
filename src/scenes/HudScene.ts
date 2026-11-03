@@ -53,10 +53,7 @@ import {
   BANKING_HINT,
   GHOST_NET_BANNER,
   GO_HOME_LABEL,
-  LEGS_LABEL,
   PLASTIC_WORM_BANNER,
-  TRIP_BAG_LABEL,
-  tripBagStatus,
 } from '../logic/tripText';
 import { LEGS } from '../logic/tuning';
 import { add, clampLen } from '../logic/vec';
@@ -84,10 +81,12 @@ import { createSoundsSwitch, toggleSounds } from './soundsSwitch';
 
 const MARGIN = 16;
 const GAP = 12;
-const PANEL_PAD = 12;
-const COUNTER_ICON_PX = 32;
+const PANEL_H = 48;
+const PANEL_PAD = 6;
+const COUNTER_ICON_PX = 28;
+const COUNTER_ICON_GAP = 6;
 const COUNTER_TEXT_PX = 22;
-const PAUSE_BUTTON_SIZE = 0.8;
+const PAUSE_BUTTON_SIZE = 0.75;
 const DASH_BUTTON_SIZE = 1.25;
 const RESUME_BUTTON_SIZE = 1.3;
 const RING_TRACK_PX = 9;
@@ -103,17 +102,12 @@ const STICK_IDLE_ALPHA = 0.8;
 const STICK_ACTIVE_ALPHA = 1;
 const STICK_RECENTER_MS = 90;
 const STEER_EPSILON = 0.01;
-const LEGS_ICON_PX = 32;
+const LEGS_ICON_PX = 28;
 const LEGS_ICON_GAP = 4;
-const LEGS_TEXT_PX = 22;
 const LEG_DISPLAY_RANK: Readonly<Record<LegStatus, number>> = { present: 0, regrowing: 1, lost: 2 };
 const BOOST_BADGE_PX = 16;
 const BOOST_HOLD_MS = 1200;
 const BOOST_FADE_MS = 400;
-const BAG_ICON_PX = 32;
-const BAG_TEXT_PX = 22;
-const BAG_STATUS_PX = 18;
-const BAG_GAP = 6;
 const HINT_HOLD_MS = 6000;
 const HINT_FADE_MS = 400;
 // INVARIANT: the find toast sits above the banners and below the banking card.
@@ -161,15 +155,6 @@ interface LegIconView {
 /** Trip display state for a swimming, whole axolotl, used until the swim scene publishes one. */
 function createSwimmingTrip(): TripSnapshot {
   return idleTripSnapshot();
-}
-
-/** Returns the widest width `text` takes for any of `values`, leaving `text` showing the last one. */
-function widestText(text: Phaser.GameObjects.Text, values: readonly string[]): number {
-  let widest = 0;
-  for (const value of values) {
-    widest = Math.max(widest, text.setText(value).width);
-  }
-  return widest;
 }
 
 /** A pink banner panel size and the text wrap width and text size that produced it. */
@@ -261,7 +246,7 @@ function waterBandMoved(placed: ScreenWaterRows | null, now: ScreenWaterRows, cs
 }
 
 /**
- * Screen-space UI over the swim scene: snack counter, legs display, Trip Bag display, Pause, Dash,
+ * Screen-space UI over the swim scene: snack counter, legs display and Pause on one top row, Dash,
  * the contextual Go home button, swim pad, pause overlay, the snack and first-trip hint
  * banners, the find pop-up and the banking card. When the trip ends the swim scene stops this
  * scene and opens the Home Tank, which shows the tank arrival card.
@@ -314,7 +299,6 @@ export class HudScene extends Phaser.Scene {
   private lastSteer: SteerPayload = { x: 0, y: 0 };
   private trip: TripSnapshot = createSwimmingTrip();
   private legsPanel!: Phaser.GameObjects.Graphics;
-  private legsLabel!: Phaser.GameObjects.Text;
   private legIcons: LegIconView[] = [];
   /** Small snack icon at the corner of the leg icon a snack just helped (PRD A19). */
   private boostBadge!: Phaser.GameObjects.Image;
@@ -323,13 +307,6 @@ export class HudScene extends Phaser.Scene {
   private boostActive = false;
   /** Slot index of the leg the latest snack helped; the badge follows this slot's icon. */
   private boostLeg: number | null = null;
-  private bagPanel!: Phaser.GameObjects.Graphics;
-  private bagIcon!: Phaser.GameObjects.Image;
-  private bagLabel!: Phaser.GameObjects.Text;
-  private bagCount!: Phaser.GameObjects.Text;
-  private bagStatus!: Phaser.GameObjects.Text;
-  /** Width of the Trip Bag count slot, sized for its widest value. */
-  private bagCountW = 0;
   private goHomeButton!: UiButton;
   private hint!: Phaser.GameObjects.Container;
   private hintPanel!: Phaser.GameObjects.Graphics;
@@ -392,7 +369,6 @@ export class HudScene extends Phaser.Scene {
 
     this.buildCounter();
     this.buildLegs();
-    this.buildTripBag();
     this.buildButtons();
     this.buildStick();
     this.buildOverlay();
@@ -494,11 +470,10 @@ export class HudScene extends Phaser.Scene {
     this.counterText = this.add.text(0, 0, '', uiTextStyle(COUNTER_TEXT_PX, dpr)).setDepth(DEPTH.ui);
   }
 
-  /** Legs panel: label plus one outline, fill and sparkle image per leg slot, laid out by layoutLegs(). */
+  /** Legs panel: one outline, fill and sparkle image per leg slot, no label, laid out by placeLegs(). */
   private buildLegs(): void {
     const { legIcons, regrowMark } = this.assets.predator;
     this.legsPanel = this.add.graphics().setDepth(DEPTH.ui);
-    this.legsLabel = this.add.text(0, 0, LEGS_LABEL, uiTextStyle(LEGS_TEXT_PX, this.view.fit.dpr)).setDepth(DEPTH.ui);
     this.legIcons = [];
     for (let i = 0; i < LEGS.count; i++) {
       this.legIcons.push({
@@ -525,29 +500,15 @@ export class HudScene extends Phaser.Scene {
       .setDepth(DEPTH.ui);
   }
 
-  /** Trip Bag panel: bag icon, label, count and status, laid out by layoutTripBag(). */
-  private buildTripBag(): void {
-    const dpr = this.view.fit.dpr;
-    const iconInfo = this.assets.baked.icons.bag;
-    this.bagPanel = this.add.graphics().setDepth(DEPTH.ui);
-    this.bagIcon = this.add
-      .image(0, 0, iconKey('bag'))
-      .setOrigin(0, 0)
-      .setScale(BAG_ICON_PX / iconInfo.w / iconInfo.scale)
-      .setDepth(DEPTH.ui);
-    this.bagLabel = this.add.text(0, 0, TRIP_BAG_LABEL, uiTextStyle(BAG_TEXT_PX, dpr)).setDepth(DEPTH.ui);
-    this.bagCount = this.add.text(0, 0, '', uiTextStyle(BAG_TEXT_PX, dpr)).setDepth(DEPTH.ui);
-    this.bagStatus = this.add.text(0, 0, '', uiTextStyle(BAG_STATUS_PX, dpr, false)).setDepth(DEPTH.ui);
-  }
-
   private buildButtons(): void {
     const dpr = this.view.fit.dpr;
     this.pauseButton = createButton(this, this.assets.baked, {
       fill: 'secondary',
-      shape: 'wide',
+      shape: 'square',
       size: PAUSE_BUTTON_SIZE,
       label: 'Pause',
       icon: 'pause',
+      iconOnly: true,
       dpr,
       pressOnDown: false,
       onPress: () => this.pauseSwim(),
@@ -705,7 +666,6 @@ export class HudScene extends Phaser.Scene {
     this.controls = hudControls(this.hudView(), this.measureControls());
     this.placeCounter(this.controls.counter);
     this.placeLegs(this.controls.legs);
-    this.placeTripBag(this.controls.bag);
     this.placeButtons();
     this.layoutStick();
     this.drawDashRing();
@@ -720,7 +680,6 @@ export class HudScene extends Phaser.Scene {
       dashCornerR: buttonRadius(BUTTON_SQUARE.h) * DASH_BUTTON_SIZE,
       counter: this.measureCounter(),
       legs: this.measureLegs(),
-      bag: this.measureTripBag(),
     };
   }
 
@@ -728,43 +687,36 @@ export class HudScene extends Phaser.Scene {
     return snacksLeftLabel(this.total - this.collected);
   }
 
-  /** Sets the snack counter text and returns the counter panel size. */
+  /** Sets the snack counter text and returns the counter panel size: PANEL_H tall, the icon then the count across. */
   private measureCounter(): Size {
     this.counterText.setText(this.counterLabel());
-    const contentH = Math.max(COUNTER_ICON_PX, this.counterText.height);
     return {
-      w: PANEL_PAD + COUNTER_ICON_PX + GAP / 2 + this.counterText.width + PANEL_PAD,
-      h: contentH + 2 * PANEL_PAD,
+      w: PANEL_PAD + COUNTER_ICON_PX + COUNTER_ICON_GAP + this.counterText.width + PANEL_PAD,
+      h: PANEL_H,
     };
   }
 
-  /** Draws the snack counter panel at `rect`: icon, then the count. */
+  /** Draws the snack counter panel at `rect`: icon, then the count, each centred down. */
   private placeCounter(rect: Rect): void {
-    const contentH = rect.h - 2 * PANEL_PAD;
     drawPanel(this.counterPanel, rect.x, rect.y, rect.w, rect.h, UI_PANEL);
-    this.counterIcon.setPosition(rect.x + PANEL_PAD, rect.y + PANEL_PAD + (contentH - COUNTER_ICON_PX) / 2);
+    this.counterIcon.setPosition(rect.x + PANEL_PAD, rect.y + (rect.h - COUNTER_ICON_PX) / 2);
     this.counterText.setPosition(
-      rect.x + PANEL_PAD + COUNTER_ICON_PX + GAP / 2,
-      rect.y + PANEL_PAD + (contentH - this.counterText.height) / 2,
+      rect.x + PANEL_PAD + COUNTER_ICON_PX + COUNTER_ICON_GAP,
+      rect.y + (rect.h - this.counterText.height) / 2,
     );
   }
 
-  /** Returns the legs panel size: label, then the icons. */
+  /** Returns the legs panel size: PANEL_H tall, the icons across. */
   private measureLegs(): Size {
-    const label = this.legsLabel;
-    const contentH = Math.max(LEGS_ICON_PX, label.height);
     const iconsW = LEGS.count * LEGS_ICON_PX + (LEGS.count - 1) * LEGS_ICON_GAP;
-    return { w: PANEL_PAD + label.width + GAP / 2 + iconsW + PANEL_PAD, h: contentH + 2 * PANEL_PAD };
+    return { w: PANEL_PAD + iconsW + PANEL_PAD, h: PANEL_H };
   }
 
-  /** Draws the legs panel at `rect`: label, then the icons in display order. */
+  /** Draws the legs panel at `rect`: the icons in display order, centred down. */
   private placeLegs(rect: Rect): void {
-    const label = this.legsLabel;
-    const contentH = rect.h - 2 * PANEL_PAD;
     drawPanel(this.legsPanel, rect.x, rect.y, rect.w, rect.h, UI_PANEL);
-    label.setPosition(rect.x + PANEL_PAD, rect.y + PANEL_PAD + (contentH - label.height) / 2);
-    const iconsX = rect.x + PANEL_PAD + label.width + GAP / 2;
-    const iconY = rect.y + PANEL_PAD + (contentH - LEGS_ICON_PX) / 2;
+    const iconsX = rect.x + PANEL_PAD;
+    const iconY = rect.y + (rect.h - LEGS_ICON_PX) / 2;
     this.legIcons.forEach((icon, index) => {
       const iconX = iconsX + index * (LEGS_ICON_PX + LEGS_ICON_GAP);
       icon.outline.setPosition(iconX, iconY);
@@ -788,43 +740,6 @@ export class HudScene extends Phaser.Scene {
     this.boostBadge
       .setPosition(icon.outline.x + LEGS_ICON_PX - BOOST_BADGE_PX, icon.outline.y + LEGS_ICON_PX - BOOST_BADGE_PX)
       .setVisible(true);
-  }
-
-  /**
-   * Returns the Trip Bag panel size: icon, label, count, status. The count and status slots are
-   * sized for their widest values (every find plus a following axolotl), so the panel never changes
-   * width as the bag fills.
-   */
-  private measureTripBag(): Size {
-    this.bagCountW = widestText(
-      this.bagCount,
-      Array.from({ length: this.zone.finds.length + 2 }, (_, count) => String(count)),
-    );
-    const statusW = widestText(this.bagStatus, [tripBagStatus(0), tripBagStatus(1)]);
-    this.drawTripBag();
-    const contentH = Math.max(BAG_ICON_PX, this.bagLabel.height, this.bagCount.height, this.bagStatus.height);
-    const contentW = BAG_ICON_PX + BAG_GAP + this.bagLabel.width + BAG_GAP + this.bagCountW + BAG_GAP + statusW;
-    return { w: PANEL_PAD + contentW + PANEL_PAD, h: contentH + 2 * PANEL_PAD };
-  }
-
-  /** Draws the Trip Bag panel at `rect`: icon, label, count, status. */
-  private placeTripBag(rect: Rect): void {
-    const labelX = rect.x + PANEL_PAD + BAG_ICON_PX + BAG_GAP;
-    const countX = labelX + this.bagLabel.width + BAG_GAP;
-    const statusX = countX + this.bagCountW + BAG_GAP;
-    drawPanel(this.bagPanel, rect.x, rect.y, rect.w, rect.h, UI_PANEL);
-    const middleY = rect.y + rect.h / 2;
-    this.bagIcon.setPosition(rect.x + PANEL_PAD, middleY - BAG_ICON_PX / 2);
-    this.bagLabel.setPosition(labelX, middleY - this.bagLabel.height / 2);
-    this.bagCount.setPosition(countX, middleY - this.bagCount.height / 2);
-    this.bagStatus.setPosition(statusX, middleY - this.bagStatus.height / 2);
-  }
-
-  /** Shows the Trip Bag count and status for the current snapshot. */
-  private drawTripBag(): void {
-    const count = this.trip.bag.length;
-    this.bagCount.setText(String(count));
-    this.bagStatus.setText(tripBagStatus(count));
   }
 
   /** Positions Pause, Dash and Go home from the control layout. */
@@ -1356,7 +1271,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   /**
-   * Redraws the legs and Trip Bag from the snapshot, announces new finds and a newly following
+   * Redraws the legs from the snapshot, announces new finds and a newly following
    * axolotl (the rescue wins when both come in one snapshot), shows the tilapia fact card when it
    * is due, and follows its phase: leaving 'swimming' drops the swim pad, the hint and the speed-up
    * badge, into 'banked' or 'ended' clears the find toast, into 'banked' shows the banking card,
@@ -1367,7 +1282,6 @@ export class HudScene extends Phaser.Scene {
     const previousRescue = this.trip.rescue;
     this.trip = snapshot;
     this.drawLegs();
-    this.drawTripBag();
     this.refreshControls();
     this.announceToast(previousRescue, snapshot);
     this.showFactCardWhenDue(snapshot);
@@ -1511,16 +1425,7 @@ export class HudScene extends Phaser.Scene {
     this.view = readSceneView(this.scale);
     const dpr = this.view.fit.dpr;
     useCssCamera(this.cameras.main, dpr);
-    const texts = [
-      this.counterText,
-      this.legsLabel,
-      this.bagLabel,
-      this.bagCount,
-      this.bagStatus,
-      this.overlayTitle,
-      this.bannerText,
-      this.hintText,
-    ];
+    const texts = [this.counterText, this.overlayTitle, this.bannerText, this.hintText];
     for (const text of texts) {
       text.setResolution(dpr);
     }
