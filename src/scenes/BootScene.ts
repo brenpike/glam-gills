@@ -43,6 +43,7 @@ import { mulberry32 } from '../logic/rng';
 import { TANK } from '../logic/tank';
 import { VIEW } from '../logic/tuning';
 import { fitView, type ViewFit } from '../logic/viewport';
+import { SceneryCache } from './sceneryCache';
 import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, WORLD_H, buildZone, type ReedSpec, type ZoneLayout } from '../logic/zone';
 import { playSound } from '../platform/soundPlayer';
 import { forgetTapButton, setTapFocus } from './buttonTaps';
@@ -90,9 +91,10 @@ export interface BakedDecorationPack {
 
 /**
  * Everything the boot scene prepares, handed from scene to scene as start data. `areas` is AREAS
- * plus the dev area when one was asked for; `zones` and `scenery` hold each of those areas' layout
- * and baked scenery by area id. `devAreaId` is the dev area's id, or null. `devDecor` is the dev
- * Decoration pack baked at the tank Decoration size, or null when none was asked for. `pond` holds
+ * plus the dev area when one was asked for; `zones` holds each of those areas' layout by area id,
+ * and `scenery` bakes an area's scenery when a trip first needs it (SceneryCache). `devAreaId` is
+ * the dev area's id, or null. `devDecor` is the dev Decoration pack baked at the tank Decoration
+ * size, or null when none was asked for. `pond` holds
  * the pond props (hollow log, plastic worms, queasy cheek tint), with the root arch and the firefly
  * when some area's look needs them, baked only when some area needs any of them, else null.
  * `chinampa` holds the chinampa props (the root tangle cave, the bank overhang, the gap edges, the
@@ -114,7 +116,7 @@ export interface BakedDecorationPack {
 export interface GameAssets {
   areas: readonly Readonly<AreaData>[];
   zones: Readonly<Record<string, ZoneLayout>>;
-  scenery: Readonly<Record<string, SceneryTextures>>;
+  scenery: SceneryCache;
   devAreaId: string | null;
   baked: BakedTextures;
   axolotl: AxolotlRigBake;
@@ -154,12 +156,14 @@ export function zoneFor(assets: GameAssets, areaId: string): ZoneLayout {
   return zone;
 }
 
-/** The baked scenery of area `areaId`. Throws when the assets hold none. */
-export function sceneryFor(assets: GameAssets, areaId: string): SceneryTextures {
-  const scenery: SceneryTextures | undefined = assets.scenery[areaId];
-  if (scenery === undefined) throw new Error(`sceneryFor: no scenery for area ${areaId}`);
-  return scenery;
+/**
+ * The baked scenery of area `areaId`, baked now when it is not held yet (SceneryCache). Throws when
+ * the assets have no such area.
+ */
+export function sceneryFor(scene: Phaser.Scene, assets: GameAssets, areaId: string): SceneryTextures {
+  return assets.scenery.get(scene, areaId);
 }
+
 
 /**
  * The look of area `area`: the variant its `look` names when set, else its habitat's `look`.
@@ -475,44 +479,49 @@ function toReedLook(reed: ReedSpec): ReedLook {
 }
 
 /**
- * Every area's scenery by area id: the canal's from its `bakeTextures` result, every other area
- * baked with its id as the key prefix, in its area look (areaLook). A look with a stream adds the
- * stream, its mouth at the right edge of the column that holds the area's first current
- * (streamColumnOf).
+ * The scenery of area `area` (not the canal), baked with its id as the key prefix, in its area look
+ * (areaLook). A look with a stream adds the stream, its mouth at the right edge of the column that
+ * holds the area's first current (streamColumnOf).
  */
-function bakeScenery(
+function bakeAreaSceneryOf(
   scene: Phaser.Scene,
+  area: Readonly<AreaData>,
+  zones: Readonly<Record<string, ZoneLayout>>,
+  bakeScale: number,
+): SceneryTextures {
+  const id = area.id;
+  const zone = zones[id];
+  if (zone === undefined) throw new Error(`bakeScenery: no zone for area ${id}`);
+  const look = areaLook(area);
+  return bakeAreaScenery(scene, {
+    keyPrefix: `${id}:`,
+    bakeScale,
+    bgScale: Math.min(bakeScale, 2),
+    screensWide: zone.chunks,
+    screensTall: zone.rows,
+    bankChunks: zone.bankChunks,
+    sunChunk: zone.sunChunk,
+    rand: mulberry32(ART_SEED),
+    reeds: zone.reeds.map(toReedLook),
+    pads: zone.pads,
+    look: look.id,
+    stream: look.stream,
+    streamColumn: look.stream ? streamColumnOf(zone, id) : undefined,
+  });
+}
+
+/** The scenery cache for `areas`: the canal's from its `bakeTextures` result, the rest on demand. */
+function createSceneryCache(
   areas: readonly Readonly<AreaData>[],
   zones: Readonly<Record<string, ZoneLayout>>,
   baked: BakedTextures,
   bakeScale: number,
-): Record<string, SceneryTextures> {
-  const scenery: Record<string, SceneryTextures> = {};
-  for (const area of areas) {
-    const id = area.id;
-    const zone = zones[id];
-    if (zone === undefined) throw new Error(`bakeScenery: no zone for area ${id}`);
-    const look = areaLook(area);
-    scenery[id] =
-      id === CANAL_AREA_ID
-        ? sceneryFromBaked(baked)
-        : bakeAreaScenery(scene, {
-            keyPrefix: `${id}:`,
-            bakeScale,
-            bgScale: Math.min(bakeScale, 2),
-            screensWide: zone.chunks,
-            screensTall: zone.rows,
-            bankChunks: zone.bankChunks,
-            sunChunk: zone.sunChunk,
-            rand: mulberry32(ART_SEED),
-            reeds: zone.reeds.map(toReedLook),
-            pads: zone.pads,
-            look: look.id,
-            stream: look.stream,
-            streamColumn: look.stream ? streamColumnOf(zone, id) : undefined,
-          });
-  }
-  return scenery;
+): SceneryCache {
+  return new SceneryCache(sceneryFromBaked(baked), (scene, areaId) => {
+    const area = areas.find((candidate) => candidate.id === areaId);
+    if (area === undefined) throw new Error(`sceneryFor: no scenery for area ${areaId}`);
+    return bakeAreaSceneryOf(scene, area, zones, bakeScale);
+  });
 }
 
 /**
@@ -646,7 +655,10 @@ function areasWithDev(devArea: Readonly<AreaData> | undefined): Readonly<AreaDat
   return [...AREAS, devArea];
 }
 
-/** Builds every area's zone, bakes every texture at the fitted scale, then starts the title. */
+/**
+ * Builds every area's zone, bakes the shared textures at the fitted scale, then starts the title.
+ * Area scenery waits for its trip (SceneryCache).
+ */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super(SCENE_KEYS.boot);
@@ -672,7 +684,7 @@ export class BootScene extends Phaser.Scene {
       reeds: zone.reeds.map(toReedLook),
       pads: zone.pads,
     });
-    const scenery = bakeScenery(this, areas, zones, baked, bakeScale);
+    const scenery = createSceneryCache(areas, zones, baked, bakeScale);
     const axolotl = createAxolotlRigBake(this, TEX.axolotl, bakeScale);
     const predator = bakePredatorTextures(this, bakeScale);
     const treasure = bakeTreasureTextures(this, bakeScale);
