@@ -333,7 +333,7 @@ Area 9's **Special treasure** (`'deep-canal/little-bailing-bucket'` in code), a 
 _Avoid_: bailing bucket alone (the **Bailing bucket** is Area 9's **Timing element**)
 
 **Treasure Chest**:
-The list of every catalogue Decoration, Wearable, and Dream colour: owned ones in full, with their rarity glow, and unfound ones as silhouettes with "???" and an area and rarity hint, with a line per section saying what its items are for.
+The list of every catalogue Decoration, Wearable, and Dream colour: owned ones in full, with their rarity glow, and unfound ones as silhouettes with "???" and an area and rarity hint, with a line per section saying what its items are for. Its filters narrow the list by type, found or not found, rarity, and area, several at once, and its area progress shows how many of each area's treasures are found, or "All found!". The filter lasts while the game is open and is never saved.
 _Avoid_: inventory
 
 **First-find card**:
@@ -542,7 +542,7 @@ _Avoid_: carry sound, defeat sound
 - **Restyle** can change **Tail**, **Body**, **Age**, **Size**, face, gills, spots, and name, can put on or take off the applied **Dream colour**, and can change the **Outfit** on the Outfit tab, but never the **Real morph** or **Boy or girl**; none of these looks changes the hit area or speed, and only the **Perks** of the **Explorer**'s **Outfit** change play, on a **Trip**
 - The starter axolotl's **Real morph**, chosen in the **Character creator**, decides which seven **Real morphs** can be **Stranded axolotls**
 - Each **Trip** has at most one **Stranded axolotl**, on about 4 trips in 10, or always when one is left waiting from the last **Trip** in that **Area**; a **Rescue** moves it into the **Home Tank** and unlocks its **Morph** in the **Collection Book**
-- The **Treasure Chest** lists every catalogue **Decoration**, **Wearable**, and **Dream colour**: owned ones in full with their **Rarity** glow, unfound ones as silhouettes with "???" and an **Area** and **Rarity** hint, and a line per section saying what its items are for; placed **Decorations** live in the **Home Tank**
+- The **Treasure Chest** lists every catalogue **Decoration**, **Wearable**, and **Dream colour**: owned ones in full with their **Rarity** glow, unfound ones as silhouettes with "???" and an **Area** and **Rarity** hint, and a line per section saying what its items are for; its filters narrow the list by type, found or not found, **Rarity**, and **Area**, and each **Area** shows how many of its treasures are found; placed **Decorations** live in the **Home Tank**
 - The **Collection Book** holds one entry per **Real morph**, each with a **Fun-fact card**, and lists **Dream colours** separately as not found in nature
 - The **Refuge** has one **Refuge section** per **Habitat** that holds an **Area**, and each **Refuge section** has one **Trash batch** per **Area** in it; beating an **Area** (its exit **Star**) clears its **Trash batch**
 - A **Trip** in a real **Area** that newly beats it adds a pending clean-up, and one that newly makes a **Refuge section** clean adds a **Habitat milestone**; both live in memory only, a dev area **Trip** or a replay adds neither, and the **Refuge nudge** shows while a clean-up is pending
