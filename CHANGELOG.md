@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-02
+
+### Added
+
+- Area 9, the second deep canal area and the first hub area. You start in the middle, with one branch to the west and one to the east.
+- Murky water: patches of dirty water. Stay in one too long and it costs a leg, so swim back out into clean water. It has its own "Dirty water" fact card.
+- Bailing buckets: a boat's bucket dips into the water on a timer. If it scoops you up, it tosses you back along the path. A toss never costs a leg.
+- Anchors and mud seeps now show up in a real area for the first time, in Area 9. Their fact cards join the Collection Book.
+- 13 new treasures, including the Olive and Lantern shine Dream colours and 5 new Wearables with perks.
+
 ## [0.60.3] - 2026-11-02
 
 ### Fixed

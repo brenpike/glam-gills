@@ -308,10 +308,30 @@ function arrivalAreaCombinations(
   );
 }
 
-/** Tank arrival card combinations for one treasure list and total, for each reason and its areas. */
-function arrivalCombinations(canvas: Canvas, names: readonly string[], total: number): Combination[] {
+/**
+ * Whether one trip can bring home `count` treasures to the arrival card of `reason` in `area`. An
+ * "Area beaten" card follows a trip in that area, which finds only that area's treasures, so it
+ * names at most the area's own catalogue size. Every other card keeps the MAX_TRIP_FINDS bound.
+ */
+function isTripCount(reason: ArrivalReason, area: Readonly<AreaData>, count: number): boolean {
+  const bound = reason === 'areaBeaten' ? area.layout.treasures.length : MAX_TRIP_FINDS;
+  return count <= bound;
+}
+
+/**
+ * Tank arrival card combinations for one treasure list and total, for each reason and its areas.
+ * With `isOneTrip`, only the areas whose trip can bring home that many treasures (isTripCount).
+ */
+function arrivalCombinations(
+  canvas: Canvas,
+  names: readonly string[],
+  total: number,
+  isOneTrip: boolean,
+): Combination[] {
   return ARRIVAL_REASONS.flatMap((reason) =>
-    arrivalAreas(reason).flatMap((area) => arrivalAreaCombinations(canvas, reason, area, names, total)),
+    arrivalAreas(reason)
+      .filter((area) => !isOneTrip || isTripCount(reason, area, names.length))
+      .flatMap((area) => arrivalAreaCombinations(canvas, reason, area, names, total)),
   );
 }
 
@@ -329,15 +349,18 @@ function bankingCombinations(canvas: Canvas, names: readonly string[], total: nu
 }
 
 /**
- * Every tank arrival card and banking card combination on one canvas, naming 0 to `maxCount` of the
- * longest catalogue names (the whole catalogue by default).
+ * Every tank arrival card and banking card combination on one canvas, naming 0 to the whole
+ * catalogue of the longest catalogue names. With `isOneTrip`, only what one trip can bring home:
+ * 0 to MAX_TRIP_FINDS names, and an "Area beaten" card names at most its area's own catalogue size
+ * (isTripCount).
  */
-function canvasCombinations(canvas: Canvas, maxCount: number = SORTED_NAMES.length): Combination[] {
+function canvasCombinations(canvas: Canvas, isOneTrip: boolean = false): Combination[] {
+  const maxCount = isOneTrip ? MAX_TRIP_FINDS : SORTED_NAMES.length;
   const combinations: Combination[] = [];
   for (let count = 0; count <= maxCount; count++) {
     const names = SORTED_NAMES.slice(0, count);
     for (const total of BANKED_TOTALS) {
-      combinations.push(...arrivalCombinations(canvas, names, total));
+      combinations.push(...arrivalCombinations(canvas, names, total, isOneTrip));
       if (total < count) continue;
       combinations.push(...bankingCombinations(canvas, names, total));
     }
@@ -414,7 +437,7 @@ describe('card copy fit', () => {
   ])(
     'shows the full body and every icon of one trip at $cssW x $cssH',
     (canvas) => {
-      const problems = canvasCombinations(canvas, MAX_TRIP_FINDS).flatMap((combination) =>
+      const problems = canvasCombinations(canvas, true).flatMap((combination) =>
         downgradeProblems(combination, fitCard(combination.availH, combination.sections)),
       );
       expect(problems).toEqual([]);
@@ -634,7 +657,7 @@ describe('danger pass fact card copy fit (C13)', () => {
   });
 });
 
-/** The moving hazard fact cards not yet in any area, for the dev-only anchor drop and mud seep (issue #194). */
+/** The moving hazard fact cards for the anchor drop and mud seep, first built dev-only (issue #194). */
 const DEV_MOVING_HAZARD_FACT_CARDS: readonly Readonly<FactCard>[] = [ANCHOR_DROP_FACT, MUD_SEEP_FACT];
 
 describe('dev-only moving hazard fact card copy fit (issue #194)', () => {
