@@ -255,6 +255,8 @@ export class HudScene extends Phaser.Scene {
   private assets!: GameAssets;
   /** The zone of the area being swum, from the swim start. */
   private zone!: ZoneLayout;
+  /** The zone's water rows in world y (surface and bed top), set once per swim start. */
+  private worldWaterRows!: { surf: number; bedTop: number };
   private view!: SceneView;
   /** Tall areas: the water band on screen when the overlays were last placed; null until placed. */
   private overlayWaterRows: ScreenWaterRows | null = null;
@@ -337,6 +339,7 @@ export class HudScene extends Phaser.Scene {
   init(data: SwimStart): void {
     this.assets = data.assets;
     this.zone = zoneFor(data.assets, data.areaId);
+    this.worldWaterRows = { surf: SURF, bedTop: this.zone.bedTop };
     this.overlayWaterRows = null;
     this.overlayAgeMs = 0;
     this.paused = false;
@@ -410,7 +413,7 @@ export class HudScene extends Phaser.Scene {
   update(_time: number, deltaMs: number): void {
     this.updateStick();
     this.foundPopup.update(deltaMs);
-    if (this.scrollsVertically()) this.followWaterBand(deltaMs);
+    if (this.scrollsVertically() && this.hasActiveOverlay()) this.followWaterBand(deltaMs);
   }
 
   // ---- view ----------------------------------------------------------------
@@ -427,8 +430,16 @@ export class HudScene extends Phaser.Scene {
 
   /** Tall areas: the water band on screen now, from where the swim camera shows the water. */
   private swimWaterRows(): ScreenWaterRows {
-    const rows = { surf: SURF, bedTop: this.zone.bedTop };
-    return screenWaterRows(this.view, rows, this.swimCameraTop(), this.view.fit.fitZoom);
+    return screenWaterRows(this.view, this.worldWaterRows, this.swimCameraTop(), this.view.fit.fitZoom);
+  }
+
+  /**
+   * Whether any overlay layoutOverlays() places is up: the hint, the snack banner or the find toast.
+   * With none up, scrolling has nothing to re-place. Each one calls layoutOverlays() as it appears,
+   * which records the water band it was placed for, so tracking resumes from the band on screen.
+   */
+  private hasActiveOverlay(): boolean {
+    return this.hintActive || this.bannerActive || this.foundPopup.hasFind();
   }
 
   /**
