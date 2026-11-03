@@ -186,15 +186,21 @@ export function liveCatchBox(
   return bucketPhase(boat, t, tuning) === 'dip' ? bailingCatchBox(boat, tuning) : null;
 }
 
-/** True when the bucket dips at element time `t` and the axolotl centre `pos` is in its catch box, edges included. */
+/**
+ * True when the bucket dips at element time `t` and the axolotl centre `pos` is in its catch box,
+ * edges included. It tests the same box as bailingCatchBox without building it, so it allocates
+ * nothing and can run every step.
+ */
 export function catchesAxolotl(
   boat: Readonly<BailingBoatSpawn>,
   pos: Readonly<Point>,
   t: number,
   tuning: Pick<BailingBucketTuning, 'restFor' | 'warnFor' | 'catchWidth' | 'catchDepth'> = BAILING_BUCKETS,
 ): boolean {
-  const box = liveCatchBox(boat, t, tuning);
-  return box !== null && inRect(pos, box);
+  if (bucketPhase(boat, t, tuning) !== 'dip') return false;
+  const half = tuning.catchWidth / 2;
+  const { bucketX } = boat.bailing;
+  return pos.x >= bucketX - half && pos.x <= bucketX + half && pos.y >= SURF && pos.y <= SURF + tuning.catchDepth;
 }
 
 /** Where the toss starts: the bucket at the surface. */

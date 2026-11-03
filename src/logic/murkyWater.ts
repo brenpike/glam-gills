@@ -71,9 +71,33 @@ export function murkyPatches(hazards: readonly Readonly<HazardSpawn>[]): Readonl
   return hazards.filter(isMurkyPatch);
 }
 
+/** True when `pos` is in the patch, edges inclusive. */
+function inPatch(pos: Readonly<Point>, { shape }: Readonly<MurkyPatchSpawn>): boolean {
+  return pos.x >= shape.x0 && pos.x <= shape.x1 && pos.y >= shape.y0 && pos.y <= shape.y1;
+}
+
 /** True when `pos`, the axolotl's centre, is in some patch, edges inclusive. */
 export function insideMurky(pos: Readonly<Point>, patches: readonly Readonly<MurkyPatchSpawn>[]): boolean {
-  return patches.some(({ shape }) => pos.x >= shape.x0 && pos.x <= shape.x1 && pos.y >= shape.y0 && pos.y <= shape.y1);
+  for (const patch of patches) if (inPatch(pos, patch)) return true;
+  return false;
+}
+
+/** True when some hazard is a murky patch. Allocates nothing, so it can run every step. */
+export function hasMurkyPatch(hazards: readonly Readonly<HazardSpawn>[]): boolean {
+  for (const hazard of hazards) if (isMurkyPatch(hazard)) return true;
+  return false;
+}
+
+/**
+ * The first murky patch among `hazards`, in hazard order, that holds `pos` (the axolotl's centre),
+ * edges inclusive, else undefined. Allocates nothing, so it can run every step.
+ */
+export function murkyPatchAt(
+  pos: Readonly<Point>,
+  hazards: readonly Readonly<HazardSpawn>[],
+): Readonly<MurkyPatchSpawn> | undefined {
+  for (const hazard of hazards) if (isMurkyPatch(hazard) && inPatch(pos, hazard)) return hazard;
+  return undefined;
 }
 
 /**

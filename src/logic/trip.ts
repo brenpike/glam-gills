@@ -39,8 +39,8 @@ import {
   MURKY_WATER,
   MURKY_WATER_TIMING,
   createMurkyTimer,
-  insideMurky,
-  murkyPatches,
+  hasMurkyPatch,
+  murkyPatchAt,
   stepMurkyTimer,
   type MurkyTimer,
 } from './murkyWater';
@@ -1052,9 +1052,8 @@ function stepMurky(
   step: number,
   ctx: EncounterContext,
 ): MurkyPass {
-  const patches = murkyPatches(encounter.hazards);
-  if (patches.length === 0 || encounter.tripOver) return { timer, encounter, events: NO_ENCOUNTER_EVENTS };
-  const patch = patches.find((candidate) => insideMurky(pos, [candidate]));
+  if (!hasMurkyPatch(encounter.hazards) || encounter.tripOver) return { timer, encounter, events: NO_ENCOUNTER_EVENTS };
+  const patch = murkyPatchAt(pos, encounter.hazards);
   const ticked = stepMurkyTimer(timer, patch !== undefined, step, isProtected(encounter.legs));
   if (!ticked.legDue || patch === undefined) return { timer: ticked.timer, encounter, events: NO_ENCOUNTER_EVENTS };
   const hit = hitEncounter(encounter, MURKY_WATER.id, hazardCentre(patch.shape), ctx);

@@ -9,9 +9,11 @@ import {
   MURKY_WATER,
   MURKY_WATER_TIMING,
   createMurkyTimer,
+  hasMurkyPatch,
   insideMurky,
   isMurkyPatch,
   murkyCrossSeconds,
+  murkyPatchAt,
   murkyPatchSpawn,
   murkyPatches,
   stepMurkyTimer,
@@ -117,6 +119,28 @@ describe('insideMurky', () => {
     expect(insideMurky({ x: 1201, y: 500 }, [PATCH, WIDE])).toBe(false);
     expect(insideMurky({ x: 1100, y: 399 }, [PATCH, WIDE])).toBe(false);
     expect(insideMurky({ x: 1100, y: 500 }, [])).toBe(false);
+  });
+});
+
+describe('hasMurkyPatch and murkyPatchAt', () => {
+  it('says whether any hazard is a murky patch', () => {
+    expect(hasMurkyPatch([NET, WIDE, VENT])).toBe(true);
+    expect(hasMurkyPatch([NET, VENT])).toBe(false);
+    expect(hasMurkyPatch([])).toBe(false);
+  });
+
+  it('finds the patch that holds the centre, edges included, among the hazards', () => {
+    const hazards = [NET, WIDE, VENT, PATCH];
+    expect(murkyPatchAt({ x: 1100, y: 500 }, hazards)).toBe(PATCH);
+    expect(murkyPatchAt({ x: 2400, y: 300 }, hazards)).toBe(WIDE);
+    expect(murkyPatchAt({ x: 1200, y: 640 }, hazards)).toBe(PATCH);
+  });
+
+  it('is undefined outside every patch, and inside a hazard that is not a patch', () => {
+    const hazards = [NET, WIDE, VENT, PATCH];
+    expect(murkyPatchAt({ x: 1201, y: 500 }, hazards)).toBeUndefined();
+    expect(murkyPatchAt({ x: 650, y: 500 }, hazards)).toBeUndefined();
+    expect(murkyPatchAt({ x: 1100, y: 500 }, [NET, VENT])).toBeUndefined();
   });
 });
 
