@@ -481,8 +481,8 @@ function countedThreatIds(source: ThreatSource): string[] {
 
 /**
  * Per area, in area order, the hazards or predators and the timing or puzzle elements that no
- * earlier area has: its elements, then its gliding trajineras (issue #78, ND-8), which are kept out
- * of `elements`. Carried-forward ids are not new. Danger parts and mobile snack types are never
+ * earlier area has: its elements, then its gliding trajineras (issue #78, ND-8), then its bailing
+ * boats (issue #107, ND-2), both kept out of `elements`. Carried-forward ids are not new. Danger parts and mobile snack types are never
  * counted (ND-13, ND-27).
  */
 export function newThingsByArea(areas: readonly Readonly<AreaData>[] = AREAS): NewThings[] {
@@ -492,7 +492,9 @@ export function newThingsByArea(areas: readonly Readonly<AreaData>[] = AREAS): N
     areaId: area.id,
     threats: takeNewIds(countedThreatIds(area.layout), seenThreats),
     elements: takeNewIds(
-      [...area.layout.elements, ...(area.layout.trajineras ?? [])].map((element) => element.type.id),
+      [...area.layout.elements, ...(area.layout.trajineras ?? []), ...(area.layout.bailingBoats ?? [])].map(
+        (element) => element.type.id,
+      ),
       seenElements,
     ),
   }));

@@ -1,7 +1,7 @@
 /**
  * The treasure catalogue: rarities, categories, wearable slots, perks, Dream colours and the
  * treasures of every area: the canal, the pond, the pond's Area 3, the chinampa gardens' Areas 4 and 5, the spring
- * cave's Areas 6 and 7 and the deep canal's Area 8 (PRD B1 to B3, F9).
+ * cave's Areas 6 and 7 and the deep canal's Areas 8 and 9 (PRD B1 to B3, F9).
  * Pure data plus lookups; nothing here applies perks.
  */
 
@@ -93,7 +93,9 @@ export type DreamColourId =
   | 'chocolate'
   | 'glowworm'
   | 'jade'
-  | 'fiesta-shine';
+  | 'fiesta-shine'
+  | 'olive'
+  | 'lantern-shine';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -223,10 +225,27 @@ export const FIESTA_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The deep canal's Area 9 Dream colour, a yellow-green olive held by that area's first Paint shell (issue #107). */
+export const OLIVE: DreamColour = Object.freeze({
+  id: 'olive',
+  name: 'Olive',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
+/** The deep canal's Area 9 Legendary Dream colour, a lantern orange sheen held by that area's second Paint shell (issue #107). */
+export const LANTERN_SHINE: DreamColour = Object.freeze({
+  id: 'lantern-shine',
+  name: 'Lantern shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
- * shine (Area 6), Chocolate and Glowworm (Area 7), then Jade and Fiesta shine (Area 8).
+ * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), then Olive and
+ * Lantern shine (Area 9).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -243,6 +262,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   GLOWWORM,
   JADE,
   FIESTA_SHINE,
+  OLIVE,
+  LANTERN_SHINE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -910,9 +931,91 @@ export const DEEP_CANAL_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The deep canal Area 9 treasures, all new (issue #107): the owner's 12 in rarity order, 6
+ * Decorations, 5 Wearables and the Olive Paint shell, then the Lantern shine Paint shell. The Little
+ * bailing bucket is the area's special treasure. Every perk comes from PERK_VALUES for its type and
+ * rarity, and no two Wearables share a perk type (ND-4). The newest entry comes last so placement
+ * by seed stays the same for every earlier treasure.
+ */
+export const DEEP_CANAL_2_TREASURES: readonly Treasure[] = Object.freeze([
+  { id: 'deep-canal/clay-jug', name: 'Clay jug', rarity: 'common', category: 'decoration' },
+  {
+    id: 'deep-canal/floating-cork',
+    name: 'Floating cork',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/bucket-hat',
+    name: 'Bucket hat',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('treasureSense', 'common'),
+  },
+  {
+    id: 'deep-canal/rope-necklace',
+    name: 'Rope necklace',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('snackMagnet', 'common'),
+  },
+  { id: 'deep-canal/little-bailing-bucket', name: 'Little bailing bucket', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'deep-canal/painted-name-sign',
+    name: 'Painted name sign',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'deep-canal/poncho',
+    name: 'Poncho',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('regrowth', 'rare'),
+  },
+  createPaintShell(OLIVE, 'deep-canal'),
+  {
+    id: 'deep-canal/paper-lantern-boat',
+    name: 'Paper lantern boat',
+    rarity: 'epic',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/tail-bell',
+    name: 'Tail bell',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'tail',
+    perk: createPerk('speed', 'epic'),
+  },
+  {
+    id: 'deep-canal/floating-music-stage',
+    name: 'Floating music stage',
+    rarity: 'legendary',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/golden-boatman-cape',
+    name: 'Golden boatman cape',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('dash', 'legendary'),
+  },
+  createPaintShell(LANTERN_SHINE, 'deep-canal'),
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
  * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
- * then the spring cave Area 7's, then the deep canal Area 8's.
+ * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -923,6 +1026,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...SPRING_CAVE_TREASURES,
   ...SPRING_CAVE_2_TREASURES,
   ...DEEP_CANAL_TREASURES,
+  ...DEEP_CANAL_2_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

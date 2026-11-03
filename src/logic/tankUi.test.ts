@@ -817,7 +817,7 @@ describe('decorateLayout', () => {
   });
 
   it('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    expect(SHIPPED_DECORATIONS).toHaveLength(43);
+    expect(SHIPPED_DECORATIONS).toHaveLength(49);
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const problems = supportedCanvases().flatMap((view) =>
       maxCounts.flatMap((maxTrayCount) =>
@@ -825,7 +825,7 @@ describe('decorateLayout', () => {
       ),
     );
     expect(problems).toEqual([]);
-  }, 30_000);
+  }, 60_000);
 
   it('uses 64 px tray squares and always reserves the Put away slot', () => {
     const view = { cssW: 800, cssH: 600 };
@@ -997,48 +997,60 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 568 }, traysFrom(32)],
   [{ cssW: 320, cssH: 600 }, traysFrom(32)],
   [{ cssW: 320, cssH: 667 }, traysFrom(42)],
+  [{ cssW: 320, cssH: 740 }, traysFrom(47)],
+  [{ cssW: 320, cssH: 768 }, traysFrom(47)],
   [{ cssW: 340, cssH: 440 }, traysFrom(23)],
   [{ cssW: 340, cssH: 480 }, traysFrom(23)],
   [{ cssW: 340, cssH: 568 }, traysFrom(33)],
   [{ cssW: 340, cssH: 600 }, traysFrom(33)],
   [{ cssW: 340, cssH: 667 }, traysFrom(38)],
+  [{ cssW: 340, cssH: 740 }, traysFrom(48)],
+  [{ cssW: 340, cssH: 768 }, traysFrom(48)],
   [{ cssW: 360, cssH: 440 }, traysFrom(18)],
   [{ cssW: 360, cssH: 480 }, traysFrom(23)],
   [{ cssW: 360, cssH: 568 }, traysFrom(28)],
   [{ cssW: 360, cssH: 600 }, traysFrom(33)],
   [{ cssW: 360, cssH: 667 }, traysFrom(38)],
   [{ cssW: 360, cssH: 740 }, traysFrom(43)],
+  [{ cssW: 360, cssH: 768 }, traysFrom(48)],
   [{ cssW: 375, cssH: 440 }, traysFrom(18)],
   [{ cssW: 375, cssH: 480 }, traysFrom(23)],
   [{ cssW: 375, cssH: 568 }, traysFrom(28)],
   [{ cssW: 375, cssH: 600 }, traysFrom(33)],
   [{ cssW: 375, cssH: 667 }, traysFrom(38)],
   [{ cssW: 375, cssH: 740 }, traysFrom(43)],
+  [{ cssW: 375, cssH: 768 }, traysFrom(48)],
   [{ cssW: 390, cssH: 440 }, traysFrom(22)],
   [{ cssW: 390, cssH: 480 }, traysFrom(28)],
   [{ cssW: 390, cssH: 568 }, traysFrom(34)],
   [{ cssW: 390, cssH: 600 }, traysFrom(40)],
+  [{ cssW: 390, cssH: 667 }, traysFrom(46)],
   [{ cssW: 414, cssH: 440 }, traysFrom(28)],
   [{ cssW: 414, cssH: 480 }, traysFrom(28)],
   [{ cssW: 414, cssH: 568 }, traysFrom(40)],
   [{ cssW: 414, cssH: 600 }, traysFrom(40)],
+  [{ cssW: 414, cssH: 667 }, traysFrom(46)],
   [{ cssW: 430, cssH: 440 }, traysFrom(22)],
   [{ cssW: 430, cssH: 480 }, traysFrom(28)],
   [{ cssW: 430, cssH: 568 }, traysFrom(40)],
   [{ cssW: 430, cssH: 600 }, traysFrom(40)],
+  [{ cssW: 430, cssH: 667 }, traysFrom(46)],
   [{ cssW: 459, cssH: 440 }, traysFrom(26)],
   [{ cssW: 459, cssH: 480 }, traysFrom(33)],
   [{ cssW: 459, cssH: 568 }, traysFrom(40)],
+  [{ cssW: 459, cssH: 600 }, traysFrom(47)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 460, cssH }, traysFrom(19)]),
   [{ cssW: 460, cssH: 414 }, traysFrom(26)],
   [{ cssW: 460, cssH: 440 }, traysFrom(26)],
   [{ cssW: 460, cssH: 480 }, traysFrom(33)],
   [{ cssW: 460, cssH: 568 }, traysFrom(40)],
+  [{ cssW: 460, cssH: 600 }, traysFrom(47)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 480, cssH }, traysFrom(19)]),
   [{ cssW: 480, cssH: 414 }, traysFrom(19)],
   [{ cssW: 480, cssH: 440 }, traysFrom(26)],
   [{ cssW: 480, cssH: 480 }, traysFrom(33)],
   [{ cssW: 480, cssH: 568 }, traysFrom(40)],
+  [{ cssW: 480, cssH: 600 }, traysFrom(47)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 520, cssH }, traysFrom(22)]),
   [{ cssW: 520, cssH: 414 }, traysFrom(30)],
   [{ cssW: 520, cssH: 440 }, traysFrom(30)],
@@ -1050,18 +1062,23 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 640, cssH }, traysFrom(28)]),
   [{ cssW: 640, cssH: 414 }, traysFrom(38)],
   [{ cssW: 640, cssH: 440 }, traysFrom(38)],
+  [{ cssW: 640, cssH: 480 }, traysFrom(48)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 667, cssH }, traysFrom(28)]),
   [{ cssW: 667, cssH: 414 }, traysFrom(38)],
   [{ cssW: 667, cssH: 440 }, traysFrom(38)],
+  [{ cssW: 667, cssH: 480 }, traysFrom(48)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 736, cssH }, traysFrom(31)]),
   [{ cssW: 736, cssH: 414 }, traysFrom(42)],
   [{ cssW: 736, cssH: 440 }, traysFrom(42)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 800, cssH }, traysFrom(36)]),
+  [{ cssW: 800, cssH: 414 }, traysFrom(49)],
+  [{ cssW: 800, cssH: 440 }, traysFrom(49)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 844, cssH }, traysFrom(37)]),
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 1024, cssH }, traysFrom(46)]),
 ];
 
 describe('decorate tray pages', () => {
-  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 43 or more on the other narrow and tall canvases, 25 at 568 wide, 28 at 640 and 667 wide, 31 at 736 wide, 36 at 800 wide and 37 at 844 wide', () => {
+  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 48 or more on the other narrow and tall canvases, 25 at 568 wide, 28 or 48 at 640 and 667 wide, 31 at 736 wide, 36 or 49 at 800 wide, 37 at 844 wide and 46 at 1024 wide', () => {
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const paged = supportedCanvases().flatMap((view) => {
       const counts = maxCounts.filter((trayCount) => sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length).pageCount > 1);

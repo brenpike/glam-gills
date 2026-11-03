@@ -90,6 +90,12 @@ const LITTLE_TRAJINERA = 'deep-canal/little-trajinera';
 const PAINTED_OAR = 'deep-canal/painted-oar';
 const FLOWER_ARCH = 'deep-canal/trajinera-flower-arch';
 const FLOWER_MARKET = 'deep-canal/floating-flower-market';
+const CLAY_JUG = 'deep-canal/clay-jug';
+const FLOATING_CORK = 'deep-canal/floating-cork';
+const BAILING_BUCKET = 'deep-canal/little-bailing-bucket';
+const NAME_SIGN = 'deep-canal/painted-name-sign';
+const LANTERN_BOAT = 'deep-canal/paper-lantern-boat';
+const MUSIC_STAGE = 'deep-canal/floating-music-stage';
 const WIDE_SHIPPED = [STRING_LIGHTS, PAPEL_PICADO];
 const SHIPPED_FLOOR = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floor');
 const SHIPPED_FLOATING = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floating');
@@ -467,6 +473,12 @@ describe('placement kinds geometry (issue #95)', () => {
       [PAINTED_OAR, 'floor'],
       [FLOWER_ARCH, 'floor'],
       [FLOWER_MARKET, 'floating'],
+      [CLAY_JUG, 'floor'],
+      [FLOATING_CORK, 'floating'],
+      [BAILING_BUCKET, 'floor'],
+      [NAME_SIGN, 'hanging'],
+      [LANTERN_BOAT, 'floating'],
+      [MUSIC_STAGE, 'floating'],
     ]);
     for (const decoration of SHIPPED_DECORATIONS) {
       expect(decorationWidth(decoration), decoration.id).toBe(
@@ -549,6 +561,8 @@ describe('isValidPlacementFor', () => {
       WATERFALL,
       PAINTED_OAR,
       FLOWER_ARCH,
+      CLAY_JUG,
+      BAILING_BUCKET,
     ]);
     for (const decoration of SHIPPED_FLOOR) {
       for (const pos of points) expect(isValidPlacementFor(decoration, pos)).toBe(isValidPlacement(pos));
@@ -566,6 +580,9 @@ describe('isValidPlacementFor', () => {
       PAPER_BOAT,
       LITTLE_TRAJINERA,
       FLOWER_MARKET,
+      FLOATING_CORK,
+      LANTERN_BOAT,
+      MUSIC_STAGE,
     ]);
     expect(SHIPPED_HANGING.map((decoration) => decoration.id)).toEqual([
       STRING_LIGHTS,
@@ -576,6 +593,7 @@ describe('isValidPlacementFor', () => {
       WIND_CHIME,
       GLOWING_STALACTITE,
       FLOWER_GARLAND,
+      NAME_SIGN,
     ]);
     for (const decoration of [...SHIPPED_FLOATING, ...SHIPPED_HANGING, LILY_PAD, PAPER_LANTERN, WIDE_BANNER]) {
       const range = placementXRangeFor(decoration);

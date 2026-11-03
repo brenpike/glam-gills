@@ -7,6 +7,7 @@ import { GHOST_NET } from './ghostNets';
 import { hazardSweep, type HazardShape } from './hazards';
 import { zoneThreats } from './hiding';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
+import { isMurkyPatch } from './murkyWater';
 import { PERK_CAPS } from './perks';
 import { GHOST_NETS, SWIM } from './tuning';
 import type { Point, ZoneLayout } from './zone';
@@ -61,13 +62,13 @@ export interface Gap {
 
 /**
  * Every obstacle of a zone: each hazard by its reach from its whole drift path (hazardSweep, N3),
- * but a pulsing current, which is swum through, not round (issue #105, ND-6),
+ * but a pulsing current (issue #105, ND-6) and a murky patch (issue #107), which are swum through, not round,
  * then each moving hazard sweep by its touch reach (ND-8), then each extra shape by its keep-out,
  * then each predator route by its strike range (zoneThreats). No extras gives the zone's own obstacles.
  */
 export function obstaclesOf(layout: GapGeometry, extras: readonly ExtraObstacle[] = []): Obstacle[] {
   const hazards = layout.hazards
-    .filter((hazard) => hazard.pulse === undefined)
+    .filter((hazard) => hazard.pulse === undefined && !isMurkyPatch(hazard))
     .map((hazard): Obstacle => ({ id: hazard.id, kind: 'shape', shape: hazardSweep(hazard), keepOut: hazard.type.reach }));
   const moving = (layout.movingHazards ?? []).map(
     (spawn): Obstacle => ({ id: spawn.id, kind: 'shape', shape: movingHazardSweep(spawn), keepOut: spawn.type.touchReach }),

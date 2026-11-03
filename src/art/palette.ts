@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the twenty-two Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the twenty-four Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -481,7 +481,9 @@ export type DreamLookId =
   | 'crystal-shine'
   | 'glowworm'
   | 'jade'
-  | 'fiesta-shine';
+  | 'fiesta-shine'
+  | 'olive'
+  | 'lantern-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -573,6 +575,16 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // luminance 0.389): 1.51:1 darker than Bubblegum and 1.59:1 from Iridescent, the other light sheen. 6.01:1 with ink and
   // 2.39:1 with white, so ink spots and, as Rainbow, the rim light. The sunny yellow gill #ffd83a is 1.73:1 against it.
   'fiesta-shine': dreamSlots('#ff78c8', '#e66eba', '#ffaede', '#ffc2e6', ['#ffd83a', '#ffe165'], ['#eac63c', '#eed263']),
+  // Deep canal Area 9 Dream colour (Olive, issue #107). Body #7c8d28 is a yellow-green olive (relative luminance 0.235),
+  // mid-dark in greyscale in the window between Poppy red (1.09:1) and Crystal shine (1.09:1), 1.69:1 from Plum and 1.76:1
+  // from Jade. 3.91:1 with ink and 3.69:1 with white, so ink spots and, as Poppy red, no rim light. The marigold gill
+  // #ffb03b is 2.02:1 against it.
+  olive: dreamSlots('#7c8d28', '#72802d', '#b0bb7e', '#c4cc9e', ['#ffb03b', '#ffc166'], ['#eaa23d', '#eeb464']),
+  // Deep canal Area 9 Legendary Dream colour (Lantern shine, a sheen). Body #e07800 is a glowing lantern orange (relative
+  // luminance 0.293), in the window between Crystal shine (1.10:1) and Rainbow (1.10:1), 1.20:1 from Olive and 2.04:1 from
+  // Iridescent, the light sheen. 4.70:1 with ink and 3.06:1 with white, so ink spots and, as Crystal shine, no rim light.
+  // The lantern red gill #b5172f is 2.19:1 against it.
+  'lantern-shine': dreamSlots('#e07800', '#ca6e0a', '#ecae66', '#f1c28c', ['#b5172f', '#c54a5d'], ['#a71832', '#b9475c']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */

@@ -355,7 +355,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-two Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-four Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -378,7 +378,9 @@ export type DreamSwatchId =
   | 'crystal-shine'
   | 'glowworm'
   | 'jade'
-  | 'fiesta-shine';
+  | 'fiesta-shine'
+  | 'olive'
+  | 'lantern-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -448,6 +450,14 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     body: '#ff78c8',
     pattern: 'stripes',
     marks: ['rgba(255,225,74,0.85)', 'rgba(64,224,208,0.8)'],
+    dark: false,
+  },
+  olive: { body: '#7c8d28', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a candle cream and a soft gold stripe, both lighter than the orange body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'lantern-shine': {
+    body: '#e07800',
+    pattern: 'stripes',
+    marks: ['rgba(255,246,204,0.85)', 'rgba(255,214,102,0.8)'],
     dark: false,
   },
 };

@@ -47,6 +47,7 @@ import {
   dreamColourById,
   treasureById,
 } from './catalogue';
+import { bailingBoatSpawn } from './bailingBuckets';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
@@ -84,6 +85,7 @@ import { SPRING_CAVE_2_AREA_ID } from './springCave2Layout';
 import { SPRING_CAVE_AREA_ID, SPRING_CAVE_LAYOUT } from './springCaveLayout';
 import { NO_STARS, type AreaStars, type AreaStarsRecord } from './stars';
 import { inSafeArea } from './tilapia';
+import { trajineraSpawn } from './trajineras';
 import { FINDS, LEGS, SWIM } from './tuning';
 import {
   CANAL_AREA_ID,
@@ -139,7 +141,10 @@ const SHRIMP_ONLY = mobileSnackMix({ shrimp: TEST_SHRIMP, homes: TEST_SHRIMP_HOM
 /** Canal layout data with these threats, elements and mobile snacks in place of the canal's. */
 function layoutWith(
   extra: Partial<
-    Pick<AreaLayoutData, 'tilapiaRoutes' | 'predatorRoutes' | 'hazards' | 'elements' | 'movingHazards' | 'mobileSnacks'>
+    Pick<
+      AreaLayoutData,
+      'tilapiaRoutes' | 'predatorRoutes' | 'hazards' | 'elements' | 'movingHazards' | 'mobileSnacks' | 'trajineras' | 'bailingBoats'
+    >
   >,
 ): AreaLayoutData {
   return { ...CANAL_LAYOUT, ...extra };
@@ -767,6 +772,21 @@ describe('newThingsByArea', () => {
     expect(areasOverNewLimit(areas)).toEqual([]);
     expect(threatIds(areas[1].layout)).toEqual(['tilapia', 'carp', 'test-glass', 'test-ram', 'test-oar']);
     expect(sourceFactCards(areas[1].layout).ids).toEqual(['tilapia', 'carp', 'test-glass', 'test-ram', 'test-oar', 'test-mats', 'tadpole', 'shrimp']);
+  });
+
+  it('counts each bailing boat type under elements, after the elements and the trajineras, and never again once seen (issue #107)', () => {
+    const bailing = (id: string) =>
+      bailingBoatSpawn(id, 0, { x0: 600, x1: 720, bucketX: 660, landing: { x: 300, y: 250 } }, swimBounds());
+    const boat = trajineraSpawn('boat-0', 0, { x0: 1300, x1: 1580, direction: 'left' });
+    const areas = [
+      areaWith('boats', 1, layoutWith({ trajineras: [boat], bailingBoats: [bailing('bucket-0'), bailing('bucket-1')] })),
+      areaWith('again', 2, layoutWith({ bailingBoats: [bailing('bucket-2')] })),
+    ];
+    expect(newThingsByArea(areas)).toEqual([
+      { areaId: 'boats', threats: ['tilapia'], elements: ['gliding-trajinera', 'bailing-bucket'] },
+      { areaId: 'again', threats: [], elements: [] },
+    ]);
+    expect(areasOverNewLimit(areas).map((things) => things.areaId)).toEqual(['boats']);
   });
 
   it('still counts a species that is not marked a danger part', () => {

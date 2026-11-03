@@ -287,7 +287,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The twenty-two Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, then Jade and Fiesta shine, issue #78, last). */
+/** The twenty-four Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, then Olive and Lantern shine, issue #107, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -311,6 +311,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'glowworm',
   'jade',
   'fiesta-shine',
+  'olive',
+  'lantern-shine',
 ];
 
 /**
@@ -506,11 +508,11 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All one hundred and eleven icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and thirteen icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
- * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, then the twenty-two Paint
- * shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last two,
- * Jade and Fiesta shine, the deep canal's).
+ * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, then the twenty-four Paint
+ * shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last four,
+ * Jade, Fiesta shine, Olive and Lantern shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -3955,7 +3957,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;
