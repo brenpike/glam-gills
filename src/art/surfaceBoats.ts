@@ -1,17 +1,26 @@
 /**
- * Where the boats at the surface are drawn, and where the moored hulls fit between them (Area 8).
+ * Where the boats at the surface are drawn, and where the moored hulls fit between them (Areas 8 and 9).
  * Every surface boat has painted art wider than the zone it blocks: a punting pole's bow and
- * shadow reach well past its thin touch zone, and a gliding trajinera's hull and shadow frames
- * reach past its route. The moored boats' shade is stretched to each bank overhang rect, but each
+ * shadow reach well past its thin touch zone, a gliding trajinera's hull and shadow frames
+ * reach past its route, and a bailing boat's hull and its bucket's frames (Area 9, issue #107) need
+ * not sit inside its span. The moored boats' shade is stretched to each bank overhang rect, but each
  * moored hull is a whole, unstretched hull set only where no other surface boat is drawn.
  *
  * Pure: no Phaser calls, no game state, no randomness. It reads the layout data and the texture
  * frames only.
  */
+import type { BailingBoatSpawn } from '../logic/bailingBuckets';
 import { movingHazardBaseY, type MovingHazardSpawn } from '../logic/movingHazards';
 import type { TrajineraSpawn } from '../logic/trajineras';
 import { SURF, type BankOverhang } from '../logic/zone';
 import type { TexSize } from './canvasKit';
+import {
+  BAILING_BOAT_TEX,
+  BAILING_BUCKET_FRONT_TEX,
+  BAILING_BUCKET_TEX,
+  BAILING_RIPPLES_TEX,
+  BAILING_SHADOW_TEX,
+} from './drawBailingBucket';
 import { TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
 import { MOVING_HAZARD_LOOKS } from './movingHazardTextures';
 
@@ -27,10 +36,11 @@ export interface SurfaceBoatSpan {
   readonly x1: number;
 }
 
-/** The layout data that holds surface boats: a zone's moving hazards and gliding trajineras. */
+/** The layout data that holds surface boats: a zone's moving hazards, gliding trajineras and bailing boats. */
 export interface SurfaceBoatSource {
   readonly movingHazards?: readonly Readonly<MovingHazardSpawn>[];
   readonly trajineras?: readonly Readonly<TrajineraSpawn>[];
+  readonly bailingBoats?: readonly Readonly<BailingBoatSpawn>[];
 }
 
 /** How far a frame centred on a hull-long rect reaches past either end of it, px: the larger side. */
@@ -67,15 +77,42 @@ function measureTrajineraSpan(boat: Readonly<TrajineraSpawn>): SurfaceBoatSpan {
   return { id: boat.id, x0: x0 - TRAJINERA_FRAME_OVERHANG, x1: x1 + TRAJINERA_FRAME_OVERHANG };
 }
 
+/** The frames drawn around a bailing boat's bucket x: the bucket, its front wall, its shadow and its ripples. */
+const BAILING_BUCKET_FRAMES: readonly TexSize[] = [BAILING_BUCKET_TEX, BAILING_BUCKET_FRONT_TEX, BAILING_SHADOW_TEX, BAILING_RIPPLES_TEX];
+
+/**
+ * A bailing boat's span: the union of its hull span, its hull frame (BAILING_BOAT_TEX) anchored at
+ * the middle of that span, and the bucket, front wall, shadow and ripple frames anchored at its
+ * bucket's x.
+ */
+function measureBailingBoatSpan(boat: Readonly<BailingBoatSpawn>): SurfaceBoatSpan {
+  const { x0, x1, bucketX } = boat.bailing;
+  const hullX = (x0 + x1) / 2;
+  return {
+    id: boat.id,
+    x0: Math.min(x0, hullX - BAILING_BOAT_TEX.originX, ...BAILING_BUCKET_FRAMES.map((tex) => bucketX - tex.originX)),
+    x1: Math.max(
+      x1,
+      hullX + BAILING_BOAT_TEX.w - BAILING_BOAT_TEX.originX,
+      ...BAILING_BUCKET_FRAMES.map((tex) => bucketX + tex.w - tex.originX),
+    ),
+  };
+}
+
 /**
  * The x-extent of every surface boat's art in `source`: each moving hazard whose base is the
- * surface (SURF) gets the union of its look's bow and shadow frames, and each gliding trajinera
- * its route widened by TRAJINERA_FRAME_OVERHANG. Moving hazards first, then trajineras, each in
+ * surface (SURF) gets the union of its look's bow and shadow frames, each gliding trajinera its
+ * route widened by TRAJINERA_FRAME_OVERHANG, and each bailing boat the union of its hull span and
+ * its hull and bucket frames. Moving hazards first, then trajineras, then bailing boats, each in
  * data order. Throws when a surface moving hazard's look has no art.
  */
 export function surfaceBoatSpans(source: Readonly<SurfaceBoatSource>): SurfaceBoatSpan[] {
   const hazards = (source.movingHazards ?? []).filter((spawn) => movingHazardBaseY(spawn) === SURF);
-  return [...hazards.map(measureMovingHazardSpan), ...(source.trajineras ?? []).map(measureTrajineraSpan)];
+  return [
+    ...hazards.map(measureMovingHazardSpan),
+    ...(source.trajineras ?? []).map(measureTrajineraSpan),
+    ...(source.bailingBoats ?? []).map(measureBailingBoatSpan),
+  ];
 }
 
 /** The left x of as many whole hulls as fit in x0..x1, MOORED_HULL_GAP apart and centred in it. */

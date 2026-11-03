@@ -70,7 +70,26 @@ import { CAVE_TEX } from './drawFinds';
 import type { TexSize } from './canvasKit';
 import { TRAJINERAS } from '../logic/trajineras';
 import { INK, LW, WHITE } from './palette';
-import { DEEP_CANAL_TEX, MOORED_HULL_KEY_PREFIX, bakeDeepCanalTextures, mooredHullKey } from './deepCanalTextures';
+import {
+  DEEP_CANAL_TEX,
+  MOORED_HULL_KEY_PREFIX,
+  MURKY_PATCH_KEY_PREFIX,
+  bakeDeepCanalTextures,
+  bakeMurkyMeter,
+  mooredHullKey,
+  murkyPatchSizeKey,
+  murkyPatchSizes,
+} from './deepCanalTextures';
+import {
+  BAILING_BOAT_TEX,
+  BAILING_BUCKET_FRONT_TEX,
+  BAILING_BUCKET_TEX,
+  BAILING_RIPPLES_TEX,
+  BAILING_SHADOW_TEX,
+  BAILING_SPLASH_TEX,
+} from './drawBailingBucket';
+import { MURKY_BUBBLES_TEX, MURKY_CHEEKS_TEX, MURKY_DIM_TEX, MURKY_METER_TEX, MURKY_SWIRL_FRAMES, murkyPatchTex } from './drawMurkyWater';
+import { murkyPatchSpawn } from '../logic/murkyWater';
 import { ROCK_WALL_KEY_PREFIX, bakeSpringCaveTextures, rockWallSizeKey } from './springCaveTextures';
 import { BASS_BODY } from './drawBlackBass';
 import {
@@ -985,18 +1004,25 @@ function fakeScene(created: { key: string; w: number; h: number }[]): never {
   } as never;
 }
 
+/** The keys of one murky patch size's still, swirl and outline frames. */
+function murkyPatchKeys(w: number, h: number): string[] {
+  const prefix = `${MURKY_PATCH_KEY_PREFIX}${murkyPatchSizeKey(w, h)}`;
+  return [`${prefix}-still`, ...Array.from({ length: MURKY_SWIRL_FRAMES }, (_, frame) => `${prefix}-swirl-${frame}`), `${prefix}-outline`];
+}
+
 describe('bakeDeepCanalTextures', () => {
-  const bakeAt = (scale: number) => {
+  const bakeAt = (scale: number, patchSizes?: readonly (readonly [number, number])[]) => {
     const created: { key: string; w: number; h: number }[] = [];
     vi.stubGlobal('Path2D', LogPath);
-    const art = bakeDeepCanalTextures(fakeScene(created), scale);
+    const art = bakeDeepCanalTextures(fakeScene(created), scale, patchSizes);
     return { art, created };
   };
 
-  it('bakes every prop under its own fixed key, and one moored hull per band order', () => {
+  it('bakes every prop under its own fixed key, one moored hull per band order and every murky patch size in the areas', () => {
     const { created } = bakeAt(2);
     const hullKeys = MOORED_HULL_BANDS.map((_, variant) => mooredHullKey(variant));
-    expect(created.map((c) => c.key).sort()).toEqual([...Object.values(DEEP_CANAL_TEX), ...hullKeys].sort());
+    const patchKeys = murkyPatchSizes(AREAS).flatMap(([w, h]) => murkyPatchKeys(w, h));
+    expect(created.map((c) => c.key).sort()).toEqual([...Object.values(DEEP_CANAL_TEX), ...hullKeys, ...patchKeys].sort());
     expect(new Set(created.map((c) => c.key)).size).toBe(created.length);
     expect(DEEP_CANAL_TEX.trajineraHull).toBe('deep-canal-trajinera-hull');
     expect(DEEP_CANAL_TEX.mooredShade).toBe('deep-canal-moored-shade');
@@ -1070,6 +1096,101 @@ describe('bakeDeepCanalTextures', () => {
     expect(art.hullCave.back.pxH).toBe(art.hullCave.front.pxH);
     expect(art.hullCave.back.key).toBe(DEEP_CANAL_TEX.hullCaveBack);
     expect(art.hullCave.front.key).toBe(DEEP_CANAL_TEX.hullCaveFront);
+  });
+
+  it('bakes the bailing bucket art (issue #107, ND-2) under its fixed keys, in its drawBailingBucket.ts frames and anchors', () => {
+    const { art, created } = bakeAt(3);
+    const { bailingBucket } = art;
+    for (const [info, key, tex] of [
+      [bailingBucket.boat, DEEP_CANAL_TEX.bailingBoat, BAILING_BOAT_TEX],
+      [bailingBucket.bucket, DEEP_CANAL_TEX.bailingBucket, BAILING_BUCKET_TEX],
+      [bailingBucket.front, DEEP_CANAL_TEX.bailingBucketFront, BAILING_BUCKET_FRONT_TEX],
+      [bailingBucket.shadow, DEEP_CANAL_TEX.bailingShadow, BAILING_SHADOW_TEX],
+      [bailingBucket.ripples, DEEP_CANAL_TEX.bailingRipples, BAILING_RIPPLES_TEX],
+      [bailingBucket.splash, DEEP_CANAL_TEX.bailingSplash, BAILING_SPLASH_TEX],
+    ] as const) {
+      expect(info.key).toBe(key);
+      expect([info.w, info.h, info.originX, info.originY], key).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(info.scale).toBe(3);
+      expect(created.find((c) => c.key === key)).toEqual({ key, w: info.pxW, h: info.pxH });
+    }
+    expect(bailingBucket.front.originX).toBe(bailingBucket.bucket.originX);
+  });
+
+  it('bakes the murky water art (issue #107, ND-1) that does not depend on a patch under its fixed keys', () => {
+    const { art, created } = bakeAt(3, []);
+    const { murkyWater } = art;
+    for (const [info, key, tex] of [
+      [murkyWater.dimRing, DEEP_CANAL_TEX.murkyDimRing, MURKY_DIM_TEX],
+      [murkyWater.meter, DEEP_CANAL_TEX.murkyMeter, MURKY_METER_TEX],
+      [murkyWater.cheeks, DEEP_CANAL_TEX.murkyCheeks, MURKY_CHEEKS_TEX],
+      [murkyWater.bubbles, DEEP_CANAL_TEX.murkyBubbles, MURKY_BUBBLES_TEX],
+    ] as const) {
+      expect(info.key).toBe(key);
+      expect([info.w, info.h, info.originX, info.originY], key).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(created.find((c) => c.key === key)).toEqual({ key, w: info.pxW, h: info.pxH });
+    }
+    expect(murkyWater.patches.size).toBe(0);
+    expect(created.filter((c) => c.key.startsWith(MURKY_PATCH_KEY_PREFIX))).toEqual([]);
+  });
+
+  it('bakes each murky patch size once: a still frame, MURKY_SWIRL_FRAMES swirl frames and an outline, all in murkyPatchTex', () => {
+    const sizes = [
+      [200, 160],
+      [420, 240],
+      [200, 160],
+    ] as const;
+    const { art, created } = bakeAt(2, sizes);
+    expect([...art.murkyWater.patches.keys()]).toEqual(['200x160', '420x240']);
+    for (const [w, h] of [sizes[0], sizes[1]]) {
+      const patch = art.murkyWater.patches.get(murkyPatchSizeKey(w, h));
+      expect(patch, `${w}x${h}`).toBeDefined();
+      if (patch === undefined) continue;
+      const tex = murkyPatchTex(w, h);
+      const infos = [patch.still, ...patch.swirl, patch.outline];
+      expect(patch.swirl).toHaveLength(MURKY_SWIRL_FRAMES);
+      expect(infos.map((info) => info.key)).toEqual(murkyPatchKeys(w, h));
+      for (const info of infos) {
+        expect([info.w, info.h, info.originX, info.originY], info.key).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+        expect(created.filter((c) => c.key === info.key)).toEqual([{ key: info.key, w: info.pxW, h: info.pxH }]);
+      }
+    }
+    expect(MURKY_PATCH_KEY_PREFIX).toBe('deep-canal-murky-patch-');
+    expect(murkyPatchKeys(200, 160)[0]).toBe('deep-canal-murky-patch-200x160-still');
+  });
+
+  it('throws for a murky patch size the art refuses', () => {
+    expect(() => bakeAt(2, [[40, 200]])).toThrow(RangeError);
+  });
+
+  it('re-bakes the murky meter under its one fixed key at any share', () => {
+    const created: { key: string; w: number; h: number }[] = [];
+    vi.stubGlobal('Path2D', LogPath);
+    const info = bakeMurkyMeter(fakeScene(created), 2, 0.5);
+    expect(info.key).toBe(DEEP_CANAL_TEX.murkyMeter);
+    expect(created).toEqual([{ key: DEEP_CANAL_TEX.murkyMeter, w: info.pxW, h: info.pxH }]);
+  });
+});
+
+describe('murkyPatchSizes (issue #107)', () => {
+  it('gives every murky patch size in the areas once, in first-use order, and skips every other hazard', () => {
+    const patch = (id: string, x0: number, w: number, h: number) => murkyPatchSpawn(id, { x0, x1: x0 + w, y0: 200, y1: 200 + h });
+    const area = {
+      ...DEEP_CANAL_AREA,
+      layout: { ...DEEP_CANAL_AREA.layout, hazards: [...DEEP_CANAL_AREA.layout.hazards, patch('a', 100, 200, 160), patch('b', 900, 420, 240)] },
+    };
+    const other = { ...DEEP_CANAL_AREA, layout: { ...DEEP_CANAL_AREA.layout, hazards: [patch('c', 2000, 200, 160)] } };
+    expect(murkyPatchSizes([area, other])).toEqual([
+      [200, 160],
+      [420, 240],
+    ]);
+    expect(murkyPatchSizes([DEEP_CANAL_AREA])).toEqual([]);
+  });
+
+  it('gives Areas 1 to 8 no murky patch, so their deep canal bake adds no patch texture', () => {
+    const earlier = AREAS.filter((area) => area.number <= DEEP_CANAL_AREA.number);
+    expect(earlier.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(murkyPatchSizes(earlier)).toEqual([]);
   });
 });
 
