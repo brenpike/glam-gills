@@ -504,7 +504,7 @@ export class SwimScene extends Phaser.Scene {
     this.zone = zone;
     this.area = area;
     this.look = areaLook(area);
-    this.scenery = sceneryFor(this.assets, areaId);
+    this.scenery = sceneryFor(this, this.assets, areaId);
     this.view = readSceneView(this.scale);
     this.motion = motionProfile(this.registry.get(REGISTRY_KEYS.reducedMotion) === true);
     this.glowPlantMotion = glowMotion(!this.motion.ambient);

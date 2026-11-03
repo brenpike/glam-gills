@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.1] - 2026-11-03
+
+### Fixed
+
+- The game opens again on iPhones. Safari kept reloading the page and then showed "A problem repeatedly occurred", because the game drew every area's background at start-up and ran out of memory. Each area's background is now drawn when you swim into it, and only one area's is kept at a time.
+
 ## [0.62.0] - 2026-11-03
 
 ### Changed
