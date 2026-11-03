@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-11-03
+
+### Added
+
+- A Filter button in the Treasure Chest opens a Filter screen. Pick a type, a rarity, an area or "found" to show only the treasures you want. You can pick several at once.
+- Area buttons show how many treasures you found there. Find them all and the button says "All found!".
+- The Treasure Chest remembers your filters while the game is open, so they are still there when you come back.
+
+### Changed
+
+- The Dream colour "not found in nature" note now shows once per page in the Treasure Chest and the Collection Book, not on every row.
+- On the smallest screens, the Filter screen's Area buttons continue onto the next page.
+
 ## [0.62.1] - 2026-11-03
 
 ### Fixed
