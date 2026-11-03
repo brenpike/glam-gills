@@ -300,6 +300,43 @@ export const FIN_STREAMER_FILLS: readonly string[] = ['#ffc6e4', '#ffc487', '#ff
 /** Rainbow fin streamers tie, a pale silver-white (so the gold band across it reads in greyscale). Alias of CRYSTAL_CROWN_BAND. 12.96:1. */
 export const FIN_STREAMER_KNOT = CRYSTAL_CROWN_BAND;
 
+// ---- Deep canal Area 9 silhouette fills (issue #107; all at least 9:1 with ink) ----
+// Icons and the worn looks of the five Area 9 Wearables share these names. Area 9 is the same festival water seen
+// from the working side: clay, rope, cork, tin, painted boards and paper lanterns, all pale. The Paper lantern boat
+// reuses the trajinera hull and the Floating music stage reuses the blossom pink and the boat weight. None equals a
+// BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour say so.
+
+/** Clay jug, a pale terracotta. 9.62:1. */
+export const CLAY_JUG_FILL = '#ffc7ae';
+/** Floating cork, a pale cork tan. 10.18:1. */
+export const FLOATING_CORK_FILL = '#ecd7a8';
+/** Little bailing bucket body, a pale tin. 11.61:1. */
+export const BAILING_BUCKET_FILL = '#dfe8f0';
+/** Little bailing bucket handle and Rope necklace cord, a pale hemp rope. 10.95:1. */
+export const BAILING_BUCKET_ROPE = '#efe0b2';
+/** Painted name sign board, a pale periwinkle. 10.94:1. */
+export const NAME_SIGN_FILL = '#d6e0ff';
+/** Paper lantern boat lantern, a pale amber paper. 10.75:1. */
+export const LANTERN_BOAT_PAPER = '#ffd9a0';
+/** Paper lantern boat hull, the trajinera's warm cream. Alias of TRAJINERA_HULL. 12.72:1. */
+export const LANTERN_BOAT_HULL = TRAJINERA_HULL;
+/** Floating music stage deck, a pale lilac. 10.89:1. */
+export const MUSIC_STAGE_DECK = '#f0d8f8';
+/** Floating music stage band shell, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const MUSIC_STAGE_SHELL = TRAJINERA_BLOSSOM_PINK;
+/** Bucket hat, a pale canvas khaki. 11.76:1. */
+export const BUCKET_HAT_FILL = '#f3e9b8';
+/** Rope necklace cord, knot and tails, the pale hemp rope. Alias of BAILING_BUCKET_ROPE. 10.95:1. */
+export const ROPE_NECKLACE_CORD = BAILING_BUCKET_ROPE;
+/** Poncho, a pale coral. 10.38:1. */
+export const PONCHO_FILL = '#ffd0cc';
+/** Tail bell, a pale brass. 11.61:1. */
+export const TAIL_BELL_FILL = '#fbe6a2';
+/** Tail bell clapper, pebble A. Alias of DEEP_CANAL_WEIGHT. 9.50:1. */
+export const TAIL_BELL_CLAPPER = DEEP_CANAL_WEIGHT;
+/** Golden boatman cape, a pale gold cream (the gold trim and the gem sit inside it). 12.78:1. */
+export const BOATMAN_CAPE_FILL = '#fff2b8';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */

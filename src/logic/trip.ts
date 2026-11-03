@@ -1,12 +1,21 @@
 import { areaById, type AreaData } from './areas';
+import {
+  catchesAxolotl,
+  tossDone,
+  tossPose,
+  type BailingBoatSpawn,
+  type TossPose,
+} from './bailingBuckets';
 import { treasureById } from './catalogue';
 import type { DrawnBody } from './collectibles';
 import {
   createEncounter,
   createEncounterContext,
   feedEncounter,
+  hitEncounter,
   predatorSpecies,
   stepEncounter,
+  stepEncounterOutOfWater,
   type EncounterContext,
   type EncounterEvent,
   type EncounterSource,
@@ -21,11 +30,20 @@ import {
   stepDarkHintClock,
   type DarkWater,
 } from './glowPlants';
-import { elementSweep, hazardShapeAt, shapeDistance, type ElementSpawn } from './hazards';
+import { elementSweep, hazardCentre, hazardShapeAt, shapeDistance, type ElementSpawn } from './hazards';
 import { zoneThreats } from './hiding';
 import { createLegs, isProtected, presentCount, quantizeProgress, type LegsState } from './legs';
 import { isAxolotlFindId, type RealMorphId } from './morphs';
 import { movingHazardSweep } from './movingHazards';
+import {
+  MURKY_WATER,
+  MURKY_WATER_TIMING,
+  createMurkyTimer,
+  insideMurky,
+  murkyPatches,
+  stepMurkyTimer,
+  type MurkyTimer,
+} from './murkyWater';
 import { DEFAULT_TRIP_SEED, nextTripSeed, placeTreasures, type PlacedFind } from './placement';
 import {
   createPlasticWorms,
@@ -92,11 +110,13 @@ export const LEG_PROGRESS_STEPS = 10;
  * The zone parts a trip is built from: the encounter parts, the area id, the Home Spot start point
  * and ring, the finds (treasure pools), the hiding spots, the main swim path, the elements (none
  * when absent) and the dark water (none when absent). The gliding trajineras (none when absent)
- * read the area's width, bed top and rock walls (none when absent) for where a push may go.
+ * read the area's width, bed top and rock walls (none when absent) for where a push may go. The
+ * bailing boats (issue #107, ND-2) are none when absent. The murky patches (issue #107, ND-1) are
+ * the encounter hazards of type murky water.
  */
 export type TripSource = EncounterSource &
   Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> &
-  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras'>> & {
+  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras' | 'bailingBoats'>> & {
     elements?: readonly Readonly<ElementSpawn>[];
   };
 
@@ -112,6 +132,22 @@ export interface CarryState {
   elapsed: number;
   duration: number;
   still: boolean;
+}
+
+/**
+ * A bailing bucket's toss under way (issue #107, ND-2): the boat that caught the axolotl, the seconds
+ * since the catch, and whether reduced motion was on at the latest step (tossPose).
+ */
+export interface BucketToss {
+  boatId: string;
+  elapsed: number;
+  reduced: boolean;
+}
+
+/** The murky meter as the scene shows it (issue #107, ND-1): its share, 0 to 1, and whether the warning shows. */
+export interface MurkyGauge {
+  meter: number;
+  warning: boolean;
 }
 
 /**
@@ -149,6 +185,9 @@ export interface CarryState {
  * none (issue #78, ND-8); each boat's hull is where trajineraHull puts it at `elementTime`, and it is
  * solid: each swimming step holds the axolotl centre out of it (stepTrajineraLane), and the hold is
  * the step result's `outOfHull`. The lane's rules (createTrajineraLane) leave every hull a way down.
+ * `murkyTimer` is the murky timer (issue #107, ND-1), fresh at a new trip. `bailingBoats` is the
+ * trip's bailing boats, none when the area has none, and `toss` the bucket toss under way, or null
+ * (issue #107, ND-2). The phase stays 'swimming' through a toss.
  */
 export interface TripState {
   phase: TripPhase;
@@ -183,6 +222,9 @@ export interface TripState {
   darkHintTime: number;
   darkHint: string | null;
   trajineras: TrajineraLane | null;
+  murkyTimer: MurkyTimer;
+  bailingBoats: BailingBoatSpawn[];
+  toss: BucketToss | null;
 }
 
 /**
@@ -235,7 +277,9 @@ export interface TripInput {
  * bag to banked, in bag order. `arrivedHome.returned` is the Trip Bag ids sent back to the world.
  * `wormSpat` is the explorer eating plastic worm `id` and spitting it from `from` to `to`.
  * `snagged` is the explorer, with its centre at `at`, entering the reach of ghost net `id` and a
- * new snag starting.
+ * new snag starting. `scoop` is bailing boat `boatId`'s bucket catching the axolotl, its centre at
+ * `at`, and its toss starting; `splashDown` is the toss ending at the boat's landing point `at`
+ * (issue #107, ND-2).
  */
 export type TripEvent =
   | Exclude<EncounterEvent, { type: 'carriedHome' }>
@@ -247,7 +291,9 @@ export type TripEvent =
   | { type: 'carryStart'; from: Point; still: boolean }
   | { type: 'arrivedHome'; still: boolean; returned: FindId[] }
   | { type: 'wormSpat'; id: string; from: Point; to: Point }
-  | { type: 'snagged'; id: string; at: Point };
+  | { type: 'snagged'; id: string; at: Point }
+  | { type: 'scoop'; boatId: string; at: Point }
+  | { type: 'splashDown'; boatId: string; at: Point };
 
 /**
  * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump or a
@@ -256,7 +302,9 @@ export type TripEvent =
  * and `impulse` is then that push's. `outOfHull` is set only on a swimming step that neither banks
  * nor starts the carry and where a gliding trajinera's hull held the axolotl out (issue #78, ND-8,
  * ND-9): the axolotl centre after the hold, a copy, which differs from `axolotlPos`; on a push step
- * it equals `pushed.to`. Each optional key is absent, never undefined-valued, when not set.
+ * it equals `pushed.to`. `landed` is set only on a bailing bucket toss's splash-down step (issue
+ * #107, ND-2): the boat's landing point, a copy, where the axolotl swims on from with zero velocity.
+ * Each optional key is absent, never undefined-valued, when not set.
  */
 export interface TripStepResult {
   state: TripState;
@@ -264,12 +312,15 @@ export interface TripStepResult {
   impulse?: Vec2;
   pushed?: TrajineraPush;
   outOfHull?: Point;
+  landed?: Point;
 }
 
 type PassedEncounterEvent = Exclude<EncounterEvent, { type: 'carriedHome' }>;
 
 // INVARIANT: frozen and shared; no caller mutates the events of a trip step result.
 const NO_EVENTS = Object.freeze<TripEvent[]>([]) as TripEvent[];
+// INVARIANT: frozen and shared; a step with no murky hit allocates no events.
+const NO_ENCOUNTER_EVENTS: readonly EncounterEvent[] = Object.freeze([]);
 
 /** Default context: the default encounter context and the shared carry and find tuning. */
 export function createTripContext(overrides: Partial<TripContext> = {}): TripContext {
@@ -306,7 +357,8 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * and bed top and out of its rock walls. Throws when a pool cannot be placed, `options.area` is not
  * the source's area, or the source has trajineras but no width or bed top. Throws createTrajineraLane's
  * RangeError when, for some boat, the row a body reach under its hull band is out of the swim bounds
- * or meets rock, or two boats' spans are less than twice the body reach apart.
+ * or meets rock, or two boats' spans are less than twice the body reach apart. The murky timer starts
+ * fresh, and the source's bailing boats are the trip's, copied, with no toss (issue #107).
  */
 export function createTrip(
   source: TripSource,
@@ -359,7 +411,15 @@ export function createTrip(
     darkHintTime: 0,
     darkHint: null,
     trajineras: tripTrajineras(source),
+    murkyTimer: createMurkyTimer(),
+    bailingBoats: (source.bailingBoats ?? []).map(copyBailingBoat),
+    toss: null,
   };
+}
+
+/** A copy of the bailing boat sharing its type; its boat and landing point are copied. */
+function copyBailingBoat(boat: Readonly<BailingBoatSpawn>): BailingBoatSpawn {
+  return { ...boat, bailing: { ...boat.bailing, landing: { ...boat.bailing.landing } } };
 }
 
 /** A copy of the element sharing its type; the mat pair, glow-plant, pebble and trajinera geometry, when set, are copied. */
@@ -396,7 +456,8 @@ function tripTrajineras(source: TripSource): TrajineraLane | null {
  * placed, and the area's special treasure is always placed while unbanked, on top of the treasure
  * slots. Every plastic worm is back at its spawn and the axolotl is neither queasy nor snagged. The
  * elements, moving hazards and gliding trajineras are the same, and the element clock and the
- * moving hazard clock are back at 0, with every push cooldown at 0. It
+ * moving hazard clock are back at 0, with every push cooldown at 0. The bailing boats are the same,
+ * with no toss, and the murky timer is fresh. It
  * passes no other trip options, so the new trip has no stranded axolotl and every fact card counts
  * as unseen. Any other phase returns the input state unchanged.
  */
@@ -412,6 +473,7 @@ export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.
       spots: state.spots,
       mainPath: state.mainPath,
       elements: state.elements,
+      bailingBoats: state.bailingBoats,
       ...(state.darkWater ? { darkWater: state.darkWater } : {}),
     },
     { count: state.encounter.legs.slots.length },
@@ -444,9 +506,11 @@ export function markFactCardSeen(state: TripState, id: string): TripState {
 /**
  * The trip with each snack type id in `ids` met (ND-29, PRD open question 276, A21): the ids not
  * already in `met` are appended, in `ids` order and each once, so a card not seen yet comes due
- * through the same rule as every other met id. Returns `state` itself when nothing is new.
+ * through the same rule as every other met id. Returns `state` itself when nothing is new, or while
+ * a bailing bucket toss runs (issue #107, ND-2).
  */
 export function meetSnacks(state: TripState, ids: readonly string[]): TripState {
+  if (state.toss !== null) return state;
   let met = state.met;
   for (const id of ids) {
     if (met.includes(id)) continue;
@@ -458,12 +522,12 @@ export function meetSnacks(state: TripState, ids: readonly string[]): TripState 
 
 /**
  * Ends the trip by choice. Allowed while 'banked', or while swimming inside the Home Spot ring;
- * any other case returns the input state unchanged with no events. Banks the Trip Bag first
- * (emitting `banked` when it was not empty), then ends with reason 'wentHome', nothing returned,
- * and every id banked this trip. Queasy time and snag time end.
+ * any other case, a bailing bucket toss included, returns the input state unchanged with no events.
+ * Banks the Trip Bag first (emitting `banked` when it was not empty), then ends with reason
+ * 'wentHome', nothing returned, and every id banked this trip. Queasy time and snag time end.
  */
 export function goHome(state: TripState): TripStepResult {
-  const allowed = state.phase === 'banked' || (state.phase === 'swimming' && state.inHomeSpot);
+  const allowed = state.phase === 'banked' || (state.phase === 'swimming' && state.inHomeSpot && state.toss === null);
   if (!allowed) return { state, events: [] };
   const events: TripEvent[] = [];
   const banking = bankFinds(state);
@@ -477,9 +541,9 @@ export function goHome(state: TripState): TripStepResult {
 
 /**
  * Applies `snacks` eaten snacks to leg regrowth (PRD A19) with `feedEncounter`. Takes only a
- * count, so it does not matter how a snack reached the axolotl. Any phase other than 'swimming',
- * or snacks that change no leg, return the input state unchanged with no events. Otherwise only
- * the encounter legs change: snacks are not trip finds, so the Trip Bag, finds and banking are
+ * count, so it does not matter how a snack reached the axolotl. Any phase other than 'swimming', a
+ * bailing bucket toss (issue #107, ND-2), or snacks that change no leg, return the input state
+ * unchanged with no events. Otherwise only the encounter legs change: snacks are not trip finds, so the Trip Bag, finds and banking are
  * untouched. Regrowth events pass through as in `stepTrip`; `boosted` is the slot each snack
  * helped, in eating order. Throws RangeError for an invalid `snacks` count while swimming.
  */
@@ -488,7 +552,7 @@ export function eatSnacks(
   snacks: number,
   ctx: TripContext = createTripContext(),
 ): TripStepResult & { boosted: number[] } {
-  if (state.phase !== 'swimming') return { state, events: [], boosted: [] };
+  if (state.phase !== 'swimming' || state.toss !== null) return { state, events: [], boosted: [] };
   const result = feedEncounter(state.encounter, snacks, ctx.encounter);
   if (result.state === state.encounter) return { state, events: [], boosted: [] };
   return {
@@ -501,8 +565,8 @@ export function eatSnacks(
 /**
  * The explorer eats the first plastic worm in reach of the head reach centre of `body` and spits
  * it out (`eatPlasticWorm`): queasy time starts and only that worm moves, landing clear of
- * `avoid`. Allowed only while swimming. Any other phase, a queasy axolotl (no stacking) or no worm
- * in reach returns the input state and a shared frozen empty events array. Otherwise emits
+ * `avoid`. Allowed only while swimming with no bailing bucket toss (issue #107, ND-2). Any other
+ * phase, a toss, a queasy axolotl (no stacking) or no worm in reach returns the input state and a shared frozen empty events array. Otherwise emits
  * `wormSpat`. Only `plasticWorms` changes: a plastic worm is not a snack, so legs, regrowth, the
  * encounter (Shell included), the Trip Bag, finds and met are untouched, and it never counts
  * toward opening the exit. A following stranded axolotl never eats one; pass only the explorer.
@@ -513,7 +577,7 @@ export function eatPlasticWorms(
   avoid: SpitAvoid,
   tuning?: Pick<PlasticWormTuning, 'queasyTime' | 'spitDistance'>,
 ): TripStepResult {
-  if (state.phase !== 'swimming') return { state, events: NO_EVENTS };
+  if (state.phase !== 'swimming' || state.toss !== null) return { state, events: NO_EVENTS };
   const eaten = eatPlasticWorm(state.plasticWorms, body, avoid, tuning);
   if (eaten === null) return { state, events: NO_EVENTS };
   const { id, from, to } = eaten.spat;
@@ -521,16 +585,16 @@ export function eatPlasticWorms(
 }
 
 /**
- * Ends the trip at the open exit (PRD H5). Allowed only while swimming; any other phase returns the
- * input state unchanged with no events. Banks the Trip Bag first, as at the Home Spot (A14), emitting
- * `banked` when it was not empty, then ends with reason 'areaBeaten', nothing returned, every id
+ * Ends the trip at the open exit (PRD H5). Allowed only while swimming with no bailing bucket toss
+ * (issue #107, ND-2); any other case returns the input state unchanged with no events. Banks the
+ * Trip Bag first, as at the Home Spot (A14), emitting `banked` when it was not empty, then ends with reason 'areaBeaten', nothing returned, every id
  * banked this trip and the stars earned (H6): the exit, the special treasure when banked now or on
  * an earlier trip, and a rescue banked this trip (at the Home Spot or the exit) or no leg lost this
  * trip. Banking comes first so a following axolotl banked at the exit counts as rescued. Queasy
  * time and snag time end.
  */
 export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
-  if (state.phase !== 'swimming') return { state, events: [] };
+  if (state.phase !== 'swimming' || state.toss !== null) return { state, events: [] };
   const events: TripEvent[] = [];
   const banking = bankFinds(state);
   if (banking.ids.length > 0) events.push({ type: 'banked', ids: [...banking.ids] });
@@ -593,6 +657,23 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * still wins over a push, and the hold never changes the impulse. A push or a hold never costs a
  * leg, never counts as a hit, drops no find, starts no protected time and emits no event; a step
  * that ends the trip neither pushes nor holds, and a banking step drops both.
+ * Murky water (issue #107, ND-1): after the encounter, unless it ended the trip, the murky timer
+ * (stepMurkyTimer) steps with whether the axolotl centre is in a murky patch, held while protected
+ * time runs after the encounter step. When a hit is due, it lands through the shared hit path
+ * (hitEncounter) with sourceId 'murky-water' from the patch centre: a `hit` (or a Shell perk's
+ * `shellBlock`), protected time on a lost leg, and the carry home on the last leg; it adds to
+ * `legsLost` like any hit. An area with no patch never steps the timer.
+ * Bailing buckets (issue #107, ND-2): first, on a swimming step with no toss, the first boat whose
+ * bucket dips with its catch box on the axolotl centre at the new element time (catchesAxolotl)
+ * catches it: `scoop` is emitted at that centre, the toss starts and the murky timer resets. Past the
+ * catch, on that step and every step of the toss, `input.axolotlPos` and `input.dashing` are
+ * ignored; the element clock and the
+ * encounter (stepEncounterOutOfWater) still run, so legs regrow and protected time counts down, but
+ * no predator, hazard, moving hazard, murky timer, find, Dash pot, rescue, ghost net, glow-plant,
+ * trajinera or meeting acts on the axolotl, and a following stranded axolotl waits. Queasy time
+ * still counts down. The toss follows `input.reduced` on every step. The step on which it reaches
+ * its time (tossDone) ends it: `splashDown` is emitted and `landed` is the landing point. A catch
+ * costs no leg and no hit, drops no find and starts no protected time.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -615,13 +696,44 @@ export function stepTrip(
 
 /**
  * The axolotl centre the trip controls: the held point while banked, the carry position while
- * carrying, home when ended, else null.
+ * carrying, home when ended, the toss pose's place during a bailing bucket toss (tripTossPose), else
+ * null.
  */
 export function tripAxolotlPos(state: TripState): Point | null {
   if (state.phase === 'ended') return { x: state.home.x, y: state.home.y };
   if (state.phase === 'banked' && state.heldAt) return { x: state.heldAt.x, y: state.heldAt.y };
   if (state.phase === 'carrying' && state.carry) return { x: state.carry.pos.x, y: state.carry.pos.y };
-  return null;
+  return tripTossPose(state)?.pos ?? null;
+}
+
+/**
+ * Where and how opaque the tossed axolotl is drawn during a bailing bucket toss (tossPose, issue
+ * #107, ND-2), with the reduced motion of the latest step; null with no toss. Throws when the toss's
+ * boat is not one of the trip's bailing boats.
+ */
+export function tripTossPose(state: TripState): TossPose | null {
+  const { toss } = state;
+  if (toss === null) return null;
+  return tossPose(tossBoat(state, toss), toss.elapsed, toss.reduced);
+}
+
+/**
+ * The murky meter (issue #107, ND-1): the built time over the hit time, clamped to 0..1, and
+ * whether the built time is at or past the warning.
+ */
+export function tripMurkyGauge(state: TripState): MurkyGauge {
+  const { built } = state.murkyTimer;
+  return {
+    meter: Math.min(1, Math.max(0, built / MURKY_WATER_TIMING.legAt)),
+    warning: built >= MURKY_WATER_TIMING.warnAt,
+  };
+}
+
+/** The bailing boat of `toss`. Throws when it is not one of the trip's bailing boats. */
+function tossBoat(state: TripState, toss: BucketToss): BailingBoatSpawn {
+  const boat = state.bailingBoats.find((candidate) => candidate.id === toss.boatId);
+  if (boat === undefined) throw new Error(`trip: toss boat ${toss.boatId} is not a bailing boat of ${state.areaId}`);
+  return boat;
 }
 
 /** Legs display state with regrow progress quantized to `steps` levels. */
@@ -848,11 +960,18 @@ function countHits(events: readonly EncounterEvent[]): number {
 }
 
 function stepSwimming(state: TripState, input: TripInput, step: number, ctx: TripContext): TripStepResult {
-  const result = stepEncounter(state.encounter, input.axolotlPos, step, ctx.encounter);
-  const events: TripEvent[] = result.events.filter(isPassedEvent);
-  const legsLost = state.legsLost + countHits(result.events);
+  if (state.toss !== null) return stepToss(state, state.toss, input, step, ctx);
   const elementTime = state.elementTime + step;
-  if (result.state.tripOver) {
+  const catcher = state.bailingBoats.find((boat) => catchesAxolotl(boat, input.axolotlPos, elementTime));
+  if (catcher !== undefined) return startToss(state, catcher, input, step, ctx);
+  const encountered = stepEncounter(state.encounter, input.axolotlPos, step, ctx.encounter);
+  const murky = stepMurky(state.murkyTimer, encountered.state, input.axolotlPos, step, ctx.encounter);
+  const { encounter } = murky;
+  const allEvents = murky.events.length === 0 ? encountered.events : [...encountered.events, ...murky.events];
+  const events: TripEvent[] = allEvents.filter(isPassedEvent);
+  const legsLost = state.legsLost + countHits(allEvents);
+  const murkyTimer = murky.timer;
+  if (encounter.tripOver) {
     const carry = startCarry(input.axolotlPos, state.home, input.reduced, ctx.carry);
     events.push({ type: 'carryStart', from: { x: carry.from.x, y: carry.from.y }, still: carry.still });
     const rescue = rescueAtCarryStart(state);
@@ -862,13 +981,14 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
       state: {
         ...state,
         phase: 'carrying',
-        encounter: result.state,
+        encounter,
         carry,
         rescue,
         legsLost,
         plasticWorms,
         ghostNets,
         elementTime,
+        murkyTimer,
       },
       events,
     };
@@ -877,19 +997,19 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const pickup = pickUpNearby({ ...state, ...pots }, input.axolotlPos, ctx.finds, events);
   const rescued = stepRescue({ ...state, ...pickup }, input.axolotlPos, step, events);
   const ghostNets = stepSnag(state.ghostNets, input.axolotlPos, step, elementTime, events);
-  const met = meetThreats(state.met, result.state, state.elements, input.axolotlPos, elementTime, ctx.encounter);
+  const met = meetThreats(state.met, encounter, state.elements, input.axolotlPos, elementTime, ctx.encounter);
   const glow = stepGlowPlants(state, input.axolotlPos, step);
   const boats =
     state.trajineras === null
       ? NO_TRAJINERA_LANE_STEP
-      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, result.impulse !== undefined);
+      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, encountered.impulse !== undefined);
   const inside = isInHomeSpot(input.axolotlPos, state.homeSpot);
   const next: TripState = {
     ...state,
     ...pots,
     ...rescued,
     ...glow,
-    encounter: result.state,
+    encounter,
     inHomeSpot: inside,
     met,
     legsLost,
@@ -897,11 +1017,12 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
     ghostNets,
     elementTime,
     trajineras: boats.lane,
+    murkyTimer,
   };
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
   const stepped: TripStepResult = { state: next, events };
-  if (result.impulse) {
-    stepped.impulse = result.impulse;
+  if (encountered.impulse) {
+    stepped.impulse = encountered.impulse;
   } else if (boats.push) {
     stepped.impulse = { ...boats.push.impulse };
     stepped.pushed = boats.push;
@@ -909,6 +1030,92 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const outOfHull = movedOutOfHull(boats.pos, input.axolotlPos);
   if (outOfHull) stepped.outOfHull = outOfHull;
   return stepped;
+}
+
+/** The murky timer after a step, and the encounter and events after its hit, when one was due. */
+interface MurkyPass {
+  timer: MurkyTimer;
+  encounter: EncounterState;
+  events: readonly EncounterEvent[];
+}
+
+/**
+ * Steps the murky timer (issue #107, ND-1) with the axolotl centre `pos` and the encounter after
+ * this step, held while its protected time runs. A due hit lands through hitEncounter with sourceId
+ * 'murky-water', from the centre of the patch the axolotl is in. An encounter with no murky patch, or
+ * one whose trip is over, returns `timer` and `encounter` themselves with no events.
+ */
+function stepMurky(
+  timer: MurkyTimer,
+  encounter: EncounterState,
+  pos: Point,
+  step: number,
+  ctx: EncounterContext,
+): MurkyPass {
+  const patches = murkyPatches(encounter.hazards);
+  if (patches.length === 0 || encounter.tripOver) return { timer, encounter, events: NO_ENCOUNTER_EVENTS };
+  const patch = patches.find((candidate) => insideMurky(pos, [candidate]));
+  const ticked = stepMurkyTimer(timer, patch !== undefined, step, isProtected(encounter.legs));
+  if (!ticked.legDue || patch === undefined) return { timer: ticked.timer, encounter, events: NO_ENCOUNTER_EVENTS };
+  const hit = hitEncounter(encounter, MURKY_WATER.id, hazardCentre(patch.shape), ctx);
+  return { timer: ticked.timer, encounter: hit.state, events: hit.events };
+}
+
+/**
+ * The step on which bailing boat `boat` catches the axolotl (issue #107, ND-2): `scoop` at the
+ * axolotl centre, then a toss step from 0 s, with the murky timer reset. Nothing else of the step
+ * acts on the axolotl (stepToss).
+ */
+function startToss(
+  state: TripState,
+  boat: BailingBoatSpawn,
+  input: TripInput,
+  step: number,
+  ctx: TripContext,
+): TripStepResult {
+  const toss: BucketToss = { boatId: boat.id, elapsed: 0, reduced: input.reduced };
+  const caught: TripState = { ...state, toss, murkyTimer: createMurkyTimer(), inHomeSpot: false };
+  const scoop: TripEvent = { type: 'scoop', boatId: boat.id, at: { x: input.axolotlPos.x, y: input.axolotlPos.y } };
+  return runToss(caught, toss, step, ctx, [scoop]);
+}
+
+/** One step of a running toss: `elapsed` grows by the capped step and the toss follows `input.reduced`. */
+function stepToss(state: TripState, toss: BucketToss, input: TripInput, step: number, ctx: TripContext): TripStepResult {
+  const next: BucketToss = { boatId: toss.boatId, elapsed: toss.elapsed + step, reduced: input.reduced };
+  return runToss(state, next, step, ctx, []);
+}
+
+/**
+ * A toss step at `toss` (issue #107, ND-2): the element clock advances, the encounter runs out of the
+ * water with the axolotl at the toss pose, queasy time counts down and a safe stranded axolotl swims
+ * to its rest; nothing else changes. Once the toss reaches its time it ends: `splashDown` and
+ * `landed` at the boat's landing point.
+ */
+function runToss(state: TripState, toss: BucketToss, step: number, ctx: TripContext, events: TripEvent[]): TripStepResult {
+  const boat = tossBoat(state, toss);
+  const pose = tossPose(boat, toss.elapsed, toss.reduced);
+  const result = stepEncounterOutOfWater(state.encounter, pose.pos, step, ctx.encounter);
+  events.push(...result.events.filter(isPassedEvent));
+  const done = tossDone(toss.elapsed);
+  const next: TripState = {
+    ...state,
+    encounter: result.state,
+    elementTime: state.elementTime + step,
+    plasticWorms: tickQueasy(state.plasticWorms, step),
+    rescue: restWhileTossed(state, step),
+    toss: done ? null : toss,
+  };
+  if (!done) return { state: next, events };
+  const { landing } = boat.bailing;
+  events.push({ type: 'splashDown', boatId: boat.id, at: { x: landing.x, y: landing.y } });
+  return { state: next, events, landed: { x: landing.x, y: landing.y } };
+}
+
+/** The stranded axolotl during a toss: a safe one swims to its rest point; a waiting or following one waits. */
+function restWhileTossed(state: TripState, step: number): RescueState | null {
+  const { rescue } = state;
+  if (!rescue || rescueStatus(rescue, state.holdings, state.phase) !== 'safe') return rescue;
+  return stepToRest(rescue, state.homeSpot, step);
 }
 
 // INVARIANT: frozen and shared; a trip with no trajineras steps them with no allocation.

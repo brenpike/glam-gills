@@ -1,5 +1,5 @@
 /**
- * Worn looks of the forty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the fifty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -10,7 +10,8 @@
  * Embroidered shirt, Hummingbird tail ribbon and Rainbow serape cape, and the spring cave Area 6's
  * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, and the spring cave Area 7's
  * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, and the deep canal Area 8's
- * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, painted on the anchors
+ * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, and the deep canal Area 9's
+ * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -77,6 +78,13 @@
  * and its icon cannot drift. Their other colours are internal details: ink at the stripe alpha (the cap's band, the
  * scarf's stripes, the captain's band and peak), the jacket's turquoise braid (MARIACHI_BRAID) and silver studs
  * (MARIACHI_STUD), and the streamers' gold tie band. No look has net-like lines.
+ *
+ * The Area 9 looks (issue #107) keep to the same footprints and rules. Their outer fills are the icons' own colours,
+ * imported by name from treasurePalette.ts (BUCKET_HAT_FILL, ROPE_NECKLACE_CORD, PONCHO_FILL, TAIL_BELL_FILL,
+ * TAIL_BELL_CLAPPER, FIREFLY_HOOK for the bell's ring, BOATMAN_CAPE_FILL; each 9:1 or better with ink, none red), so a
+ * worn look and its icon cannot drift. Their other colours are internal details: ink at the stripe alpha (the rope's
+ * twists, the poncho's fringe, the cape's folds), the hat's eyelets and seam in ink, and the gold or boat-yellow
+ * trim. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -127,8 +135,10 @@ import {
 } from './drawTreasures';
 import {
   BOAT_TRIM,
+  BOATMAN_CAPE_FILL,
   BOW_FILL,
   BOW_GEM,
+  BUCKET_HAT_FILL,
   CAVE_CRYSTAL_FILL,
   CAPTAINS_HAT_FILL,
   CLIMBING_HELMET_FILL,
@@ -147,6 +157,7 @@ import {
   FIN_STREAMER_FILLS,
   FIN_STREAMER_KNOT,
   FIREFLY_GLOW,
+  FIREFLY_HOOK,
   FLIPPER_RIDGE,
   FROGGY_BOOT,
   GEM_GLINT,
@@ -175,11 +186,15 @@ import {
   PEBBLE_NECKLACE_CORD,
   PEBBLE_NECKLACE_STONE,
   POND_WEED_SCARF,
+  PONCHO_FILL,
   RAINCOAT_FILL,
+  ROPE_NECKLACE_CORD,
   SAILOR_CAP_FILL,
   SOCK_FILL,
   SOCK_STRIPE_ALPHA,
   STRIPED_SCARF_FILL,
+  TAIL_BELL_CLAPPER,
+  TAIL_BELL_FILL,
   TANK_TOP_FILL,
   TREASURE_SHINE,
   TREASURE_STAR,
@@ -253,12 +268,17 @@ export type WearableArtSlug =
   | 'striped-scarf'
   | 'mariachi-jacket'
   | 'captains-hat'
-  | 'rainbow-fin-streamers';
+  | 'rainbow-fin-streamers'
+  | 'bucket-hat'
+  | 'rope-necklace'
+  | 'poncho'
+  | 'tail-bell'
+  | 'golden-boatman-cape';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
- * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five and the deep canal Area 8's five last, so WEARABLE_ART_SLUGS
+ * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five, the deep canal Area 8's five and the deep canal Area 9's five last, so WEARABLE_ART_SLUGS
  * finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
@@ -308,6 +328,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'mariachi-jacket': 'shirt',
   'captains-hat': 'head',
   'rainbow-fin-streamers': 'tail',
+  'bucket-hat': 'head',
+  'rope-necklace': 'neck',
+  poncho: 'shirt',
+  'tail-bell': 'tail',
+  'golden-boatman-cape': 'back',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -3393,6 +3418,287 @@ function paintRainbowFinStreamers(ctx: CanvasRenderingContext2D): void {
 }
 
 // ---------------------------------------------------------------------------
+// Head: Bucket hat (Common)
+// ---------------------------------------------------------------------------
+
+/** The brim's corners, rear-top first, clockwise: it slopes down and out all round, so it is wider at its foot than at its top; the front rises a little, as the Sun hat's. */
+const BUCKET_BRIM: readonly Pt[] = [
+  { x: 22.4, y: -29.4 },
+  { x: 39.8, y: -30 },
+  { x: 43.8, y: -21.5 },
+  { x: 18, y: -21.5 },
+];
+const BUCKET_BRIM_RADII: readonly number[] = [1, 1, 1.2, 1.2];
+/** The crown's corners, rear-top first, clockwise: it flares toward the brim, and its foot is sunk into the brim. */
+const BUCKET_CROWN: readonly Pt[] = [
+  { x: 24.6, y: -37.2 },
+  { x: 37.2, y: -37.8 },
+  { x: 39.6, y: -26.2 },
+  { x: 22.6, y: -26.2 },
+];
+const BUCKET_CROWN_RADII: readonly number[] = [3, 3, 0.5, 0.5];
+/** The seam round the crown's foot: its y and x extent. The two eyelets on the crown: centres and radius. */
+const BUCKET_SEAM_Y = -27.4;
+const BUCKET_EYELETS: readonly Pt[] = [
+  { x: 26.2, y: -32.6 },
+  { x: 36.4, y: -32.8 },
+];
+const BUCKET_EYELET_R = 0.7;
+
+/**
+ * Common (issue #107): a BUCKET_HAT_FILL pale canvas khaki bucket hat: a crown that flares toward the foot, on a brim
+ * that slopes down and out all round, merged into one `blob` silhouette (ink 2.0 all outside the fill). On the crown,
+ * one thin ink seam at its foot (clipped to the crown) and two small ink eyelets, as the icon's; one shine on the
+ * crown; no trim. Ink included it fills HEAD_FOOTPRINT: x about 16.4 to 44.6, lowest ink y -19.5 on the brim, as the
+ * Sailor cap's, so the glasses keep their clearance; the crown's top is about y -39.8.
+ */
+function paintBucketHat(ctx: CanvasRenderingContext2D): void {
+  const brim = roundedPolygon(BUCKET_BRIM, BUCKET_BRIM_RADII);
+  const crown = roundedPolygon(BUCKET_CROWN, BUCKET_CROWN_RADII);
+  blobs(ctx, [brim, crown], BUCKET_HAT_FILL);
+  ctx.save();
+  ctx.clip(crown);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  ctx.stroke(line(20, BUCKET_SEAM_Y, 42, BUCKET_SEAM_Y));
+  ctx.restore();
+  ctx.fillStyle = INK;
+  for (const e of BUCKET_EYELETS) ctx.fill(ellipsePath(e.x, e.y, BUCKET_EYELET_R, BUCKET_EYELET_R));
+  shine(ctx, 29.4, -35.2, 0.9, 2.2, 0.12);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Rope necklace (Common)
+// ---------------------------------------------------------------------------
+
+/** The twists across the rope: x of each along the band, and how far each leans along x across the band; ink at the stripe alpha. */
+const ROPE_TWIST_XS: readonly number[] = [7.4, 12, 16.6, 25.4, 30, 34.6];
+const ROPE_TWIST_LEAN = 1.6;
+const ROPE_TWIST_LW = 0.6;
+/** The knot: centre x (left of the mouth, so it shows), its half width and its most half height (fitted to the band). */
+const ROPE_KNOT_X = 20.9;
+const ROPE_KNOT_HALF_W = 3.4;
+const ROPE_KNOT_MAX_HALF_H = 4.3;
+/** The thin ink ring that sets the knot off the rope, and the two wrap ticks across it. */
+const ROPE_KNOT_RING_LW = 0.5;
+
+/**
+ * Common (issue #107): a loop of ROPE_NECKLACE_CORD pale hemp rope strung round the neck: the Pond-weed scarf's
+ * whole band, with a knot fitted to the band left of the mouth, merged into one
+ * silhouette with 0.6 of ink outside the fill (as the scarf: the Neck footprint is too shallow for 2.0). Six short
+ * twist lines across the rope (ink at the stripe alpha, the same colour darkened, not a second colour), a thin ink
+ * ring round the knot and two wrap ticks across it; one shine on the knot; no trim. The icon's two frayed tails hang
+ * below the knot and would leave the Neck footprint, so they are left off. Everything lies inside the scarf's band,
+ * so it keeps the gill-root zone, the cheek heart zone and the silhouette outline's outer half as the scarf does; the
+ * mouth paints over its front.
+ */
+function paintRopeNecklace(ctx: CanvasRenderingContext2D): void {
+  const upper = Math.max(scarfUpperAt(ROPE_KNOT_X - ROPE_KNOT_HALF_W), scarfUpperAt(ROPE_KNOT_X), scarfUpperAt(ROPE_KNOT_X + ROPE_KNOT_HALF_W));
+  const lower = Math.min(scarfLowerAt(ROPE_KNOT_X - ROPE_KNOT_HALF_W), scarfLowerAt(ROPE_KNOT_X), scarfLowerAt(ROPE_KNOT_X + ROPE_KNOT_HALF_W));
+  const knotY = (upper + lower) / 2;
+  const knotRy = Math.min(ROPE_KNOT_MAX_HALF_H, (lower - upper) / 2 - 0.1);
+  const knot = ellipsePath(ROPE_KNOT_X, knotY, ROPE_KNOT_HALF_W, knotRy);
+  silhouette(
+    ctx,
+    [
+      { path: scarfBandPath(), fill: ROPE_NECKLACE_CORD },
+      { path: knot, fill: ROPE_NECKLACE_CORD },
+    ],
+    SCARF_OL,
+  );
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = ROPE_TWIST_LW;
+  const twists = new Path2D();
+  for (const x of ROPE_TWIST_XS) {
+    twists.moveTo(x, scarfUpperAt(x) + 1);
+    twists.lineTo(x + ROPE_TWIST_LEAN, scarfLowerAt(x + ROPE_TWIST_LEAN) - 1);
+  }
+  ctx.stroke(twists);
+  ctx.restore();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = ROPE_KNOT_RING_LW;
+  ctx.stroke(knot);
+  ctx.save();
+  ctx.clip(knot);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.lineWidth = ROPE_TWIST_LW;
+  const wraps = new Path2D();
+  for (const s of [-1, 1]) {
+    wraps.moveTo(ROPE_KNOT_X + s * 1.1 - 1, knotY - knotRy);
+    wraps.lineTo(ROPE_KNOT_X + s * 1.1 + 1, knotY + knotRy);
+  }
+  ctx.stroke(wraps);
+  ctx.restore();
+  shine(ctx, ROPE_KNOT_X - 1.2, knotY - knotRy * 0.45, 0.8, 0.5, -0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Poncho (Rare)
+// ---------------------------------------------------------------------------
+
+/** The poncho's trim band: how far down the torso half it starts (share of the inset ry below the centre line), and its height. */
+const PONCHO_BAND_AT = 0.3;
+const PONCHO_BAND_H = 3;
+/** Thin ink lines on each side of the band, as the Raincoat's. */
+const PONCHO_BAND_LW = 0.6;
+/** The fringe: how many ticks, how far under the band each starts, how long each is and how wide; ink at the stripe alpha. */
+const PONCHO_FRINGE_COUNT = 9;
+const PONCHO_FRINGE_GAP = 0.5;
+const PONCHO_FRINGE_LEN = 2.4;
+const PONCHO_FRINGE_LW = 0.8;
+
+/**
+ * Rare (issue #107): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) in a
+ * PONCHO_FILL pale coral, with one #ffe14a trim band across the lower torso (the one trim band, between two 0.6
+ * ink lines, clipped inside the silhouette) and a row of nine short fringe ticks under it (ink at the stripe alpha,
+ * the same colour darkened, clipped inside), and one shine placed as on the Tank top. The icon's fringe points would
+ * leave the silhouette and reach the torso edge band, so the fringe is drawn inside it. It sits inside the
+ * silhouette, so it never reaches the torso edge band, the front line, the tail root or a leg. No sleeves.
+ */
+function paintPoncho(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const e = shirtGeometry(look).inset;
+  inkedShape(ctx, outline.body, PONCHO_FILL, () => {
+    const y0 = e.cy + e.ry * PONCHO_BAND_AT;
+    const y1 = y0 + PONCHO_BAND_H;
+    trimBand(ctx, { x0: outline.xr - 1, x1: outline.xf + 1, y0, y1 }, BOAT_TRIM, true, PONCHO_BAND_LW);
+    const length = outline.xf - outline.xr;
+    const fringe = new Path2D();
+    for (let i = 0; i < PONCHO_FRINGE_COUNT; i++) {
+      const x = outline.xr + (length * (i + 0.5)) / PONCHO_FRINGE_COUNT;
+      fringe.moveTo(x, y1 + PONCHO_FRINGE_GAP);
+      fringe.lineTo(x, y1 + PONCHO_FRINGE_GAP + PONCHO_FRINGE_LEN);
+    }
+    ctx.save();
+    ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = PONCHO_FRINGE_LW;
+    ctx.stroke(fringe);
+    ctx.restore();
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
+// Tail: Tail bell (Epic)
+// ---------------------------------------------------------------------------
+
+/** The bell in the Tail frame (y' down): the hanging ring, the clapper and the bell's body, each a circle or a curve. */
+const BELL_RING: Pt = { x: 0, y: -12.4 };
+const BELL_RING_R = 1.5;
+const BELL_CLAPPER: Pt = { x: 0, y: 6.4 };
+const BELL_CLAPPER_R = 1.8;
+/** How far the whole bell sits toward the head from the anchor (frame x'), as the lantern's, so its tip-side lip keeps a Dream marker star clear at every swim phase. */
+const BELL_SHIFT = 1.4;
+/** The gem on the dome. */
+const BELL_GEM: Pt = { x: 0, y: -3.4 };
+
+/** The bell's body, a closed path in the Tail frame: the icon's domed top flaring to a curved lip, fitted to the slot. */
+function bellBodyPath(): Path2D {
+  const bell = new Path2D();
+  bell.moveTo(-7.2, 3.9);
+  bell.bezierCurveTo(-5.4, 2.8, -5.3, -0.4, -5.1, -3.8);
+  bell.bezierCurveTo(-4.8, -8.8, -2.8, -11.4, 0, -11.4);
+  bell.bezierCurveTo(2.8, -11.4, 4.8, -8.8, 5.1, -3.8);
+  bell.bezierCurveTo(5.3, -0.4, 5.4, 2.8, 7.2, 3.9);
+  bell.bezierCurveTo(4, 6.1, -4, 6.1, -7.2, 3.9);
+  bell.closePath();
+  return bell;
+}
+
+/**
+ * Epic (issue #107): a TAIL_BELL_FILL pale brass bell standing on the tail's top edge: a domed top flaring to a curved
+ * lip, under a FIREFLY_HOOK pebble A hanging ring and over a TAIL_BELL_CLAPPER pebble A clapper, one merged `blob`
+ * silhouette (ink 2.0 all outside the fill). One thin ink line (1.2) round the flare, clipped inside the bell, and one
+ * rounded gem (radius 2.5, outline 1.2, the Golden bow's pink) on the dome: the Epic detail. One shine on the dome; no
+ * trim. Painted in the Tail frame (x' along the local tail direction toward the head, y' down), set BELL_SHIFT toward
+ * the head, so a Dream marker star past it stays clear at every swim phase. Everything, ink included, stays within
+ * TAIL_SLOT_REACH of the anchor.
+ */
+function paintTailBell(ctx: CanvasRenderingContext2D): void {
+  ctx.translate(BELL_SHIFT, 0);
+  const body = bellBodyPath();
+  silhouette(ctx, [
+    { path: ellipsePath(BELL_RING.x, BELL_RING.y, BELL_RING_R, BELL_RING_R), fill: FIREFLY_HOOK },
+    { path: ellipsePath(BELL_CLAPPER.x, BELL_CLAPPER.y, BELL_CLAPPER_R, BELL_CLAPPER_R), fill: TAIL_BELL_CLAPPER },
+    { path: body, fill: TAIL_BELL_FILL },
+  ]);
+  ctx.save();
+  ctx.clip(body);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  const flare = new Path2D();
+  flare.moveTo(-6.4, 1.6);
+  flare.bezierCurveTo(-3, 3.6, 3, 3.6, 6.4, 1.6);
+  ctx.stroke(flare);
+  ctx.restore();
+  shine(ctx, -3.3, -6.4, 0.65, 2, 0.25);
+  gem(ctx, BELL_GEM.x, BELL_GEM.y, BOW_GEM, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Golden boatman cape (Legendary)
+// ---------------------------------------------------------------------------
+
+/** The wave hem: how many waves run along the cape's outer edge, how deep each dips toward the body, and the thin fold lines' places (share of the length from the rear) and bend. */
+const BOATMAN_WAVES = 4;
+const BOATMAN_WAVE_DEPTH = 2.2;
+const BOATMAN_FOLD_SHARES: readonly number[] = [0.34, 0.6];
+const BOATMAN_FOLD_BEND = 1.4;
+
+/**
+ * Legendary (issue #107): a BOATMAN_CAPE_FILL pale gold cream cape draped along the back, the Rainbow serape cape's
+ * outline with its outer edge cut into four waves (each dips BOATMAN_WAVE_DEPTH toward the body between points that
+ * stay at the top, so the cape stands as proud as the serape), one `blob` silhouette (ink 2.0 all outside the fill)
+ * in the Back box of the look, ink included: the fills are 2.0 inside the box, so the cape runs the box's length and
+ * stands 13 proud of the back. Two thin ink fold lines (ink at the stripe alpha) are clipped inside it. The Legendary
+ * trim is one #ffc12e clasp band across the front (between two 0.6 ink lines, clipped inside) and one static 4-point
+ * star (R 3, outline 1.2) behind it. One shine. No gem (the icon has one at the clasp). Painted in the Back frame
+ * (x' along the torso edge toward the snout, y' + into the body), so its lower edge, y' +1, keeps off the Shirt.
+ */
+function paintGoldenBoatmanCape(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const top = box.minV + ITEM_LW;
+  const bottom = box.maxV - ITEM_LW;
+  const rear = box.minU + ITEM_LW;
+  const front = box.maxU - ITEM_LW;
+  const length = front - rear;
+  const cape = new Path2D();
+  cape.moveTo(rear, bottom);
+  cape.lineTo(rear, top + SERAPE_CORNER_R);
+  cape.quadraticCurveTo(rear, top, rear + SERAPE_CORNER_R, top);
+  const span = (length - 2 * SERAPE_CORNER_R) / BOATMAN_WAVES;
+  for (let i = 0; i < BOATMAN_WAVES; i++) {
+    const x0 = rear + SERAPE_CORNER_R + i * span;
+    cape.quadraticCurveTo(x0 + span / 2, top + 2 * BOATMAN_WAVE_DEPTH, x0 + span, top);
+  }
+  cape.quadraticCurveTo(front, top, front, top + SERAPE_CORNER_R);
+  cape.lineTo(front, bottom);
+  cape.closePath();
+  silhouette(ctx, [{ path: cape, fill: BOATMAN_CAPE_FILL }]);
+  ctx.save();
+  ctx.clip(cape);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  const folds = new Path2D();
+  for (const share of BOATMAN_FOLD_SHARES) {
+    const x = rear + length * share;
+    folds.moveTo(x, top + 3);
+    folds.quadraticCurveTo(x + BOATMAN_FOLD_BEND, (top + bottom) / 2, x, bottom - 1);
+  }
+  ctx.stroke(folds);
+  ctx.restore();
+  ctx.save();
+  ctx.clip(cape);
+  trimBand(ctx, { x0: front - SERAPE_BAND_FROM, x1: front - SERAPE_BAND_TO, y0: top - 1, y1: bottom + 1 }, GOLD_TRIM, false, SERAPE_BAND_LW);
+  ctx.restore();
+  shine(ctx, rear + 2, top + 4.4, 1, 0.7, -0.1);
+  legendStar(ctx, front - SERAPE_STAR_BACK, SERAPE_STAR_V, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -3561,6 +3867,23 @@ export function paintBodyWearable(
     case 'rainbow-fin-streamers':
       inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintRainbowFinStreamers(ctx));
       break;
+    case 'bucket-hat':
+      paintBucketHat(ctx);
+      break;
+    case 'rope-necklace':
+      paintRopeNecklace(ctx);
+      break;
+    case 'poncho':
+      paintPoncho(ctx, look);
+      break;
+    case 'tail-bell':
+      inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintTailBell(ctx));
+      break;
+    case 'golden-boatman-cape': {
+      const back = backFootprint(look);
+      inFrame(ctx, back.frame, () => paintGoldenBoatmanCape(ctx, back.box));
+      break;
+    }
     default:
       break;
   }

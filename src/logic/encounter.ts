@@ -283,6 +283,59 @@ export function stepEncounter(
   dt: number,
   ctx: EncounterContext = createEncounterContext(),
 ): EncounterStepResult {
+  return runEncounterStep(state, axolotlPos, dt, ctx, true);
+}
+
+/**
+ * Advances the encounter by `dt` seconds while the axolotl, its centre at `axolotlPos`, is out of
+ * the water in a bailing bucket's toss (issue #107, ND-2). Time runs as in `stepEncounter`: legs
+ * regrow and protected time counts down, with their events, the bump cooldown counts down and the
+ * moving hazard clock advances. Every predator steps as in `stepEncounter` but sees the axolotl as
+ * hidden, as behind rock, so it starts no warning, cancels a warning at its end, chases nothing and
+ * never connects. No hazard, moving hazard or bump check runs, so the step costs no leg, uses no
+ * Shell and never ends the trip. A zero, negative or non-finite `dt`, or a finished trip, returns the
+ * input state unchanged with no events.
+ */
+export function stepEncounterOutOfWater(
+  state: EncounterState,
+  axolotlPos: Point,
+  dt: number,
+  ctx: EncounterContext = createEncounterContext(),
+): EncounterStepResult {
+  return runEncounterStep(state, axolotlPos, dt, ctx, false);
+}
+
+/**
+ * One hit from `sourceId`, with `from` the place it came from, through the same hit path a
+ * predator, hazard or moving hazard hit takes (issue #107, ND-1: murky water): a protected axolotl
+ * loses nothing and emits nothing; else an unused Shell blocks it (`shellBlock`, protected time
+ * starts); else one leg is lost (`hit`, then `regrowStart` for a regrowing leg), protected time
+ * starts, and losing the last leg emits `carriedHome` and ends the trip. The bump cooldown is
+ * unchanged. A finished trip returns the input state unchanged with no events.
+ */
+export function hitEncounter(
+  state: EncounterState,
+  sourceId: string,
+  from: Point,
+  ctx: EncounterContext = createEncounterContext(),
+): EncounterStepResult {
+  if (state.tripOver) return { state, events: [] };
+  const pass = applyHit(state, { id: sourceId, from }, ctx);
+  return { state: pass.state, events: pass.events };
+}
+
+/**
+ * One encounter step (see `stepEncounter`). `inWater` false is the toss of
+ * `stepEncounterOutOfWater`: no hit can land, every predator sees the axolotl as hidden, and no
+ * hazard, moving hazard or bump check runs.
+ */
+function runEncounterStep(
+  state: EncounterState,
+  axolotlPos: Point,
+  dt: number,
+  ctx: EncounterContext,
+  inWater: boolean,
+): EncounterStepResult {
   if (state.tripOver || !(dt > 0) || !Number.isFinite(dt)) return { state, events: [] };
   const step = Math.min(dt, SWIM.dtMax);
   const legs = updateLegs(state.legs, step, ctx.legs);
@@ -295,8 +348,8 @@ export function stepEncounter(
     bumpCooldownLeft: Math.max(0, state.bumpCooldownLeft - step),
     ...(state.hazardTime === undefined ? {} : { hazardTime: state.hazardTime + step }),
   };
-  const canHit = !isProtected(state.legs);
-  const pass = stepPredators(timed, axolotlPos, step, ctx, canHit);
+  const canHit = inWater && !isProtected(state.legs);
+  const pass = stepPredators(timed, axolotlPos, step, ctx, canHit, !inWater);
   events.push(...pass.events);
   let current = pass.state;
   let hit = pass.hit;
@@ -312,7 +365,7 @@ export function stepEncounter(
     hit = movingPass.hit;
     events.push(...movingPass.events);
   }
-  if (hit || current.tripOver || current.bumpCooldownLeft > 0) {
+  if (!inWater || hit || current.tripOver || current.bumpCooldownLeft > 0) {
     return { state: current, events };
   }
   return applyBump(current, axolotlPos, events, ctx);
@@ -349,13 +402,18 @@ export function feedEncounter(
   };
 }
 
-/** Steps every predator; `canHit` false means protected time was running at the step start. */
+/**
+ * Steps every predator; `canHit` false means protected time was running at the step start or the
+ * axolotl is out of the water. `hidden` true (out of the water) tells every predator the target is
+ * behind rock, so none warns at, chases or strikes it.
+ */
 function stepPredators(
   state: EncounterState,
   axolotlPos: Point,
   dt: number,
   ctx: EncounterContext,
   canHit: boolean,
+  hidden: boolean,
 ): HitPass {
   let current: EncounterState = { ...state, predators: [...state.predators] };
   const events: EncounterEvent[] = [];
@@ -377,6 +435,7 @@ function stepPredators(
       predatorCtx.rockWalls = current.rockWalls;
       predatorCtx.targetBehindRock = crossesRock(current.predators[i].pos, axolotlPos, current.rockWalls);
     }
+    if (hidden) predatorCtx.targetBehindRock = true;
     const result = stepPredator(current.predators[i], axolotlPos, dt, predatorCtx);
     current.predators[i] = result.state;
     const sourceId = result.state.routeId;

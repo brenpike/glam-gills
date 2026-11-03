@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   createEncounter,
   createEncounterContext,
+  hitEncounter,
   predatorSpecies,
   resetEncounter,
   stepEncounter,
+  stepEncounterOutOfWater,
   type EncounterContext,
   type EncounterEvent,
   type EncounterSource,
@@ -17,7 +19,7 @@ import { GAME_EVENTS, REGISTRY_KEYS } from './gameEvents';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, HazardType } from './hazards';
 import { inSightCover } from './hiding';
-import { createLegs, isProtected, legSwimTuning, presentCount } from './legs';
+import { createLegs, isProtected, legSwimTuning, presentCount, tryHit } from './legs';
 import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardSpawn } from './movingHazards';
 import {
   BLACK_BASS_SPECIES,
@@ -1174,4 +1176,131 @@ describe('rock walls in the encounter (ND-12)', () => {
     const result = run(createEncounter({ ...source, predatorRoutes: [route] }), pastTheCorner, 2, ctx);
     expect(typesOf(result.events, ['telegraph'])).toEqual([]);
   });
+});
+
+describe('out of the water: a bailing bucket toss (issue #107, ND-2)', () => {
+  const spikeType: HazardType = { id: 'test-spike', name: 'Test spike', costsLeg: true, reach: 0, meetRange: 40, fact: TILAPIA_FACT };
+  const spike: HazardSpawn = { id: 'spike', type: spikeType, shape: { kind: 'circle', x: 1000, y: 200, r: 20 } };
+  const onSpike: Point = { x: 1005, y: 200 };
+  const shellCtx = createEncounterContext({ legs: { ...LEGS, regrowTime: 1e9 }, shell: true });
+
+  function runOutOfWater(state: EncounterState, pos: Point, seconds: number, ctx: EncounterContext = noRegrowCtx): Run {
+    let current = state;
+    const events: EncounterEvent[] = [];
+    let impulses = 0;
+    for (let t = 0; t < seconds; t += DT) {
+      const result = stepEncounterOutOfWater(current, pos, DT, ctx);
+      current = result.state;
+      events.push(...result.events);
+      if (result.impulse) impulses++;
+    }
+    return { state: current, events, impulses };
+  }
+
+  it('lets no predator warn at, strike or hit an axolotl in lunge range, while it keeps swimming its route', () => {
+    const start = createEncounter(zone);
+    const { state, events } = runOutOfWater(start, inRange, 10, shellCtx);
+    expect(typesOf(events, ['telegraph', 'lunge', 'hit', 'shellBlock', 'bump', 'carriedHome'])).toEqual([]);
+    expect(presentCount(state.legs)).toBe(LEGS.count);
+    expect(state.shellUsed).toBe(false);
+    expect(state.predators[0].pos).not.toEqual(start.predators[0].pos);
+  });
+
+  it('never lets a strike already running connect', () => {
+    const lunging = lungingAt(inRange, createLegs());
+    expect(typesOf(stepEncounter(lunging, inRange, DT, noRegrowCtx).events, ['hit'])).toEqual(['hit']);
+    const { state, events } = runOutOfWater(lunging, inRange, 2);
+    expect(typesOf(events, ['hit', 'shellBlock', 'carriedHome'])).toEqual([]);
+    expect(presentCount(state.legs)).toBe(LEGS.count);
+  });
+
+  it('checks no hazard, moving hazard or bump', () => {
+    const pole = movingHazardSpawn('pole-1', PUNTING_POLE, 1000, -3);
+    const hazards = createEncounter({ ...zone, tilapiaRoutes: [], hazards: [spike], movingHazards: [pole] });
+    const onHazards = runOutOfWater(hazards, onSpike, 3, shellCtx);
+    expect(onHazards.events).toEqual([]);
+    expect(presentCount(onHazards.state.legs)).toBe(LEGS.count);
+    const edgeRoute: TilapiaRoute = { id: 'edge', waypoints: [{ x: zone.safeArea.x1 + TILAPIA.bodyRadius, y: 200 }] };
+    const edge = createEncounter({ ...zone, tilapiaRoutes: [edgeRoute] });
+    const bumped = runOutOfWater(edge, { x: zone.safeArea.x1, y: 200 }, 1);
+    expect(bumped.impulses).toBe(0);
+    expect(typesOf(bumped.events, ['bump'])).toEqual([]);
+  });
+
+  it('runs time as in the water: protected time ends, legs regrow, the bump cooldown and the moving hazard clock run', () => {
+    const pole = movingHazardSpawn('pole-1', PUNTING_POLE, 1000, 0);
+    const hit = stepEncounter(createEncounter({ ...zone, tilapiaRoutes: [], hazards: [spike], movingHazards: [pole] }), onSpike, DT);
+    const start: EncounterState = { ...hit.state, bumpCooldownLeft: 0.5 };
+    const swum = runOutOfWater(start, onSpike, LEGS.protectedTime + LEGS.regrowTime + 1, createEncounterContext());
+    expect(typesOf(swum.events, ['protectedEnd', 'regrown'])).toEqual(['protectedEnd', 'regrown']);
+    expect(presentCount(swum.state.legs)).toBe(LEGS.count);
+    expect(swum.state.bumpCooldownLeft).toBe(0);
+    const once = stepEncounterOutOfWater(start, onSpike, 1);
+    expect(once.state.hazardTime).toBe(hit.state.hazardTime! + SWIM.dtMax);
+    expect(once.state.bumpCooldownLeft).toBeCloseTo(0.5 - SWIM.dtMax, 9);
+  });
+
+  it('keeps the state on a paused step or a finished trip', () => {
+    const state = createEncounter(zone);
+    for (const dt of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(stepEncounterOutOfWater(state, inRange, dt)).toEqual({ state, events: [] });
+    }
+    const over: EncounterState = { ...state, tripOver: true };
+    expect(stepEncounterOutOfWater(over, inRange, DT).state).toBe(over);
+  });
+
+  it('still lets the same tilapia hit the axolotl in the water', () => {
+    const inWater = run(createEncounter(zone), inRange, 10, noRegrowCtx);
+    expect(typesOf(inWater.events, ['hit']).length).toBeGreaterThan(0);
+  });
+});
+
+describe('hitEncounter, the shared hit path (issue #107, ND-1)', () => {
+  const from: Point = { x: 1200, y: 300 };
+  const shellCtx = createEncounterContext({ legs: { ...LEGS, regrowTime: 1e9 }, shell: true });
+
+  it('costs one leg from `from`, starts protected time and leaves the bump cooldown unchanged', () => {
+    const start: EncounterState = { ...createEncounter(zone), bumpCooldownLeft: 0.5 };
+    const result = hitEncounter(start, 'murky-water', from, noRegrowCtx);
+    expect(result.events).toEqual([
+      { type: 'hit', sourceId: 'murky-water', leg: 0, from },
+      { type: 'regrowStart', leg: 0 },
+    ]);
+    expect((result.events[0] as { from: Point }).from).not.toBe(from);
+    expect(presentCount(result.state.legs)).toBe(LEGS.count - 1);
+    expect(result.state.legs.protectedLeft).toBe(LEGS.protectedTime);
+    expect(result.state.bumpCooldownLeft).toBe(0.5);
+    expect(result).not.toHaveProperty('impulse');
+  });
+
+  it('loses nothing and emits nothing while protected', () => {
+    const first = hitEncounter(createEncounter(zone), 'murky-water', from, noRegrowCtx).state;
+    const second = hitEncounter(first, 'murky-water', from, noRegrowCtx);
+    expect(second.events).toEqual([]);
+    expect(second.state).toBe(first);
+  });
+
+  it('lets an unused Shell block it', () => {
+    const result = hitEncounter(createEncounter(zone), 'murky-water', from, shellCtx);
+    expect(result.events).toEqual([{ type: 'shellBlock', sourceId: 'murky-water', from }]);
+    expect(presentCount(result.state.legs)).toBe(LEGS.count);
+    expect(result.state.legs.protectedLeft).toBe(LEGS.protectedTime);
+    expect(result.state.shellUsed).toBe(true);
+  });
+
+  it('carries the axolotl home on the last leg, and is a no-op once the trip is over', () => {
+    const lastLeg: EncounterState = { ...createEncounter(zone), legs: oneLegLeft() };
+    const result = hitEncounter(lastLeg, 'murky-water', from, noRegrowCtx);
+    expect(result.events.map((event) => event.type)).toEqual(['hit', 'carriedHome']);
+    expect(result.state.tripOver).toBe(true);
+    expect(hitEncounter(result.state, 'murky-water', from, noRegrowCtx)).toEqual({ state: result.state, events: [] });
+  });
+
+  function oneLegLeft(): EncounterState['legs'] {
+    let legs = createLegs();
+    for (let lost = 0; lost < LEGS.count - 1; lost++) {
+      legs = { ...tryHit(legs, noRegrowCtx.legs).state, protectedLeft: 0 };
+    }
+    return legs;
+  }
 });

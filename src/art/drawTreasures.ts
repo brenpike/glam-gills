@@ -3,7 +3,8 @@
  * Decorations and Wearables, the eleven pond ones (issue #75), the eleven pond
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
- * the eleven deep canal Area 8 ones (issue #78), and one Paint shell per Dream colour.
+ * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), and one Paint shell per
+ * Dream colour.
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -36,6 +37,8 @@ import { roundedPolygon, type Pt } from './drawBadges';
 import {
   AMMONITE_FILL,
   AMMONITE_SLAB,
+  BAILING_BUCKET_FILL,
+  BAILING_BUCKET_ROPE,
   BOAT_CANOPY,
   BUBBLE_FILL,
   BUBBLE_MACHINE_FILL,
@@ -43,8 +46,10 @@ import {
   BUBBLE_STONE_FILL,
   BOAT_HULL,
   BOAT_TRIM,
+  BOATMAN_CAPE_FILL,
   BOW_FILL,
   BOW_GEM,
+  BUCKET_HAT_FILL,
   CAPTAINS_HAT_FILL,
   CASTLE_GEM,
   CASTLE_STONE,
@@ -53,6 +58,7 @@ import {
   CATTAIL_HEAD,
   CATTAIL_STEM,
   CAVE_CRYSTAL_FILL,
+  CLAY_JUG_FILL,
   CLAY_POT_FILL,
   CLIMBING_HELMET_FILL,
   CRYSTAL_ARCH_BASE,
@@ -81,6 +87,7 @@ import {
   FIREFLY_SOCKET,
   FIN_STREAMER_FILLS,
   FIN_STREAMER_KNOT,
+  FLOATING_CORK_FILL,
   FLOWER_MARKET_HULL,
   FROG_STATUE_STONE,
   FROGGY_BOOT,
@@ -105,6 +112,8 @@ import {
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_FILL,
+  LANTERN_BOAT_HULL,
+  LANTERN_BOAT_PAPER,
   LANTERN_FRAME,
   LANTERN_GLASS,
   LILY_PAD_SOCK_FILL,
@@ -119,6 +128,9 @@ import {
   MOSS_BALL_WEIGHT,
   MOSSY_ROCK_FILL,
   MOSSY_ROCK_MOSS,
+  MUSIC_STAGE_DECK,
+  MUSIC_STAGE_SHELL,
+  NAME_SIGN_FILL,
   NECKLACE_CORD,
   NECKLACE_SHELL,
   PAINT_SHELL_FILL,
@@ -133,13 +145,17 @@ import {
   PEBBLE_STACK_FILL,
   PLANT_LEAF,
   POND_WEED_SCARF,
+  PONCHO_FILL,
   PYRAMID_GEM,
   RAINCOAT_FILL,
   PYRAMID_STONE,
   REED_BUNDLE_STALK,
+  ROPE_NECKLACE_CORD,
   SAILOR_CAP_FILL,
   SOCK_FILL,
   STRIPED_SCARF_FILL,
+  TAIL_BELL_CLAPPER,
+  TAIL_BELL_FILL,
   TANK_TOP_FILL,
   TRAJINERA_ARCH,
   TRAJINERA_BLOSSOM_PINK,
@@ -320,7 +336,7 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * eleven pond ones and the eleven pond Area 3 ones (the text after `pond/`), then the eleven chinampa
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
  * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
- * Area 8 ones (the text after `deep-canal/`), in catalogue order.
+ * Area 8 ones and the eleven deep canal Area 9 ones (the text after `deep-canal/`), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -411,7 +427,18 @@ export type TreasureItemSlug =
   | 'trajinera-flower-arch'
   | 'captains-hat'
   | 'floating-flower-market'
-  | 'rainbow-fin-streamers';
+  | 'rainbow-fin-streamers'
+  | 'clay-jug'
+  | 'floating-cork'
+  | 'bucket-hat'
+  | 'rope-necklace'
+  | 'little-bailing-bucket'
+  | 'painted-name-sign'
+  | 'poncho'
+  | 'paper-lantern-boat'
+  | 'tail-bell'
+  | 'floating-music-stage'
+  | 'golden-boatman-cape';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -505,14 +532,25 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'captains-hat',
   'floating-flower-market',
   'rainbow-fin-streamers',
+  'clay-jug',
+  'floating-cork',
+  'bucket-hat',
+  'rope-necklace',
+  'little-bailing-bucket',
+  'painted-name-sign',
+  'poncho',
+  'paper-lantern-boat',
+  'tail-bell',
+  'floating-music-stage',
+  'golden-boatman-cape',
 ];
 
 /**
- * All one hundred and thirteen icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and twenty-four icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
- * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, then the twenty-four Paint
- * shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last four,
- * Jade, Fiesta shine, Olive and Lantern shine, the deep canal's).
+ * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
+ * items, then the twenty-four Paint shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the
+ * spring cave's; the last four, Jade, Fiesta shine, Olive and Lantern shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -596,6 +634,9 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The six deep canal Area 8 Decorations (issue #78) end on the same 12.6 edge: the Painted oar's blade foot and the
  * Trajinera flower arch's deck (Floor items), the weights of the Paper boat, the Little trajinera and the Floating
  * flower market (Floating items, so the box edge) and the lowest blossom of the Flower garland (a Hanging item).
+ * The six deep canal Area 9 Decorations (issue #107) end on the same 12.6 edge: the Clay jug's foot and the Little
+ * bailing bucket's base (Floor items), the weights of the Floating cork, the Paper lantern boat and the Floating music
+ * stage (Floating items, so the box edge) and the foot of the Painted name sign's board (a Hanging item).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -641,6 +682,12 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'painted-oar': 12.6,
   'trajinera-flower-arch': 12.6,
   'floating-flower-market': 12.6,
+  'clay-jug': 12.6,
+  'floating-cork': 12.6,
+  'little-bailing-bucket': 12.6,
+  'painted-name-sign': 12.6,
+  'paper-lantern-boat': 12.6,
+  'floating-music-stage': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -3764,6 +3811,358 @@ function paintRainbowFinStreamers(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 9 items (issue #107)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Every outer fill is one of the Area 9 fills of
+// treasurePalette.ts (9:1 or more with ink); the five Wearables' worn looks use the same names. Shape carries the
+// meaning: a round-bellied jug with a ring handle, a cork bobbing on a cord, a bucket hat with a flaring crown,
+// a hemp rope looped round with a knot, a tapered bucket under a rope handle, a painted board hanging from two
+// cords, a poncho with a fringe, a paper lantern glowing on a boat, a bell on a ring, a stage with a band shell
+// afloat on a raft and a boatman's cape with a wave hem. The Olive and Lantern shine Paint shells use the generic
+// Paint shell painter (below).
+
+/**
+ * Common, Floor: a pale terracotta jug: a short flared lip, a narrow neck, a round belly and a flat foot, with a
+ * ring handle from the neck to the shoulder on the right (the ring's opening shows through). One shine on the belly.
+ * The foot is the lowest fill edge.
+ */
+function paintClayJug(pen: Pen): void {
+  const { k } = pen;
+  const handle = new Path2D();
+  handle.ellipse(8, -8.2, 4.2, 3.6, 0, 0, TAU, false);
+  handle.moveTo(10, -8.2);
+  handle.ellipse(8, -8.2, 2, 1.5, 0, 0, -TAU, true);
+  outerShape(pen, place(handle, k), CLAY_JUG_FILL, ITEM_LW);
+  const jug = new Path2D();
+  jug.moveTo(-3.6, -11);
+  jug.lineTo(3.6, -11);
+  jug.lineTo(3.6, -9.6);
+  jug.bezierCurveTo(3.6, -8, 4.2, -7, 7, -5.6);
+  jug.bezierCurveTo(11.2, -3.4, 11.6, 2.4, 9.6, 7.4);
+  jug.bezierCurveTo(8.6, 10.4, 7, AREA3_FOOT_Y, 5, AREA3_FOOT_Y);
+  jug.lineTo(-5, AREA3_FOOT_Y);
+  jug.bezierCurveTo(-7, AREA3_FOOT_Y, -8.6, 10.4, -9.6, 7.4);
+  jug.bezierCurveTo(-11.6, 2.4, -11.2, -3.4, -7, -5.6);
+  jug.bezierCurveTo(-4.2, -7, -3.6, -8, -3.6, -9.6);
+  jug.closePath();
+  outerShape(pen, place(jug, k), CLAY_JUG_FILL, ITEM_LW);
+  const lip = roundedPolygon(pts(-5.4, -12.6, 5.4, -12.6, 5, -9.4, -5, -9.4), [1.6, 1.6, 0.8, 0.8]);
+  outerShape(pen, place(lip, k), CLAY_JUG_FILL, ITEM_LW);
+  shine(pen, -6.6, 1.6, 1, 2.8, 0.2);
+}
+
+/**
+ * Common, Floating: a pale cork lying across the waterline, a little narrower at the left end, with ink specks
+ * (alpha 0.30) and one thin ink line for the end face, a thin ink cord and a pebble A weight hanging below. One shine
+ * on the cork. The cork's top is at the waterline, 20 below the top of the 80 box; the weight is the lowest fill
+ * edge, the box edge.
+ */
+function paintFloatingCork(pen: Pen): void {
+  const { ctx, k } = pen;
+  const top = waterlineY(INK_OUT_SHAPE) - 0.6;
+  const bottom = top + 8.6;
+  boatTether(pen, 0, bottom - 0.4);
+  const cork = roundedPolygon(pts(-12.6, top + 1.2, 12.6, top, 12.6, bottom, -12.6, bottom - 1.2), 3.2);
+  silhouette(pen, place(cork, k), FLOATING_CORK_FILL, ITEM_LW, () => {
+    specks(pen, [-7.4, top + 2.6, -3, top + 5.8, 1.6, top + 3.2, 5, top + 6.2, -9.4, top + 6.2, 8, top + 2.4]);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(ellipse(9, (top + bottom) / 2, 2.4, (bottom - top) / 2 - 1.1), k));
+  });
+  shine(pen, -6.4, top + 2, 2.4, 0.7, 0.05);
+}
+
+/**
+ * Common: a pale canvas bucket hat: a crown that flares toward the brim and a wide brim sloping down all round, two
+ * small ink eyelets (alpha 1) on the crown and one thin ink seam at its foot. One shine on the crown.
+ */
+function paintBucketHat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const brim = new Path2D();
+  brim.moveTo(-9, 2.6);
+  brim.lineTo(9, 2.6);
+  brim.bezierCurveTo(11.2, 4.4, 12.6, 7, 12.6, 9.6);
+  brim.quadraticCurveTo(12.6, 11.6, 10.4, 11.6);
+  brim.lineTo(-10.4, 11.6);
+  brim.quadraticCurveTo(-12.6, 11.6, -12.6, 9.6);
+  brim.bezierCurveTo(-12.6, 7, -11.2, 4.4, -9, 2.6);
+  brim.closePath();
+  outerShape(pen, place(brim, k), BUCKET_HAT_FILL, ITEM_LW);
+  const crown = roundedPolygon(pts(-6.6, -8.6, 6.6, -8.6, 9, 4.6, -9, 4.6), [3.4, 3.4, 1.2, 1.2]);
+  silhouette(pen, place(crown, k), BUCKET_HAT_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(-10, 2.4, 10, 2.4), k));
+  });
+  detail(pen, () => {
+    ctx.fillStyle = INK;
+    for (const x of [-5.6, 5.6]) ctx.fill(place(ellipse(x, -3.6, 0.7, 0.7), k));
+  });
+  shine(pen, -3.6, -4.6, 0.9, 2.2, 0.12);
+}
+
+/** The Rope necklace's twist marks: the angle on its loop of each short ink line across the rope. */
+const ROPE_TWISTS = [0.28, 0.6, 0.92, 1.24, 1.56, 1.88, 2.2, 2.52, 2.84] as const;
+
+/**
+ * Common: a loop of pale hemp rope hanging from the top corners (a tube, like the Pebble necklace's) with a knot at
+ * the bottom and two short frayed tails below it, nine short ink twist lines (1.2) across the rope. One shine on the
+ * knot. Sized for tube ink: the rope's centre line and the knot stay inside 10 units of the centre.
+ */
+function paintRopeNecklace(pen: Pen): void {
+  const { ctx, k } = pen;
+  const rope = new Path2D();
+  rope.ellipse(0, -9, 10, 14, 0, 0, Math.PI);
+  inkMany(ctx, [outerSeg(pen, place(rope, k), TUBE_W, ROPE_NECKLACE_CORD, TUBE_OL)]);
+  detail(pen, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    // Each twist crosses the rope on the slant, its length in px (the rope's width never scales), its place scaled.
+    const twists = new Path2D();
+    for (const a of ROPE_TWISTS) {
+      const nx = 14 * Math.cos(a);
+      const ny = 10 * Math.sin(a);
+      const len = Math.hypot(nx, ny);
+      const ux = nx / len;
+      const uy = ny / len;
+      const cx = 10 * Math.cos(a) * k;
+      const cy = (-9 + 14 * Math.sin(a)) * k;
+      const dx = ux * 1.2 + uy * 0.9;
+      const dy = uy * 1.2 - ux * 0.9;
+      twists.moveTo(cx - dx, cy - dy);
+      twists.lineTo(cx + dx, cy + dy);
+    }
+    ctx.stroke(twists);
+  });
+  for (const s of [-1, 1]) {
+    const tail = roundedPolygon(pts(s * 0.6, 6.4, s * 3.8, 6.8, s * 4.6, 10.2, s * 1.8, 10.6), 1);
+    outerShape(pen, place(tail, k), ROPE_NECKLACE_CORD, ITEM_LW);
+  }
+  outerShape(pen, place(ellipse(0, 5, 3.4, 2.8), k), ROPE_NECKLACE_CORD, ITEM_LW);
+  shine(pen, -1.2, 4.2, 0.7, 1.1, 0.4);
+}
+
+/**
+ * Rare, Floor: a little tapered bucket in pale tin under a rope handle (a flat arch of pale hemp rope with its
+ * opening), a rim band round the top and one yellow trim band round the body. One shine on the body. The flat base
+ * is the lowest fill edge.
+ */
+function paintLittleBailingBucket(pen: Pen): void {
+  const { k } = pen;
+  const cy = -4.6;
+  const handle = new Path2D();
+  handle.moveTo(-10.2, cy);
+  handle.ellipse(0, cy, 10.2, 8, 0, Math.PI, TAU, false);
+  handle.lineTo(5.8, cy);
+  handle.ellipse(0, cy, 5.8, 3.6, 0, 0, Math.PI, true);
+  handle.closePath();
+  outerShape(pen, place(handle, k), BAILING_BUCKET_ROPE, ITEM_LW);
+  const body = roundedPolygon(pts(-10.6, -4.4, 10.6, -4.4, 8.2, AREA3_FOOT_Y, -8.2, AREA3_FOOT_Y), [1.8, 1.8, 2.2, 2.2]);
+  silhouette(pen, place(body, k), BAILING_BUCKET_FILL, ITEM_LW, () => trimBand(pen, 3.4, 6, BOAT_TRIM));
+  const rim = roundedPolygon(pts(-11.6, -6.6, 11.6, -6.6, 11.2, -3.2, -11.2, -3.2), 1.2);
+  outerShape(pen, place(rim, k), BAILING_BUCKET_FILL, ITEM_LW);
+  shine(pen, -6.4, 0, 0.9, 2.4, 0.1);
+}
+
+/**
+ * Rare, Hanging: a painted board hanging from two thin ink cords that meet at a pebble A hook ring on its
+ * top-centre: a pale periwinkle board with a gently arched top and rounded foot, a wavy ink line of painted
+ * writing (1.6) over one yellow trim band. One shine on the board. The board's foot is the lowest fill edge.
+ */
+function paintPaintedNameSign(pen: Pen): void {
+  const { ctx, k } = pen;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  const cords = new Path2D();
+  cords.moveTo(0, -10);
+  cords.lineTo(-7, -4.6);
+  cords.moveTo(0, -10);
+  cords.lineTo(7, -4.6);
+  ctx.stroke(place(cords, k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, FIREFLY_HOOK), DETAIL_LW);
+  const board = new Path2D();
+  board.moveTo(-11.6, -2.4);
+  board.quadraticCurveTo(0, -9.4, 11.6, -2.4);
+  board.lineTo(11.6, 10.6);
+  board.quadraticCurveTo(11.6, AREA3_FOOT_Y, 9.6, AREA3_FOOT_Y);
+  board.lineTo(-9.6, AREA3_FOOT_Y);
+  board.quadraticCurveTo(-11.6, AREA3_FOOT_Y, -11.6, 10.6);
+  board.closePath();
+  silhouette(pen, place(board, k), NAME_SIGN_FILL, ITEM_LW, () => {
+    trimBand(pen, 6.4, 9, BOAT_TRIM);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    const writing = new Path2D();
+    writing.moveTo(-7.4, 1.2);
+    writing.bezierCurveTo(-5.6, -1.4, -4.2, 3.6, -2.4, 1.2);
+    writing.bezierCurveTo(-0.8, -1, 0.6, 3.4, 2.4, 1.2);
+    writing.bezierCurveTo(4, -0.8, 5.4, 2.8, 7.4, 1);
+    ctx.stroke(place(writing, k));
+  });
+  shine(pen, -8.2, 2.6, 0.7, 1.7, 0.1);
+}
+
+/**
+ * Rare: a pale coral poncho: a V neck over broad shoulders flaring to a wide hem with a row of twelve fringe points,
+ * and one yellow trim band across the lower body. One shine on the left shoulder.
+ */
+function paintPoncho(pen: Pen): void {
+  const { k } = pen;
+  const poncho = new Path2D();
+  poncho.moveTo(-3.4, -11);
+  poncho.lineTo(0, -7.8);
+  poncho.lineTo(3.4, -11);
+  poncho.lineTo(10.4, -8.4);
+  poncho.lineTo(12.6, 10.4);
+  for (let i = 0; i < 12; i++) {
+    const x = 12.6 - i * 2.1;
+    poncho.lineTo(x - 1.05, AREA3_FOOT_Y);
+    poncho.lineTo(x - 2.1, 10.4);
+  }
+  poncho.lineTo(-10.4, -8.4);
+  poncho.closePath();
+  silhouette(pen, place(poncho, k), PONCHO_FILL, ITEM_LW, () => trimBand(pen, 3.2, 5.8, BOAT_TRIM));
+  shine(pen, -8, -2.8, 0.8, 2.6, 0.1);
+}
+
+/**
+ * Epic, Floating: a little boat with a paper lantern glowing in front of it: a cream hull with both ends turned up and
+ * a round pale amber lantern with two ink ribs (1.2) standing in it, one aqua gem as the lantern's glowing core, a
+ * thin ink cord and a pebble A weight hanging below. One shine on the lantern. The hull's top is on the waterline, 20
+ * below the top of the 80 box; the weight is the lowest fill edge, the box edge.
+ */
+function paintPaperLanternBoat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const top = waterlineY(INK_OUT_SHAPE) - 0.6;
+  const bottom = top + 8.4;
+  boatTether(pen, 0, bottom - 0.4);
+  const hull = roundedPolygon(pts(-12.6, top, 12.6, top, 8.8, bottom, -8.8, bottom), [1.6, 1.6, 2.4, 2.4]);
+  outerShape(pen, place(hull, k), LANTERN_BOAT_HULL, ITEM_LW);
+  const lantern = ellipse(0, -5.6, 6.6, 6.8);
+  silhouette(pen, place(lantern, k), LANTERN_BOAT_PAPER, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    for (const x of [-3.6, 3.6]) {
+      const rib = new Path2D();
+      rib.moveTo(x * 0.5, -12.4);
+      rib.quadraticCurveTo(x * 1.9, -5.6, x * 0.5, 1.2);
+      ctx.stroke(place(rib, k));
+    }
+  });
+  gem(pen, 0, -5.6, CASTLE_GEM);
+  shine(pen, -4.4, -9.4, 0.7, 1.5, 0.4);
+}
+
+/**
+ * Epic: a pale brass bell hanging from a pebble A ring on its top-centre: a domed top flaring to a curved lip, a pebble A
+ * clapper under the lip, one thin ink line (1.2) round the flare and one aqua gem on the dome. One shine on the dome. The
+ * clapper is the lowest fill edge.
+ */
+function paintTailBell(pen: Pen): void {
+  const { ctx, k } = pen;
+  outerShape(pen, place(ellipse(0, 10.6, 2.2, 2), k), TAIL_BELL_CLAPPER, ITEM_LW);
+  const bell = new Path2D();
+  bell.moveTo(-10.8, 6.4);
+  bell.bezierCurveTo(-8, 5, -7.6, 1, -7.2, -3);
+  bell.bezierCurveTo(-6.8, -8, -4, -10.2, 0, -10.2);
+  bell.bezierCurveTo(4, -10.2, 6.8, -8, 7.2, -3);
+  bell.bezierCurveTo(7.6, 1, 8, 5, 10.8, 6.4);
+  bell.bezierCurveTo(6, 9.2, -6, 9.2, -10.8, 6.4);
+  bell.closePath();
+  silhouette(pen, place(bell, k), TAIL_BELL_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    const flare = new Path2D();
+    flare.moveTo(-9.6, 4.6);
+    flare.bezierCurveTo(-5, 7, 5, 7, 9.6, 4.6);
+    ctx.stroke(place(flare, k));
+  });
+  shape(pen.ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, FIREFLY_HOOK), DETAIL_LW);
+  gem(pen, 0, -3.4, CASTLE_GEM);
+  shine(pen, -4.6, -5.6, 0.8, 2.2, 0.3);
+}
+
+/**
+ * Legendary, Floating: a floating music stage: a lilac raft with both ends turned up and one gold band along it, a
+ * pink band shell (half a dome with two ink ribs, 1.2, and one ink note, 1.6) standing on it at the back, one
+ * pink gem on the raft's side, a thin ink cord and a pebble A weight hanging below, and one 4-point star. One shine
+ * on the raft. The deck is on the waterline, 20 below the top of the 80 box; the weight is the lowest fill edge.
+ */
+function paintFloatingMusicStage(pen: Pen): void {
+  const { ctx, k } = pen;
+  const deck = waterlineY(INK_OUT_SHAPE);
+  boatTether(pen, 0, 5.2);
+  const cx = -2;
+  const rx = 8.2;
+  const base = deck + 0.6;
+  const ry = base + 12.6;
+  const shell = new Path2D();
+  shell.moveTo(cx - rx, base);
+  shell.ellipse(cx, base, rx, ry, 0, Math.PI, TAU, false);
+  shell.closePath();
+  silhouette(pen, place(shell, k), MUSIC_STAGE_SHELL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    for (const theta of [-0.8, 0.8]) {
+      const rib = new Path2D();
+      rib.moveTo(cx, base);
+      rib.lineTo(cx + rx * Math.sin(theta), base - ry * Math.cos(theta));
+      ctx.stroke(place(rib, k));
+    }
+    ctx.lineWidth = DETAIL_LW;
+    const note = new Path2D();
+    note.moveTo(cx + 0.6, -9.4);
+    note.lineTo(cx + 0.6, -12);
+    note.quadraticCurveTo(cx + 2.6, -11.6, cx + 2.4, -10);
+    ctx.stroke(place(note, k));
+    ctx.fillStyle = INK;
+    ctx.fill(place(ellipse(cx - 0.6, -9.2, 1.4, 1.1, -0.4), k));
+  });
+  const hull = roundedPolygon(pts(-12.6, deck, 12.6, deck, 10.8, 5.6, -10.8, 5.6), [1.6, 1.6, 2.4, 2.4]);
+  silhouette(pen, place(hull, k), MUSIC_STAGE_DECK, ITEM_LW, () => trimBand(pen, 2.2, 4.6, GOLD_TRIM));
+  gem(pen, 0, -1.4, PYRAMID_GEM);
+  shine(pen, -8, -2.8, 0.8, 1.6, 0.3);
+  legendStar(pen, 9.8, -9.8);
+}
+
+/**
+ * Legendary: a golden boatman's cape in pale gold cream: a standing collar over broad shoulders flowing down to a hem
+ * of four waves, two ink fold lines (1.2), one gold band across the lower body, one pink gem as the clasp and one
+ * 4-point star. One shine on the left shoulder.
+ */
+function paintGoldenBoatmanCape(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cape = new Path2D();
+  cape.moveTo(-5, -11.2);
+  cape.bezierCurveTo(-8.6, -11.2, -10.6, -9.6, -11.2, -6.6);
+  cape.bezierCurveTo(-12.2, -2, -12.6, 3, -12.6, 9.6);
+  for (let i = 0; i < 4; i++) {
+    const x0 = -12.6 + i * 6.3;
+    cape.quadraticCurveTo(x0 + 3.15, 15.6, x0 + 6.3, 9.6);
+  }
+  cape.bezierCurveTo(12.6, 3, 12.2, -2, 11.2, -6.6);
+  cape.bezierCurveTo(10.6, -9.6, 8.6, -11.2, 5, -11.2);
+  cape.closePath();
+  silhouette(pen, place(cape, k), BOATMAN_CAPE_FILL, ITEM_LW, () => {
+    trimBand(pen, 5.2, 7.6, GOLD_TRIM);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    for (const s of [-1, 1]) {
+      const fold = new Path2D();
+      fold.moveTo(s * 5.4, -7.2);
+      fold.quadraticCurveTo(s * 7.8, -1, s * 7, 4.6);
+      ctx.stroke(place(fold, k));
+    }
+  });
+  const collar = roundedPolygon(pts(-6, -12.6, 6, -12.6, 7.2, -8.6, -7.2, -8.6), [2, 2, 1.4, 1.4]);
+  outerShape(pen, place(collar, k), BOATMAN_CAPE_FILL, ITEM_LW);
+  gem(pen, 0, -4.8, PYRAMID_GEM);
+  shine(pen, -8.8, -4.6, 0.9, 2.4, 0.2);
+  legendStar(pen, 9.8, -9.8);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -4452,6 +4851,39 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'rainbow-fin-streamers':
       paintRainbowFinStreamers({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'clay-jug':
+      paintClayJug({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'floating-cork':
+      paintFloatingCork({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'bucket-hat':
+      paintBucketHat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'rope-necklace':
+      paintRopeNecklace({ ctx, k: fitScale(size, INK_OUT_TUBE), flat });
+      break;
+    case 'little-bailing-bucket':
+      paintLittleBailingBucket({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'painted-name-sign':
+      paintPaintedNameSign({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'poncho':
+      paintPoncho({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'paper-lantern-boat':
+      paintPaperLanternBoat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'tail-bell':
+      paintTailBell({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'floating-music-stage':
+      paintFloatingMusicStage({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'golden-boatman-cape':
+      paintGoldenBoatmanCape({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

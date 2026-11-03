@@ -66,7 +66,9 @@ function soundRequest(id: SoundId, version: string = ONLY_VERSION, delayS: numbe
  * carry home the lullaby (S10; ND-11), a sealed Dash pot touched without dashing the wobble and a
  * broken one the Dash pot (ND-12), meeting a stranded axolotl the rescue meeting (ND-16), a plastic
  * worm spat out the bleh (S11; ND-8) and a ghost net's snag the snag (S11; ND-7). The strike, the
- * bump, the regrowth's start, the end of protected time and the arrival home play nothing.
+ * bump, the regrowth's start, the end of protected time and the arrival home play nothing. Issue
+ * #107, ND-5: a murky water hit is a `hit` and plays the uh-oh like any hit; a bailing bucket's catch
+ * (`scoop`) and its splash-down play nothing, left open for the owner.
  */
 export function tripEventSound(event: Readonly<TripEvent>): SoundRequest | null {
   switch (event.type) {
@@ -99,6 +101,8 @@ export function tripEventSound(event: Readonly<TripEvent>): SoundRequest | null 
     case 'regrowStart':
     case 'protectedEnd':
     case 'arrivedHome':
+    case 'scoop':
+    case 'splashDown':
       return null;
     default: {
       const unhandled: never = event;
