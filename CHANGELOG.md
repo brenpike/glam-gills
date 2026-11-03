@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-03
+
+### Changed
+
+- The top of the swim screen is now one short row: the snacks left, your four legs and a small Pause button. More of the water shows.
+- The Trip Bag panel is gone from the top of the screen. The find pop-up still shows each find, and the Home Spot still keeps them safe.
+
 ## [0.61.0] - 2026-11-02
 
 ### Added

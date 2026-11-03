@@ -72,9 +72,9 @@ export function habitatAreasLabel(habitatName: string, numbers: readonly number[
   return `${habitatName}: ${areasLine(numbers)}`;
 }
 
-/** Snack counter label: the snacks left, such as "5 left". */
+/** Snack counter label: the snacks left as a bare number beside the snack icon, such as "5". */
 export function snacksLeftLabel(left: number): string {
-  return `${left} left`;
+  return `${left}`;
 }
 
 /** "1 snack" or "N snacks". */

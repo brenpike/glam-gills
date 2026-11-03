@@ -3,9 +3,6 @@ import type { AxolotlSex } from './axolotlLook';
 import { axolotlPronouns } from './pronouns';
 import type { AreaStars } from './stars';
 
-/** Label next to the four leg icons in the legs display. */
-export const LEGS_LABEL = 'Legs';
-
 /** Title of the card shown after the axolotl is carried home. */
 export const TRIP_END_TITLE = 'Carried home!';
 
@@ -16,12 +13,6 @@ export const TRIP_END_BODY =
 
 /** Button on the tank arrival card that closes it and shows the Home Tank. */
 export const ARRIVAL_OK_LABEL = 'OK';
-
-/** Label on the HUD Trip Bag display. */
-export const TRIP_BAG_LABEL = 'Trip Bag';
-
-/** Status shown next to a Trip Bag that holds finds. */
-export const NOT_SAFE_YET = 'not safe yet';
 
 /** Title of the celebration card shown after banking finds at the Home Spot. */
 export const BANKED_TITLE = 'Safe at the Home Spot!';
@@ -46,8 +37,6 @@ export const GHOST_NET_BANNER = 'Snagged on an old net! Wriggle free.';
 
 /** Title of the card shown after choosing to go home. */
 export const WENT_HOME_TITLE = 'Welcome home!';
-
-const EMPTY_BAG_STATUS = 'empty';
 
 const MAX_LISTED_NAMES = 3;
 
@@ -112,11 +101,6 @@ export function describeTreasures(names: readonly string[]): string {
   if (names.length <= MAX_LISTED_NAMES) return joinWithAnd(names);
   const listed = names.slice(0, MAX_LISTED_NAMES).join(', ');
   return `${listed} and ${names.length - MAX_LISTED_NAMES} more`;
-}
-
-/** Short Trip Bag status: warns that carried finds are not safe yet. */
-export function tripBagStatus(count: number): string {
-  return count > 0 ? NOT_SAFE_YET : EMPTY_BAG_STATUS;
 }
 
 function bankedTotalLine(total: number): string {

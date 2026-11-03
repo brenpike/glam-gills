@@ -109,7 +109,7 @@ describe('area text', () => {
   });
 
   it('labels the snacks left no wider than the old compact counter', () => {
-    expect(snacksLeftLabel(5)).toBe('5 left');
+    expect(snacksLeftLabel(5)).toBe('5');
     for (const left of SNACKS_LEFT_SAMPLES) {
       expect(snacksLeftLabel(left).length).toBeLessThanOrEqual(OLD_COMPACT_COUNTER.length);
     }

@@ -26,15 +26,7 @@ import {
   type Size,
 } from './hudLayout';
 import { REAL_MORPHS, RESCUE_POPUP_DETAIL } from './morphs';
-import {
-  ALL_SNACKS_BANNER,
-  BANKING_HINT,
-  GHOST_NET_BANNER,
-  LEGS_LABEL,
-  PLASTIC_WORM_BANNER,
-  TRIP_BAG_LABEL,
-  tripBagStatus,
-} from './tripText';
+import { ALL_SNACKS_BANNER, BANKING_HINT, GHOST_NET_BANNER, PLASTIC_WORM_BANNER } from './tripText';
 import { LEGS } from './tuning';
 import { buildCanalZone } from './zone';
 
@@ -47,28 +39,27 @@ const LINE_HEIGHT_EM = 1.25;
 
 /**
  * Control sizes from src/art/drawUi.ts and src/scenes/HudScene.ts (logic tests must not import art):
- * Pause is BUTTON_WIDE (200 x 64) at PAUSE_BUTTON_SIZE 0.8, Go home is BUTTON_WIDE at size 1, Dash is
- * BUTTON_SQUARE (64 x 64) at DASH_BUTTON_SIZE 1.25 with corner buttonRadius(64) * 1.25 = 19.2 * 1.25.
+ * Pause is an icon-only BUTTON_SQUARE (64 x 64) at PAUSE_BUTTON_SIZE 0.75, Go home is BUTTON_WIDE
+ * (200 x 64) at size 1, Dash is BUTTON_SQUARE at DASH_BUTTON_SIZE 1.25 with corner
+ * buttonRadius(64) * 1.25 = 19.2 * 1.25.
  */
-const PAUSE_SIZE: Size = { w: 160, h: 51.2 };
+const PAUSE_SIZE: Size = { w: 48, h: 48 };
 const GO_HOME_SIZE: Size = { w: 200, h: 64 };
 const DASH_SIZE: Size = { w: 80, h: 80 };
 const DASH_CORNER_R = 24;
 
 /**
- * Status panel metrics from src/scenes/HudScene.ts: 12 px padding round a 32 px icon row, so every
- * panel is 56 tall; the counter reads snacksLeftLabel() at every width.
+ * Status panel metrics from src/scenes/HudScene.ts: every panel is PANEL_H (48) tall with 6 px
+ * padding across. The counter is a 28 px snack icon, 6 px, then snacksLeftLabel() in bold 22 px;
+ * the legs panel is four 28 px leg icons 4 apart, with no label.
  */
-const PANEL_H = 56;
-const PANEL_PAD = 12;
-const PANEL_ICON_PX = 32;
+const PANEL_H = 48;
+const PANEL_PAD = 6;
+const PANEL_ICON_PX = 28;
 const PANEL_TEXT_PX = 22;
 const COUNTER_ICON_GAP = 6;
-const LEGS_ICON_PX = 32;
+const LEGS_ICON_PX = 28;
 const LEGS_ICON_GAP = 4;
-const LEGS_LABEL_GAP = 6;
-const BAG_STATUS_PX = 18;
-const BAG_GAP = 6;
 
 /** Panel label advance per em: narrow and wide, so every Go home tier is covered. */
 const PANEL_EMS: Readonly<Record<PanelWidth, number>> = { narrow: 0.45, wide: 0.6 };
@@ -83,7 +74,6 @@ const CANVAS_HEIGHTS: readonly number[] = [
 
 const ZONE = buildCanalZone();
 const SNACK_TOTAL = ZONE.collectibles.length;
-const FIND_TOTAL = ZONE.finds.length;
 
 /** One find toast's text: the bold name over the bold detail line beside the badge. */
 interface ToastText {
@@ -113,6 +103,9 @@ const COMBINATION_TOASTS: readonly ToastText[] = [...new Set([...SORTED_TOASTS.s
 /** Two-digit snacks-left count: the longest closed-exit message the snack banner shows. */
 const MOST_SNACKS_LEFT = 16;
 const EXIT_CLOSED_BANNER = exitClosedText(MOST_SNACKS_LEFT);
+
+/** The snack counter label the panels are sized for: a two-digit count, at least the canal's snacks. */
+const COUNTER_LABEL = snacksLeftLabel(Math.max(SNACK_TOTAL, MOST_SNACKS_LEFT));
 
 /** Every message the snack banner shows: the closed exit, the last snack, the plastic worm and the ghost net. */
 const SNACK_BANNER_TEXTS: readonly string[] = [
@@ -220,20 +213,13 @@ function supportedCanvases(): Canvas[] {
   return canvases;
 }
 
-/** Snack counter, legs and Trip Bag panel sizes the way HudScene lays them out, labels at `em`. */
-function panelSizes(em: number): Pick<HudControlSizes, 'counter' | 'legs' | 'bag'> {
-  const counterLabel = snacksLeftLabel(SNACK_TOTAL);
-  const counterW = 2 * PANEL_PAD + PANEL_ICON_PX + COUNTER_ICON_GAP + textWidth(counterLabel, PANEL_TEXT_PX, em);
-  const iconsW = LEGS.count * LEGS_ICON_PX + (LEGS.count - 1) * LEGS_ICON_GAP;
-  const legsW = 2 * PANEL_PAD + textWidth(LEGS_LABEL, PANEL_TEXT_PX, em) + LEGS_LABEL_GAP + iconsW;
-  const countW = textWidth(String(FIND_TOTAL), PANEL_TEXT_PX, em);
-  const statusW = Math.max(textWidth(tripBagStatus(0), BAG_STATUS_PX, em), textWidth(tripBagStatus(1), BAG_STATUS_PX, em));
-  const bagLabelW = textWidth(TRIP_BAG_LABEL, PANEL_TEXT_PX, em);
-  const bagW = 2 * PANEL_PAD + PANEL_ICON_PX + 3 * BAG_GAP + bagLabelW + countW + statusW;
+/** Snack counter and legs panel sizes the way HudScene lays them out, the counter label at `em`. */
+function panelSizes(em: number): Pick<HudControlSizes, 'counter' | 'legs'> {
+  const counterW = 2 * PANEL_PAD + PANEL_ICON_PX + COUNTER_ICON_GAP + textWidth(COUNTER_LABEL, PANEL_TEXT_PX, em);
+  const legsW = 2 * PANEL_PAD + LEGS.count * LEGS_ICON_PX + (LEGS.count - 1) * LEGS_ICON_GAP;
   return {
     counter: { w: counterW, h: PANEL_H },
     legs: { w: legsW, h: PANEL_H },
-    bag: { w: bagW, h: PANEL_H },
   };
 }
 
@@ -374,13 +360,13 @@ function cutsBetween(lo: number, hi: number, edges: readonly number[]): number[]
 }
 
 /**
- * Whether the part of `rect` inside the play middle lies on the snack counter, legs and Trip Bag
- * panels themselves (no open water): every cell of the grid cut at the panel edges has its centre
- * on a panel.
+ * Whether the part of `rect` inside the play middle lies on the snack counter and legs panels
+ * themselves (no open water): every cell of the grid cut at the panel edges has its centre on a
+ * panel.
  */
 function coversOnlyPanelsInMiddle(rect: Rect, view: HudView, controls: HudControls): boolean {
   const middle = playMiddle(view);
-  const panels = [controls.counter, controls.legs, controls.bag];
+  const panels = [controls.counter, controls.legs];
   const left = Math.max(rect.x, middle.x);
   const right = Math.min(rect.x + rect.w, middle.x + middle.w);
   const top = Math.max(rect.y, middle.y);
@@ -423,6 +409,17 @@ function topEdgeProblems(overlayCase: OverlayCase): string[] {
   return [`${overlayCase.label}: toast at ${JSON.stringify(placement)}`];
 }
 
+/**
+ * What waits shown alone at 460 wide (320 to 360 tall) with narrow panels and Go home visible: Go
+ * home sits under Pause there, clear of the legs panel, and leaves too little of the top band.
+ */
+const NARROW_460_WAITS: readonly string[] = [
+  'findToast "Rainbow dragonfly wings"',
+  'findToast "Tie-dye galaxy Paint shell"',
+  'findToast "Little bailing bucket"',
+  'snackBanner',
+];
+
 /** Every HUD state on every supported canvas. */
 function allHudCases(): HudCase[] {
   return supportedCanvases().flatMap(canvasHudCases);
@@ -440,6 +437,32 @@ describe('estimateLines', () => {
   it('sizes a wrapped block by its widest line', () => {
     expect(estimateSize('aaaa bbbb cc', 10, 90, 1)).toEqual({ w: 90, h: 25 });
     expect(estimateSize('aaaa bbbb', 10, Infinity, 1)).toEqual({ w: 90, h: 12.5 });
+  });
+});
+
+/** Problems with one HUD state's top row: counter, legs and Pause on one row at the margin, inside the margins, a gap apart, at most PANEL_H tall. */
+function rowProblems(hud: HudCase): string[] {
+  const { counter, legs, pause } = hud.controls;
+  const row = [counter, legs, pause];
+  const problems: string[] = [];
+  if (!row.every((rect) => rect.y === HUD.margin)) problems.push('not on one row at the margin');
+  if (!row.every((rect) => rect.h <= PANEL_H)) problems.push(`taller than ${PANEL_H}`);
+  if (counter.x < HUD.margin) problems.push('counter left of the margin');
+  if (pause.x + pause.w > hud.view.cssW - HUD.margin + EPSILON) problems.push('Pause right of the margin');
+  if (counter.x + counter.w + HUD.gap > legs.x + EPSILON) problems.push('counter and legs under a gap apart');
+  if (legs.x + legs.w + HUD.gap > pause.x + EPSILON) problems.push('legs and Pause under a gap apart');
+  return problems.map((problem) => `${hud.label}: ${problem}`);
+}
+
+describe('HUD top row', () => {
+  it('sizes the counter for a two-digit count', () => {
+    expect(COUNTER_LABEL).toHaveLength(2);
+  });
+
+  it('puts the counter, legs and Pause on one row at the margin on every supported canvas, at both panel widths', () => {
+    const huds = allHudCases();
+    expect(huds.length).toBeGreaterThan(0);
+    expect(huds.flatMap(rowProblems)).toEqual([]);
   });
 });
 
@@ -480,22 +503,20 @@ describe('HUD overlay fit', () => {
   );
 
   it(
-    'places each banner alone on every supported canvas, and each toast alone at least 375 tall or 520 wide',
+    'places each banner alone on every supported canvas, and each toast alone at least 375 tall or 520 wide, Go home hidden',
     () => {
-      // A banner with no place at 24 px retries at 20 px, so every banner alone finds a place on
-      // every supported canvas. The toast never shrinks: below 375 tall and 520 wide (460 and 480
-      // wide, 360 tall or less on this grid) a long toast may have no place outside the open
-      // middle and wait (X10); the next test pins those waits. Long pond names wait the same way:
-      // with Go home visible at 460 x 320 and 460 x 340, "Rainbow dragonfly wings" and Area 9's
-      // "Little bailing bucket" wait as Area 5's "Tie-dye galaxy Paint shell" does, never
-      // overlapping. A toast with Go home visible
-      // is unreachable: trip.ts banks a non-empty bag inside the ring in the same step, and
-      // HudScene clears the toast on 'banked'.
-      const huds = allHudCases();
+      // A banner with no place at 24 px retries at 20 px, so with Go home hidden every banner alone
+      // finds a place on every supported canvas. The toast never shrinks: below 375 tall and 520
+      // wide (460 and 480 wide, 360 tall or less on this grid) a long toast may have no place
+      // outside the open middle and wait (X10). With Go home visible under Pause at 460 wide and
+      // narrow panels, the snack banner and the long toasts ("Rainbow dragonfly wings", Area 5's
+      // "Tie-dye galaxy Paint shell" and Area 9's "Little bailing bucket") wait until the explorer
+      // leaves the Home Spot ring; the next test pins those waits. A toast with Go home visible is
+      // unreachable: trip.ts banks a non-empty bag inside the ring in the same step, and HudScene
+      // clears the toast on 'banked'.
+      const huds = allHudCases().filter((hud) => !hud.goHomeVisible);
       const roomy = huds.filter(({ view }) => view.cssH >= 375 || view.cssW >= 520);
-      const toastCases = roomy
-        .filter((hud) => !hud.goHomeVisible)
-        .flatMap((hud) => ALL_TOASTS.map((toast) => runCase(hud, { ids: ['findToast'], toast })));
+      const toastCases = roomy.flatMap((hud) => ALL_TOASTS.map((toast) => runCase(hud, { ids: ['findToast'], toast })));
       const bannerCases = huds.flatMap((hud) => BANNER_IDS.map((id) => runCase(hud, { ids: [id], toast: null })));
       const problems = [
         ...toastCases.flatMap((overlayCase) => unplacedProblems(overlayCase, 'findToast')),
@@ -508,44 +529,40 @@ describe('HUD overlay fit', () => {
   );
 
   it.each([
-    {
-      cssW: 460,
-      cssH: 320,
-      shown: [
-        'findToast "Rainbow dragonfly wings"',
-        'findToast "Tie-dye galaxy Paint shell"',
-        'findToast "Little bailing bucket"',
-      ],
-      hidden: [],
-    },
-    {
-      cssW: 460,
-      cssH: 340,
-      shown: [
-        'findToast "Rainbow dragonfly wings"',
-        'findToast "Tie-dye galaxy Paint shell"',
-        'findToast "Little bailing bucket"',
-      ],
-      hidden: [],
-    },
-    { cssW: 460, cssH: 360, shown: [], hidden: [] },
-    { cssW: 480, cssH: 320, shown: [], hidden: [] },
-    { cssW: 480, cssH: 340, shown: [], hidden: [] },
-    { cssW: 480, cssH: 360, shown: [], hidden: [] },
-    { cssW: 320, cssH: 440, shown: [], hidden: [] },
-    { cssW: 390, cssH: 440, shown: [], hidden: [] },
-    { cssW: 667, cssH: 375, shown: [], hidden: [] },
-    { cssW: 844, cssH: 360, shown: [], hidden: [] },
-    { cssW: 1024, cssH: 360, shown: [], hidden: [] },
+    { cssW: 460, cssH: 320, narrowShown: NARROW_460_WAITS, wideShown: [], hidden: [] },
+    { cssW: 460, cssH: 340, narrowShown: NARROW_460_WAITS, wideShown: [], hidden: [] },
+    { cssW: 460, cssH: 360, narrowShown: NARROW_460_WAITS, wideShown: [], hidden: [] },
+    { cssW: 480, cssH: 320, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 480, cssH: 340, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 480, cssH: 360, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 320, cssH: 440, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 390, cssH: 440, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 667, cssH: 375, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 844, cssH: 360, narrowShown: [], wideShown: [], hidden: [] },
+    { cssW: 1024, cssH: 360, narrowShown: [], wideShown: [], hidden: [] },
   ])(
     'holds exactly these messages, each shown alone, at $cssW x $cssH',
-    ({ cssW, cssH, shown, hidden }) => {
+    ({ cssW, cssH, narrowShown, wideShown, hidden }) => {
+      const shownBy: Readonly<Record<PanelWidth, readonly string[]>> = { narrow: narrowShown, wide: wideShown };
       for (const panelWidth of PANEL_WIDTHS) {
         for (const goHomeVisible of [true, false]) {
           const hud = makeHudCase({ cssW, cssH }, panelWidth, goHomeVisible);
-          expect(aloneWaits(hud), hud.label).toEqual(goHomeVisible ? shown : hidden);
+          expect(aloneWaits(hud), hud.label).toEqual(goHomeVisible ? shownBy[panelWidth] : hidden);
         }
       }
+    },
+    FIT_TIMEOUT_MS,
+  );
+
+  it(
+    'holds a message shown alone only at 460 wide with narrow panels and Go home visible',
+    () => {
+      const problems = allHudCases().flatMap((hud) => {
+        const waits = aloneWaits(hud);
+        const pinned = hud.view.cssW === 460 && hud.goHomeVisible && hud.label.includes('narrow panels');
+        return waits.length === 0 || pinned ? [] : [`${hud.label}: ${waits.join(', ')}`];
+      });
+      expect(problems).toEqual([]);
     },
     FIT_TIMEOUT_MS,
   );
