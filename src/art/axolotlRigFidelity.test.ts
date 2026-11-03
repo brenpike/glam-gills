@@ -1475,11 +1475,12 @@ const IRIDESCENT_CASES: readonly [AxolotlArtLook, number, RigRenderer][] = [
 ];
 
 /** The sheen Dream colours (isSheenDream) and the names their checks carry. */
-const SHEEN_DREAMS = ['iridescent', 'crystal-shine', 'fiesta-shine'] as const satisfies readonly DreamLookId[];
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine', 'fiesta-shine', 'lantern-shine'] as const satisfies readonly DreamLookId[];
 const SHEEN_NAME: Readonly<Record<(typeof SHEEN_DREAMS)[number], string>> = {
   iridescent: 'Iridescent',
   'crystal-shine': 'Crystal shine',
   'fiesta-shine': 'Fiesta shine',
+  'lantern-shine': 'Lantern shine',
 };
 
 const sheenPalette = (dream: DreamLookId, n: number): MorphPalette => axolotlPalette(MORPHS[n % MORPHS.length], dream);

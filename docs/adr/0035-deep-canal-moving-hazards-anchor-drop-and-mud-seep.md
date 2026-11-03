@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-01
 - Updated: 2026-11-01. The owner approved both fact cards' copy (PRD open questions 592 and 593).
+- Updated: 2026-11-02. Area 9 (#107) now places two anchor drops and two mud seeps ([ADR 0037](0037-hub-areas-murky-water-and-the-bailing-bucket.md)), so the ids `'anchor-drop'` and `'mud-seep'` are fixed for good, and both fact cards are in the Collection Book. The Decision below is unchanged.
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (kid safety, which keeps the new hazards and their cards gentle), [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (the moving hazard type and its shaft rule, which both new hazards use as they are, and ids that are fixed for good once saved), [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (the danger bar's whole-water test, which counts them), [ADR 0028](0028-descent-areas-crayfish-and-dark-water.md) (the stalactite drip and the geyser vent, the last moving hazard types added), [ADR 0030](0030-spring-cave-danger-tuning.md) (the drip's and the geyser's fixed art lengths, which these follow)
 
 This ADR records the build choices for issue #194: two new moving hazard types for the deep canal, the anchor drop and the mud seep, each with its own fact card and art. Q1 to Q3 are the owner's decisions on #194 (2026-11-01). Every value here is provisional, and the owner can tune any of them once a real area places them.
@@ -50,6 +51,7 @@ The anchor drop has the pole's 1.0 s warning and a slower pull back up. The mud 
 - In the dev danger area, the two cards show again each session. The save's repair step drops met hazard ids that no real area knows, so the dev cards are not kept.
 - The ids `'anchor-drop'` and `'mud-seep'` become fixed for good once a real area saves them ([ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md)). Until Area 9 (#107) ships they can still be renamed.
 - Any later area can place either type as area data, with its own depth up to the type's deepest, and nothing else needs to change.
+- Since 2026-11-02, Area 9 (#107) places two anchor drops on its main path, each lowered 140 px, and two mud seeps on its bed, each rising 200 px ([ADR 0037](0037-hub-areas-murky-water-and-the-bailing-bucket.md)). With Area 9 in the game, the ids `'anchor-drop'` and `'mud-seep'` are fixed for good and can no longer be renamed. Both fact cards are in the Collection Book, and a player unlocks them by meeting the hazards in Area 9.
 
 ## Alternatives considered
 

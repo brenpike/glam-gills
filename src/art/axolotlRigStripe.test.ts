@@ -405,7 +405,7 @@ const inBox = (box: Box, x: number, y: number): boolean =>
 
 const MARKS = DREAM_SWATCH.iridescent.marks;
 /** The sheen Dream colours (isSheenDream), whose stripe tailStripe draws. */
-const SHEEN_DREAMS = ['iridescent', 'crystal-shine', 'fiesta-shine'] as const satisfies readonly DreamLookId[];
+const SHEEN_DREAMS = ['iridescent', 'crystal-shine', 'fiesta-shine', 'lantern-shine'] as const satisfies readonly DreamLookId[];
 /** The pattern paints of drawAxolotl carry three clips: silhouette, inset Dream clip, face limit. */
 const PATTERN_CLIPS = 3;
 const EXACT = 1e-6;
@@ -541,6 +541,18 @@ describe('tailStripe', () => {
     });
   }
 
+  for (const look of LOOKS) {
+    it(`covers exactly the Lantern shine stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
+      const tally = newTally();
+      tallyLook('lantern-shine', look, tally);
+      expect(tally.first).toBeNull();
+      expect(tally.mismatches).toBe(0);
+      expect(tally.overlaps).toBe(0);
+      expect(tally.strays).toBe(0);
+      expect(tally.covered).toBeGreaterThan(1000);
+    });
+  }
+
   it('fills each band with its parsed Iridescent mark, white first', () => {
     const parse = (css: string): [number, number] => {
       const m = /^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/.exec(css);
@@ -568,6 +580,14 @@ describe('tailStripe', () => {
     expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
       [0xffe14a, 0.85],
       [0x40e0d0, 0.8],
+    ]);
+  });
+
+  it('fills each band with its parsed Lantern shine mark, candle cream first', () => {
+    const stripe = tailStripe('lantern-shine', DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
+    expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
+      [0xfff6cc, 0.85],
+      [0xffd666, 0.8],
     ]);
   });
 

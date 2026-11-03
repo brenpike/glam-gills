@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DrawnBody } from './collectibles';
-import { createEncounter, createEncounterContext, predatorSpecies } from './encounter';
+import { BAILING_BUCKETS, bailingBoatSpawn, tossPose } from './bailingBuckets';
+import { createEncounter, createEncounterContext, predatorSpecies, stepEncounterOutOfWater } from './encounter';
 import { HERON_MEET_RANGE, meetsTilapia, type FactCard } from './factCards';
 import { GHOST_NET, createGhostNets, isSnagged, netDrift } from './ghostNets';
 import { GLOW_PLANTS, glowPlantSpawn, type DarkWater } from './glowPlants';
@@ -15,6 +16,7 @@ import {
 import { GAME_EVENTS, REGISTRY_KEYS } from './gameEvents';
 import { createLegs, isProtected, presentCount, tryHit, type LegsState } from './legs';
 import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
+import { MURKY_WATER_TIMING, createMurkyTimer, murkyPatchSpawn } from './murkyWater';
 import { CANAL_AREA } from './areas';
 import { treasureById } from './catalogue';
 import { TRAJINERAS, trajineraSpawn } from './trajineras';
@@ -24,6 +26,7 @@ import {
   createTrip,
   createTripContext,
   eatPlasticWorms,
+  eatSnacks,
   foundInfo,
   followReducedMotion,
   foundInfos,
@@ -37,7 +40,9 @@ import {
   sameTripSnapshot,
   stepTrip,
   tripAxolotlPos,
+  tripMurkyGauge,
   tripSnapshot,
+  tripTossPose,
   type CarryState,
   type TripEvent,
   type TripInput,
@@ -2986,5 +2991,255 @@ describe('gliding trajineras in the trip (issue #78, ND-8)', () => {
     const next = newTrip(done, 42);
     expect(next.trajineras).toEqual({ ...pushed.trajineras, cooldowns: [0] });
     expect(next).toEqual(createTrip(boatZone, LEGS, [], 42));
+  });
+});
+
+describe('murky water in the trip (issue #107, ND-1)', () => {
+  const patch = murkyPatchSpawn('canal/murky-1', { x0: 900, x1: 1100, y0: 150, y1: 290 });
+  const murkyZone: TripSource = { ...findZone, hazards: [patch] };
+  const inPatch: Point = { x: 1000, y: 200 };
+  const patchCentre: Point = { x: 1000, y: 220 };
+  const clean: Point = { x: 800, y: 200 };
+  const shellCtx = createTripContext({ encounter: createEncounterContext({ legs: { ...LEGS, regrowTime: 1e9 }, shell: true }) });
+
+  /** Steps the trip at `pos` for `seconds`, in DT steps, collecting the events. */
+  function stay(state: TripState, pos: Point, seconds: number, tripCtx = ctx): Drive {
+    let current = state;
+    const events: TripEvent[] = [];
+    let last: TripStepResult = { state, events: [] };
+    const steps = Math.round(seconds / DT);
+    for (let step = 0; step < steps; step++) {
+      last = stepTrip(current, { axolotlPos: pos, reduced: false, dashing: false }, DT, tripCtx);
+      current = last.state;
+      events.push(...last.events);
+    }
+    return { state: current, events, last, seconds: steps * DT };
+  }
+
+  it('starts every trip with a fresh timer, and never steps it in an area with no patch', () => {
+    expect(createTrip(murkyZone).murkyTimer).toEqual(createMurkyTimer());
+    const plain = createTrip(findZone);
+    expect(stepAt(plain, clean).state.murkyTimer).toBe(plain.murkyTimer);
+    expect(tripMurkyGauge(plain)).toEqual({ meter: 0, warning: false });
+  });
+
+  it('builds the timer inside a patch and shows the warning at 2 s, with the meter at time / 3', () => {
+    const before = stay(createTrip(murkyZone), inPatch, MURKY_WATER_TIMING.warnAt - 0.1).state;
+    expect(tripMurkyGauge(before).warning).toBe(false);
+    expect(tripMurkyGauge(before).meter).toBeCloseTo((MURKY_WATER_TIMING.warnAt - 0.1) / MURKY_WATER_TIMING.legAt, 6);
+    const warned = stay(before, inPatch, 0.2).state;
+    expect(tripMurkyGauge(warned).warning).toBe(true);
+    expect(warned.legsLost).toBe(0);
+  });
+
+  it('lands one hit at 3 s through the shared hit path, from the patch centre, then restarts the timer', () => {
+    const { state, events } = stay(createTrip(murkyZone), inPatch, MURKY_WATER_TIMING.legAt + DT);
+    expect(events.filter((event) => event.type === 'hit')).toEqual([{ type: 'hit', sourceId: 'murky-water', leg: 0, from: patchCentre }]);
+    expect(state.legsLost).toBe(1);
+    expect(presentCount(state.encounter.legs)).toBe(LEGS.count - 1);
+    expect(isProtected(state.encounter.legs)).toBe(true);
+    expect(state.murkyTimer.built).toBeLessThan(DT * 2);
+    expect(tripMurkyGauge(state)).toMatchObject({ warning: false });
+  });
+
+  it('holds the timer while protected time runs, so a second hit waits for protection to end and 3 s more', () => {
+    const hit = stay(createTrip(murkyZone), inPatch, MURKY_WATER_TIMING.legAt + DT).state;
+    const protectedRun = stay(hit, inPatch, LEGS.protectedTime - 0.1);
+    expect(protectedRun.state.murkyTimer).toEqual(hit.murkyTimer);
+    const later = stay(protectedRun.state, inPatch, MURKY_WATER_TIMING.legAt + 0.2);
+    expect(later.events.filter((event) => event.type === 'hit')).toHaveLength(1);
+    expect(later.state.legsLost).toBe(2);
+  });
+
+  it('resets after 1 s in clean water, and holds after a shorter time out', () => {
+    const built = stay(createTrip(murkyZone), inPatch, 1.5).state;
+    const shortOut = stay(built, clean, MURKY_WATER_TIMING.clearAfter - 0.2).state;
+    expect(shortOut.murkyTimer.built).toBeCloseTo(built.murkyTimer.built, 9);
+    const longOut = stay(built, clean, MURKY_WATER_TIMING.clearAfter + 0.1).state;
+    expect(longOut.murkyTimer.built).toBe(0);
+    const back = stay(shortOut, inPatch, 1.6);
+    expect(back.events.filter((event) => event.type === 'hit')).toHaveLength(1);
+  });
+
+  it('lets the Shell perk block the murky hit', () => {
+    const { state, events } = stay(createTrip(murkyZone), inPatch, MURKY_WATER_TIMING.legAt + DT, shellCtx);
+    expect(events.filter((event) => event.type === 'hit' || event.type === 'shellBlock')).toEqual([
+      { type: 'shellBlock', sourceId: 'murky-water', from: patchCentre },
+    ]);
+    expect(state.legsLost).toBe(0);
+    expect(presentCount(state.encounter.legs)).toBe(LEGS.count);
+    expect(state.encounter.shellUsed).toBe(true);
+  });
+
+  it('carries the axolotl home when the murky hit takes the last leg', () => {
+    const start = createTrip(murkyZone);
+    let legs = createLegs();
+    for (let lost = 0; lost < LEGS.count - 1; lost++) legs = { ...tryHit(legs).state, protectedLeft: 0 };
+    const lastLeg: TripState = { ...start, encounter: { ...start.encounter, legs } };
+    const drove = drive(lastLeg, { axolotlPos: inPatch, reduced: false, dashing: false }, 'carryStart', 5);
+    expect(drove.events.map((event) => event.type).filter((type) => type === 'hit' || type === 'carryStart')).toEqual(['hit', 'carryStart']);
+    expect(drove.state.phase).toBe('carrying');
+    expect(drove.state.legsLost).toBe(1);
+  });
+
+  it('meets murky water once the centre enters a patch outside the Home Spot', () => {
+    expect(stepAt(createTrip(murkyZone), clean).state.met).toEqual([]);
+    expect(stepAt(createTrip(murkyZone), inPatch).state.met).toEqual(['murky-water']);
+  });
+
+  it('starts a fresh timer on newTrip', () => {
+    const built = stay(createTrip(murkyZone), inPatch, 1).state;
+    const done = goHome({ ...built, inHomeSpot: true }).state;
+    expect(newTrip(done, 42)).toEqual(createTrip(murkyZone, LEGS, [], 42));
+  });
+});
+
+describe('bailing buckets in the trip (issue #107, ND-2)', () => {
+  const landing: Point = { x: 700, y: 260 };
+  /** Offset -6 puts the bucket 6 s into its 7 s cycle at element time 0: dipping until element time 1. */
+  const boat = bailingBoatSpawn('canal/bailing-1', -6, { x0: 1300, x1: 1500, bucketX: 1400, landing }, swimBounds(zone));
+  const restingBoat = bailingBoatSpawn('canal/bailing-2', 0, { x0: 1300, x1: 1500, bucketX: 1400, landing }, swimBounds(zone));
+  const patch = murkyPatchSpawn('canal/murky-1', { x0: 1300, x1: 1500, y0: 100, y1: 290 });
+  const boatZone: TripSource = { ...findZone, bailingBoats: [boat] };
+  const underBucket: Point = { x: 1400, y: 120 };
+
+  /** Steps the trip until `splashDown`, with the axolotl input at `pos`, collecting the events. */
+  function tossUntilLanded(state: TripState, pos: Point, reduced = false): Drive {
+    return drive(state, { axolotlPos: pos, reduced, dashing: true }, 'splashDown', 5);
+  }
+
+  it('copies the boats with no toss, and has none in an area with no boats', () => {
+    const trip = createTrip(boatZone);
+    expect(trip.bailingBoats).toEqual([boat]);
+    expect(trip.bailingBoats[0]).not.toBe(boat);
+    expect(trip.bailingBoats[0].bailing.landing).not.toBe(boat.bailing.landing);
+    expect(trip.toss).toBeNull();
+    expect(createTrip(zone).bailingBoats).toEqual([]);
+    expect(createTrip({ ...zone, bailingBoats: [] })).toEqual(createTrip(zone));
+  });
+
+  it('scoops the axolotl whose centre is in the catch box during the dip, starting the toss', () => {
+    const result = stepAt(createTrip(boatZone), underBucket);
+    expect(result.events).toEqual([{ type: 'scoop', boatId: boat.id, at: underBucket }]);
+    expect(result.state.toss).toEqual({ boatId: boat.id, elapsed: 0, reduced: false });
+    expect(result.state.phase).toBe('swimming');
+    expect(tripAxolotlPos(result.state)).toEqual({ x: 1400, y: SURF });
+    expect(tripTossPose(result.state)).toEqual(tossPose(boat, 0, false));
+  });
+
+  it('never scoops outside the dip or outside the catch box', () => {
+    expect(stepAt(createTrip({ ...findZone, bailingBoats: [restingBoat] }), underBucket).state.toss).toBeNull();
+    expect(stepAt(createTrip(boatZone), { x: 1400, y: SURF + BAILING_BUCKETS.catchDepth + 10 }).state.toss).toBeNull();
+    expect(stepAt(createTrip(boatZone), { x: 1460, y: 120 }).state.toss).toBeNull();
+  });
+
+  it('lands at the landing point after the toss time: splashDown and landed, no leg, no hit, no protected time', () => {
+    const caught = stepAt(createTrip(boatZone), underBucket).state;
+    const tossed = tossUntilLanded(caught, spotA);
+    expect(tossed.events.map((event) => event.type)).toEqual(['splashDown']);
+    expect(tossed.events[0]).toEqual({ type: 'splashDown', boatId: boat.id, at: landing });
+    expect(tossed.last.landed).toEqual(landing);
+    expect(tossed.last).not.toHaveProperty('impulse');
+    expect(tossed.seconds).toBeGreaterThanOrEqual(BAILING_BUCKETS.tossFor - 1e-9);
+    expect(tossed.seconds).toBeLessThan(BAILING_BUCKETS.tossFor + 2 * DT);
+    const landed = tossed.state;
+    expect(landed.toss).toBeNull();
+    expect(landed.phase).toBe('swimming');
+    expect(landed.legsLost).toBe(0);
+    expect(presentCount(landed.encounter.legs)).toBe(LEGS.count);
+    expect(isProtected(landed.encounter.legs)).toBe(false);
+    expect(tripAxolotlPos(landed)).toBeNull();
+  });
+
+  it('ignores the input during the toss: no find, Dash pot, meeting, murky time or snag acts on the axolotl', () => {
+    const net: HazardSpawn = { id: 'canal/net-1', type: GHOST_NET, shape: { kind: 'circle', x: spotA.x, y: spotA.y, r: 40 } };
+    const source: TripSource = { ...findZone, hazards: [patch, net], bailingBoats: [boat] };
+    const caught = stepAt(createTrip(source), underBucket).state;
+    expect(caught.met).toEqual([]);
+    const tossed = tossUntilLanded(caught, spotA);
+    expect(tossed.state.holdings).toEqual(caught.holdings);
+    expect(tossed.state.found).toEqual([]);
+    expect(tossed.state.met).toEqual([]);
+    expect(tossed.state.murkyTimer).toEqual(createMurkyTimer());
+    expect(isSnagged(tossed.state.ghostNets)).toBe(false);
+    expect(tossed.state.touchingPots).toEqual(caught.touchingPots);
+  });
+
+  it('resets the murky timer on the catch', () => {
+    const source: TripSource = { ...findZone, hazards: [patch], bailingBoats: [{ ...boat, offset: -5 }] };
+    let state = createTrip(source);
+    for (let step = 0; step < 30; step++) state = stepAt(state, underBucket).state;
+    expect(state.murkyTimer.built).toBeGreaterThan(0);
+    expect(state.toss).toBeNull();
+    let caught = state;
+    while (caught.toss === null) caught = stepAt(caught, underBucket).state;
+    expect(caught.murkyTimer).toEqual(createMurkyTimer());
+  });
+
+  it('steps the encounter out of the water at the toss pose, and the element clock on', () => {
+    const caught = stepAt(createTrip(boatZone), underBucket).state;
+    const next = stepAt(caught, spotA).state;
+    const pose = tossPose(boat, 0, false);
+    expect(next.encounter).toEqual(stepEncounterOutOfWater(caught.encounter, pose.pos, DT, ctx.encounter).state);
+    expect(next.elementTime).toBeCloseTo(caught.elementTime + DT, 9);
+    expect(next.toss?.elapsed).toBeCloseTo(DT, 9);
+  });
+
+  it('lets no predator strike during the toss', () => {
+    const lunger: PredatorRoute = { id: 'lunger', species: TILAPIA_SPECIES, waypoints: [{ x: 1450, y: 140 }] };
+    const source: TripSource = { ...boatZone, predatorRoutes: [lunger] };
+    const caught = stepAt(createTrip(source), underBucket).state;
+    const tossed = tossUntilLanded(caught, underBucket);
+    expect(tossed.events.filter((event) => ['telegraph', 'lunge', 'hit', 'bump'].includes(event.type))).toEqual([]);
+    expect(tossed.state.legsLost).toBe(0);
+  });
+
+  it('follows reduced motion: a fade out at the bucket and a fade in at the landing point', () => {
+    const caught = stepTrip(createTrip(boatZone), { axolotlPos: underBucket, reduced: true, dashing: false }, DT, ctx).state;
+    expect(caught.toss?.reduced).toBe(true);
+    let state = caught;
+    for (let step = 0; step < 18; step++) state = stepTrip(state, { axolotlPos: underBucket, reduced: true, dashing: false }, DT, ctx).state;
+    const fading = tripTossPose(state);
+    expect(fading?.pos).toEqual({ x: 1400, y: SURF });
+    expect(fading?.alpha).toBeLessThan(1);
+    for (let step = 0; step < 36; step++) state = stepTrip(state, { axolotlPos: underBucket, reduced: true, dashing: false }, DT, ctx).state;
+    expect(tripTossPose(state)?.pos).toEqual(landing);
+    const full = stepTrip(state, { axolotlPos: underBucket, reduced: false, dashing: false }, DT, ctx).state;
+    expect(full.toss?.reduced).toBe(false);
+    expect(tripTossPose(full)?.alpha).toBe(1);
+  });
+
+  it('holds the toss while paused', () => {
+    const caught = stepAt(createTrip(boatZone), underBucket).state;
+    for (const dt of PAUSE_DTS) {
+      expect(stepTrip(caught, { axolotlPos: underBucket, reduced: false, dashing: false }, dt, ctx).state).toBe(caught);
+    }
+  });
+
+  it('eats no snack or plastic worm, meets no snack and allows no Go home or exit during the toss', () => {
+    const worm: HazardSpawn = { id: 'test/worm-a', type: PLASTIC_WORM, shape: { kind: 'circle', x: 1000, y: 200, r: 0 } };
+    const avoid: SpitAvoid = { bounds: swimBounds(), currents: [], safeArea: zone.safeArea };
+    const body: DrawnBody = { x: 1000 - SNACK_REACH.headAhead, y: 200, facing: 1, rotation: 0 };
+    const start = createTrip({ ...boatZone, hazards: [worm] });
+    expect(eatPlasticWorms(start, body, avoid).events).toHaveLength(1);
+    const caught = stepAt(start, underBucket).state;
+    expect(eatPlasticWorms(caught, body, avoid)).toEqual({ state: caught, events: [] });
+    const hurt: TripState = { ...caught, encounter: { ...caught.encounter, legs: regrowingLegs(0.3) } };
+    expect(eatSnacks(hurt, 1, ctx)).toEqual({ state: hurt, events: [], boosted: [] });
+    expect(meetSnacks(caught, ['worm'])).toBe(caught);
+    const inRing: TripState = { ...caught, inHomeSpot: true };
+    expect(goHome(inRing)).toEqual({ state: inRing, events: [] });
+    expect(beatArea(caught, { specialTreasureId: PLANT })).toEqual({ state: caught, events: [] });
+  });
+
+  it('never changes Star 3: a catch is not a leg lost', () => {
+    const landed = tossUntilLanded(stepAt(createTrip(boatZone), underBucket).state, underBucket).state;
+    expect(beatArea(landed, { specialTreasureId: PLANT }).state.ending?.stars?.legsOrRescue).toBe(true);
+  });
+
+  it('keeps the boats and starts with no toss on newTrip', () => {
+    const landed = tossUntilLanded(stepAt(createTrip(boatZone), underBucket).state, underBucket).state;
+    const done = goHome({ ...landed, inHomeSpot: true }).state;
+    expect(newTrip(done, 42)).toEqual(createTrip(boatZone, LEGS, [], 42));
   });
 });

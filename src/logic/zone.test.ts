@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { bailingBoatSpawn, bailingCatchBox } from './bailingBuckets';
 import { CANAL_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
 import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
@@ -1125,6 +1126,61 @@ describe('gliding trajineras in the layout (issue #78, ND-8)', () => {
   it('adds no trajineras key to a layout that has none, and keeps an empty list', () => {
     expect(buildCanalZone()).not.toHaveProperty('trajineras');
     expect(buildZone(canalWith({ trajineras: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), trajineras: [] });
+  });
+});
+
+const CANAL_BOUNDS = swimBounds(areaSize(ZONE_SCREENS, 1));
+const BAILING_BOATS = [
+  bailingBoatSpawn('canal/bailing-1', 0, { x0: 600, x1: 720, bucketX: 660, landing: { x: 300, y: 250 } }, CANAL_BOUNDS),
+  bailingBoatSpawn('canal/bailing-2', 3.5, { x0: 1400, x1: 1520, bucketX: 1460, landing: { x: 1100, y: 250 } }, CANAL_BOUNDS),
+];
+
+describe('bailing boats in the layout (issue #107, ND-2)', () => {
+  it.each(ALL_SEEDS)('keeps every snack start SNACK_HAZARD_CLEARANCE from every catch box for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ bailingBoats: BAILING_BOATS }), seed);
+    expect(zone.collectibles).toHaveLength(16);
+    for (const snack of zone.collectibles) {
+      for (const boat of BAILING_BOATS) {
+        const distance = shapeDistance(snack, bailingCatchBox(boat));
+        expect(distance, `${snack.id} is ${distance.toFixed(1)} px from ${boat.id}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
+      }
+    }
+  });
+
+  it('tests catch boxes that sit where the canal would put snacks', () => {
+    const tooClose = ALL_SEEDS.filter((seed) =>
+      buildCanalZone(seed).collectibles.some((snack) =>
+        BAILING_BOATS.some((boat) => shapeDistance(snack, bailingCatchBox(boat)) < SNACK_HAZARD_CLEARANCE),
+      ),
+    );
+    expect(tooClose.length).toBeGreaterThan(0);
+  });
+
+  it('copies the boats, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ bailingBoats: BAILING_BOATS }), 3);
+    expect(zone.bailingBoats).toEqual(BAILING_BOATS);
+    zone.bailingBoats?.forEach((boat, index) => {
+      expect(boat).not.toBe(BAILING_BOATS[index]);
+      expect(boat.type).not.toBe(BAILING_BOATS[index].type);
+      expect(boat.bailing).not.toBe(BAILING_BOATS[index].bailing);
+      expect(boat.bailing.landing).not.toBe(BAILING_BOATS[index].bailing.landing);
+    });
+  });
+
+  it('never puts a bailing boat in the elements', () => {
+    expect(buildZone(canalWith({ bailingBoats: BAILING_BOATS }), 3).elements).toEqual([]);
+  });
+
+  it.each(ALL_SEEDS)('copies the boats with no rand() draws when no catch box is near for seed %i', (seed) => {
+    const far = [{ ...BAILING_BOATS[0], bailing: { x0: -1000, x1: -880, bucketX: -940, landing: { x: 300, y: 250 } } }];
+    const { bailingBoats, ...rest } = buildZone(canalWith({ bailingBoats: far }), seed);
+    expect(bailingBoats).toEqual(far);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no bailingBoats key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('bailingBoats');
+    expect(buildZone(canalWith({ bailingBoats: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), bailingBoats: [] });
   });
 });
 

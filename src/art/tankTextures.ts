@@ -25,9 +25,9 @@ import { bake, type TexInfo } from './textures';
 /**
  * The Decorations that can stand in the Home Tank: the treasure icon slugs of the four canal
  * Decorations, the four pond ones, the six pond Area 3 ones, the six chinampa Area 4 ones, the five
- * chinampa Area 5 ones, the six spring cave Area 6 ones, the six spring cave Area 7 ones, then the six deep canal
- * Area 8 ones (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/` or `deep-canal/` in
- * src/logic/catalogue.ts), in catalogue order.
+ * chinampa Area 5 ones, the six spring cave Area 6 ones, the six spring cave Area 7 ones, the six deep canal
+ * Area 8 ones, then the six deep canal Area 9 ones (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/` or
+ * `deep-canal/` in src/logic/catalogue.ts), in catalogue order.
  * This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_SLUGS = [
@@ -74,6 +74,12 @@ export const TANK_DECORATION_SLUGS = [
   'painted-oar',
   'trajinera-flower-arch',
   'floating-flower-market',
+  'clay-jug',
+  'floating-cork',
+  'little-bailing-bucket',
+  'painted-name-sign',
+  'paper-lantern-boat',
+  'floating-music-stage',
 ] as const satisfies readonly TreasureIconSlug[];
 export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
 
@@ -87,7 +93,8 @@ export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
  * Fossil ammonite Rare, Crystal wind chime Rare, Geode lamp Epic, Crystal arch Legendary; Mossy rock Common,
  * Bubble stone Common, Ancient clay pot Rare, Glowing stalactite Rare, Bubble machine Epic, Underground waterfall
  * Legendary; Flower garland Common, Paper boat Common, Little trajinera Rare, Painted oar Rare, Trajinera flower
- * arch Epic, Floating flower market Legendary). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
+ * arch Epic, Floating flower market Legendary; Clay jug Common, Floating cork Common, Little bailing bucket Rare, Painted
+ * name sign Rare, Paper lantern boat Epic, Floating music stage Legendary). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeShape>> = {
   'pond-plant': 'circle',
@@ -133,6 +140,12 @@ export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeSh
   'painted-oar': 'diamond',
   'trajinera-flower-arch': 'shield',
   'floating-flower-market': 'star',
+  'clay-jug': 'circle',
+  'floating-cork': 'circle',
+  'little-bailing-bucket': 'diamond',
+  'painted-name-sign': 'diamond',
+  'paper-lantern-boat': 'shield',
+  'floating-music-stage': 'star',
 };
 
 /** Where a Decoration goes in the Home Tank: on the gravel, on the water surface, or from the glass top. */
@@ -194,6 +207,12 @@ export const TANK_DECORATION_SHAPES: Readonly<Record<TankDecorationSlug, TankDec
   'painted-oar': { placement: 'floor' },
   'trajinera-flower-arch': { placement: 'floor' },
   'floating-flower-market': { placement: 'floating' },
+  'clay-jug': { placement: 'floor' },
+  'floating-cork': { placement: 'floating' },
+  'little-bailing-bucket': { placement: 'floor' },
+  'painted-name-sign': { placement: 'hanging' },
+  'paper-lantern-boat': { placement: 'floating' },
+  'floating-music-stage': { placement: 'floating' },
 };
 
 /** The standard Decoration footprint in tank units (TANK.decorationPx): a width x this box. */

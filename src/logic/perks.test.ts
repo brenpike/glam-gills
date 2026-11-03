@@ -4,6 +4,7 @@ import {
   ALL_TREASURES,
   CHINAMPA_2_TREASURES,
   CHINAMPA_TREASURES,
+  DEEP_CANAL_2_TREASURES,
   DEEP_CANAL_TREASURES,
   PERK_VALUES,
   POND_2_TREASURES,
@@ -98,6 +99,9 @@ const AREA_6_WEARABLE_IDS: readonly string[] = SPRING_CAVE_TREASURES.filter((tre
   (treasure) => treasure.id,
 );
 const AREA_8_WEARABLE_IDS: readonly string[] = DEEP_CANAL_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
+  (treasure) => treasure.id,
+);
+const AREA_9_WEARABLE_IDS: readonly string[] = DEEP_CANAL_2_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
   (treasure) => treasure.id,
 );
 
@@ -230,6 +234,22 @@ describe('catalogue Wearable perks (F9)', () => {
       expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
     }
     expect(new Set(area8.map((wearable) => wearable.perk.type)).size).toBe(area8.length);
+  });
+
+  it('gives the Area 9 Wearables existing perks at the PERK_VALUES value for their rarity, no two the same type (ND-4)', () => {
+    const area9 = CATALOGUE_WEARABLES.filter((wearable) => AREA_9_WEARABLE_IDS.includes(wearable.id));
+    expect(area9.map((wearable) => [wearable.id, wearable.rarity, wearable.slot, wearable.perk])).toEqual([
+      ['deep-canal/bucket-hat', 'common', 'head', { type: 'treasureSense', value: 15 }],
+      ['deep-canal/rope-necklace', 'common', 'neck', { type: 'snackMagnet', value: 30 }],
+      ['deep-canal/poncho', 'rare', 'shirt', { type: 'regrowth', value: 15 }],
+      ['deep-canal/tail-bell', 'epic', 'tail', { type: 'speed', value: 8 }],
+      ['deep-canal/golden-boatman-cape', 'legendary', 'back', { type: 'dash', value: 25 }],
+    ]);
+    for (const wearable of area9) {
+      expect(PERK_ORDER, wearable.id).toContain(wearable.perk.type);
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+    }
+    expect(new Set(area9.map((wearable) => wearable.perk.type)).size).toBe(area9.length);
   });
 
   it('puts Shell only on Epic or Legendary Wearables', () => {

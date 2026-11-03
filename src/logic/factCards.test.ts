@@ -19,6 +19,8 @@ import {
   HERON_FACT,
   HERON_MEET_RANGE,
   MUD_SEEP_FACT,
+  MURKY_WATER_FACT,
+  MURKY_WATER_MEET_RANGE,
   PLASTIC_WORM_FACT,
   PUNTING_POLE_FACT,
   REFUGE_FACT_CARDS,
@@ -523,6 +525,46 @@ describe('anchor and mud seep fact card copy (issue #194)', () => {
       expect(text).not.toMatch(/\b(fire|flam\w*|burn\w*|volcan\w*|lava|rot\w*|smell\w*|stink\w*)\b/i);
     },
   );
+});
+
+describe('murky water fact card copy (issue #107)', () => {
+  it('has the murky-water id, name, title and body, and no hint of its own', () => {
+    expect(MURKY_WATER_FACT).toEqual({
+      id: 'murky-water',
+      name: 'Murky water',
+      title: 'Dirty water',
+      body: 'When rubbish and dirty water get into the canals, the water turns murky and it is harder for animals to breathe. Keeping the water clean helps axolotls and fish.',
+    });
+    expect(MURKY_WATER_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(MURKY_WATER_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      UNDERWATER_SPRINGS_FACT.id,
+      BLACK_BASS_FACT.id,
+      ANCHOR_DROP_FACT.id,
+      MUD_SEEP_FACT.id,
+      ...REFUGE_FACT_CARDS.map((card) => card.id),
+    ];
+    expect(others).not.toContain(MURKY_WATER_FACT.id);
+  });
+
+  it('is met at range 0, once the centre is in a patch (ND-1)', () => {
+    expect(MURKY_WATER_MEET_RANGE).toBe(0);
+  });
+
+  it.each([MURKY_WATER_FACT.name, MURKY_WATER_FACT.title, MURKY_WATER_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
 });
 
 describe('refuge fact card copy', () => {

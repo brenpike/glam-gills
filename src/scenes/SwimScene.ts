@@ -71,6 +71,7 @@ import {
   type MobileSnackPoseScene,
 } from '../logic/mobileSnacks';
 import { motionProfile, type MotionProfile } from '../logic/motion';
+import { murkyPatches } from '../logic/murkyWater';
 import {
   blockAtRock,
   createPebbles,
@@ -106,6 +107,7 @@ import {
   stepTrip,
   tripAxolotlPos,
   tripSnapshot,
+  tripTossPose,
   type TripContext,
   type TripEvent,
   type TripInput,
@@ -130,6 +132,7 @@ import {
   type SceneView,
   type SwimStart,
 } from './BootScene';
+import { BailingBucketView, type BailingBucketFrame } from './BailingBucketView';
 import { BlackBassView } from './BlackBassView';
 import { CarpView } from './CarpView';
 import { CrayfishView } from './CrayfishView';
@@ -144,6 +147,7 @@ import { HomeSpotView } from './HomeSpotView';
 import { HUD_EVENTS, type DashPotTipHeldPayload, type FactCardSeenPayload } from './HudScene';
 import { HyacinthMatView } from './HyacinthMatView';
 import { MobileSnackView } from './MobileSnackView';
+import { MurkyWaterView, type MurkyWaterFrame } from './MurkyWaterView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
 import { PebbleRoomView } from './PebbleRoomView';
@@ -345,6 +349,16 @@ export class SwimScene extends Phaser.Scene {
   private blackBassView: BlackBassView | null = null;
   /** The gliding trajineras, their shadows and push ripples, or null in an area with no gliding trajineras. */
   private trajineraView: TrajineraView | null = null;
+  /** The murky patches, the dim ring, the meter and the warning cue, or null in an area with no murky patches. */
+  private murkyWaterView: MurkyWaterView | null = null;
+  /** The reused render argument of the murky water view, made on its first frame. */
+  private murkyFrame: MurkyWaterFrame | null = null;
+  /** The bailing boats, their buckets, warnings, peek and splash, or null in an area with no bailing boats. */
+  private bailingBucketView: BailingBucketView | null = null;
+  /** The reused render argument of the bailing bucket view, made on its first frame. */
+  private bailingFrame: BailingBucketFrame | null = null;
+  /** The tossed axolotl's opacity (tripTossPose), 1 with no bailing bucket toss. */
+  private tossAlpha = 1;
   /** The dark layer over the area's dark water, or null in an area with no dark water. */
   private darkCaveView: DarkCaveView | null = null;
   /** The glow-plants and their hint, or null in an area with no glow-plants. */
@@ -463,6 +477,11 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView = null;
     this.blackBassView = null;
     this.trajineraView = null;
+    this.murkyWaterView = null;
+    this.murkyFrame = null;
+    this.bailingBucketView = null;
+    this.bailingFrame = null;
+    this.tossAlpha = 1;
     this.darkCaveView = null;
     this.glowPlantView = null;
     this.darkLightsNow = [];
@@ -647,6 +666,14 @@ export class SwimScene extends Phaser.Scene {
    * area's boat count: the same class as the residual below. The trip step builds each boat's hull
    * only near the surface (a body a full body reach under the hull band finds none), and a hold adds
    * one point and one swim state (holdOutOfHull) on a frame the hull moved the axolotl.
+   * Deep canal Area 9 (#107): Areas 1 to 8 build and call nothing new. MurkyWaterView and
+   * BailingBucketView are made once per trip, and only in an area with murky patches or with bailing
+   * boats. Both use textures baked at boot (the murky meter's fill steps are baked once when the view
+   * is built), reuse their sprites, take a render argument object the scene makes once and reuses,
+   * and swap a texture only when a swirl frame or a meter step changes; MurkyWaterView's only
+   * per-frame work that allocates is insideMurky's test. During a bailing bucket toss the scene
+   * builds the toss pose (tripTossPose) and one swim state per frame, as the carry home does
+   * (placeCarried): the same bounded class as the residual below, for the toss's 1.2 s only.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -667,8 +694,8 @@ export class SwimScene extends Phaser.Scene {
     this.tripSounds.handleFrame(this.trip, this.cameras.main.worldView);
     // INVARIANT: the trip step runs before the eat, so the eat reads the transform drawn this frame.
     this.captureDrawnFrame();
-    // INVARIANT: a trip that left swimming in its step eats nothing.
-    if (this.trip.phase === 'swimming') {
+    // INVARIANT: a trip that left swimming in its step, or is in a bailing bucket toss, eats nothing.
+    if (this.trip.phase === 'swimming' && this.trip.toss === null) {
       const head = headPoint(this.body);
       // INVARIANT: the dart and the shrimp flick run before the Snack magnet and the eat, so a darter
       // hops and a shrimp flicks before either reads it.
@@ -686,7 +713,28 @@ export class SwimScene extends Phaser.Scene {
     this.renderFrame(dt);
   }
 
+  /**
+   * One swimming frame of play: the swim step from this frame's steering, then the Tail Dash and the
+   * drift clock. During a bailing bucket toss (issue #107, ND-2) the trip places the axolotl
+   * (advanceTrip), so steering is ignored and no swim step runs; the dash and the drift clock still
+   * run.
+   */
   private stepPlay(dt: number): void {
+    if (this.trip.toss === null) {
+      this.swimStep(dt);
+    } else {
+      this.dashingThisFrame = false;
+    }
+    const previousPhase = this.dash.phase;
+    this.dash = updateDash(this.dash, dt, this.perks.swim);
+    if (this.dash.phase !== previousPhase || this.dash.phase === 'cooldown') {
+      this.emitDashState();
+    }
+    this.driftClock += dt;
+  }
+
+  /** The swim step from this frame's steering, stopped at the mats, the rock and the pebbles. */
+  private swimStep(dt: number): void {
     const steer = this.computeSteer();
     this.lastSteer = steer;
 
@@ -709,12 +757,6 @@ export class SwimScene extends Phaser.Scene {
       this.swimTuning(),
     );
     this.swim = this.blockAtRockAndPebbles(pos, this.blockAtMats(pos, swum, dt), dt);
-    const previousPhase = this.dash.phase;
-    this.dash = updateDash(this.dash, dt, this.perks.swim);
-    if (this.dash.phase !== previousPhase || this.dash.phase === 'cooldown') {
-      this.emitDashState();
-    }
-    this.driftClock += dt;
   }
 
   /**
@@ -894,6 +936,10 @@ export class SwimScene extends Phaser.Scene {
       : null;
     const lane = this.trip.trajineras;
     this.trajineraView = lane !== null ? new TrajineraView(this, this.assets, lane.boats) : null;
+    const patches = murkyPatches(this.trip.encounter.hazards);
+    this.murkyWaterView = patches.length > 0 ? new MurkyWaterView(this, this.assets, patches) : null;
+    const bailingBoats = this.trip.bailingBoats;
+    this.bailingBucketView = bailingBoats.length > 0 ? new BailingBucketView(this, this.assets, bailingBoats) : null;
     const movingHazards = this.trip.encounter.movingHazards ?? [];
     this.movingHazardView = movingHazards.length > 0 ? new MovingHazardView(this, this.assets, movingHazards) : null;
     this.mobileSnackView = hasMobileSnacks(zone) ? new MobileSnackView(this.mobileSnackTextures()) : null;
@@ -1074,7 +1120,7 @@ export class SwimScene extends Phaser.Scene {
   }
 
   private requestDash(): void {
-    if (this.trip.phase !== 'swimming') return;
+    if (this.trip.phase !== 'swimming' || this.trip.toss !== null) return;
     const attempt = tryStartDash(this.dash, this.perks.swim);
     if (!attempt.started) return;
     this.dash = attempt.state;
@@ -1262,8 +1308,10 @@ export class SwimScene extends Phaser.Scene {
   /**
    * Steps the trip. Swimming: a gliding trajinera's hull that held the axolotl out puts it at the
    * held place (stepTrip's `outOfHull`), then a bump or push sets the swim velocity, and a Tail Dash
-   * active this step can break Dash pots. Banked, carrying or ended: the trip places the axolotl,
-   * still. The carry advances only with this frame `dt`, so pause freezes it.
+   * active this step can break Dash pots. A bailing bucket toss (issue #107, ND-2) places the axolotl
+   * at the toss pose with no velocity, and its splash-down at the landing point with zero velocity.
+   * Banked, carrying or ended: the trip places the axolotl, still. The carry and the toss advance
+   * only with this frame `dt`, so pause freezes them.
    */
   private advanceTrip(dt: number): void {
     const input: TripInput = {
@@ -1273,7 +1321,10 @@ export class SwimScene extends Phaser.Scene {
     };
     const result = stepTrip(this.trip, input, dt, this.tripCtx);
     this.trip = result.state;
+    this.tossAlpha = 1;
     if (this.trip.phase === 'swimming') {
+      if (result.landed) this.swim = { ...this.swim, x: result.landed.x, y: result.landed.y, vx: 0, vy: 0 };
+      if (this.trip.toss !== null) this.placeTossed();
       if (result.outOfHull) this.swim = this.holdOutOfHull(this.swim, result.outOfHull);
       if (result.impulse) {
         this.swim = { ...this.swim, vx: result.impulse.x, vy: result.impulse.y };
@@ -1293,6 +1344,14 @@ export class SwimScene extends Phaser.Scene {
     };
     this.applyDashPotTip(stepDashPotTip(this.dashPotTip, tipInput));
     this.syncSnapshot();
+  }
+
+  /** Puts the axolotl at the toss pose with no velocity, and keeps the pose's opacity for the draw. */
+  private placeTossed(): void {
+    const pose = tripTossPose(this.trip);
+    if (pose === null) throw new Error('SwimScene: no toss pose during a bailing bucket toss');
+    this.swim = { ...this.swim, x: pose.pos.x, y: pose.pos.y, vx: 0, vy: 0 };
+    this.tossAlpha = pose.alpha;
   }
 
   /**
@@ -1342,7 +1401,7 @@ export class SwimScene extends Phaser.Scene {
    * is not swimming, so the carry wins over the exit.
    */
   private checkExit(): void {
-    if (this.trip.phase !== 'swimming') return;
+    if (this.trip.phase !== 'swimming' || this.trip.toss !== null) return;
     const left = this.snackTally.left;
     const atExitNow = atExit(this.swim, this.area.exit);
     const contact = exitContact(this.wasAtExit, atExitNow, left);
@@ -1389,6 +1448,7 @@ export class SwimScene extends Phaser.Scene {
     this.homeSpotView.handleEvents(events);
     this.treasureView.handleEvents(events);
     this.plasticWormView.handleEvents(events);
+    this.bailingBucketView?.handleEvents(events);
     this.tripSounds.handleEvents(events);
   }
 
@@ -1530,6 +1590,8 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.destroy();
     this.blackBassView?.destroy();
     this.trajineraView?.destroy();
+    this.murkyWaterView?.destroy();
+    this.bailingBucketView?.destroy();
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
     this.pulsingCurrentView?.destroy();
@@ -1570,6 +1632,8 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
     this.blackBassView?.render({ encounter: this.trip.encounter, motion: this.motion, dt });
     this.trajineraView?.render({ elementTime: this.trip.elementTime, motion: this.motion, dt });
+    this.renderMurkyWater();
+    this.renderBailingBuckets(dt);
     this.renderDarkCave();
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
@@ -1584,6 +1648,48 @@ export class SwimScene extends Phaser.Scene {
     this.renderSparkles(dt);
     this.renderSurface(t);
     this.renderPads(t);
+  }
+
+  /**
+   * The murky water (issue #107, ND-1): the patches, and round the axolotl as drawn this frame the
+   * dim ring, the meter and the warning cue, shown only while swimming with no bailing bucket toss.
+   * Only in an area with murky patches; its argument object is made once and reused.
+   */
+  private renderMurkyWater(): void {
+    const view = this.murkyWaterView;
+    if (view === null) return;
+    const frame = (this.murkyFrame ??= {
+      body: this.body,
+      centre: this.swim,
+      size: this.axolotlSize(),
+      timer: this.trip.murkyTimer,
+      inWater: false,
+      motion: this.motion,
+      time: this.clock,
+    });
+    frame.body = this.body;
+    frame.centre = this.swim;
+    frame.size = this.axolotlSize();
+    frame.timer = this.trip.murkyTimer;
+    frame.inWater = this.trip.phase === 'swimming' && this.trip.toss === null;
+    frame.motion = this.motion;
+    frame.time = this.clock;
+    view.render(frame);
+  }
+
+  /**
+   * The bailing boats (issue #107, ND-2) at the trip's element time, with the toss under way for the
+   * peek. Only in an area with bailing boats; its argument object is made once and reused.
+   */
+  private renderBailingBuckets(dt: number): void {
+    const view = this.bailingBucketView;
+    if (view === null) return;
+    const frame = (this.bailingFrame ??= { elementTime: 0, toss: null, motion: this.motion, dt });
+    frame.elementTime = this.trip.elementTime;
+    frame.toss = this.trip.toss;
+    frame.motion = this.motion;
+    frame.dt = dt;
+    view.render(frame);
   }
 
   /**
@@ -1660,7 +1766,7 @@ export class SwimScene extends Phaser.Scene {
     // so setFlipX drew a left-facing axolotl ahead of its anchor. A negative x scale mirrors about
     // the anchor, so the head lands where the eat check expects.
     faceSprite(
-      this.axolotl.setPosition(body.x, body.y).setRotation(body.rotation),
+      this.axolotl.setPosition(body.x, body.y).setRotation(body.rotation).setAlpha(this.tossAlpha),
       body.facing,
       baseScale * body.squash,
       baseScale,
@@ -1683,7 +1789,7 @@ export class SwimScene extends Phaser.Scene {
     const body = this.body;
     const scale = this.queasyCheeksBaseScale;
     faceSprite(
-      cheeks.setVisible(true).setPosition(body.x, body.y).setRotation(body.rotation),
+      cheeks.setVisible(true).setPosition(body.x, body.y).setRotation(body.rotation).setAlpha(this.tossAlpha),
       body.facing,
       scale * body.squash,
       scale,

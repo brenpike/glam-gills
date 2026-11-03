@@ -1,16 +1,24 @@
 /**
- * Surface boats and moored hull slots (Area 8): the x-extent of every surface boat's art, and the
+ * Surface boats and moored hull slots (Areas 8 and 9): the x-extent of every surface boat's art, and the
  * whole moored hulls that fit in each bank overhang rect clear of them. Unit cases run on synthetic
  * spans; the layout cases run on the current Area 8 data, read generically so they hold when the
  * routes move. No Phaser is loaded.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { AREAS, habitatById, type AreaData } from '../logic/areas';
+import { bailingBoatSpawn } from '../logic/bailingBuckets';
 import { DEEP_CANAL_LAYOUT } from '../logic/deepCanalLayout';
 import { DEV_AREAS } from '../logic/devAreas';
 import { PUNTING_POLE, STALACTITE_DRIP, movingHazardBaseY, movingHazardSpawn } from '../logic/movingHazards';
 import { trajineraSpawn } from '../logic/trajineras';
-import { SURF } from '../logic/zone';
+import { SURF, areaSize, swimBounds } from '../logic/zone';
+import {
+  BAILING_BOAT_TEX,
+  BAILING_BUCKET_FRONT_TEX,
+  BAILING_BUCKET_TEX,
+  BAILING_RIPPLES_TEX,
+  BAILING_SHADOW_TEX,
+} from './drawBailingBucket';
 import { MOORED_HULL_TEX, TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
 import { habitatLook } from './habitatLook';
 import { MOVING_HAZARD_LOOKS } from './movingHazardTextures';
@@ -62,11 +70,52 @@ describe('surfaceBoatSpans', () => {
     }
   });
 
-  it('lists surface moving hazards, then trajineras, each with its id, and nothing for a zone with neither', () => {
+  it('gives a bailing boat the union of its hull span, its hull frame at the span\'s middle and its bucket frames at the bucket\'s x', () => {
+    const bounds = swimBounds(areaSize(9, 2));
+    const centred = bailingBoatSpawn('bail', 0, { x0: 3000, x1: 3120, bucketX: 3060, landing: { x: 1800, y: 400 } }, bounds);
+    const bucketFrames = [BAILING_BUCKET_TEX, BAILING_BUCKET_FRONT_TEX, BAILING_SHADOW_TEX, BAILING_RIPPLES_TEX];
+    expect(surfaceBoatSpans({ bailingBoats: [centred] })).toEqual([
+      {
+        id: 'bail',
+        x0: Math.min(3000, 3060 - BAILING_BOAT_TEX.originX, ...bucketFrames.map((tex) => 3060 - tex.originX)),
+        x1: Math.max(3120, 3060 + BAILING_BOAT_TEX.w - BAILING_BOAT_TEX.originX, ...bucketFrames.map((tex) => 3060 + tex.w - tex.originX)),
+      },
+    ]);
+    // The hull frame, inked and padded, reaches past a 120 px span, so the span is wider than the hull rect.
+    const [centredSpan] = surfaceBoatSpans({ bailingBoats: [centred] });
+    expect(centredSpan.x0).toBeLessThan(3000);
+    expect(centredSpan.x1).toBeGreaterThan(3120);
+    // A bucket at the span's end reaches past the hull frame on that side.
+    const offCentre = bailingBoatSpawn('east', 0, { x0: 3000, x1: 3120, bucketX: 3096, landing: { x: 1800, y: 400 } }, bounds);
+    const [offSpan] = surfaceBoatSpans({ bailingBoats: [offCentre] });
+    expect(offSpan.x0).toBe(centredSpan.x0);
+    expect(offSpan.x1).toBe(Math.max(...bucketFrames.map((tex) => 3096 + tex.w - tex.originX)));
+    expect(offSpan.x1).toBeGreaterThan(centredSpan.x1);
+  });
+
+  it('lists surface moving hazards, then trajineras, then bailing boats, each with its id, and nothing for a zone with none', () => {
     const pole = movingHazardSpawn('pole', PUNTING_POLE, 2000, 0);
     const boat = trajineraSpawn('boat', 0, { x0: 100, x1: 300, direction: 'right' });
-    expect(surfaceBoatSpans({ movingHazards: [pole], trajineras: [boat] }).map((s) => s.id)).toEqual(['pole', 'boat']);
+    const bail = bailingBoatSpawn('bail', 0, { x0: 3000, x1: 3120, bucketX: 3060, landing: { x: 1800, y: 400 } }, swimBounds(areaSize(9, 2)));
+    expect(surfaceBoatSpans({ bailingBoats: [bail], movingHazards: [pole], trajineras: [boat] }).map((s) => s.id)).toEqual([
+      'pole',
+      'boat',
+      'bail',
+    ]);
     expect(surfaceBoatSpans({})).toEqual([]);
+  });
+
+  it('keeps a moored hull SURFACE_BOAT_GAP clear of a bailing boat\'s art', () => {
+    const bail = bailingBoatSpawn('bail', 0, { x0: 3000, x1: 3120, bucketX: 3060, landing: { x: 1800, y: 400 } }, swimBounds(areaSize(9, 2)));
+    const spans = surfaceBoatSpans({ bailingBoats: [bail] });
+    const [bailSpan] = spans;
+    const hullW = MOORED_HULL_TEX.w;
+    const slots = mooredHullSlots({ x0: 2400, x1: 3700 }, spans, hullW);
+    expect(slots.length).toBeGreaterThan(0);
+    for (const slotX of slots) {
+      const clear = slotX + hullW <= bailSpan.x0 - SURFACE_BOAT_GAP || slotX >= bailSpan.x1 + SURFACE_BOAT_GAP;
+      expect(clear, `hull at ${slotX}`).toBe(true);
+    }
   });
 
   it('throws for a surface moving hazard whose look has no art', () => {
@@ -162,6 +211,11 @@ describe('moored hulls on the current Area 8 layout', () => {
   it('still sets some whole hulls in Area 8; a short row may get the shade only', () => {
     const total = rects.reduce((sum, rect) => sum + mooredHullSlots(rect, spans, hullW).length, 0);
     expect(total).toBeGreaterThan(0);
+  });
+
+  it('has no bailing boat, so its spans are its poles and trajineras alone', () => {
+    expect(DEEP_CANAL_LAYOUT.bailingBoats ?? []).toHaveLength(0);
+    expect(spans).toEqual(surfaceBoatSpans({ movingHazards: DEEP_CANAL_LAYOUT.movingHazards, trajineras: DEEP_CANAL_LAYOUT.trajineras }));
   });
 
   it('sets the 4 hulls ADR 0036 records: one west, none in the short row, one middle, two east', () => {

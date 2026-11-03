@@ -13,6 +13,7 @@ import {
   type Gap,
 } from './layoutGaps';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
+import { murkyPatchSpawn } from './murkyWater';
 import { TILAPIA } from './tuning';
 import { SURF, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
 
@@ -121,6 +122,13 @@ describe('obstaclesOf', () => {
       ['mat-1', 'shape', 4],
       ['route-1', 'route', STRIKE],
     ]);
+  });
+
+  it('leaves out a murky patch, which is swum through, not round (issue #107)', () => {
+    const murky = murkyPatchSpawn('murky-1', { x0: 300, x1: 500, y0: 0, y1: 200 });
+    const geo = geometry([net('net-1', rect(200, 260, 0, 100)), murky], [square]);
+    expect(obstaclesOf(geo).map((obstacle) => obstacle.id)).toEqual(['net-1', 'route-1']);
+    expect(gapsOf(geo).map((gap) => gap.between)).toEqual(['net-1 and route-1']);
   });
 });
 

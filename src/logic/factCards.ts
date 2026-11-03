@@ -361,6 +361,41 @@ export const UNDERWATER_SPRINGS_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The dirty water fact card, shown the first time the axolotl's centre enters a murky patch outside
+ * the Home Spot (PRD C13; issue #107, ND-1).
+ * Sources, checked 2026-11-02 (web research only; the game fetches nothing):
+ * David Alire Garcia (Associated Press), The Christian Science Monitor, "Mythical Mexican axolotl
+ * faces extinction in the canals of Xochimilco", 2018-11-20,
+ * https://www.csmonitor.com/Environment/2018/1120/Mythical-Mexican-axolotl-faces-extinction-in-the-canals-of-Xochimilco
+ * (axolotls are "plagued by polluted water"; as they also take in oxygen through their skin they are
+ * "particularly vulnerable to dirty water"; "the raw sewage that pollutes the Xochimilco canals when
+ * heavy rains overwhelm the aging pipes");
+ * Sarah Freeman, National Geographic, "This fragile wetland is dying. Tour boats could be its
+ * unlikely savior.", 2022-01-25,
+ * https://www.nationalgeographic.com/travel/article/nanobubbles-tour-boats-could-rescue-endangered-mexican-wetland
+ * ("Wastewater is discharged from El Cerro de la Estrella and three smaller treatment plants";
+ * "illicit discharges of sewage"; algae blooms "carpet the surface of the water, blocking out sun and
+ * oxygen"; "the canals' murkiest depths"; "oxygen-starved waters");
+ * U.S. Geological Survey, Water Science School, "Dissolved Oxygen and Water",
+ * https://www.usgs.gov/special-topics/water-science-school/science/dissolved-oxygen-and-water
+ * ("This dissolved oxygen is breathed by fish and zooplankton and is needed by them to survive";
+ * "Bacteria in water can consume oxygen as organic matter decays");
+ * U.S. EPA, CADDIS, "Sediments", https://www.epa.gov/caddis/sediments ("Suspended particles can
+ * damage gills, resulting in increased susceptibility to low dissolved oxygen").
+ * Owner to verify: "rubbish" is not in these sources, which name sewage and wastewater,
+ * not litter; "murky" reads National Geographic's "murkiest depths" and the EPA's suspended
+ * particles; "harder for animals to breathe" joins two links, low oxygen from decay and blooms and
+ * gills harmed by particles, and no source measures either in Xochimilco's canals; "helps axolotls
+ * and fish" reads the sources' threats in reverse, not a study of a clean-up.
+ */
+export const MURKY_WATER_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'murky-water',
+  name: 'Murky water',
+  title: 'Dirty water',
+  body: 'When rubbish and dirty water get into the canals, the water turns murky and it is harder for animals to breathe. Keeping the water clean helps axolotls and fish.',
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",
@@ -537,6 +572,12 @@ export const BLACK_BASS_MEET_RANGE = 180;
  * ND-6). Provisional; tune in play. Short, so the card shows as the axolotl comes up to a vent.
  */
 export const PULSING_CURRENT_MEET_RANGE = 60;
+
+/**
+ * Distance in px from a murky patch within which the axolotl meets it (issue #107, ND-1): 0, so the
+ * card shows when the axolotl's centre first enters a patch.
+ */
+export const MURKY_WATER_MEET_RANGE = 0;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl
