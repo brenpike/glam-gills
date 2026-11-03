@@ -3,6 +3,14 @@ import { HOME_TANK_WALL, UI_PANEL } from '../art/palette';
 import type { BakedTextures, TexInfo } from '../art/textures';
 import type { TreasureTextures } from '../art/treasureTextures';
 import { treasureSlug, type Perk } from '../logic/catalogue';
+import {
+  FILTER_LABEL,
+  areaProgress,
+  filterSections,
+  isFilterActive,
+  noMatchText,
+  type ChestFilter,
+} from '../logic/chestFilter';
 import type { Size } from '../logic/hudLayout';
 import { CLOSE_LABEL, NEXT_PAGE_LABEL, PREVIOUS_PAGE_LABEL, TREASURE_CHEST_LABEL } from '../logic/tankText';
 import {
@@ -22,6 +30,8 @@ import {
 } from '../logic/treasureChest';
 import {
   CHEST_BUTTON,
+  ICON_TILE,
+  TILE_BUTTON,
   UI,
   chestLayout,
   chestShowsTitle,
@@ -34,6 +44,7 @@ import {
 } from '../logic/tankUi';
 import { playSound } from '../platform/soundPlayer';
 import { createButton, cssColor, drawPanel, uiTextStyle, type SceneView, type UiButton } from './BootScene';
+import { ChestFilterSheet, addTickIcon, drawTickBadge, readChestFilter, writeChestFilter } from './ChestFilterSheet';
 import { addGlowingTreasureIcon, addRarityGlow } from './FindPopup';
 
 const TITLE_PX = 28;
@@ -43,6 +54,7 @@ const SECTION_LINE_PX = 18;
 const NAME_PX = 20;
 const RARITY_PX = 18;
 const DETAIL_PX = 18;
+const MESSAGE_PX = 18;
 const LEAD_PX = 32;
 /** Rarity glow under a found entry's 32 px icon or swatch. */
 const LEAD_GLOW_PX = 40;
@@ -63,6 +75,9 @@ const BACKDROP_COVER = 8192;
 const BACK_INDEX = 0;
 const CLOSE_INDEX = 1;
 const NEXT_INDEX = 2;
+const FILTER_INDEX = 3;
+/** createButton size of a square tile that makes the ICON_TILE body of the Filter tile. */
+const ICON_TILE_SIZE = ICON_TILE.w / TILE_BUTTON.w;
 
 /** Textures the Treasure Chest draws with. */
 export interface TreasureChestTextures {
@@ -267,10 +282,15 @@ function arrangeRow(parts: RowParts, rowW: number): number {
  * Treasure Chest over the Home Tank: an opaque Home Tank wall backdrop that takes every press, a
  * white panel with the title (hidden when even the short lines leave no room for a whole row), the
  * section heading with its found count, the section line under it (the short lines when the full
- * ones leave no room for a whole row), one page of entry rows for every treasure, found or not, the
- * page text, and the Close, Back and Next buttons. Pages come from chestPages() at as many rows as
- * fit the list; paging wraps. Appears and leaves at once.
- * Keys: left and right page, next and previous move focus over Back, Close and Next, confirm
+ * ones leave no room for a whole row), one page of entry rows for every treasure that matches the
+ * filter, found or not, the Filter tile and the page text, and the Close, Back and Next buttons.
+ * Pages come from chestPages() of filterSections() at as many rows as fit the list, measured over
+ * every entry so the list keeps its size; paging wraps. When no entry matches, one page shows
+ * noMatchText(). The Filter tile (icon-only, named 'Filter', with the tick badge while a filter is
+ * on) opens the Filter screen (ChestFilterSheet) in the same panel; Done or cancel there comes back
+ * to the list, on its first page when the filter changed. The filter is remembered in the game
+ * registry, never saved. Appears and leaves at once.
+ * Keys: left and right page, next and previous move focus over Back, Close, Next and Filter, confirm
  * presses the focused button, cancel closes. Closing by button or key calls `onClose`.
  */
 export class TreasureChestView {
@@ -278,15 +298,26 @@ export class TreasureChestView {
   private readonly treasure: TreasureTextures;
   private readonly onClose: () => void;
   private readonly container: Phaser.GameObjects.Container;
+  /** Everything of the list screen; hidden while the Filter screen shows. */
+  private readonly listGroup: Phaser.GameObjects.Container;
   private readonly panel: Phaser.GameObjects.Graphics;
   private readonly title: Phaser.GameObjects.Text;
   private readonly heading: Phaser.GameObjects.Text;
   private readonly pageLabel: Phaser.GameObjects.Text;
   private readonly sectionLineText: Phaser.GameObjects.Text;
+  /** The one line of the page shown when no entry matches the filter. */
+  private readonly messageText: Phaser.GameObjects.Text;
+  /** The Filter tile's tick badge disc and its tick, shown while a filter is on. */
+  private readonly filterMark: Phaser.GameObjects.Graphics;
+  private readonly filterTick: Phaser.GameObjects.Image;
   private readonly probe: RowParts;
   private readonly buttons: readonly UiButton[];
+  private readonly sheet: ChestFilterSheet;
   private view: SceneView;
   private dpr: number;
+  /** Every entry, unfiltered; rows are measured over it and the area counts come from it. */
+  private listing: readonly ChestSection[] = [];
+  private filter: Readonly<ChestFilter>;
   private sections: readonly ChestSection[] = [];
   private pages: ChestPage[] = [];
   private pageIndex = 0;
@@ -311,6 +342,7 @@ export class TreasureChestView {
     this.onClose = onClose;
     this.view = view;
     this.dpr = view.fit.dpr;
+    this.filter = readChestFilter(scene.registry);
     const backdrop = scene.add
       .rectangle(-BACKDROP_COVER / 2, -BACKDROP_COVER / 2, BACKDROP_COVER, BACKDROP_COVER, cssColor(HOME_TANK_WALL).color, 1)
       .setOrigin(0, 0)
@@ -320,6 +352,7 @@ export class TreasureChestView {
     this.heading = scene.add.text(0, 0, '', uiTextStyle(HEADING_PX, this.dpr));
     this.pageLabel = scene.add.text(0, 0, '', uiTextStyle(PAGE_TEXT_PX, this.dpr, false));
     this.sectionLineText = scene.add.text(0, 0, '', uiTextStyle(SECTION_LINE_PX, this.dpr, false));
+    this.messageText = scene.add.text(0, 0, '', uiTextStyle(MESSAGE_PX, this.dpr, false)).setVisible(false);
     this.probe = this.createRowParts(null, null, null);
     for (const text of this.probeTexts()) {
       text.setVisible(false);
@@ -328,17 +361,31 @@ export class TreasureChestView {
       this.createChestButton(textures.baked, PREVIOUS_PAGE_LABEL, 'left', BACK_INDEX),
       this.createChestButton(textures.baked, CLOSE_LABEL, 'close', CLOSE_INDEX),
       this.createChestButton(textures.baked, NEXT_PAGE_LABEL, 'right', NEXT_INDEX),
+      this.createFilterTile(textures.baked),
     ];
+    this.filterMark = scene.add.graphics();
+    this.filterTick = addTickIcon(scene, textures.baked);
+    this.listGroup = scene.add.container(0, 0, [
+      this.panel,
+      this.title,
+      this.heading,
+      this.pageLabel,
+      this.sectionLineText,
+      this.messageText,
+      ...this.buttons.map((button) => button.container),
+      this.filterMark,
+      this.filterTick,
+    ]);
+    this.sheet = new ChestFilterSheet({
+      scene,
+      baked: textures.baked,
+      treasure: textures.treasure,
+      dpr: this.dpr,
+      onChange: (filter) => this.changeFilter(filter),
+      onDone: () => this.closeFilter(),
+    });
     this.container = scene.add
-      .container(0, 0, [
-        backdrop,
-        this.panel,
-        this.title,
-        this.heading,
-        this.pageLabel,
-        this.sectionLineText,
-        ...this.buttons.map((button) => button.container),
-      ])
+      .container(0, 0, [backdrop, this.listGroup, this.sheet.container])
       .setDepth(depth)
       .setVisible(false);
     this.setFocus(NEXT_INDEX);
@@ -349,32 +396,45 @@ export class TreasureChestView {
     return this.container.visible;
   }
 
-  /** Shows the chest at once for these banked treasure ids, on the first Decorations page with Next focused. */
+  /**
+   * Shows the chest at once for these banked treasure ids, filtered by the remembered filter, on the
+   * first page with Next focused.
+   */
   open(banked: readonly string[]): void {
-    this.sections = chestListing(banked);
+    this.listing = chestListing(banked);
+    this.filter = readChestFilter(this.scene.registry);
+    this.sections = filterSections(this.listing, this.filter);
     this.pages = [];
     this.pageIndex = 0;
+    this.sheet.close();
+    this.listGroup.setVisible(true);
     this.setFocus(NEXT_INDEX);
     this.container.setVisible(true);
     this.layout(this.view);
   }
 
-  /** Hides the chest at once. Does not call `onClose`; the Close button and the cancel key do. */
+  /** Hides the chest at once, the Filter screen too. Does not call `onClose`; the Close button and the cancel key do. */
   close(): void {
+    this.sheet.close();
+    this.listGroup.setVisible(true);
     this.container.setVisible(false);
     this.clearRows();
   }
 
   /**
    * Lays the chest out for `view` with chestLayout() and the full section lines, measures the tallest
-   * entry row at the list width, lays it out again with the short lines when no whole row fits, hides
-   * the title (hideChestTitle) when a whole row still does not fit, and pages the listing at as many
-   * rows as fit, staying in the current section. Safe to call while closed; the next open() uses
-   * `view`.
+   * entry row of the whole listing at the list width, lays it out again with the short lines when no
+   * whole row fits, hides the title (hideChestTitle) when a whole row still does not fit, and pages
+   * the filtered listing at as many rows as fit, staying in the current section. While the Filter
+   * screen shows, lays that out instead. Safe to call while closed; the next open() uses `view`.
    */
   layout(view: SceneView): void {
     this.view = view;
     if (!this.isOpen()) return;
+    if (this.sheet.isOpen()) {
+      this.sheet.layout(view);
+      return;
+    }
     const category = this.currentCategory();
     const firstEntry = this.firstEntryIndex();
     this.pageLabel.setText(pageText(this.pageIndex + 1, Math.max(1, this.pages.length)));
@@ -384,6 +444,8 @@ export class TreasureChestView {
     const lined = this.lineLength === 'full' ? full : chestLayout(view, this.chestMeasure('short'));
     const showsTitle = chestShowsTitle(lined.list.h, this.rowH);
     const chest = showsTitle ? lined : hideChestTitle(lined);
+    const filterRect = chest.filter;
+    if (filterRect === undefined) throw new Error('TreasureChestView.layout: no Filter tile place');
     this.chest = chest;
     this.perPage = rowsPerPage(chest.list.h, this.rowH, UI.gap);
     this.pages = chestPages(this.sections, this.perPage);
@@ -395,6 +457,10 @@ export class TreasureChestView {
     this.buttons[BACK_INDEX].container.setPosition(chest.back.x, chest.back.y);
     this.buttons[CLOSE_INDEX].container.setPosition(chest.close.x, chest.close.y);
     this.buttons[NEXT_INDEX].container.setPosition(chest.next.x, chest.next.y);
+    this.buttons[FILTER_INDEX].container.setPosition(filterRect.x, filterRect.y);
+    this.filterMark.clear();
+    this.filterTick.setVisible(false);
+    if (isFilterActive(this.filter)) drawTickBadge(this.filterMark, this.filterTick, filterRect);
     this.showPage();
   }
 
@@ -407,21 +473,25 @@ export class TreasureChestView {
       row.parts.slot,
       row.parts.perk,
     ]);
-    for (const text of [this.title, this.heading, this.pageLabel, this.sectionLineText, ...this.probeTexts(), ...rowTexts]) {
+    const listTexts = [this.title, this.heading, this.pageLabel, this.sectionLineText, this.messageText];
+    for (const text of [...listTexts, ...this.probeTexts(), ...rowTexts]) {
       text.setResolution(dpr);
     }
     for (const button of this.buttons) {
       button.setResolution(dpr);
     }
+    this.sheet.setResolution(dpr);
   }
 
   /**
-   * Handles a Home Tank key while open: left and right page, next and previous move focus, confirm
-   * presses the focused button, cancel closes. Other keys, and every key while closed, do nothing.
+   * Handles a Home Tank key while open: on the Filter screen, its keys (ChestFilterSheet.handleKey);
+   * else left and right page, next and previous move focus, confirm presses the focused button,
+   * cancel closes. Other keys, and every key while closed, do nothing.
    */
   handleKey(key: TankKey): void {
     if (!this.isOpen()) return;
-    if (key === 'left') this.turnPage(-1);
+    if (this.sheet.isOpen()) this.sheet.handleKey(key);
+    else if (key === 'left') this.turnPage(-1);
     else if (key === 'right') this.turnPage(1);
     else if (key === 'next') this.setFocus(nextFocusIndex(this.focusIndex, this.buttons.length, 1));
     else if (key === 'previous') this.setFocus(nextFocusIndex(this.focusIndex, this.buttons.length, -1));
@@ -434,6 +504,7 @@ export class TreasureChestView {
     for (const text of this.probeTexts()) {
       text.destroy();
     }
+    this.sheet.destroy();
     this.container.destroy();
   }
 
@@ -462,6 +533,21 @@ export class TreasureChestView {
     });
   }
 
+  /** The Filter tile: an icon-only ICON_TILE secondary tile with the funnel icon, named 'Filter' as the Pause tile is named. It taps. */
+  private createFilterTile(baked: BakedTextures): UiButton {
+    return createButton(this.scene, baked, {
+      fill: 'secondary',
+      shape: 'square',
+      size: ICON_TILE_SIZE,
+      label: FILTER_LABEL,
+      icon: 'filter',
+      iconOnly: true,
+      dpr: this.dpr,
+      pressOnDown: false,
+      onPress: () => this.pressButton(FILTER_INDEX),
+    });
+  }
+
   private createRowParts(
     lead: Phaser.GameObjects.Image | Phaser.GameObjects.Container | null,
     badge: Phaser.GameObjects.Image | null,
@@ -480,9 +566,9 @@ export class TreasureChestView {
     };
   }
 
-  /** Chest measurements with the `length` section lines under the headings. */
+  /** Chest measurements with the `length` section lines under the headings, and the Filter tile. */
   private chestMeasure(length: SectionLineLength): ChestMeasure {
-    const [back, close, next] = this.buttons.map((button): Size => ({ w: button.width, h: button.height }));
+    const [back, close, next, filter] = this.buttons.map((button): Size => ({ w: button.width, h: button.height }));
     return {
       titleAt: (wrapW) => wrappedSize(this.title, wrapW),
       headingAt: (wrapW) => this.measureHeadings(wrapW, length),
@@ -490,18 +576,20 @@ export class TreasureChestView {
       close,
       back,
       next,
+      filter,
     };
   }
 
   /**
-   * The heading block of every section wrapped at `wrapW`, so the list keeps one size on every page:
-   * as wide as the widest heading or `length` section line, and as tall as the tallest heading, the
-   * gap and the tallest section line. Remembers the tallest heading height for placing the line.
+   * The heading block of every section, of the whole listing and of the filtered one, wrapped at
+   * `wrapW`, so the list keeps one size on every page: as wide as the widest heading or `length`
+   * section line, and as tall as the tallest heading, the gap and the tallest section line.
+   * Remembers the tallest heading height for placing the line.
    */
   private measureHeadings(wrapW: number, length: SectionLineLength): Size {
     let headingSize: Size = { w: 0, h: 0 };
     let lineSize: Size = { w: 0, h: 0 };
-    for (const section of this.sections) {
+    for (const section of [...this.listing, ...this.sections]) {
       this.heading.setText(headingText(section));
       const heading = wrappedSize(this.heading, wrapW);
       this.sectionLineText.setText(sectionLine(section.category, length));
@@ -513,10 +601,13 @@ export class TreasureChestView {
     return { w: Math.max(headingSize.w, lineSize.w), h: headingSize.h + SECTION_LINE_GAP_PX + lineSize.h };
   }
 
-  /** Height of the tallest entry row, found or unfound, of every section at `rowW`; the lead image height when there are none. */
+  /**
+   * Height of the tallest entry row, found or unfound, of the whole listing at `rowW`, whatever the
+   * filter; the lead image height when there are none.
+   */
   private measureRowHeight(rowW: number): number {
     let height = LEAD_PX;
-    for (const section of this.sections) {
+    for (const section of this.listing) {
       for (const entry of section.entries) {
         fillRowTexts(this.probe, entry);
         height = Math.max(height, arrangeRow(this.probe, rowW));
@@ -539,29 +630,44 @@ export class TreasureChestView {
     return earlierPages * this.perPage;
   }
 
-  /** Page of `category` that holds its entry `entryIndex`, or its last page when it has fewer entries. */
+  /**
+   * Page of `category` that holds its entry `entryIndex`, or its last page when it has fewer
+   * entries; the first page when no page is of `category` (the filter left that section out, or
+   * nothing matches).
+   */
   private pageIndexFor(category: ChestCategory, entryIndex: number): number {
     const first = this.pages.findIndex((page) => page.section.category === category);
-    if (first < 0) throw new Error(`TreasureChestView: no page for section ${category}`);
+    if (first < 0) return 0;
     const count = this.pages.filter((page) => page.section.category === category).length;
     return first + Math.min(count - 1, Math.floor(entryIndex / this.perPage));
   }
 
   /**
    * Draws the current page: heading, the section line in the same place on every page, page text,
-   * and its entry rows.
+   * and its entry rows; with no page (nothing matches the filter), noMatchText() at the top of the
+   * list as page 1 of 1.
    */
   private showPage(): void {
     const chest = this.chest;
+    if (chest === null) throw new Error('TreasureChestView.showPage: not laid out');
     const page = this.pages[this.pageIndex];
-    if (chest === null || page === undefined) throw new Error('TreasureChestView.showPage: not laid out');
+    this.clearRows();
+    this.heading.setVisible(page !== undefined);
+    this.sectionLineText.setVisible(page !== undefined);
+    this.messageText.setVisible(page === undefined);
+    this.pageLabel.setText(pageText(this.pageIndex + 1, Math.max(1, this.pages.length)));
+    this.pageLabel.setPosition(chest.pageText.x + (chest.pageText.w - this.pageLabel.width) / 2, chest.pageText.y);
+    if (page === undefined) {
+      if (this.pages.length > 0) throw new Error(`TreasureChestView.showPage: no page ${this.pageIndex}`);
+      this.messageText.setText(noMatchText(this.filter));
+      wrappedSize(this.messageText, chest.list.w);
+      this.messageText.setPosition(chest.list.x, chest.list.y);
+      return;
+    }
     this.heading.setText(headingText(page.section));
     this.sectionLineText.setText(sectionLine(page.section.category, this.lineLength));
     wrappedSize(this.sectionLineText, chest.list.w);
     this.sectionLineText.setPosition(chest.heading.x, chest.heading.y + this.headingH + SECTION_LINE_GAP_PX);
-    this.pageLabel.setText(pageText(this.pageIndex + 1, this.pages.length));
-    this.pageLabel.setPosition(chest.pageText.x + (chest.pageText.w - this.pageLabel.width) / 2, chest.pageText.y);
-    this.clearRows();
     page.entries.forEach((entry, index) => {
       this.rows.push(this.buildRow(entry, chest.list.x, chest.list.y + index * (this.rowH + UI.gap), chest.list.w));
     });
@@ -589,7 +695,7 @@ export class TreasureChestView {
       parts.slot,
       parts.perk,
     ]);
-    this.container.add(container);
+    this.listGroup.add(container);
     return { container, parts };
   }
 
@@ -600,9 +706,9 @@ export class TreasureChestView {
     this.rows = [];
   }
 
-  /** Shows the page `step` away, wrapping past either end. */
+  /** Shows the page `step` away, wrapping past either end; the one no-match page stays. */
   private turnPage(step: number): void {
-    this.pageIndex = nextFocusIndex(this.pageIndex, this.pages.length, step);
+    this.pageIndex = Math.max(0, nextFocusIndex(this.pageIndex, this.pages.length, step));
     this.showPage();
     playSound('pageTurn');
   }
@@ -612,13 +718,41 @@ export class TreasureChestView {
     this.buttons.forEach((button, buttonIndex) => button.setFocused(buttonIndex === index));
   }
 
-  /** Focuses the button and does its action: Back and Next turn the page, Close closes. Ignored while closed. */
+  /**
+   * Focuses the button and does its action: Back and Next turn the page, Close closes, Filter opens
+   * the Filter screen. Ignored while closed.
+   */
   private pressButton(index: number): void {
     if (!this.isOpen()) return;
     this.setFocus(index);
     if (index === BACK_INDEX) this.turnPage(-1);
     else if (index === NEXT_INDEX) this.turnPage(1);
+    else if (index === FILTER_INDEX) this.openFilter();
     else this.requestClose();
+  }
+
+  /** Hides the list and shows the Filter screen in the same panel, with the area counts of the whole listing. */
+  private openFilter(): void {
+    this.listGroup.setVisible(false);
+    this.clearRows();
+    this.sheet.open(this.filter, areaProgress(this.listing), this.view);
+  }
+
+  /** Remembers `filter` in the registry, filters the listing again and goes back to its first page. */
+  private changeFilter(filter: Readonly<ChestFilter>): void {
+    this.filter = filter;
+    writeChestFilter(this.scene.registry, filter);
+    this.sections = filterSections(this.listing, filter);
+    this.pages = [];
+    this.pageIndex = 0;
+  }
+
+  /** Hides the Filter screen and shows the list again with the Filter tile focused. */
+  private closeFilter(): void {
+    this.sheet.close();
+    this.listGroup.setVisible(true);
+    this.setFocus(FILTER_INDEX);
+    this.layout(this.view);
   }
 
   /** Closes the chest, then tells the owner through `onClose`. */
