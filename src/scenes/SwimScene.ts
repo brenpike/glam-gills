@@ -106,6 +106,7 @@ import {
   sameTripSnapshot,
   stepTrip,
   tripAxolotlPos,
+  tripFishingSnapshot,
   tripSnapshot,
   tripTossPose,
   type TripContext,
@@ -137,8 +138,10 @@ import { BlackBassView } from './BlackBassView';
 import { CarpView } from './CarpView';
 import { CrayfishView } from './CrayfishView';
 import { DarkCaveView } from './DarkCaveView';
+import { DragNetView, type DragNetFrame } from './DragNetView';
 import { ExitView } from './ExitView';
 import { FireflyView } from './FireflyView';
+import { FishingTrajineraView, type FishingTrajineraFrame } from './FishingTrajineraView';
 import { GarterSnakeView } from './GarterSnakeView';
 import { GhostNetView } from './GhostNetView';
 import { GlowPlantView } from './GlowPlantView';
@@ -359,6 +362,14 @@ export class SwimScene extends Phaser.Scene {
   private bailingFrame: BailingBucketFrame | null = null;
   /** The tossed axolotl's opacity (tripTossPose), 1 with no bailing bucket toss. */
   private tossAlpha = 1;
+  /** The fishing trajineras, their lines and lures, or null in an area with no fishing boats. */
+  private fishingTrajineraView: FishingTrajineraView | null = null;
+  /** The reused render argument of the fishing trajinera view, made on its first frame. */
+  private fishingFrame: FishingTrajineraFrame | null = null;
+  /** The drag nets, their boats, floats, hollows, curtains and strands, or null in an area with no drag nets. */
+  private dragNetView: DragNetView | null = null;
+  /** The reused render argument of the drag net view, made on its first frame. */
+  private dragNetFrame: DragNetFrame | null = null;
   /** The dark layer over the area's dark water, or null in an area with no dark water. */
   private darkCaveView: DarkCaveView | null = null;
   /** The glow-plants and their hint, or null in an area with no glow-plants. */
@@ -482,6 +493,10 @@ export class SwimScene extends Phaser.Scene {
     this.bailingBucketView = null;
     this.bailingFrame = null;
     this.tossAlpha = 1;
+    this.fishingTrajineraView = null;
+    this.fishingFrame = null;
+    this.dragNetView = null;
+    this.dragNetFrame = null;
     this.darkCaveView = null;
     this.glowPlantView = null;
     this.darkLightsNow = [];
@@ -674,6 +689,15 @@ export class SwimScene extends Phaser.Scene {
    * per-frame work that allocates is insideMurky's test. During a bailing bucket toss the scene
    * builds the toss pose (tripTossPose) and one swim state per frame, as the carry home does
    * (placeCarried): the same bounded class as the residual below, for the toss's 1.2 s only.
+   * Deep canal Area 10 (#108): Areas 1 to 9 build and call nothing new, and their trip input has no
+   * head. FishingTrajineraView and DragNetView are made once per trip, and only in an area with
+   * fishing boats or with drag nets. Both use textures baked at boot, reuse their sprites, take a
+   * render argument object the scene makes once and reuses, and allocate nothing per frame; the
+   * lines are one Graphics redrawn each frame, as the surface is, and each rope is redrawn only when
+   * its lift changes. Where there are fishing boats the scene builds the head point (headPoint) for
+   * the trip step, and where there are either, one fishing snapshot (tripFishingSnapshot) per frame:
+   * one object per boat, lure and net with its points, bounded by the area's boat, lure and net
+   * counts, the same class as the residual below.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -940,6 +964,11 @@ export class SwimScene extends Phaser.Scene {
     this.murkyWaterView = patches.length > 0 ? new MurkyWaterView(this, this.assets, patches) : null;
     const bailingBoats = this.trip.bailingBoats;
     this.bailingBucketView = bailingBoats.length > 0 ? new BailingBucketView(this, this.assets, bailingBoats) : null;
+    const fishingBoats = this.trip.fishingBoats;
+    this.fishingTrajineraView =
+      fishingBoats.length > 0 ? new FishingTrajineraView(this, this.assets, fishingBoats) : null;
+    const dragNets = this.trip.dragNets;
+    this.dragNetView = dragNets.length > 0 ? new DragNetView(this, this.assets, dragNets) : null;
     const movingHazards = this.trip.encounter.movingHazards ?? [];
     this.movingHazardView = movingHazards.length > 0 ? new MovingHazardView(this, this.assets, movingHazards) : null;
     this.mobileSnackView = hasMobileSnacks(zone) ? new MobileSnackView(this.mobileSnackTextures()) : null;
@@ -1311,7 +1340,9 @@ export class SwimScene extends Phaser.Scene {
    * active this step can break Dash pots. A bailing bucket toss (issue #107, ND-2) places the axolotl
    * at the toss pose with no velocity, and its splash-down at the landing point with zero velocity.
    * Banked, carrying or ended: the trip places the axolotl, still. The carry and the toss advance
-   * only with this frame `dt`, so pause freezes them.
+   * only with this frame `dt`, so pause freezes them. In an area with fishing boats (issue #108,
+   * ND-1) the step also gets the head reach centre that eats a lure: the head of the axolotl as last
+   * drawn (captureDrawnFrame runs after the step), so it lags the swim step by one frame.
    */
   private advanceTrip(dt: number): void {
     const input: TripInput = {
@@ -1319,6 +1350,7 @@ export class SwimScene extends Phaser.Scene {
       reduced: !this.motion.ambient,
       dashing: this.trip.phase === 'swimming' && this.dashingThisFrame,
     };
+    if (this.trip.fishingBoats.length > 0) input.head = headPoint(this.body);
     const result = stepTrip(this.trip, input, dt, this.tripCtx);
     this.trip = result.state;
     this.tossAlpha = 1;
@@ -1449,6 +1481,8 @@ export class SwimScene extends Phaser.Scene {
     this.treasureView.handleEvents(events);
     this.plasticWormView.handleEvents(events);
     this.bailingBucketView?.handleEvents(events);
+    this.fishingTrajineraView?.handleEvents(events);
+    this.dragNetView?.handleEvents(events);
     this.tripSounds.handleEvents(events);
   }
 
@@ -1592,6 +1626,8 @@ export class SwimScene extends Phaser.Scene {
     this.trajineraView?.destroy();
     this.murkyWaterView?.destroy();
     this.bailingBucketView?.destroy();
+    this.fishingTrajineraView?.destroy();
+    this.dragNetView?.destroy();
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
     this.pulsingCurrentView?.destroy();
@@ -1634,6 +1670,7 @@ export class SwimScene extends Phaser.Scene {
     this.trajineraView?.render({ elementTime: this.trip.elementTime, motion: this.motion, dt });
     this.renderMurkyWater();
     this.renderBailingBuckets(dt);
+    this.renderFishing(dt);
     this.renderDarkCave();
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
@@ -1690,6 +1727,47 @@ export class SwimScene extends Phaser.Scene {
     frame.motion = this.motion;
     frame.dt = dt;
     view.render(frame);
+  }
+
+  /**
+   * The fishing trajineras and drag nets (issue #108, ND-1, ND-2) from one fishing snapshot of the
+   * trip at this frame's motion setting, the one the trip step ate lures with. Only in an area with
+   * fishing boats or drag nets; each view's argument object is made once and reused.
+   */
+  private renderFishing(dt: number): void {
+    const boatsView = this.fishingTrajineraView;
+    const netsView = this.dragNetView;
+    if (boatsView === null && netsView === null) return;
+    const fishing = tripFishingSnapshot(this.trip, !this.motion.ambient);
+    if (boatsView !== null) {
+      const frame = (this.fishingFrame ??= { boats: fishing.boats, motion: this.motion, time: this.clock, dt });
+      frame.boats = fishing.boats;
+      frame.motion = this.motion;
+      frame.time = this.clock;
+      frame.dt = dt;
+      boatsView.render(frame);
+    }
+    if (netsView !== null) {
+      const frame = (this.dragNetFrame ??= {
+        nets: fishing.nets,
+        elementTime: this.trip.elementTime,
+        body: this.body,
+        size: this.axolotlSize(),
+        swimming: false,
+        motion: this.motion,
+        time: this.clock,
+        dt,
+      });
+      frame.nets = fishing.nets;
+      frame.elementTime = this.trip.elementTime;
+      frame.body = this.body;
+      frame.size = this.axolotlSize();
+      frame.swimming = this.trip.phase === 'swimming';
+      frame.motion = this.motion;
+      frame.time = this.clock;
+      frame.dt = dt;
+      netsView.render(frame);
+    }
   }
 
   /**
@@ -1814,10 +1892,19 @@ export class SwimScene extends Phaser.Scene {
       legsPresent: this.snapshot.legs.present,
       swimming: this.trip.phase === 'swimming',
       queasy: isQueasy(this.trip.plasticWorms),
-      snagged: isSnagged(this.trip.ghostNets),
+      snagged: isSnagged(this.trip.ghostNets) || this.wrigglingFree(),
       squash: this.turn.squash,
     });
     this.snackView = this.snackFrame();
+  }
+
+  /**
+   * True while a lure's tug or a drag net's catch (issue #108, ND-1, ND-2) has the axolotl wriggle
+   * free. It drives the drawn axolotl's snag wriggle, which shows under full motion only; it never
+   * changes swim tuning, and the axolotl is never held.
+   */
+  private wrigglingFree(): boolean {
+    return this.fishingTrajineraView?.wriggling() === true || this.dragNetView?.wriggling() === true;
   }
 
   /**
