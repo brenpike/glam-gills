@@ -1,0 +1,104 @@
+# ADR 0038: Grand tour areas, trajinera lures and drag nets
+
+- Status: Accepted
+- Date: 2026-11-04
+- Amends: [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (in part: its rule that elements never cost a leg; every other ADR 0021 rule stays in force as amended), [ADR 0023](0023-whole-water-danger-test-and-relaxed-fairness.md) (in part: the full danger bar's every-predator-chasing check, which now passes a predator built never to chase; every other ADR 0023 rule stays in force)
+- Related: [ADR 0007](0007-kid-safety-and-privacy.md) (kid safety, which keeps the lures and the nets gentle: no hook, no person, never trapped), [ADR 0008](0008-gentle-fail-state.md) (the gentle fail state, which a lure or net hit goes through like any hit), [ADR 0012](0012-save-on-device.md) (the two new ids under its additive rule), [ADR 0014](0014-area-framework.md) (the area framework and the rule of at most one new thing per area), [ADR 0019](0019-heron-wading-stalker.md) (the wading heron, which never chases), [ADR 0032](0032-legendary-spots-deep-and-dangerous-dash-pot-optional.md) (the Legendary rule that Area 10's open spots follow), [ADR 0034](0034-two-lane-areas-black-bass-and-gliding-trajineras.md) (the two lanes and the black bass, carried forward), [ADR 0035](0035-deep-canal-moving-hazards-anchor-drop-and-mud-seep.md) (the anchor drop and the mud seep, which fill Area 10's danger bar), [ADR 0036](0036-gliding-trajineras-shuttle-and-surface-boats-never-overlap.md) (surface boats never overlap), [ADR 0037](0037-hub-areas-murky-water-and-the-bailing-bucket.md) (the hub, murky water and the bailing bucket, carried forward)
+
+This ADR records the build choices for issue #108, the deep canal's Area 10: the first grand tour area, its new hazard, the trajinera lure, and its timing element, the drag net, the first timing element that costs a leg. The owner's decisions on #108 are listed below, and they are final. ND-1 to ND-12 are the named defaults in the code comments, and they are provisional until the owner reviews them on the PR.
+
+Owner decisions on #108:
+
+- 2026-10-22: the level layout ladder on #32 applies: more branching routes, dead ends that hold treasure, and tighter gaps than the area before, while staying beatable with one leg and every hit avoidable with skill.
+- 2026-10-22: the area's shape (the area shape rule on #32) is a grand tour: a long route that mixes the earlier shapes (down, U-turn, descent, climb, two lanes, hub).
+- 2026-10-22: the Area 10 plan. All values are starting values, to tune in play.
+  - Lures: 3 fishing trajineras with 5 lures among the snacks. The line always runs up to a boat, and the boat's shadow is always shown. No hook is ever drawn. Eating a lure tugs the line, and the axolotl wriggles free and loses a leg. It is a hit, so protected time starts. The lure is pulled up and comes back after 5 s. The boats drift slowly. Under reduced motion the lure does not bob. The fact card is "Fishing lines", with the owner's copy.
+  - Drag net, the first timing element that costs a leg (the #32 rule): a cycle of 4 s quiet, a 1.0 s warning (the floats rise and the boats lean) and a 2.5 s sweep. Each stretch has 2 safe hollows. A catch costs a leg and is a hit, so protected time starts. The axolotl wriggles out through the mesh and is never shown trapped. There are 2 stretches, and the second has a 3 s quiet and a 2.0 s sweep. Under reduced motion the net does not billow and the floats do not bob, and the floats light up as the warning. In greyscale the mesh is outlined. The fact card is "Fishing nets", with the owner's copy.
+  - Predator mix: each predator is one step tighter than its last appearance and guards its own part of the area, and only one predator acts at a time. 2 tilapia (0.8 s warning, 480 px/s strike, 165 px reach, 1.6 s cooldown, 70 px/s patrol), 1 garter snake (0.8 s, 380 px/s for 0.35 s, 115 px at the surface, 1.8 s, 60 px/s), 1 crayfish (0.8 s, 420 px/s for 0.3 s, 95 px on the floor, 1.5 s, 70 px/s) and 1 black bass (0.8 s, 520 px/s for 0.45 s, 185 px at any depth, 1.3 s, 70 px/s). The heron row of this plan was replaced on the same day (below).
+  - Size and contents: about 10 screens wide and 3 tall, 5 lures, 2 drag-net stretches, 15 treasure slots, the deep canal look with festival trajineras and Area 8's hiding-place kinds. The plan's 52 snacks of 28 worms and 24 bugs and its 30% stranded chance were replaced by the later decisions below.
+  - Treasures, on the theme of celebration and axolotl pride: Festival flag string, Floating candle, Party hat and Confetti scarf (Common); the Axolotl statue (the special treasure), Marigold boat, Festival shirt and Peach, a solid Dream colour told apart from Sunset orange and Bubblegum (Rare); Mariachi band figures and Hero medal (Epic); Refuge snow globe and Champion crown (Legendary).
+- 2026-10-22, update: the heron is now a wading stalker (#111), and Area 10's heron stays one step tighter than Area 3's, with provisional values: a 1.0 s warning (0.8 s floor), a 120 px stab reach, a 2.5 s cooldown and 1 heron. The 6 s cycle no longer applies. The stranded chance default is now 40% (#111), and Area 10 uses it unless the owner sets its own. The cormorant (#112) may join Area 10 once its own area is decided.
+- 2026-10-23: the danger bar of #117 applies: about one moving threat per screen, at least 2 predator types and 1 moving hazard type that costs a leg on touch, and predators that chase on a leash.
+- 2026-10-23: the snack ramp (PRD H4) applies: a mobile snack share above Area 5's 60%, up to about 70%, at speeds at or above Area 5's.
+- 2026-10-24: the whole-water danger test of #130 and the snack motion rules of #131 apply: the depth rule, the floor rule (Area 10 has surface danger), about one carp for every 3 screens, so 10 carp, no quiet swim longer than one screen across, and the relaxed safe start. Snack homes keep 80 px from every lure and its line, and out of every drag-net sweep, so a real snack is never mixed up with a lure. The heron values still needed updating for the danger bar.
+
+Named defaults: ND-1 is the lures' rules and values, ND-2 the drag net's rules and values, ND-3 the danger bar's heron exemption, ND-4 Area 10's carp tuning, ND-5 the perk on each Area 10 Wearable, ND-6 the sounds for a lure or net hit, ND-7 the grand tour's skeleton and its shape proof, ND-8 the snack mix and speeds, ND-9 Confetti shine, ND-10 the murky patches carried forward, ND-11 the extra anchor drops and mud seeps and ND-12 the heron's values.
+
+The plan had four open questions, Q1 to Q4. Each took the planner's recommended answer. The agent chose these answers, not the owner, and they are pending the owner's review on the PR:
+
+- Q1 (ND-3): the danger bar's every-predator-chases check skips a predator built never to chase, which is the wading heron.
+- Q2 (ND-10): murky water carries forward from Area 9 as 2 patches.
+- Q3: Area 10 sets no stranded chance of its own, so the 40% default applies.
+- Q4 (ND-9): Confetti shine, a Legendary sheen, is the area's second Dream colour.
+
+## Context
+
+Areas 1 to 9 each have one shape: down, U-turn, descent, climb, two lanes or hub. The owner chose a grand tour for Area 10, a long route that mixes them all. The area shape rule says the first area that needs a shape the framework cannot express generalises the framework in its own PR, with an ADR.
+
+Every hazard so far that costs a leg does so on touch. A lure looks like a snack, and it costs a leg only when the axolotl eats it.
+
+ADR 0021 kept timing elements and leg costs apart: "elements never cost a leg", and a part whose touch costs a leg is a hazard. The owner's drag net is a timing element that costs a leg (the #32 rule).
+
+The full danger bar (ADR 0021, as replaced by ADR 0023) needs every predator to chase. The owner's Area 10 mix has a heron, and the heron is built never to chase: `tunedSpecies` refuses a chase on a species with the `fixedStrikeSpot` or `stillCooldown` rule (ADR 0019, ADR 0021). As written, Area 10 could not pass its own danger test with the owner's predators.
+
+A fishing line and a net both come close to things the game never shows: a hook, a person fishing, or the axolotl caught and held (PRD A11, ADR 0007, ADR 0008). Their rules and art have to stay clearly gentle.
+
+## Decision
+
+**The grand tour is plain area data, and the framework did not change (owner, 2026-10-22; ND-7).** Area 10 is 10 x 3 screens, 4800 x 1080 px (`src/logic/deepCanal3Layout.ts`). Its start (x 180, y 200) and its Home Spot are top left, and its safe area is the Home Spot's column of the top row. The main path drops down and right into a fork pocket, swims the upper of two lanes split by an old-stone divider (two stones, each 640 px wide, the second touching the first) to a join pocket, makes a U-turn along the top row, descends through all three rows, runs east along the bed, climbs back up through a clear opening, and forks at a hub at the top right. The hub's main branch drops to the exit, low at the east end with its gate on the bed. Its treasure branch runs on east past the side-canal inflow to a dead end.
+
+The framework already reads the start, the safe area, the exit, the main path and the rock from each area's data, so the grand tour needed no framework change. This ADR records that in place of one. The only shared layout fields the area adds are `fishingBoats` and `dragNets`, for its new hazard and its timing element. Area 10's layout test proves each part of the shape in order.
+
+**A lure is eaten, never touched, and it is not a danger-bar threat (ND-1).** The trajinera lure (`'trajinera-lure'` in code, `TRAJINERA_LURE` in `src/logic/lures.ts`) is a hazard type that costs a leg, with the "Fishing lines" card, met within 120 px of a lure that is down.
+
+- A fishing trajinera is its own `fishingBoats` area data, never in `hazards` or `elements`, as the bailing boats are their own `bailingBoats`. Its 120 px hull drifts back and forth at 12 px/s across a span of the surface longer than the hull, turning at once at each end.
+- Each lure hangs on a straight line from its boat at the surface, at a fixed place along the hull and a fixed depth below the hull's draft. Its place along the hull is limited to the hull, 0 to 120 px from its left end (`fishingBoatSpawn` throws a RangeError otherwise), so the line always runs straight up to its own boat. Area 10 hangs each line at a hull end, at most one at each end.
+- A lure bobs like a snack under full motion, and not at all under reduced motion. It is eaten when the head reach centre is within the shared snack eat reach of the lure where it hangs, edges included. Touching the line or the hull is never a hit.
+- Eating a lure lands one hit through the shared hit path (`hitEncounter` in `src/logic/encounter.ts`), with source id `'trajinera-lure'`, from the lure. So a Shell perk can block it, a lost leg starts protected time, it counts against Star 3, and losing the last leg carries the axolotl home, as for any hit. Two lures in reach on the same frame land one hit.
+- After a tug, the lure rises to its boat over 0.5 s (at once under reduced motion) and stays up 5 s, even when the hit was blocked or protected. Then it comes back only once the head is out of its reach, so it never returns onto the head. A carry home puts every lure down again.
+- A lure is never a snack. It is never counted, never pulled by the Snack magnet, never speeds regrowth and is never needed to open the exit.
+- A lure's whole path, the places it can hang as its hull drifts, is a hiding-risk threat (B10) and a gap obstacle. It is not a danger-bar threat. Snack homes, stranding places, the exit and the safe area keep clear of every lure's path and line, and each boat's whole drift span overlaps no other surface boat (ADR 0036).
+- Nothing shows a hook or a person fishing. The boat is a festival trajinera with a rod over the side, its shadow always shown, and no person, face or text. The lure is a worm-like lure, told apart from a snack by its line, which always runs up to its boat. A tug jerks the line and the axolotl wriggles free (PRD A11, ADR 0007, ADR 0008).
+
+**The drag net is a timing element that costs a leg (ND-2). It amends ADR 0021's rule that elements never cost a leg.** A timing element may now cost a leg, but only through the shared hit path, so the Shell, protected time, `legsLost` and the carry home work on it with no new rules. ADR 0021's other reasoning stands: a part whose touch costs a leg on a fixed shape or a moving shaft is still a hazard.
+
+- The drag net (`'drag-net'` in code, `DRAG_NET` in `src/logic/dragNets.ts`) works one stretch of water, a fixed rect, on a cycle: quiet, then a warning (the floats rise and the boats lean), then a sweep in which a front crosses the stretch at a steady speed from one edge to the other. The default cycle is 4 s quiet, a 1.0 s warning and a 2.5 s sweep. Area data can set a stretch's own timing, and Area 10's second stretch has a 3 s quiet, a 1.0 s warning and a 2.0 s sweep.
+- Drag nets are their own `dragNets` area data, never in `hazards` or `elements`. Each stretch has exactly 2 safe hollows inside it.
+- During the sweep the net catches an axolotl whose centre is inside the stretch, on the side of the front it has already swept, and not in a hollow. A catch lands one hit through the shared hit path, with source id `'drag-net'`, from the axolotl's centre. A stretch catches at most once per sweep. Tail Dash gives no immunity.
+- A net never moves, holds or traps the axolotl. The catch rule reads the axolotl's place only, and sets no push, hold or toss. The axolotl wriggles out through the mesh where it is and swims on (ADR 0007, ADR 0008).
+- Every stretch is fair: from every point in it, a one-leg axolotl that starts to swim at the warning reaches a hollow or leaves the stretch before the front reaches it (`dragNetUnfairPoint`, proved in Area 10's layout test).
+- A stretch is a hiding-risk threat (B10). It is not a gap obstacle, because it is crossed by timing, like a pulsing current. It is not a danger-bar threat. Snack homes, stranding places, the exit and the safe area keep out of every stretch. The "Fishing nets" card is met within 180 px of a stretch.
+- Under reduced motion the net does not billow and the floats do not bob, and the floats light up as the warning. The mesh is outlined, so it reads in greyscale. The art shows no person, face or text.
+- A lure or net hit plays the shared hit's uh-oh, with no extra sound (ND-6). The lures and the nets act only on swimming steps. They pause with the game and the banking card, start fresh each trip and after a carry home, and never act during a bailing bucket toss.
+
+**The full danger bar passes a predator built never to chase (ND-3). It amends ADR 0023's every-predator-chasing check.** In `meetsWholeWaterDangerBar` (`src/logic/dangerBar.ts`), a predator route passes the chase check when its species has a chase, or when its species has the `fixedStrikeSpot` or `stillCooldown` rule, which `tunedSpecies` refuses a chase. Today that is only the wading heron. Every other predator still has to chase. The heron still counts as one moving threat, and its reach for the bar is its stab reach with no leash. The ramp bar is unchanged, and every shipped area's bar result is unchanged. The heron keeps its gentle wading stalk from #111.
+
+**Area 10's predators.** Area 10 has 2 tilapia, 10 carp, a black bass, a heron, a garter snake and a crayfish, each guarding its own part of the area. The tilapia, the black bass, the garter snake and the crayfish take the owner's values above, each with its chase. The heron is a wading stalker on a surface stretch with a 1.0 s warning, a 120 px stab and a 2.5 s cooldown, and no chase (ND-12). The carp are one step up from Area 9's, with a 1.5 s cooldown and a 65 px/s patrol (ND-4). Five anchor drops and six mud seeps fill the bar (ND-11), so the area has 27 moving threats for its 30 screens, at least the ⌈0.75 × 30⌉ = 23 it needs. The one black bass loop reaches all three depth bands, each lane passes the bar alone, and the main path's narrowest gap, 39 px between `anchor-drop-4` and `bass-0`, is tighter than Area 9's and never under the safe passing width. Two murky patches carry forward from Area 9 (ND-10): a 120 px patch on the main path, crossed by a one-leg axolotl in under 3 s, and a wider one over the sunken hull cave, a treasure dead end. The side-canal inflow runs at Area 9's 72 px/s.
+
+**Area 10's treasures and Dream colours.** Area 10 has 15 slots and 13 treasures: the owner's 12, with the Axolotl statue as the Rare special treasure, then the Confetti shine Paint shell. Each Wearable has one existing perk at the value for its rarity, and no two share a perk type (ND-5): the Party hat `dash`, the Confetti scarf `treasureSense`, the Festival shirt `speed`, the Hero medal `shell` and the Champion crown `regrowth`. Area 10 adds two Paint shells: Peach, the owner's Rare solid, and Confetti shine (ND-9), a Legendary sheen with a deep grape-violet body and confetti pink and lemon stripes. Confetti shine is the first dark sheen. It follows the rule that each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour, and makes 26 Dream colours.
+
+Area 10's snacks are 18 tadpoles, 18 shrimp, 8 worms and 8 bugs, so 36 of 52 are mobile, 69.2%, within the 70% cap. Tadpoles swim at 72 px/s, the Snack magnet pulls at 86.4 px/s, and the drift is a little faster than Area 9's (ND-8).
+
+## Consequences
+
+- A grand tour, or any area that mixes the earlier shapes, is area data. A later area with that shape needs no framework change.
+- An eaten hazard is a hazard type plus an eat check that hits through the shared hit path. The Shell, protected time and the carry home work on it with no new rules.
+- A timing element may cost a leg, through the shared hit path only. A later timing element that costs a leg has to land its hit there too.
+- The full danger bar's chase check now passes a species built never to chase. A later area could lean on a predator that does not chase. Each such species is named by its rules, not a list of ids, and it still has to be counted with its real reach.
+- Fishing boats and drag nets are their own area data fields, so every rule that reads `hazards` or `elements` is unchanged, and Areas 1 to 9 build, play and bake exactly as before.
+- The ids `'trajinera-lure'` and `'drag-net'` are fixed for good (ADR 0012). The save format is unchanged: the met list only gains the two ids, and the Collection Book gains their two fact cards.
+- The ND-n values and the Q1 to Q4 answers are provisional. The owner can tune or reverse any of them on the PR, as area data, tuning or the one danger bar check.
+
+## Alternatives considered
+
+| Option | Why not |
+|---|---|
+| Generalise the area framework for a grand tour first | The start, the safe area, the exit, the main path and the rock were already area data. A framework change would have changed nothing. |
+| Make a lure cost a leg on touch | It reads as a snack, and the owner's rule is that eating it costs a leg. A touch cost would make the line and the hull hazards too, and would punish a near miss. |
+| Put fishing boats or drag nets in `hazards` or `elements` | Every reader of those lists would need a case to leave them out of the danger bar, the gap measure or the element rules. Their own fields, as the trajineras and the bailing boats have, keep every other rule unchanged. |
+| Make the drag net a hazard, keeping ADR 0021's rule | The net runs on a cycle with a warning and safe hollows, and the owner chose it as the area's timing element. Calling it a hazard would break the one-new-thing rule (ADR 0014) with the lure. |
+| Let a net hold or drag the axolotl | A net never traps the axolotl (PRD A11, ADR 0007, ADR 0008). A hold would read as being caught and kept. |
+| Let a lure hang anywhere along its boat's span | The line would no longer run up to its own boat, which the owner's rule needs so a lure is never mistaken for a snack. |
+| Give Area 10's heron a short chase (Q1, option B) | It changes the heron's shared rules from #111 against ADR 0019 and ADR 0021, and a bird chasing the axolotl may read as less gentle (ADR 0007). |
+| Leave the heron out of Area 10 (Q1, option C) | It goes against the owner's predator mix: the tilapia with every earlier predator. |
+| Count lures or drag nets toward the danger bar | The bar counts predators and moving hazards that cost a leg on touch. A lure costs a leg only when eaten, and a net is a timing element. |

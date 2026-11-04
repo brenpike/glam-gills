@@ -364,7 +364,8 @@ export const FISHING_LURE_FRAME_DY: Readonly<Record<FishingLureFrame, number>> =
  * lureDrawn). Under full motion the lure bobs over `bobPeriod` and the hull and rods over
  * `hullBobPeriod`; a tug snaps the lure `tugPx` up and back in `tugFor` (one half sine) with the
  * axolotl's snag wriggle for `wriggleFor`; the lure is then reeled up at `reelSpeed` and fades over
- * the last `reelFade` s at the bead; it comes back faded in at the bead and let down over `lowerFor`.
+ * the last `reelFade` s at the bead; a returned lure fades in at its eat position (from alpha 0.4
+ * over `reducedFadeIn`, under full and reduced motion alike).
  * Under reduced motion there is no bob, jerk or wriggle: the lure fades out where it is over
  * `reducedFadeOut` and fades back in at its rest position over `reducedFadeIn`.
  */
@@ -378,7 +379,6 @@ export const FISHING_MOTION = Object.freeze({
   wriggleFor: 0.4,
   reelSpeed: 200,
   reelFade: 0.2,
-  lowerFor: 1,
   reducedFadeOut: 0.3,
   reducedFadeIn: 0.5,
 });

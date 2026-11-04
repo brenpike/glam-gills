@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-11-04
+
+### Added
+
+- Area 10, the third deep canal area. The grand tour is now a big 10 x 3 trip.
+- Fishing trajineras float on the water. Their lures look like snacks, so look up for the line before you nibble!
+- Drag nets sweep across the water. Swim into a safe hollow to hide while a net goes by.
+- A new mix of predators: tilapia join the heron, the garter snake, the crayfish and the black bass, plus carp.
+- 13 new treasures to find, including the Axolotl statue.
+- Two new Dream colours: Peach and Confetti shine.
+- Two new fact cards: "Fishing lines" and "Fishing nets".
+
 ## [0.63.0] - 2026-11-03
 
 ### Added

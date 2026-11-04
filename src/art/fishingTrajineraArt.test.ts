@@ -817,12 +817,11 @@ describe('the line and the lure frames: rest, bob and tug (guide 7p)', () => {
     expect(FISHING_MOTION.bobPeriod).toBe(LURES.bobPeriod);
   });
 
-  it('has the motion numbers of the guide: a 0.25 s jerk, a 0.4 s wriggle, the reel at 200 px/s, the let-down in 1 s and the reduced fades', () => {
+  it('has the motion numbers of the guide: a 0.25 s jerk, a 0.4 s wriggle, the reel at 200 px/s and the reduced fades', () => {
     expect(FISHING_MOTION.tugFor).toBe(0.25);
     expect(FISHING_MOTION.wriggleFor).toBe(0.4);
     expect(FISHING_MOTION.reelSpeed).toBe(200);
     expect(FISHING_MOTION.reelFade).toBe(0.2);
-    expect(FISHING_MOTION.lowerFor).toBe(1);
     expect(FISHING_MOTION.reducedFadeOut).toBe(0.3);
     expect(FISHING_MOTION.reducedFadeIn).toBe(0.5);
     expect(FISHING_MOTION.hullBobPx).toBe(1.5);

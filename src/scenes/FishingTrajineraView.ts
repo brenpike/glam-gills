@@ -14,8 +14,10 @@ import { cssColor, type GameAssets } from './BootScene';
 const TAU = Math.PI * 2;
 /** Seconds after which a tug's jerk, wriggle and reduced-motion fade-out are all over. */
 const TUG_DONE_S = Math.max(FISHING_MOTION.tugFor, FISHING_MOTION.wriggleFor, FISHING_MOTION.reducedFadeOut);
-/** Seconds after which a returning lure's let-down and its reduced-motion fade-in are both over. */
-const BACK_DONE_S = Math.max(FISHING_MOTION.lowerFor, FISHING_MOTION.reelFade, FISHING_MOTION.reducedFadeIn);
+/** Seconds after which a returning lure's fade-in is over. */
+const BACK_DONE_S = FISHING_MOTION.reducedFadeIn;
+/** The alpha a returning lure starts its fade-in at: it is eatable at once, so it is clearly visible from its first frame. */
+const BACK_MIN_ALPHA = 0.4;
 
 /** One frame of fishing trajinera rendering input. SwimScene reuses one object for every frame. */
 export interface FishingTrajineraFrame {
@@ -76,6 +78,11 @@ function clampShare(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
+/** The alpha of a lure `backAge` seconds after it came back: BACK_MIN_ALPHA, rising to 1 over BACK_DONE_S. */
+function backAlphaFor(backAge: number): number {
+  return BACK_MIN_ALPHA + (1 - BACK_MIN_ALPHA) * clampShare(backAge / BACK_DONE_S);
+}
+
 /** The snapshot of boat `drawing` at `index`. Throws when the snapshot's boats are not the drawn ones, in order. */
 function boatSnapshotFor(boats: readonly Readonly<FishingBoatSnapshot>[], index: number, drawing: BoatDrawing): Readonly<FishingBoatSnapshot> {
   const boat = boats[index];
@@ -123,9 +130,10 @@ function createLure(scene: Phaser.Scene, textures: FishingTrajineraTextures, lur
  * tugPx up and back over tugFor (one half sine) while the logic lifts it, and it fades out over the
  * last reelFade seconds of the lift at the bead; the axolotl does the snag wriggle for wriggleFor
  * (wriggling). While it is up only the rod, the line to the bead and the bead show. When the logic
- * brings it back it fades in at the bead and is let down to where it hangs over lowerFor. Under
- * reduced motion there is no jerk, no wriggle and no let-down: at the tug the lure fades out where
- * it hung over reducedFadeOut, and when it comes back it fades in where it hangs over reducedFadeIn.
+ * brings it back it is eatable at once, so it is drawn where it hangs from its first frame, fading in
+ * over reducedFadeIn from BACK_MIN_ALPHA, never invisible. Under reduced motion there is no jerk and
+ * no wriggle: at the tug the lure fades out where it hung over reducedFadeOut, and when it comes back
+ * it fades in the same way.
  * The tug shows the same when the hit is blocked by the Shell or lands in protected time.
  *
  * It reuses its sprites and one Graphics for every line, redrawn each frame, and allocates nothing
@@ -242,20 +250,19 @@ export class FishingTrajineraView {
 
   /**
    * Full motion: up, the lure where the logic lifts it, jerked up by the tug's half sine and fading
-   * over the lift's last reelFade seconds; down, faded in at the bead and let down to where it hangs
-   * over lowerFor. The line ends at the lure while it shows.
+   * over the lift's last reelFade seconds; down, where it hangs, fading in from BACK_MIN_ALPHA over
+   * reducedFadeIn. The line ends at the lure while it shows.
    */
   private placeMovingLure(drawing: LureDrawing, lure: Readonly<LureSnapshot>): void {
     const { at } = lure;
-    let y: number;
+    let y = at.y;
     let alpha: number;
     if (lure.up) {
       const jerk = drawing.tugAge < FISHING_MOTION.tugFor ? FISHING_MOTION.tugPx * Math.sin((Math.PI * drawing.tugAge) / FISHING_MOTION.tugFor) : 0;
       y = Math.max(SURF, at.y - jerk);
       alpha = clampShare(((1 - lure.lift) * LURES.liftFor) / FISHING_MOTION.reelFade);
     } else {
-      y = SURF + (at.y - SURF) * clampShare(drawing.backAge / FISHING_MOTION.lowerFor);
-      alpha = clampShare(drawing.backAge / FISHING_MOTION.reelFade);
+      alpha = backAlphaFor(drawing.backAge);
     }
     drawing.drawnY = y;
     drawing.lure.setPosition(at.x, y).setAlpha(alpha).setVisible(alpha > 0);
@@ -263,7 +270,7 @@ export class FishingTrajineraView {
 
   /**
    * Reduced motion: up, the lure fading out where it hung at the tug over reducedFadeOut, off its
-   * line, which runs to the bead; down, where it hangs, fading in over reducedFadeIn.
+   * line, which runs to the bead; down, where it hangs, fading in from BACK_MIN_ALPHA over reducedFadeIn.
    */
   private placeStillLure(drawing: LureDrawing, lure: Readonly<LureSnapshot>): void {
     if (lure.up) {
@@ -271,7 +278,7 @@ export class FishingTrajineraView {
       drawing.lure.setPosition(drawing.tugAt.x, drawing.tugAt.y).setAlpha(alpha).setVisible(alpha > 0);
       return;
     }
-    const alpha = clampShare(drawing.backAge / FISHING_MOTION.reducedFadeIn);
+    const alpha = backAlphaFor(drawing.backAge);
     drawing.drawnY = lure.at.y;
     drawing.lure.setPosition(lure.at.x, lure.at.y).setAlpha(alpha).setVisible(alpha > 0);
   }
