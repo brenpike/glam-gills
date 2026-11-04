@@ -6,8 +6,10 @@ import {
   CHINAMPA_2_TREASURES,
   CHOCOLATE,
   CHINAMPA_TREASURES,
+  CONFETTI_SHINE,
   CRYSTAL_SHINE,
   DEEP_CANAL_2_TREASURES,
+  DEEP_CANAL_3_TREASURES,
   DEEP_CANAL_TREASURES,
   DREAM_COLOURS,
   FIESTA_SHINE,
@@ -20,6 +22,7 @@ import {
   LILY_GREEN,
   MOONSTONE,
   OLIVE,
+  PEACH,
   PERK_VALUES,
   PLUM,
   POND_2_TREASURES,
@@ -1089,8 +1092,132 @@ describe('DEEP_CANAL_2_TREASURES', () => {
   });
 });
 
+describe('DEEP_CANAL_3_TREASURES', () => {
+  it("holds exactly the deep canal Area 10 treasures, the owner's 12 in rarity order, then the Confetti shine Paint shell (issue #108)", () => {
+    expect(DEEP_CANAL_3_TREASURES).toEqual([
+      {
+        id: 'deep-canal/festival-flag-string',
+        name: 'Festival flag string',
+        rarity: 'common',
+        category: 'decoration',
+        placement: 'hanging',
+      },
+      {
+        id: 'deep-canal/floating-candle',
+        name: 'Floating candle',
+        rarity: 'common',
+        category: 'decoration',
+        placement: 'floating',
+      },
+      {
+        id: 'deep-canal/party-hat',
+        name: 'Party hat',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'dash', value: 10 },
+      },
+      {
+        id: 'deep-canal/confetti-scarf',
+        name: 'Confetti scarf',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'neck',
+        perk: { type: 'treasureSense', value: 15 },
+      },
+      { id: 'deep-canal/axolotl-statue', name: 'Axolotl statue', rarity: 'rare', category: 'decoration' },
+      {
+        id: 'deep-canal/marigold-boat',
+        name: 'Marigold boat',
+        rarity: 'rare',
+        category: 'decoration',
+        placement: 'floating',
+      },
+      {
+        id: 'deep-canal/festival-shirt',
+        name: 'Festival shirt',
+        rarity: 'rare',
+        category: 'wearable',
+        slot: 'shirt',
+        perk: { type: 'speed', value: 6 },
+      },
+      {
+        id: 'deep-canal/paint-shell-peach',
+        name: 'Peach Paint shell',
+        rarity: 'rare',
+        category: 'paintShell',
+        dreamColour: 'peach',
+      },
+      { id: 'deep-canal/mariachi-band-figures', name: 'Mariachi band figures', rarity: 'epic', category: 'decoration' },
+      {
+        id: 'deep-canal/hero-medal',
+        name: 'Hero medal',
+        rarity: 'epic',
+        category: 'wearable',
+        slot: 'neck',
+        perk: { type: 'shell', value: 1 },
+      },
+      { id: 'deep-canal/refuge-snow-globe', name: 'Refuge snow globe', rarity: 'legendary', category: 'decoration' },
+      {
+        id: 'deep-canal/champion-crown',
+        name: 'Champion crown',
+        rarity: 'legendary',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'regrowth', value: 25 },
+      },
+      {
+        id: 'deep-canal/paint-shell-confetti-shine',
+        name: 'Confetti shine Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'confetti-shine',
+      },
+    ]);
+    expect(Object.isFrozen(DEEP_CANAL_3_TREASURES)).toBe(true);
+  });
+
+  it('gives every Area 10 Wearable its PERK_VALUES value, no set, and a perk type no other Area 10 Wearable has (ND-5)', () => {
+    const wearables = DEEP_CANAL_3_TREASURES.filter(isWearable);
+    for (const wearable of wearables) {
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+      expect(wearable.setId, wearable.id).toBeUndefined();
+    }
+    expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBe(wearables.length);
+  });
+
+  it('has 6 Decorations, 5 Wearables and the Peach and Confetti shine Paint shells, in rarity order, with the Axolotl statue a Rare Floor Decoration', () => {
+    expect(DEEP_CANAL_3_TREASURES).toHaveLength(13);
+    expect(DEEP_CANAL_3_TREASURES.filter(isDecoration)).toHaveLength(6);
+    expect(DEEP_CANAL_3_TREASURES.filter(isWearable)).toHaveLength(5);
+    expect(DEEP_CANAL_3_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'deep-canal/paint-shell-peach',
+      'deep-canal/paint-shell-confetti-shine',
+    ]);
+    const rarityIndexes = DEEP_CANAL_3_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
+    expect(RARITIES.map((rarity) => DEEP_CANAL_3_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([4, 4, 2, 3]);
+    const statue = treasureById('deep-canal/axolotl-statue');
+    expect(statue?.rarity).toBe('rare');
+    expect(statue !== undefined && isDecoration(statue) && placementKind(statue)).toBe('floor');
+  });
+
+  it('keeps every slug apart from the Area 8 and Area 9 slugs it shares the deep-canal/ prefix with', () => {
+    const earlierIds = new Set([...DEEP_CANAL_TREASURES, ...DEEP_CANAL_2_TREASURES].map((treasure) => treasure.id));
+    for (const treasure of DEEP_CANAL_3_TREASURES) {
+      expect(treasure.id).toMatch(/^deep-canal\/[a-z0-9-]+$/);
+      expect(earlierIds.has(treasure.id), treasure.id).toBe(false);
+    }
+  });
+
+  it('keeps every earlier area list unchanged ahead of it', () => {
+    expect(DEEP_CANAL_2_TREASURES).toHaveLength(13);
+    expect(DEEP_CANAL_2_TREASURES.at(-1)?.id).toBe('deep-canal/paint-shell-lantern-shine');
+  });
+});
+
 describe('ALL_TREASURES', () => {
-  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5, spring cave Area 6, spring cave Area 7, deep canal Area 8 and deep canal Area 9 treasures, in that order', () => {
+  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5, spring cave Area 6, spring cave Area 7, deep canal Area 8, deep canal Area 9 and deep canal Area 10 treasures, in that order', () => {
     expect(ALL_TREASURES).toEqual([
       ...CANAL_TREASURES,
       ...POND_TREASURES,
@@ -1101,16 +1228,17 @@ describe('ALL_TREASURES', () => {
       ...SPRING_CAVE_2_TREASURES,
       ...DEEP_CANAL_TREASURES,
       ...DEEP_CANAL_2_TREASURES,
+      ...DEEP_CANAL_3_TREASURES,
     ]);
     expect(Object.isFrozen(ALL_TREASURES)).toBe(true);
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 124 treasures: 49 Decorations, 51 Wearables and 24 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(124);
-    expect(ALL_DECORATIONS).toHaveLength(49);
-    expect(ALL_WEARABLES).toHaveLength(51);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(24);
+  it('has 137 treasures: 55 Decorations, 56 Wearables and 26 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(137);
+    expect(ALL_DECORATIONS).toHaveLength(55);
+    expect(ALL_WEARABLES).toHaveLength(56);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(26);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -1121,6 +1249,7 @@ describe('ALL_TREASURES', () => {
       'pond/pearl-tail-charm',
       'chinampa/rainbow-serape-cape',
       'spring-cave/gemstone-cape',
+      'deep-canal/hero-medal',
     ]);
     for (const wearable of shellWearables) {
       expect(['epic', 'legendary'], wearable.id).toContain(wearable.rarity);
@@ -1175,7 +1304,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine, Peach, Confetti shine', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -1194,8 +1323,10 @@ describe('Dream colours', () => {
       FIESTA_SHINE,
       OLIVE,
       LANTERN_SHINE,
+      PEACH,
+      CONFETTI_SHINE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(24);
+    expect(DREAM_COLOURS).toHaveLength(26);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -1222,6 +1353,7 @@ describe('Dream colours', () => {
       'chocolate',
       'jade',
       'olive',
+      'peach',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -1307,11 +1439,29 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Lantern shine a Legendary sheen, the twenty-fourth and last Dream colour, with a name no other Dream colour has (issue #107)', () => {
+  it('makes Lantern shine a Legendary sheen, the twenty-fourth Dream colour, with a name no other Dream colour has (issue #107)', () => {
     expect(LANTERN_SHINE).toEqual({ id: 'lantern-shine', name: 'Lantern shine', rarity: 'legendary', kind: 'sheen' });
     expect(Object.isFrozen(LANTERN_SHINE)).toBe(true);
     expect(dreamColourById('lantern-shine')).toBe(LANTERN_SHINE);
-    expect(DREAM_COLOURS.at(-1)).toBe(LANTERN_SHINE);
+    expect(DREAM_COLOURS.at(23)).toBe(LANTERN_SHINE);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Peach a rare solid, the twenty-fifth Dream colour, with a name no other Dream colour has (issue #108)', () => {
+    expect(PEACH).toEqual({ id: 'peach', name: 'Peach', rarity: 'rare', kind: 'solid' });
+    expect(Object.isFrozen(PEACH)).toBe(true);
+    expect(dreamColourById('peach')).toBe(PEACH);
+    expect(DREAM_COLOURS.at(24)).toBe(PEACH);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Confetti shine a Legendary sheen, the twenty-sixth and last Dream colour, with a name no other Dream colour has (issue #108)', () => {
+    expect(CONFETTI_SHINE).toEqual({ id: 'confetti-shine', name: 'Confetti shine', rarity: 'legendary', kind: 'sheen' });
+    expect(Object.isFrozen(CONFETTI_SHINE)).toBe(true);
+    expect(dreamColourById('confetti-shine')).toBe(CONFETTI_SHINE);
+    expect(DREAM_COLOURS.at(-1)).toBe(CONFETTI_SHINE);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -1602,5 +1752,15 @@ describe('ownedDreamColours', () => {
       'deep-canal/paint-shell-fiesta-shine',
     ];
     expect(ownedDreamColours(banked)).toEqual(['fiesta-shine', 'olive', 'lantern-shine']);
+  });
+
+  it('owns Peach and Confetti shine from the deep canal Area 10 Paint shells, after Lantern shine', () => {
+    const banked = [
+      'deep-canal/paint-shell-confetti-shine',
+      'deep-canal/axolotl-statue',
+      'deep-canal/paint-shell-peach',
+      'deep-canal/paint-shell-lantern-shine',
+    ];
+    expect(ownedDreamColours(banked)).toEqual(['lantern-shine', 'peach', 'confetti-shine']);
   });
 });

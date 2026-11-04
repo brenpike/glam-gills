@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RARITIES } from './catalogue';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
+import { dragNetSpawn, dragNetSweep } from './dragNets';
 import type { FactCard } from './factCards';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardSpawn, HazardType } from './hazards';
@@ -33,6 +34,7 @@ import {
   type PastCurrentBand,
   type Threat,
 } from './hiding';
+import { LURES, TRAJINERA_LURE, fishingBoatSpawn, lurePath } from './lures';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
 import { POND_2_LAYOUT } from './pond2Layout';
 import { POND_LAYOUT } from './pondLayout';
@@ -47,7 +49,7 @@ import {
   type PredatorSpecies,
 } from './predators';
 import { HERON, RISK, TILAPIA, TILAPIA_CHASE } from './tuning';
-import { BED_TOP, CANAL_LAYOUT, SURF, inSafeArea, type CurrentZone, type HidingSpot, type Point, type TilapiaRoute } from './zone';
+import { BED_TOP, CANAL_LAYOUT, SURF, areaSize, inSafeArea, swimBounds, type CurrentZone, type HidingSpot, type Point, type TilapiaRoute } from './zone';
 
 const CURRENT: CurrentZone = { id: 'current-0', x0: 400, x1: 600, y0: 120, y1: 280, force: { x: -70, y: 0 } };
 /** CURRENT with its flow reversed, coming from the left. */
@@ -590,6 +592,25 @@ const SPIKE: HazardSpawn = { id: 'spike-0', type: TEST_SPIKE, shape: { kind: 'ci
 const WEED: HazardSpawn = { id: 'weed-0', type: TEST_WEED, shape: { kind: 'rect', x0: 0, x1: 10000, y0: 900, y1: 1100 } };
 /** A punting pole at x 5000: its sweep is x 4995 to 5005, from the surface down 180 px. */
 const POLE = movingHazardSpawn('pole-0', PUNTING_POLE, 5000, 0);
+/**
+ * A fishing boat over GEO's cave: its first lure hangs at y 250 and drifts over x 860 to 1040, so the
+ * cave spot (950, 250) is on its path. Its second lure hangs at y 150, over x 920 to 1100.
+ */
+const FISHING_BOAT = fishingBoatSpawn(
+  'boat-0',
+  0,
+  { x0: 800, x1: 1100, lures: [{ along: 60, depth: 250 - SURF }, { along: 120, depth: 150 - SURF }] },
+  swimBounds(areaSize(10, 3)),
+);
+/** A drag-net stretch over GEO's cave, its two hollows at its left and right ends. */
+const DRAG_NET = dragNetSpawn('net-0', 0, {
+  stretch: { x0: 900, x1: 1000, y0: 200, y1: 318 },
+  sweep: 'right',
+  hollows: [
+    { x0: 900, x1: 910, y0: 200, y1: 318 },
+    { x0: 990, x1: 1000, y0: 200, y1: 318 },
+  ],
+});
 
 describe('riskBands', () => {
   it('gives exactly RISK.band for the tilapia lunge range', () => {
@@ -654,6 +675,54 @@ describe('zoneThreats', () => {
   it('gives the same threats with an empty moving hazard list as with none', () => {
     const geo = { tilapiaRoutes: [LINE_ROUTE], predatorRoutes: [EEL_ROUTE], hazards: [SPIKE, WEED] };
     expect(zoneThreats({ ...geo, movingHazards: [] })).toEqual(zoneThreats(geo));
+  });
+});
+
+describe('zoneThreats with lures and drag nets', () => {
+  it('lists each lure after the moving hazards, its whole path with the eat reach, then each drag-net stretch with strike 0 (ND-1, ND-2)', () => {
+    const threats = zoneThreats({ tilapiaRoutes: [LINE_ROUTE], movingHazards: [POLE], fishingBoats: [FISHING_BOAT], dragNets: [DRAG_NET] });
+    expect(threats).toHaveLength(5);
+    expect(threats.slice(2)).toEqual([
+      { kind: 'shape', shape: lurePath(FISHING_BOAT, 0), strike: TRAJINERA_LURE.reach },
+      { kind: 'shape', shape: lurePath(FISHING_BOAT, 1), strike: TRAJINERA_LURE.reach },
+      { kind: 'shape', shape: dragNetSweep(DRAG_NET), strike: 0 },
+    ]);
+    expect(threats[2]).toEqual({ kind: 'shape', shape: { kind: 'rect', x0: 860, x1: 1040, y0: 250 - LURES.bobAmplitude, y1: 250 + LURES.bobAmplitude }, strike: TRAJINERA_LURE.reach });
+    expect(threats[4]).toEqual({ kind: 'shape', shape: { kind: 'rect', x0: 900, x1: 1000, y0: 200, y1: 318 }, strike: 0 });
+  });
+
+  it('gives the same threats with empty fishing boat and drag net lists as with none (Areas 1 to 9)', () => {
+    const geo = { tilapiaRoutes: [LINE_ROUTE], predatorRoutes: [EEL_ROUTE], hazards: [SPIKE, WEED], movingHazards: [POLE] };
+    expect(zoneThreats({ ...geo, fishingBoats: [], dragNets: [] })).toEqual(zoneThreats(geo));
+  });
+
+  it('bands a spot near a lure by riskBands of the eat reach, from its whole path', () => {
+    const lure = zoneThreats({ tilapiaRoutes: [], fishingBoats: [{ ...FISHING_BOAT, lures: [FISHING_BOAT.lures[0]] }] });
+    const reach = TRAJINERA_LURE.reach;
+    const below = (distance: number): Point => ({ x: 950, y: 250 + LURES.bobAmplitude + distance });
+    expect(meetsThreatRiskRule(below(reach / 2), 'legendary', lure)).toBe(true);
+    expect(meetsThreatRiskRule(below(reach), 'epic', lure)).toBe(true);
+    expect(meetsThreatRiskRule(below(reach), 'rare', lure)).toBe(false);
+    expect(meetsThreatRiskRule(below(reach + RISK_COMMON_MARGIN), 'rare', lure)).toBe(true);
+    expect(meetsThreatRiskRule(below(reach + RISK_COMMON_MARGIN + 1), 'common', lure)).toBe(true);
+    expect(meetsThreatRiskRule(below(reach + RISK_COMMON_MARGIN), 'common', lure)).toBe(false);
+  });
+
+  it('bands a spot by a drag-net stretch: Legendary only inside it, never Common within RISK_COMMON_MARGIN of it', () => {
+    const net = zoneThreats({ tilapiaRoutes: [], dragNets: [DRAG_NET] });
+    expect(meetsThreatRiskRule({ x: 950, y: 250 }, 'legendary', net)).toBe(true);
+    expect(meetsThreatRiskRule({ x: 950, y: 250 }, 'epic', net)).toBe(false);
+    expect(meetsThreatRiskRule({ x: 950, y: 190 }, 'rare', net)).toBe(true);
+    expect(meetsThreatRiskRule({ x: 950, y: 200 - RISK_COMMON_MARGIN }, 'common', net)).toBe(false);
+    expect(meetsThreatRiskRule({ x: 950, y: 200 - RISK_COMMON_MARGIN - 1 }, 'common', net)).toBe(true);
+  });
+
+  it('lets an open cave Legendary count a lure or a drag net as its nearby threat (ND-1, ND-2)', () => {
+    const open = { x: 950, y: 250, container: false };
+    expect(meetsRarity(open, 'legendary', GEO)).toBe(false);
+    expect(riskDistance(open, zoneThreats({ ...GEO, fishingBoats: [FISHING_BOAT] }))).toBe(0);
+    expect(meetsRarity(open, 'legendary', { ...GEO, fishingBoats: [FISHING_BOAT] })).toBe(true);
+    expect(meetsRarity(open, 'legendary', { ...GEO, dragNets: [DRAG_NET] })).toBe(true);
   });
 });
 

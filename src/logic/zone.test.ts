@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { AREAS } from './areas';
 import { bailingBoatSpawn, bailingCatchBox } from './bailingBuckets';
 import { CANAL_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
 import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
 import { depthBands } from './dangerBar';
+import { dragNetSpawn, dragNetSweep, type DragNetSpawn } from './dragNets';
 import { netDrift } from './ghostNets';
 import { glowPlantSpawn, type DarkWater } from './glowPlants';
 import {
@@ -16,6 +18,7 @@ import {
   type HazardType,
 } from './hazards';
 import { coversAt, inReeds, isDeep, routeDistance, spotMatchesLabels, turnDistance } from './hiding';
+import { fishingBoatSpawn, lureLinePath, lurePath, type FishingBoatSpawn } from './lures';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
 import { POND_2_LAYOUT } from './pond2Layout';
@@ -1181,6 +1184,167 @@ describe('bailing boats in the layout (issue #107, ND-2)', () => {
   it('adds no bailingBoats key to a layout that has none, and keeps an empty list', () => {
     expect(buildCanalZone()).not.toHaveProperty('bailingBoats');
     expect(buildZone(canalWith({ bailingBoats: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), bailingBoats: [] });
+  });
+});
+
+const FISHING_BOATS = [
+  fishingBoatSpawn('canal/fishing-1', 0, { x0: 400, x1: 560, lures: [{ along: 60, depth: 80 }] }, CANAL_BOUNDS),
+  fishingBoatSpawn('canal/fishing-2', 2, { x0: 1300, x1: 1460, lures: [{ along: 20, depth: 100 }, { along: 100, depth: 160 }] }, CANAL_BOUNDS),
+];
+
+/** Every lure's whole path and its line, boat by boat and lure by lure. */
+function lureShapesOf(boats: readonly FishingBoatSpawn[]) {
+  return boats.flatMap((boat) => boat.lures.flatMap((lure, index) => [
+    { id: `${lure.id} path`, shape: lurePath(boat, index) },
+    { id: `${lure.id} line`, shape: lureLinePath(boat, index) },
+  ]));
+}
+
+describe('fishing boats in the layout (issue #108, ND-1)', () => {
+  it.each(ALL_SEEDS)('keeps every snack start SNACK_HAZARD_CLEARANCE from every lure path and line for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ fishingBoats: FISHING_BOATS }), seed);
+    expect(zone.collectibles).toHaveLength(16);
+    for (const snack of zone.collectibles) {
+      for (const { id, shape } of lureShapesOf(FISHING_BOATS)) {
+        const distance = shapeDistance(snack, shape);
+        expect(distance, `${snack.id} is ${distance.toFixed(1)} px from ${id}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
+      }
+    }
+  });
+
+  it('tests lure paths and lines that sit where the canal would put snacks', () => {
+    const tooClose = ALL_SEEDS.filter((seed) =>
+      buildCanalZone(seed).collectibles.some((snack) =>
+        lureShapesOf(FISHING_BOATS).some(({ shape }) => shapeDistance(snack, shape) < SNACK_HAZARD_CLEARANCE),
+      ),
+    );
+    expect(tooClose.length).toBeGreaterThan(0);
+  });
+
+  it('tests a line that reaches snacks its lure path alone would not', () => {
+    const lineOnly = ALL_SEEDS.filter((seed) =>
+      buildCanalZone(seed).collectibles.some((snack) =>
+        FISHING_BOATS.some((boat) =>
+          boat.lures.some(
+            (_, index) =>
+              shapeDistance(snack, lureLinePath(boat, index)) < SNACK_HAZARD_CLEARANCE &&
+              shapeDistance(snack, lurePath(boat, index)) >= SNACK_HAZARD_CLEARANCE,
+          ),
+        ),
+      ),
+    );
+    expect(lineOnly.length).toBeGreaterThan(0);
+  });
+
+  it('copies the boats, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ fishingBoats: FISHING_BOATS }), 3);
+    expect(zone.fishingBoats).toEqual(FISHING_BOATS);
+    zone.fishingBoats?.forEach((boat, index) => {
+      expect(boat).not.toBe(FISHING_BOATS[index]);
+      expect(boat.lures).not.toBe(FISHING_BOATS[index].lures);
+      boat.lures.forEach((lure, lureIndex) => expect(lure).not.toBe(FISHING_BOATS[index].lures[lureIndex]));
+    });
+  });
+
+  it('never puts a fishing boat or a lure in the hazards or the elements', () => {
+    const zone = buildZone(canalWith({ fishingBoats: FISHING_BOATS }), 3);
+    expect(zone.hazards).toEqual([]);
+    expect(zone.elements).toEqual([]);
+  });
+
+  it.each(ALL_SEEDS)('copies the boats with no rand() draws when no lure is near for seed %i', (seed) => {
+    const far = [{ ...FISHING_BOATS[0], x0: -1000, x1: -700 }];
+    const { fishingBoats, ...rest } = buildZone(canalWith({ fishingBoats: far }), seed);
+    expect(fishingBoats).toEqual(far);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no fishingBoats key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('fishingBoats');
+    expect(buildZone(canalWith({ fishingBoats: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), fishingBoats: [] });
+  });
+});
+
+const DRAG_NETS: DragNetSpawn[] = [
+  dragNetSpawn('canal/drag-net-1', 0, {
+    stretch: { x0: 360, x1: 560, y0: 100, y1: 140 },
+    sweep: 'right',
+    hollows: [{ x0: 380, x1: 420, y0: 105, y1: 135 }, { x0: 500, x1: 540, y0: 105, y1: 135 }],
+  }),
+  dragNetSpawn('canal/drag-net-2', 3, {
+    stretch: { x0: 1300, x1: 1460, y0: 240, y1: 290 },
+    sweep: 'down',
+    hollows: [{ x0: 1320, x1: 1360, y0: 245, y1: 285 }, { x0: 1400, x1: 1440, y0: 245, y1: 285 }],
+  }, { quietFor: 3, warnFor: 1, sweepFor: 2 }),
+];
+
+describe('drag nets in the layout (issue #108, ND-2)', () => {
+  it.each(ALL_SEEDS)('keeps every snack start SNACK_HAZARD_CLEARANCE from every drag-net stretch for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ dragNets: DRAG_NETS }), seed);
+    expect(zone.collectibles).toHaveLength(16);
+    for (const snack of zone.collectibles) {
+      for (const net of DRAG_NETS) {
+        const distance = shapeDistance(snack, dragNetSweep(net));
+        expect(distance, `${snack.id} is ${distance.toFixed(1)} px from ${net.id}`).toBeGreaterThanOrEqual(SNACK_HAZARD_CLEARANCE);
+      }
+    }
+  });
+
+  it('tests stretches that sit where the canal would put snacks', () => {
+    const tooClose = ALL_SEEDS.filter((seed) =>
+      buildCanalZone(seed).collectibles.some((snack) => DRAG_NETS.some((net) => shapeDistance(snack, dragNetSweep(net)) < SNACK_HAZARD_CLEARANCE)),
+    );
+    expect(tooClose.length).toBeGreaterThan(0);
+  });
+
+  it('copies the nets, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ dragNets: DRAG_NETS }), 3);
+    expect(zone.dragNets).toEqual(DRAG_NETS);
+    zone.dragNets?.forEach((net, index) => {
+      const data = DRAG_NETS[index];
+      expect(net).not.toBe(data);
+      expect(net.type).not.toBe(data.type);
+      expect(net.dragNet).not.toBe(data.dragNet);
+      expect(net.dragNet.stretch).not.toBe(data.dragNet.stretch);
+      expect(net.dragNet.hollows).not.toBe(data.dragNet.hollows);
+      expect(net.dragNet.hollows[0]).not.toBe(data.dragNet.hollows[0]);
+      expect(net.dragNet.hollows[1]).not.toBe(data.dragNet.hollows[1]);
+      expect(net.dragNet.timing).not.toBe(data.dragNet.timing);
+    });
+  });
+
+  it('never puts a drag net in the hazards or the elements', () => {
+    const zone = buildZone(canalWith({ dragNets: DRAG_NETS }), 3);
+    expect(zone.hazards).toEqual([]);
+    expect(zone.elements).toEqual([]);
+  });
+
+  it.each(ALL_SEEDS)('copies the nets with no rand() draws when no stretch is near for seed %i', (seed) => {
+    const far = [{ ...DRAG_NETS[0], dragNet: { ...DRAG_NETS[0].dragNet, stretch: { kind: 'rect' as const, x0: -1000, x1: -800, y0: 120, y1: 280 } } }];
+    const { dragNets, ...rest } = buildZone(canalWith({ dragNets: far }), seed);
+    expect(dragNets).toEqual(far);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('adds no dragNets key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('dragNets');
+    expect(buildZone(canalWith({ dragNets: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), dragNets: [] });
+  });
+
+  it.each(AREAS.map((area) => [area.number, area] as const))(
+    'gives Area %i zone keys for fishing boats and drag nets only when its data has them',
+    (_, area) => {
+      const zone = buildZone(area.layout, DEFAULT_ZONE_SEED);
+      expect('fishingBoats' in zone).toBe(area.layout.fishingBoats !== undefined);
+      expect('dragNets' in zone).toBe(area.layout.dragNets !== undefined);
+    },
+  );
+
+  it('keeps Areas 1 to 9 free of fishing boats and drag nets', () => {
+    for (const area of AREAS.filter((each) => each.number <= 9)) {
+      expect(area.layout.fishingBoats).toBeUndefined();
+      expect(area.layout.dragNets).toBeUndefined();
+    }
   });
 });
 

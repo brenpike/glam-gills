@@ -68,7 +68,9 @@ function soundRequest(id: SoundId, version: string = ONLY_VERSION, delayS: numbe
  * worm spat out the bleh (S11; ND-8) and a ghost net's snag the snag (S11; ND-7). The strike, the
  * bump, the regrowth's start, the end of protected time and the arrival home play nothing. Issue
  * #107, ND-5: a murky water hit is a `hit` and plays the uh-oh like any hit; a bailing bucket's catch
- * (`scoop`) and its splash-down play nothing, left open for the owner.
+ * (`scoop`) and its splash-down play nothing, left open for the owner. Issue #108, ND-6: a lure's tug
+ * (`lureTug`) and a drag net's catch (`netCatch`) play nothing of their own; the shared `hit` that
+ * follows plays the uh-oh, and a Shell block its own sound.
  */
 export function tripEventSound(event: Readonly<TripEvent>): SoundRequest | null {
   switch (event.type) {
@@ -103,6 +105,8 @@ export function tripEventSound(event: Readonly<TripEvent>): SoundRequest | null 
     case 'arrivedHome':
     case 'scoop':
     case 'splashDown':
+    case 'lureTug':
+    case 'netCatch':
       return null;
     default: {
       const unhandled: never = event;

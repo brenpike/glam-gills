@@ -1,6 +1,7 @@
 import { bailingCatchBox, type BailingBoatSpawn } from './bailingBuckets';
 import { CANAL_TREASURES, type Rarity, type Treasure } from './catalogue';
 import { snackWander, type SnackWander } from './collectibles';
+import { dragNetSweep, type DragNetSpawn, type DragNetStretch } from './dragNets';
 import {
   elementSweep,
   hazardSweep,
@@ -11,6 +12,7 @@ import {
   type HazardSpawn,
 } from './hazards';
 import type { DarkWater } from './glowPlants';
+import { lureLinePath, lurePath, type FishingBoatSpawn } from './lures';
 import type { MobileSnackMix } from './mobileSnacks';
 import type { RockWall } from './pebble';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
@@ -47,8 +49,9 @@ const SNACK_START_CLEARANCE = 90;
 const SNACK_MAX_ATTEMPTS = 400;
 /**
  * Minimum distance in px from every snack start to every hazard's drift sweep (hazardSweep), every
- * element sweep, every moving hazard's sweep, every gliding trajinera's hull band and every bailing
- * boat's catch box.
+ * element sweep, every moving hazard's sweep, every gliding trajinera's hull band, every bailing
+ * boat's catch box, every trajinera lure's whole path and line (lurePath, lureLinePath) and every
+ * drag-net stretch (dragNetSweep).
  */
 export const SNACK_HAZARD_CLEARANCE = 80;
 const SPOT_HOME_CLEARANCE = FINDS.pickupRadius + 8;
@@ -269,6 +272,10 @@ export interface ZoneLayout {
   trajineras?: TrajineraSpawn[];
   /** Bailing boats (issue #107, ND-2); absent means none. Never in `elements`. */
   bailingBoats?: BailingBoatSpawn[];
+  /** Fishing trajineras and their lures (issue #108, ND-1); absent means none. Never in `hazards` or `elements`. */
+  fishingBoats?: FishingBoatSpawn[];
+  /** Drag-net stretches (issue #108, ND-2); absent means none. Never in `hazards` or `elements`. */
+  dragNets?: DragNetSpawn[];
 }
 
 /** An area's size in world px. */
@@ -358,6 +365,18 @@ export interface AreaLayoutData {
    * (bailingCatchBox). Absent means none.
    */
   readonly bailingBoats?: readonly Readonly<BailingBoatSpawn>[];
+  /**
+   * Fishing trajineras, built with fishingBoatSpawn() (issue #108, ND-1): fixed area data, never
+   * seeded and never in `hazards` or `elements`. No snack starts within SNACK_HAZARD_CLEARANCE of a
+   * lure's whole path (lurePath) or its line (lureLinePath). Absent means none.
+   */
+  readonly fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
+  /**
+   * Drag-net stretches, built with dragNetSpawn() (issue #108, ND-2): fixed area data, never seeded
+   * and never in `hazards` or `elements`. No snack starts within SNACK_HAZARD_CLEARANCE of a stretch
+   * (dragNetSweep). Absent means none.
+   */
+  readonly dragNets?: readonly Readonly<DragNetSpawn>[];
 }
 
 /** The canal cave. */
@@ -660,10 +679,16 @@ function rockRect(rock: Readonly<RockWall>): HazardRect {
   return { kind: 'rect', x0: rock.x0, x1: rock.x1, y0: rock.y0, y1: rock.y1 };
 }
 
+/** Each lure's whole path and then its line (issue #108, ND-1), boat by boat and lure by lure, in data order. */
+function lureKeepOuts(boats: readonly Readonly<FishingBoatSpawn>[]): HazardRect[] {
+  return boats.flatMap((boat) => boat.lures.flatMap((_, index) => [lurePath(boat, index), lureLinePath(boat, index)]));
+}
+
 /**
  * The sweep of every element that has geometry, then of every moving hazard, then every rock wall
  * and side room (issue #105, ND-8), then every gliding trajinera's hull band (issue #78, ND-8), then
- * every bailing boat's catch box (issue #107, ND-2), in data order.
+ * every bailing boat's catch box (issue #107, ND-2), then every lure's whole path and line and every
+ * drag-net stretch (issue #108, ND-1, ND-2), in data order.
  */
 function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
   const elementSweeps = data.elements.flatMap((element) => {
@@ -673,13 +698,15 @@ function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
   const rock = [...(data.rockWalls ?? []), ...(data.sideRooms ?? [])].map(rockRect);
   const hullBands = (data.trajineras ?? []).map((boat) => trajineraHullBand(boat));
   const catchBoxes = (data.bailingBoats ?? []).map((boat) => bailingCatchBox(boat));
-  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep), ...rock, ...hullBands, ...catchBoxes];
+  const lures = lureKeepOuts(data.fishingBoats ?? []);
+  const nets = (data.dragNets ?? []).map(dragNetSweep);
+  return [...elementSweeps, ...(data.movingHazards ?? []).map(movingHazardSweep), ...rock, ...hullBands, ...catchBoxes, ...lures, ...nets];
 }
 
 /**
  * Snack starts, each SNACK_HAZARD_CLEARANCE px or more from every hazard's drift sweep, element
- * sweep, moving hazard sweep, trajinera hull band and bailing boat catch box. Only candidates near one are redrawn, so an area with none makes
- * the same draws.
+ * sweep, moving hazard sweep, trajinera hull band, bailing boat catch box, lure path, lure line and
+ * drag-net stretch. Only candidates near one are redrawn, so an area with none makes the same draws.
  */
 function buildSnacks(
   rand: () => number,
@@ -924,6 +951,22 @@ function copyBailingBoat(boat: Readonly<BailingBoatSpawn>): BailingBoatSpawn {
   };
 }
 
+/** A copy of the fishing boat sharing no object with the data. */
+function copyFishingBoat(boat: Readonly<FishingBoatSpawn>): FishingBoatSpawn {
+  return { ...boat, lures: boat.lures.map((lure) => ({ ...lure })) };
+}
+
+/** A copy of the stretch sharing no object with the data. */
+function copyDragNetStretch(net: Readonly<DragNetStretch>): DragNetStretch {
+  const [first, second] = net.hollows;
+  return { stretch: { ...net.stretch }, sweep: net.sweep, hollows: [{ ...first }, { ...second }], timing: { ...net.timing } };
+}
+
+/** A copy of the drag net sharing no object with the data. */
+function copyDragNet(net: Readonly<DragNetSpawn>): DragNetSpawn {
+  return { ...copyElement(net), dragNet: copyDragNetStretch(net.dragNet) };
+}
+
 /** The layout's optional fields, each copied only when its data is set. */
 function optionalLayoutParts(
   data: Readonly<AreaLayoutData>,
@@ -938,6 +981,8 @@ function optionalLayoutParts(
   | 'sideRooms'
   | 'trajineras'
   | 'bailingBoats'
+  | 'fishingBoats'
+  | 'dragNets'
 > {
   return {
     ...(data.tilapia ? { tilapia: { ...data.tilapia } } : {}),
@@ -949,6 +994,8 @@ function optionalLayoutParts(
     ...(data.sideRooms ? { sideRooms: data.sideRooms.map((room) => ({ ...room })) } : {}),
     ...(data.trajineras ? { trajineras: data.trajineras.map(copyTrajinera) } : {}),
     ...(data.bailingBoats ? { bailingBoats: data.bailingBoats.map(copyBailingBoat) } : {}),
+    ...(data.fishingBoats ? { fishingBoats: data.fishingBoats.map(copyFishingBoat) } : {}),
+    ...(data.dragNets ? { dragNets: data.dragNets.map(copyDragNet) } : {}),
   };
 }
 
@@ -956,9 +1003,10 @@ function optionalLayoutParts(
  * Deterministically builds an area's zone layout from its data and a mulberry32 seed. The rules
  * read the layout's width, height and bedTop, never the canal constants. The optional tilapia
  * tuning, bank overhangs, bank spots, moving hazards, mobile snacks, dark water, rock walls, side
- * rooms, gliding trajineras and bailing boats make no rand() draws; only snack starts near a drifting
- * net's path, a moving hazard's sweep, a rock wall, a side room, a trajinera's hull band or a bailing
- * boat's catch box are redrawn.
+ * rooms, gliding trajineras, bailing boats, fishing boats and drag nets make no rand() draws; only
+ * snack starts near a drifting net's path, a moving hazard's sweep, a rock wall, a side room, a
+ * trajinera's hull band, a bailing boat's catch box, a lure's path or line or a drag-net stretch are
+ * redrawn.
  */
 export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLayout {
   const rand = mulberry32(seed);

@@ -417,6 +417,7 @@ const NARROW_460_WAITS: readonly string[] = [
   'findToast "Rainbow dragonfly wings"',
   'findToast "Tie-dye galaxy Paint shell"',
   'findToast "Little bailing bucket"',
+  'findToast "Confetti shine Paint shell"',
   'snackBanner',
 ];
 
@@ -510,10 +511,10 @@ describe('HUD overlay fit', () => {
       // wide (460 and 480 wide, 360 tall or less on this grid) a long toast may have no place
       // outside the open middle and wait (X10). With Go home visible under Pause at 460 wide and
       // narrow panels, the snack banner and the long toasts ("Rainbow dragonfly wings", Area 5's
-      // "Tie-dye galaxy Paint shell" and Area 9's "Little bailing bucket") wait until the explorer
-      // leaves the Home Spot ring; the next test pins those waits. A toast with Go home visible is
-      // unreachable: trip.ts banks a non-empty bag inside the ring in the same step, and HudScene
-      // clears the toast on 'banked'.
+      // "Tie-dye galaxy Paint shell", Area 9's "Little bailing bucket" and Area 10's "Confetti shine
+      // Paint shell") wait until the explorer leaves the Home Spot ring; the next test pins those
+      // waits. A toast with Go home visible is unreachable: trip.ts banks a non-empty bag inside the
+      // ring in the same step, and HudScene clears the toast on 'banked'.
       const huds = allHudCases().filter((hud) => !hud.goHomeVisible);
       const roomy = huds.filter(({ view }) => view.cssH >= 375 || view.cssW >= 520);
       const toastCases = roomy.flatMap((hud) => ALL_TOASTS.map((toast) => runCase(hud, { ids: ['findToast'], toast })));

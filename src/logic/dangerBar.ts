@@ -274,8 +274,9 @@ export function carpCount(layout: Pick<ZoneLayout, 'predatorRoutes'>): number {
 /**
  * Whether the area meets the full danger bar with the whole-water test (PRD N2; issue #130, ND-1
  * to ND-7): at least ⌈0.75 × screens⌉ moving threats, at least 2 predator species, at least 1
- * moving hazard type, every predator chases, no quiet swim longer than one screen across, and the
- * depth, floor and carp rules hold.
+ * moving hazard type, every predator chases except one built never to chase (the wading heron,
+ * amended by ADR 0038), no quiet swim longer than one screen across, and the depth, floor and carp
+ * rules hold.
  */
 export function meetsWholeWaterDangerBar(layout: WholeWaterGeometry): boolean {
   return (
@@ -333,10 +334,20 @@ function screenCount(layout: Pick<ZoneLayout, 'width' | 'height'>): number {
   return (layout.width / SCREEN_W) * (layout.height / WORLD_H);
 }
 
-/** Whether every tilapia route (by the area's tuning) and every other predator route's species has a chase. */
+/**
+ * Whether every tilapia route (by the area's tuning) and every other predator route's species has a
+ * chase. A species built never to chase passes (ADR 0038, amending the full bar): one with the
+ * `fixedStrikeSpot` or `stillCooldown` rule, which tunedSpecies refuses a chase (the wading heron).
+ * It still counts as a moving threat, its reach its lungeRange with no leash.
+ */
 function everyPredatorChases(layout: ThreatGeometry): boolean {
   const tilapiaChase = layout.tilapiaRoutes.length === 0 || layout.tilapia?.chase !== undefined;
-  return tilapiaChase && layout.predatorRoutes.every((route) => route.species.tuning.chase !== undefined);
+  return tilapiaChase && layout.predatorRoutes.every((route) => route.species.tuning.chase !== undefined || isBuiltNeverToChase(route.species.rules));
+}
+
+/** Whether a species' rules mean it never chases: the `fixedStrikeSpot` or `stillCooldown` rule, as tunedSpecies enforces. */
+function isBuiltNeverToChase(rules: Readonly<PredatorRules> | undefined): boolean {
+  return rules?.fixedStrikeSpot === true || rules?.stillCooldown === true;
 }
 
 /** Reach in px from a predator's patrol loop: its lungeRange plus its leash when it chases off its route. */

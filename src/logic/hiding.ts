@@ -1,12 +1,15 @@
 /**
  * Hiding rules (PRD B6): which cover a position is under and which rarity a spot may hold.
  * Every rule derives from geometry; declared spot labels are only checked against it. Rarer
- * spots also sit nearer a threat: a predator route or a leg-costing hazard (the risk ladder, issue #70).
+ * spots also sit nearer a threat: a predator route, a leg-costing hazard, a trajinera lure or a drag-net
+ * stretch (the risk ladder, issue #70).
  * Legendaries are the rarest finds, more hidden and/or more dangerous to get: a Legendary spot is
  * deep and in the Legendary risk band, and is in a Dash pot or in an area with a measurable threat.
  */
 import type { Rarity } from './catalogue';
+import { dragNetSweep, type DragNetSpawn } from './dragNets';
 import { shapeDistance, type HazardShape, type HazardSpawn } from './hazards';
+import { lurePath, TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { routeLoopDistance, type PredatorRoute } from './predators';
 import { RISK, TILAPIA, type RiskTuning, type TilapiaTuning } from './tuning';
@@ -35,8 +38,8 @@ export const PAST_CURRENT_DEPTH = 140;
 export const RISK_COMMON_MARGIN = 60;
 
 /**
- * The zone geometry the hiding rules read. Absent predator routes, hazards or moving hazards mean
- * none; together with the tilapia routes they are the zone's threats. Absent `tilapia` means the
+ * The zone geometry the hiding rules read. Absent predator routes, hazards, moving hazards, fishing
+ * boats or drag nets mean none; together with the tilapia routes they are the zone's threats. Absent `tilapia` means the
  * TILAPIA tuning; absent `bankOverhangs` means no bank cover.
  */
 export type HidingGeometry = Pick<
@@ -46,6 +49,8 @@ export type HidingGeometry = Pick<
   predatorRoutes?: readonly Readonly<PredatorRoute>[];
   hazards?: readonly Readonly<HazardSpawn>[];
   movingHazards?: readonly Readonly<MovingHazardSpawn>[];
+  fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
+  dragNets?: readonly Readonly<DragNetSpawn>[];
 };
 
 /**
@@ -54,6 +59,9 @@ export type HidingGeometry = Pick<
  * unless `tuned` marks it as played with its area's own tuning, banded by riskBands(strike).
  * A shape threat is a leg-costing hazard, its strike range being the hazard's reach from the shape
  * edge, or a moving hazard, its shape being its sweep and its strike range its touch reach (ND-8).
+ * A lure is a shape threat too, its shape being its whole path (lurePath) and its strike range the
+ * eat reach (ND-1), and a drag-net stretch is one with its sweep rect (dragNetSweep) and a strike
+ * range of 0, since a net catches only a centre inside its stretch (ND-2).
  */
 export type Threat =
   | { kind: 'route'; route: Readonly<TilapiaRoute>; strike: number; tilapia: boolean; tuned?: true }
@@ -222,12 +230,14 @@ export function meetsRiskRule(pos: Point, rarity: Rarity, routes: readonly Tilap
 /**
  * Every threat in a zone: each tilapia route with the tilapia lunge range, each other predator route
  * with its species' lunge range, then each leg-costing hazard with its reach, then each moving
- * hazard by its sweep with its touch reach (ND-8). A geometry with its own tilapia tuning gives its
- * tilapia routes that tuning's lunge range, marked `tuned`; without one they get TILAPIA's.
- * Slow-only hazards, drifting nets included (N3), are not threats.
+ * hazard by its sweep with its touch reach (ND-8), then each lure by its whole path with the eat
+ * reach, boat by boat and lure by lure (ND-1), then each drag-net stretch by its sweep rect with a
+ * strike range of 0 (ND-2). A geometry with its own tilapia tuning gives its tilapia routes that
+ * tuning's lunge range, marked `tuned`; without one they get TILAPIA's. Slow-only hazards, drifting
+ * nets included (N3), are not threats.
  */
 export function zoneThreats(
-  geo: Pick<HidingGeometry, 'tilapiaRoutes' | 'tilapia' | 'predatorRoutes' | 'hazards' | 'movingHazards'>,
+  geo: Pick<HidingGeometry, 'tilapiaRoutes' | 'tilapia' | 'predatorRoutes' | 'hazards' | 'movingHazards' | 'fishingBoats' | 'dragNets'>,
 ): Threat[] {
   const threats: Threat[] = geo.tilapiaRoutes.map((route) => tilapiaThreat(route, geo.tilapia));
   for (const route of geo.predatorRoutes ?? []) {
@@ -238,6 +248,12 @@ export function zoneThreats(
   }
   for (const spawn of geo.movingHazards ?? []) {
     threats.push({ kind: 'shape', shape: movingHazardSweep(spawn), strike: spawn.type.touchReach });
+  }
+  for (const boat of geo.fishingBoats ?? []) {
+    boat.lures.forEach((_, index) => threats.push({ kind: 'shape', shape: lurePath(boat, index), strike: TRAJINERA_LURE.reach }));
+  }
+  for (const net of geo.dragNets ?? []) {
+    threats.push({ kind: 'shape', shape: dragNetSweep(net), strike: 0 });
   }
   return threats;
 }

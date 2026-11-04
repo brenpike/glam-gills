@@ -384,7 +384,7 @@ export const PAINT_SHELL_FILL = PEBBLE_C;
 export const PAINT_SHELL_RIDGE = PEBBLE_E;
 /**
  * Rim light along the top of a dark Dream blob (Midnight blue, Galaxy,
- * Tie-dye galaxy). 9.07:1 with ink (guide 3f).
+ * Tie-dye galaxy, Plum, Chocolate, Glowworm, Confetti shine). 9.07:1 with ink (guide 3f).
  */
 export const DREAM_RIM = '#cec9f0';
 /** Thin divider between Rainbow and Tie-dye bands. */
@@ -392,7 +392,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-four Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-six Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -417,7 +417,9 @@ export type DreamSwatchId =
   | 'jade'
   | 'fiesta-shine'
   | 'olive'
-  | 'lantern-shine';
+  | 'lantern-shine'
+  | 'peach'
+  | 'confetti-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -496,5 +498,13 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     pattern: 'stripes',
     marks: ['rgba(255,246,204,0.85)', 'rgba(255,214,102,0.8)'],
     dark: false,
+  },
+  peach: { body: '#ffa9a8', pattern: 'plain', marks: [], dark: false },
+  // Dark sheen: a confetti pink and a confetti lemon stripe, both lighter than the grape-violet body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p). Dark body, so the rim light carries the outline.
+  'confetti-shine': {
+    body: '#6a008a',
+    pattern: 'stripes',
+    marks: ['rgba(255,128,204,0.85)', 'rgba(255,236,110,0.85)'],
+    dark: true,
   },
 };

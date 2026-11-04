@@ -303,7 +303,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The twenty-four Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, then Olive and Lantern shine, issue #107, last). */
+/** The twenty-six Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, then Peach and Confetti shine, issue #108, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -329,6 +329,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'fiesta-shine',
   'olive',
   'lantern-shine',
+  'peach',
+  'confetti-shine',
 ];
 
 /**
@@ -4356,7 +4358,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;

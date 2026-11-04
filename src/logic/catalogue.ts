@@ -1,7 +1,7 @@
 /**
  * The treasure catalogue: rarities, categories, wearable slots, perks, Dream colours and the
  * treasures of every area: the canal, the pond, the pond's Area 3, the chinampa gardens' Areas 4 and 5, the spring
- * cave's Areas 6 and 7 and the deep canal's Areas 8 and 9 (PRD B1 to B3, F9).
+ * cave's Areas 6 and 7 and the deep canal's Areas 8, 9 and 10 (PRD B1 to B3, F9).
  * Pure data plus lookups; nothing here applies perks.
  */
 
@@ -95,7 +95,9 @@ export type DreamColourId =
   | 'jade'
   | 'fiesta-shine'
   | 'olive'
-  | 'lantern-shine';
+  | 'lantern-shine'
+  | 'peach'
+  | 'confetti-shine';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -241,11 +243,27 @@ export const LANTERN_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The deep canal's Area 10 Dream colour, a soft peach held by that area's first Paint shell (issue #108). */
+export const PEACH: DreamColour = Object.freeze({
+  id: 'peach',
+  name: 'Peach',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
+/** The deep canal's Area 10 Legendary Dream colour, a dark grape-violet confetti sheen held by that area's second Paint shell (issue #108). */
+export const CONFETTI_SHINE: DreamColour = Object.freeze({
+  id: 'confetti-shine',
+  name: 'Confetti shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
- * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), then Olive and
- * Lantern shine (Area 9).
+ * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
+ * Lantern shine (Area 9), then Peach and Confetti shine (Area 10).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -264,6 +282,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   FIESTA_SHINE,
   OLIVE,
   LANTERN_SHINE,
+  PEACH,
+  CONFETTI_SHINE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -1013,9 +1033,86 @@ export const DEEP_CANAL_2_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The deep canal Area 10 treasures, all new (issue #108): the owner's 12 in rarity order, 6
+ * Decorations, 5 Wearables and the Peach Paint shell, then the Confetti shine Paint shell. The
+ * Axolotl statue is the area's special treasure. Every perk comes from PERK_VALUES for its type and
+ * rarity, and no two Wearables share a perk type (ND-5). The newest entry comes last so placement
+ * by seed stays the same for every earlier treasure.
+ */
+export const DEEP_CANAL_3_TREASURES: readonly Treasure[] = Object.freeze([
+  {
+    id: 'deep-canal/festival-flag-string',
+    name: 'Festival flag string',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'deep-canal/floating-candle',
+    name: 'Floating candle',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/party-hat',
+    name: 'Party hat',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('dash', 'common'),
+  },
+  {
+    id: 'deep-canal/confetti-scarf',
+    name: 'Confetti scarf',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('treasureSense', 'common'),
+  },
+  { id: 'deep-canal/axolotl-statue', name: 'Axolotl statue', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'deep-canal/marigold-boat',
+    name: 'Marigold boat',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/festival-shirt',
+    name: 'Festival shirt',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('speed', 'rare'),
+  },
+  createPaintShell(PEACH, 'deep-canal'),
+  { id: 'deep-canal/mariachi-band-figures', name: 'Mariachi band figures', rarity: 'epic', category: 'decoration' },
+  {
+    id: 'deep-canal/hero-medal',
+    name: 'Hero medal',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('shell', 'epic'),
+  },
+  { id: 'deep-canal/refuge-snow-globe', name: 'Refuge snow globe', rarity: 'legendary', category: 'decoration' },
+  {
+    id: 'deep-canal/champion-crown',
+    name: 'Champion crown',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('regrowth', 'legendary'),
+  },
+  createPaintShell(CONFETTI_SHINE, 'deep-canal'),
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
  * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
- * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's.
+ * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's, then
+ * the deep canal Area 10's.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -1027,6 +1124,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...SPRING_CAVE_2_TREASURES,
   ...DEEP_CANAL_TREASURES,
   ...DEEP_CANAL_2_TREASURES,
+  ...DEEP_CANAL_3_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =
