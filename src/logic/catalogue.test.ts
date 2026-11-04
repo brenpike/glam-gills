@@ -1220,8 +1220,15 @@ describe('DEEP_CANAL_3_TREASURES', () => {
 });
 
 describe('DEEP_CANAL_4_TREASURES', () => {
-  it('holds the deep canal Area 11 Paint shells, the Marigold one then the Golden hour shine one (issue #112)', () => {
+  it('holds the deep canal Area 11 treasures: the Little cormorant, then the Marigold Paint shell, then the Golden shine one (issue #112)', () => {
     expect(DEEP_CANAL_4_TREASURES).toEqual([
+      {
+        id: 'deep-canal/little-cormorant',
+        name: 'Little cormorant',
+        rarity: 'rare',
+        category: 'decoration',
+        placement: 'floating',
+      },
       {
         id: 'deep-canal/paint-shell-marigold',
         name: 'Marigold Paint shell',
@@ -1238,6 +1245,18 @@ describe('DEEP_CANAL_4_TREASURES', () => {
       },
     ]);
     expect(Object.isFrozen(DEEP_CANAL_4_TREASURES)).toBe(true);
+  });
+
+  it('makes the Little cormorant a Rare Floating Decoration with the standard width, ahead of the Paint shells, in rarity order', () => {
+    const cormorant = treasureById('deep-canal/little-cormorant');
+    expect(cormorant?.rarity).toBe('rare');
+    expect(cormorant !== undefined && isDecoration(cormorant) && placementKind(cormorant)).toBe('floating');
+    expect(cormorant !== undefined && isDecoration(cormorant) && cormorant.width).toBeUndefined();
+    expect(cormorant !== undefined && categoryName(cormorant.category)).toBe('Decoration');
+    expect(DEEP_CANAL_4_TREASURES.filter(isDecoration).map((decoration) => decoration.id)).toEqual(['deep-canal/little-cormorant']);
+    expect(DEEP_CANAL_4_TREASURES.filter(isWearable)).toHaveLength(0);
+    const rarityIndexes = DEEP_CANAL_4_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
   });
 
   it('keeps every slug apart from the Area 8, Area 9 and Area 10 slugs it shares the deep-canal/ prefix with', () => {
@@ -1273,9 +1292,9 @@ describe('ALL_TREASURES', () => {
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 139 treasures: 55 Decorations, 56 Wearables and 28 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(139);
-    expect(ALL_DECORATIONS).toHaveLength(55);
+  it('has 140 treasures: 56 Decorations, 56 Wearables and 28 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(140);
+    expect(ALL_DECORATIONS).toHaveLength(56);
     expect(ALL_WEARABLES).toHaveLength(56);
     expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(28);
   });
@@ -1517,7 +1536,7 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Golden hour shine a Legendary sheen, the twenty-eighth and last Dream colour, with a name no other Dream colour has (issue #112)', () => {
+  it('makes Golden shine a Legendary sheen, the twenty-eighth and last Dream colour, with a name no other Dream colour has (issue #112)', () => {
     expect(GOLDEN_HOUR_SHINE).toEqual({ id: 'golden-hour-shine', name: 'Golden shine', rarity: 'legendary', kind: 'sheen' });
     expect(Object.isFrozen(GOLDEN_HOUR_SHINE)).toBe(true);
     expect(dreamColourById('golden-hour-shine')).toBe(GOLDEN_HOUR_SHINE);
@@ -1824,7 +1843,7 @@ describe('ownedDreamColours', () => {
     expect(ownedDreamColours(banked)).toEqual(['lantern-shine', 'peach', 'confetti-shine']);
   });
 
-  it('owns Marigold and Golden hour shine from the deep canal Area 11 Paint shells, after Confetti shine', () => {
+  it('owns Marigold and Golden shine from the deep canal Area 11 Paint shells, after Confetti shine', () => {
     const banked = [
       'deep-canal/paint-shell-golden-hour-shine',
       'deep-canal/paint-shell-marigold',

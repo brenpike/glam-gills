@@ -281,7 +281,7 @@ export const GOLDEN_HOUR_SHINE: DreamColour = Object.freeze({
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
- * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold and Golden hour shine
+ * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold and Golden shine
  * (Area 11).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
@@ -1130,11 +1130,19 @@ export const DEEP_CANAL_3_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
- * The deep canal Area 11 treasures, all new (issue #112): the Marigold Paint shell, then the Golden
- * hour shine Paint shell. The newest entry comes last so placement by seed stays the same for every
- * earlier treasure.
+ * The deep canal Area 11 treasures, all new (issue #112): the Little cormorant, a Rare Floating
+ * Decoration and the area's special treasure, then the Marigold Paint shell, then the Golden shine
+ * Paint shell, in rarity order. The newest entry comes last so placement by seed stays the same for
+ * every earlier treasure.
  */
 export const DEEP_CANAL_4_TREASURES: readonly Treasure[] = Object.freeze([
+  {
+    id: 'deep-canal/little-cormorant',
+    name: 'Little cormorant',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'floating',
+  },
   createPaintShell(MARIGOLD, 'deep-canal'),
   createPaintShell(GOLDEN_HOUR_SHINE, 'deep-canal'),
 ]);

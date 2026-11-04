@@ -383,6 +383,17 @@ export const SNOW_GLOBE_WEED = PLANT_LEAF;
 /** Refuge snow globe's drifting flecks, a cream (never white, so a fleck is never read as a gem glint); inside the glass, so free. */
 export const SNOW_GLOBE_FLECK = '#fff3d6';
 
+// ---- Deep canal Area 11 silhouette fills (issue #112; all at least 9:1 with ink) ----
+// The Little cormorant, Area 11's special treasure: a friendly toy of the area's diving bird, so pale where the real
+// bird is dark. One fill is new (a pale dusk blue-grey); the bill reuses the shipped colour the cormorant's own bill
+// uses (guide 7n). None equals a BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour say
+// so.
+
+/** Little cormorant body, tail, neck and head, a pale dusk blue-grey. 10.60:1. */
+export const LITTLE_CORMORANT_BODY = '#d9dcf2';
+/** Little cormorant closed bill and throat patch, the cormorant's bill colour. Alias of MINERS_HELMET_FILL. 10.65:1. */
+export const LITTLE_CORMORANT_BILL = MINERS_HELMET_FILL;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */

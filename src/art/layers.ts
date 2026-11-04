@@ -82,7 +82,12 @@
  * axolotl, so the axolotl is always drawn in front of the net. `dragNetFloats` (the float line and its
  * floats, lit or not) sits just above the surface, so the surface line never cuts them, and below the
  * pads. The wriggle-out strands use `fx`.
- * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
+ * Area 11 (issue #112). The cormorant reuses the heron's depths: `heronBody` while it floats, warns
+ * and dries, so every cue object draws over it, and `heronStab` while it dives, so it is in front of
+ * the tilapia and behind the halo and the axolotl. Its dive trail bubbles use `bubbles`. `petals`
+ * (the golden-hour drifting petals) sits between bg and haze, above the reeds and the cave front:
+ * hazed scenery, below every cue object.
+ * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker < petals
  * < haze < trajineraShadow < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
  * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < rock < fishingLure < tilapia
  * < movingHazard = trajineraHull = bailingBoat = bailingShadow = fishingBoat = fishingShadow = dragNetBoat
@@ -100,6 +105,8 @@ export const DEPTH = {
   caveFront: 12,
   /** Provisional. Past-the-current carved stone marker (hazed scenery). */
   currentMarker: 12,
+  /** Provisional. Golden-hour drifting petals: hazed scenery between bg and haze, above the reeds and the cave front. */
+  petals: 15,
   haze: 20,
   /** Provisional. Gliding trajinera's leading shadow: above the haze, below the mats and every cue object. */
   trajineraShadow: 21,
