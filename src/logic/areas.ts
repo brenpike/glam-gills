@@ -3,6 +3,7 @@ import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import type { SnackDrift } from './collectibles';
 import { DEEP_CANAL_2_AREA_ID, DEEP_CANAL_2_LAYOUT } from './deepCanal2Layout';
 import { DEEP_CANAL_3_AREA_ID, DEEP_CANAL_3_LAYOUT } from './deepCanal3Layout';
+import { DEEP_CANAL_4_AREA_ID, DEEP_CANAL_4_LAYOUT } from './deepCanal4Layout';
 import { DEEP_CANAL_AREA_ID, DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import type { DragNetSpawn } from './dragNets';
 import { REFUGE_FACT_CARDS, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT, type FactCard } from './factCards';
@@ -39,7 +40,7 @@ export const CHINAMPA_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'chinampa
 /** The spring cave habitat, home of Areas 6 and 7. */
 export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
 
-/** The deep canal habitat, home of Areas 8 to 10 (issues #78, #107 and #108). */
+/** The deep canal habitat, home of Areas 8 to 11 (issues #78, #107, #108 and #112). */
 export const DEEP_CANAL_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
 
 /** Every habitat. */
@@ -57,16 +58,20 @@ export function habitatById(id: string): Readonly<Habitat> | undefined {
 }
 
 /**
- * Id of an area's own look, a variant of its habitat's look: the pond at dusk for Area 3. The art
- * layer maps it to colours; this layer only names it.
+ * Id of an area's own look, a variant of its habitat's look: the pond at dusk for Area 3 and the deep
+ * canal at golden hour for Area 11 (issue #112). The art layer maps it to colours; this layer only
+ * names it.
  */
-export type AreaLookVariant = 'pond-dusk';
+export type AreaLookVariant = 'pond-dusk' | 'deep-canal-golden';
 
 /** The time of day an area's look shows; the music rule reads it (M2, M4). */
 export type TimeOfDay = 'day' | 'dusk' | 'night';
 
-/** The time of day each area look variant shows. */
-export const AREA_LOOK_TIMES: Readonly<Record<AreaLookVariant, TimeOfDay>> = Object.freeze({ 'pond-dusk': 'dusk' });
+/** The time of day each area look variant shows: golden hour is the deep canal at dusk (issue #112). */
+export const AREA_LOOK_TIMES: Readonly<Record<AreaLookVariant, TimeOfDay>> = Object.freeze({
+  'pond-dusk': 'dusk',
+  'deep-canal-golden': 'dusk',
+});
 
 /** The time of day `area`'s look shows: its variant's, or day for the habitat's own look. */
 export function areaTimeOfDay(area: Pick<AreaData, 'look'>): TimeOfDay {
@@ -347,6 +352,34 @@ export const DEEP_CANAL_3_AREA: Readonly<AreaData> = Object.freeze({
   snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.7, periodY: 5.36 }),
 });
 
+/**
+ * Area 11, the deep canal at golden hour, a U-turn where the cormorants dive from the surface (issue
+ * #112).
+ */
+export const DEEP_CANAL_4_AREA: Readonly<AreaData> = Object.freeze({
+  id: DEEP_CANAL_4_AREA_ID,
+  number: 11,
+  habitatId: DEEP_CANAL_HABITAT.id,
+  layout: DEEP_CANAL_4_LAYOUT,
+  /**
+   * Provisional exit low in the first column, under the Home Spot, so its gate stands on the bed
+   * (issue #183), at the end of the main path's way back west along the bottom row: inside the swim
+   * bounds, out of the safe area and every predator's strike, clear of every anchor drop and mud
+   * seep, every murky patch, every lure and its line and the current, and clear of every hiding spot
+   * by more than the exit radius plus the find pickup radius.
+   */
+  exit: Object.freeze({ x: 180, y: 620, radius: 40 }),
+  specialTreasureId: 'deep-canal/little-cormorant',
+  /**
+   * Provisional drift, a little faster than Area 10 (PRD H4): the same amplitudes with shorter
+   * periods. That is below the 18 px/s a one-leg axolotl makes against the side-canal inflow and at
+   * most half the 40 px/s Snack magnet pull. No snacks dart once: the shrimp replace the one-time
+   * darters. No stranding chance of its own, so the default applies.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.6, periodY: 5.28 }),
+  look: 'deep-canal-golden',
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -359,6 +392,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   DEEP_CANAL_AREA,
   DEEP_CANAL_2_AREA,
   DEEP_CANAL_3_AREA,
+  DEEP_CANAL_4_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */

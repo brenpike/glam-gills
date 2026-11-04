@@ -54,7 +54,7 @@
  * canal look with a warm peach and coral sky and wash, warm shallow and mid water fading to the same
  * deep teal, a warm haze and surface line, and warm, more slanted light rays (`rayTint`,
  * `raySlant`). It also lights its lower row (`lowerRowLight`), paints its decorations into its chunks
- * (`goldenDecor`, drawGoldenCanal.ts) and lets a few marigold petals sink (`sinkingPetalsPerScreen`).
+ * (`goldenDecor`, drawGoldenCanal.ts) and lets at most one marigold petal per screen sink (`sinkingPetalsPerScreen`, ND-13).
  * Every other look says white rays at the day slant, false, false and 0, so its bakes are unchanged.
  * The golden look keeps the deep canal contrast rule: every water stop, haze blend and bed colour has
  * relative luminance 0.1687 or more.
@@ -717,13 +717,13 @@ export const GOLDEN_SURFACE_LINE = 'rgba(255,240,206,0.95)';
 /** Golden-hour light rays: a warm gold, slanting further than the day rays (the sun is low). */
 export const GOLDEN_RAY_TINT: RgbTriple = Object.freeze([255, 222, 160] as const);
 export const GOLDEN_RAY_SLANT = 130;
-/** Marigold petals sinking through the water, per screen of area width (issue #112: a few). */
-export const GOLDEN_SINKING_PETALS_PER_SCREEN = 3;
+/** Marigold petals sinking through the water, per screen of area width (issue #112, ND-13: at most one). */
+export const GOLDEN_SINKING_PETALS_PER_SCREEN = 1;
 
 /**
  * Deep canal at golden hour (issue #112, Area 11): the deep canal look with the golden sky, wash,
  * water, haze, surface line and rays, its lower row lit, its decorations painted into its chunks and
- * a few sinking petals. The bed, the bed stones, the sunken hull cave, the deep canal props and the
+ * at most one sinking petal per screen. The bed, the bed stones, the sunken hull cave, the deep canal props and the
  * willow bank are the deep canal's own.
  */
 export const DEEP_CANAL_GOLDEN_LOOK: HabitatLook = Object.freeze({

@@ -4,6 +4,7 @@ import { bakeAreaTextures, type AreaTextures } from '../art/areaTextures';
 import { createAxolotlRigBake, type AxolotlRigBake } from '../art/axolotlRig';
 import { bakeChinampaTextures, type ChinampaTextures } from '../art/chinampaTextures';
 import { bakeDeepCanalTextures, hasFishingBoats, murkyPatchSizes, type DeepCanalTextures } from '../art/deepCanalTextures';
+import { bakeGoldenCanalTextures, type GoldenCanalTextures } from '../art/goldenCanalTextures';
 import type { GhostNetSize } from '../art/drawChinampa';
 import { CAVE_H, CAVE_W } from '../art/drawFinds';
 import { streamColumnFor, type ReedLook } from '../art/drawScenery';
@@ -110,7 +111,9 @@ export interface BakedDecorationPack {
  * hull and its shadow, the moored hulls and the sunken hull cave), baked only when some area's look
  * has the sunken hull cave or says it needs them, or some area has gliding trajineras, fishing
  * trajineras or drag nets, else null. Its fishing trajinera and drag net art are baked only when
- * some area has fishing trajineras or drag nets, else each is null.
+ * some area has fishing trajineras or drag nets, else each is null. `goldenCanal` holds the one
+ * sinking marigold petal (issue #112, ND-13), baked only when some area's look lets petals sink,
+ * else null.
  * "Some area" counts the dev area when one was loaded. A dev area that
  * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
  * of `predator`.
@@ -136,6 +139,7 @@ export interface GameAssets {
   mobileSnacks: MobileSnackTextures | null;
   springCave: SpringCaveTextures | null;
   deepCanal: DeepCanalTextures | null;
+  goldenCanal: GoldenCanalTextures | null;
 }
 
 /** What the swim scene and its HUD start from: the game assets and the id of the area to swim in. */
@@ -716,6 +720,7 @@ export class BootScene extends Phaser.Scene {
     const mobileSnacks = areas.some(hasMobileSnacks) ? bakeMobileSnackTextures(this, bakeScale) : null;
     const springCave = bakeSpringCaveProps(this, areas, bakeScale);
     const deepCanal = bakeDeepCanalProps(this, areas, bakeScale);
+    const goldenCanal = bakeGoldenCanalTextures(this, bakeScale, areas.map(areaLook));
     const assets: GameAssets = {
       areas,
       zones,
@@ -737,6 +742,7 @@ export class BootScene extends Phaser.Scene {
       mobileSnacks,
       springCave,
       deepCanal,
+      goldenCanal,
     };
     this.scene.start(SCENE_KEYS.title, assets);
   }

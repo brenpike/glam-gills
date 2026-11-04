@@ -514,7 +514,7 @@ describe('the golden-hour deep canal look (issue #112)', () => {
     expect(look.lowerRowLight).toBe(true);
     expect(look.goldenDecor).toBe(true);
     expect(look.sinkingPetalsPerScreen).toBe(GOLDEN_SINKING_PETALS_PER_SCREEN);
-    expect(GOLDEN_SINKING_PETALS_PER_SCREEN).toBeGreaterThan(0);
+    expect(GOLDEN_SINKING_PETALS_PER_SCREEN).toBe(1);
   });
 
   it('has warm shallow and mid water fading to the deep canal teal', () => {

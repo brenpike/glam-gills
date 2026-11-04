@@ -162,6 +162,7 @@ import { MurkyWaterView, type MurkyWaterFrame } from './MurkyWaterView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
 import { PebbleRoomView } from './PebbleRoomView';
+import { PetalView } from './PetalView';
 import { PlasticWormView } from './PlasticWormView';
 import { PredatorView } from './PredatorView';
 import { PulsingCurrentView } from './PulsingCurrentView';
@@ -348,6 +349,8 @@ export class SwimScene extends Phaser.Scene {
   private hyacinthMatView: HyacinthMatView | null = null;
   /** The dusk fireflies, or null in an area whose look has none. */
   private fireflyView: FireflyView | null = null;
+  /** The golden-hour sinking petals, or null in an area whose look has none. */
+  private petalView: PetalView | null = null;
   /** The ghost nets and the snag cue, or null in an area with no ghost nets. */
   private ghostNetView: GhostNetView | null = null;
   /** The common carp, or null in an area with no carp route. */
@@ -492,6 +495,7 @@ export class SwimScene extends Phaser.Scene {
     this.garterSnakeView = null;
     this.hyacinthMatView = null;
     this.fireflyView = null;
+    this.petalView = null;
     this.ghostNetView = null;
     this.carpView = null;
     this.movingHazardView = null;
@@ -713,6 +717,8 @@ export class SwimScene extends Phaser.Scene {
    * per trip, and only in an area with a cormorant. It reuses its sprites (the body and a ring of
    * dive trail bubbles) and allocates its render argument object and, per cormorant under water,
    * diveArcPose's result: bounded by the area's cormorant count, the same class as the residual below.
+   * PetalView is made once per trip, and only in a look with sinking petals; PetalView.render
+   * allocates nothing.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -992,6 +998,7 @@ export class SwimScene extends Phaser.Scene {
     this.mobileSnackView = hasMobileSnacks(zone) ? new MobileSnackView(this.mobileSnackTextures()) : null;
     this.hyacinthMatView = this.matSweeps !== null ? new HyacinthMatView(this, this.assets, this.trip.elements) : null;
     this.fireflyView = this.look.firefliesPerScreen > 0 ? new FireflyView(this, this.assets, this.look, zone) : null;
+    this.petalView = this.look.sinkingPetalsPerScreen > 0 ? new PetalView(this, this.assets, this.look, zone) : null;
     const dark = this.trip.darkWater;
     this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, zone, dark, this.trip.elements) : null;
     this.glowPlantView =
@@ -1642,6 +1649,7 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.destroy();
     this.blackBassView?.destroy();
     this.cormorantView?.destroy();
+    this.petalView?.destroy();
     this.trajineraView?.destroy();
     this.murkyWaterView?.destroy();
     this.bailingBucketView?.destroy();
@@ -1696,6 +1704,7 @@ export class SwimScene extends Phaser.Scene {
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
     this.pebbleRoomView?.render({ pebbles: this.pebbleStates, hint: this.trip.phase === 'swimming' && pebbleHintShown(this.pebbleHintTime) });
     this.fireflyView?.render(this.motion, this.clock);
+    this.petalView?.render(this.motion, this.clock);
     this.renderReeds(dt, t);
     this.renderSnacks();
     this.renderMobileSnacks();
