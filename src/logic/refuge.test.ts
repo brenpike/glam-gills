@@ -7,6 +7,7 @@ import {
   CHINAMPA_AREA,
   CHINAMPA_HABITAT,
   DEEP_CANAL_2_AREA,
+  DEEP_CANAL_3_AREA,
   DEEP_CANAL_AREA,
   DEEP_CANAL_HABITAT,
   HABITATS,
@@ -155,6 +156,7 @@ describe('refugeSections', () => {
     expect(deepCanal.batches).toEqual([
       { areaId: DEEP_CANAL_AREA.id, areaNumber: 8, cleared: false },
       { areaId: DEEP_CANAL_2_AREA.id, areaNumber: 9, cleared: false },
+      { areaId: DEEP_CANAL_3_AREA.id, areaNumber: 10, cleared: false },
     ]);
   });
 
@@ -217,6 +219,22 @@ describe('refugeSections', () => {
     expect(both.batches.map((batch) => batch.cleared)).toEqual([true, true]);
   });
 
+  it('keeps the deep canal section dirty until Areas 8, 9 and 10 are all beaten (issues #78, #107 and #108)', () => {
+    const area10Only = refugeSections(beaten(DEEP_CANAL_3_AREA.id));
+    expect(area10Only.map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden', 'dirty']);
+    expect(area10Only[4].batches).toEqual([
+      { areaId: DEEP_CANAL_AREA.id, areaNumber: 8, cleared: false },
+      { areaId: DEEP_CANAL_2_AREA.id, areaNumber: 9, cleared: false },
+      { areaId: DEEP_CANAL_3_AREA.id, areaNumber: 10, cleared: true },
+    ]);
+    const areas8And9 = refugeSections(beaten(DEEP_CANAL_AREA.id, DEEP_CANAL_2_AREA.id))[4];
+    expect(areas8And9.state).toBe('dirty');
+    expect(areas8And9.batches.map((batch) => batch.cleared)).toEqual([true, true, false]);
+    const all = refugeSections(beaten(DEEP_CANAL_AREA.id, DEEP_CANAL_2_AREA.id, DEEP_CANAL_3_AREA.id))[4];
+    expect(all.state).toBe('clean');
+    expect(all.batches.map((batch) => batch.cleared)).toEqual([true, true, true]);
+  });
+
   it('never counts a dev area', () => {
     const devIds = DEV_AREAS.map((area) => area.id);
     expect(refugeSections(beaten(...devIds)).map((section) => section.state)).toEqual(['hidden', 'hidden', 'hidden', 'hidden', 'hidden']);
@@ -255,7 +273,7 @@ describe('refugeAreaLine (issue #113, ND-8)', () => {
   it('names the areas of a clean section', () => {
     const sections = refugeSections(beaten(...AREAS.map((area) => area.id)));
     expect(sections.map((section) => section.state)).toEqual(['clean', 'clean', 'clean', 'clean', 'clean']);
-    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7', 'Areas 8 and 9']);
+    expect(sections.map(refugeAreaLine)).toEqual(['Area 1', 'Areas 2 and 3', 'Areas 4 and 5', 'Areas 6 and 7', 'Areas 8 to 10']);
   });
 
   it('takes the area numbers from the area data', () => {

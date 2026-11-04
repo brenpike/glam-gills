@@ -71,11 +71,23 @@
  * the rim. `bailingBucketFront` (the bucket's front wall and rim) sits over `queasyTint` and under
  * bubbles, so the front wall covers a peeking axolotl and both cheek tints. The ripples and the landing
  * splash use `fx`.
+ * Area 10 (issue #108, guide 7p). `fishingBoat` (a fishing trajinera's hull and its rods, ND-1) and
+ * `fishingShadow` (its always-shown shadow) share the moving hazard band: in front of the tilapia and
+ * the black bass, behind the heron stab, the halo and the axolotl; the scene adds the shadow first,
+ * then the hull, then the rods. `fishingLure` (a lure's line, float bead and lure) sits above
+ * collectibles, the murky cloud, the dark layer, the glow-plants and the rock, and below every
+ * predator, the moving hazard band, the halo and the axolotl. `dragNetBoat` (a drag net's two boats,
+ * ND-2) shares the moving hazard band. `dragNetMesh` (a stretch's hollow shades and then its mesh
+ * curtain) sits just above collectibles and below the murky cloud, every predator, the halo and the
+ * axolotl, so the axolotl is always drawn in front of the net. `dragNetFloats` (the float line and its
+ * floats, lit or not) sits just above the surface, so the surface line never cuts them, and below the
+ * pads. The wriggle-out strands use `fx`.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker
  * < haze < trajineraShadow < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
- * < collectibles < murkyCloud < darkWater < glowPlant < rock < tilapia < movingHazard = trajineraHull = bailingBoat = bailingShadow
+ * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < rock < fishingLure < tilapia
+ * < movingHazard = trajineraHull = bailingBoat = bailingShadow = fishingBoat = fishingShadow = dragNetBoat
  * < heronStab < halo = bailingBucket < friend < axolotl < queasyTint < bailingBucketFront
- * < bubbles < surface < pads < fireflies < hint < fx < ui.
+ * < bubbles < surface < dragNetFloats < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
   bg: 0,
@@ -106,6 +118,8 @@ export const DEPTH = {
   /** Provisional. A pulsing vent's mouth, bubbles, streaks and surging band: above treasures, below collectibles. */
   pulsingCurrent: 29,
   collectibles: 30,
+  /** Provisional. Drag net hollow shades and mesh curtain: above collectibles, below the murky cloud, every predator, the halo and the axolotl. */
+  dragNetMesh: 30.5,
   /** Provisional. Murky patch cloud and dotted outline: above collectibles, below the dark layer, every predator and the axolotl. */
   murkyCloud: 31,
   /** Provisional. The dark layer over an area's dark part: above collectibles, below the glow-plants and the tilapia. */
@@ -114,6 +128,8 @@ export const DEPTH = {
   glowPlant: 33,
   /** Provisional. Solid rock walls and the pebble: above the glow-plants, below the tilapia. */
   rock: 34,
+  /** Provisional. Fishing lure, its line and float bead: above collectibles and the rock, below every predator, the halo and the axolotl. */
+  fishingLure: 34.5,
   /** Provisional. Predator: behind the axolotl, in front of collectibles. */
   tilapia: 35,
   /** Provisional. Moving hazard shadow, shaft and bow: in front of the tilapia, behind the heron stab, the halo and the axolotl. */
@@ -124,6 +140,12 @@ export const DEPTH = {
   bailingBoat: 36,
   /** Provisional. Bailing bucket's warning shadow: the moving hazard band, behind the halo and the axolotl. */
   bailingShadow: 36,
+  /** Provisional. Fishing trajinera hull and rods: the moving hazard band, behind the heron stab, the halo and the axolotl. */
+  fishingBoat: 36,
+  /** Provisional. Fishing trajinera's always-shown shadow: the moving hazard band, under its hull. */
+  fishingShadow: 36,
+  /** Provisional. Drag net boats: the moving hazard band, behind the heron stab, the halo and the axolotl. */
+  dragNetBoat: 36,
   /** Provisional. Wading heron stab head and neck piece: in front of the tilapia, behind the halo and the axolotl. */
   heronStab: 37,
   /** Provisional. Protected halo: behind the axolotl, in front of the tilapia. */
@@ -139,6 +161,8 @@ export const DEPTH = {
   bailingBucketFront: 42,
   bubbles: 50,
   surface: 60,
+  /** Provisional. Drag net float line and floats, lit or not: above the surface, below the pads. */
+  dragNetFloats: 61,
   pads: 70,
   /** Provisional. Pond fireflies above the water band: above pads, below hint. */
   fireflies: 72,

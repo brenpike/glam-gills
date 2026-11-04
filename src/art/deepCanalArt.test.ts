@@ -74,12 +74,31 @@ import {
   DEEP_CANAL_TEX,
   MOORED_HULL_KEY_PREFIX,
   MURKY_PATCH_KEY_PREFIX,
+  NET_CURTAIN_KEY_PREFIX,
+  NET_HOLLOW_KEY_PREFIX,
   bakeDeepCanalTextures,
   bakeMurkyMeter,
+  dragNetCurtainHeight,
+  dragNetCurtainHeights,
+  dragNetHollowSizes,
+  hasFishingBoats,
   mooredHullKey,
   murkyPatchSizeKey,
   murkyPatchSizes,
+  netHollowSizeKey,
 } from './deepCanalTextures';
+import {
+  DRAG_NET_BOAT_TEX,
+  DRAG_NET_FLOAT_LIT_TEX,
+  DRAG_NET_FLOAT_TEX,
+  DRAG_NET_STRANDS_TEX,
+  dragNetCurtainTex,
+  dragNetHollowShadeTex,
+} from './drawDragNet';
+import { FISHING_BEAD_TEX, FISHING_BOAT_TEX, FISHING_LURE_TEX, FISHING_ROD_TEX, FISHING_SHADOW_TEX } from './drawFishingTrajinera';
+import { dragNetSpawn, type DragNetSpawn } from '../logic/dragNets';
+import { DEPTH } from './layers';
+import { SURF } from '../logic/zone';
 import {
   BAILING_BOAT_TEX,
   BAILING_BUCKET_FRONT_TEX,
@@ -111,7 +130,7 @@ import {
 import { paintBackgroundChunk, bedEdgeY, type ChunkRow } from './drawScenery';
 import { VIEW_W, WATER_GRADIENT_END_Y, WATER_STOP_MID } from './palette';
 import { SKY_HORIZON, SKY_TOP } from './palette';
-import { AREAS, DEEP_CANAL_AREA, habitatById } from '../logic/areas';
+import { AREAS, DEEP_CANAL_3_AREA, DEEP_CANAL_AREA, habitatById, type AreaData } from '../logic/areas';
 
 vi.mock('phaser', () => ({}));
 
@@ -1010,19 +1029,46 @@ function murkyPatchKeys(w: number, h: number): string[] {
   return [`${prefix}-still`, ...Array.from({ length: MURKY_SWIRL_FRAMES }, (_, frame) => `${prefix}-swirl-${frame}`), `${prefix}-outline`];
 }
 
+/** The keys of every drag net curtain height and hollow size in `areas`. */
+function netSizeKeys(areas: readonly Readonly<AreaData>[]): string[] {
+  return [
+    ...dragNetCurtainHeights(areas).map((h) => `${NET_CURTAIN_KEY_PREFIX}${h}`),
+    ...dragNetHollowSizes(areas).map(([w, h]) => `${NET_HOLLOW_KEY_PREFIX}${netHollowSizeKey(w, h)}`),
+  ];
+}
+
+/** The fixed keys of Area 10's fishing trajinera and drag net art (issue #108). */
+const LURE_NET_KEYS: readonly string[] = [
+  DEEP_CANAL_TEX.fishingBoat,
+  DEEP_CANAL_TEX.fishingRod,
+  DEEP_CANAL_TEX.fishingShadow,
+  DEEP_CANAL_TEX.fishingBead,
+  DEEP_CANAL_TEX.fishingLure,
+  DEEP_CANAL_TEX.netBoat,
+  DEEP_CANAL_TEX.netFloat,
+  DEEP_CANAL_TEX.netFloatLit,
+  DEEP_CANAL_TEX.netStrands,
+];
+
 describe('bakeDeepCanalTextures', () => {
-  const bakeAt = (scale: number, patchSizes?: readonly (readonly [number, number])[]) => {
+  const bakeAt = (
+    scale: number,
+    patchSizes?: readonly (readonly [number, number])[],
+    lureNetAreas?: readonly Readonly<AreaData>[],
+  ) => {
     const created: { key: string; w: number; h: number }[] = [];
     vi.stubGlobal('Path2D', LogPath);
-    const art = bakeDeepCanalTextures(fakeScene(created), scale, patchSizes);
+    const art = bakeDeepCanalTextures(fakeScene(created), scale, patchSizes, lureNetAreas);
     return { art, created };
   };
 
-  it('bakes every prop under its own fixed key, one moored hull per band order and every murky patch size in the areas', () => {
+  it('bakes every prop under its own fixed key, one moored hull per band order, every murky patch size and every net size in the areas', () => {
     const { created } = bakeAt(2);
     const hullKeys = MOORED_HULL_BANDS.map((_, variant) => mooredHullKey(variant));
     const patchKeys = murkyPatchSizes(AREAS).flatMap(([w, h]) => murkyPatchKeys(w, h));
-    expect(created.map((c) => c.key).sort()).toEqual([...Object.values(DEEP_CANAL_TEX), ...hullKeys, ...patchKeys].sort());
+    const netKeys = netSizeKeys(AREAS);
+    expect(netKeys.length).toBeGreaterThan(0);
+    expect(created.map((c) => c.key).sort()).toEqual([...Object.values(DEEP_CANAL_TEX), ...hullKeys, ...patchKeys, ...netKeys].sort());
     expect(new Set(created.map((c) => c.key)).size).toBe(created.length);
     expect(DEEP_CANAL_TEX.trajineraHull).toBe('deep-canal-trajinera-hull');
     expect(DEEP_CANAL_TEX.mooredShade).toBe('deep-canal-moored-shade');
@@ -1163,6 +1209,99 @@ describe('bakeDeepCanalTextures', () => {
     expect(() => bakeAt(2, [[40, 200]])).toThrow(RangeError);
   });
 
+  it('bakes the fishing trajinera art (issue #108, ND-1) under its fixed keys, in its drawFishingTrajinera.ts frames and anchors', () => {
+    const { art, created } = bakeAt(3);
+    const fishing = art.fishingTrajinera;
+    expect(fishing).not.toBeNull();
+    if (fishing === null) return;
+    for (const [info, key, tex] of [
+      [fishing.boat, DEEP_CANAL_TEX.fishingBoat, FISHING_BOAT_TEX],
+      [fishing.rod, DEEP_CANAL_TEX.fishingRod, FISHING_ROD_TEX],
+      [fishing.shadow, DEEP_CANAL_TEX.fishingShadow, FISHING_SHADOW_TEX],
+      [fishing.bead, DEEP_CANAL_TEX.fishingBead, FISHING_BEAD_TEX],
+      [fishing.lure, DEEP_CANAL_TEX.fishingLure, FISHING_LURE_TEX],
+    ] as const) {
+      expect(info.key).toBe(key);
+      expect([info.w, info.h, info.originX, info.originY], key).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(info.scale).toBe(3);
+      expect(created.filter((c) => c.key === key)).toEqual([{ key, w: info.pxW, h: info.pxH }]);
+    }
+    expect([DEEP_CANAL_TEX.fishingBoat, DEEP_CANAL_TEX.fishingRod, DEEP_CANAL_TEX.fishingShadow]).toEqual([
+      'deep-canal-fishing-boat',
+      'deep-canal-fishing-rod',
+      'deep-canal-fishing-shadow',
+    ]);
+    expect([DEEP_CANAL_TEX.fishingBead, DEEP_CANAL_TEX.fishingLure]).toEqual(['deep-canal-fishing-bead', 'deep-canal-fishing-lure']);
+  });
+
+  it('bakes the drag net art (issue #108, ND-2) under its fixed keys, with one curtain per height and one hollow shade per size', () => {
+    const { art, created } = bakeAt(2);
+    const net = art.dragNet;
+    expect(net).not.toBeNull();
+    if (net === null) return;
+    for (const [info, key, tex] of [
+      [net.boat, DEEP_CANAL_TEX.netBoat, DRAG_NET_BOAT_TEX],
+      [net.float, DEEP_CANAL_TEX.netFloat, DRAG_NET_FLOAT_TEX],
+      [net.floatLit, DEEP_CANAL_TEX.netFloatLit, DRAG_NET_FLOAT_LIT_TEX],
+      [net.strands, DEEP_CANAL_TEX.netStrands, DRAG_NET_STRANDS_TEX],
+    ] as const) {
+      expect(info.key).toBe(key);
+      expect([info.w, info.h, info.originX, info.originY], key).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(created.filter((c) => c.key === key)).toEqual([{ key, w: info.pxW, h: info.pxH }]);
+    }
+    expect([DEEP_CANAL_TEX.netBoat, DEEP_CANAL_TEX.netFloat, DEEP_CANAL_TEX.netFloatLit, DEEP_CANAL_TEX.netStrands]).toEqual([
+      'deep-canal-net-boat',
+      'deep-canal-net-float',
+      'deep-canal-net-float-lit',
+      'deep-canal-net-strands',
+    ]);
+    const heights = dragNetCurtainHeights(AREAS);
+    expect([...net.curtains.keys()]).toEqual(heights);
+    for (const h of heights) {
+      const info = net.curtains.get(h);
+      const tex = dragNetCurtainTex(h);
+      expect(info?.key).toBe(`deep-canal-net-curtain-${h}`);
+      expect([info?.w, info?.h, info?.originX, info?.originY]).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(created.filter((c) => c.key === info?.key)).toHaveLength(1);
+    }
+    const sizes = dragNetHollowSizes(AREAS);
+    expect([...net.hollowShades.keys()]).toEqual(sizes.map(([w, h]) => netHollowSizeKey(w, h)));
+    for (const [w, h] of sizes) {
+      const info = net.hollowShades.get(netHollowSizeKey(w, h));
+      const tex = dragNetHollowShadeTex(w, h);
+      expect(info?.key).toBe(`deep-canal-net-hollow-${w}x${h}`);
+      expect([info?.w, info?.h, info?.originX, info?.originY]).toEqual([tex.w, tex.h, tex.originX, tex.originY]);
+      expect(created.filter((c) => c.key === info?.key)).toHaveLength(1);
+    }
+  });
+
+  it('bakes no fishing trajinera or drag net art when no area has fishing boats or drag nets: Areas 1 to 9 bake as before', () => {
+    const earlier = AREAS.filter((area) => area.number < DEEP_CANAL_3_AREA.number);
+    expect(earlier.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const { art, created } = bakeAt(2, murkyPatchSizes(AREAS), earlier);
+    expect(art.fishingTrajinera).toBeNull();
+    expect(art.dragNet).toBeNull();
+    const keys = created.map((c) => c.key);
+    for (const key of LURE_NET_KEYS) expect(keys).not.toContain(key);
+    expect(keys.filter((key) => key.startsWith(NET_CURTAIN_KEY_PREFIX) || key.startsWith(NET_HOLLOW_KEY_PREFIX))).toEqual([]);
+    const hullKeys = MOORED_HULL_BANDS.map((_, variant) => mooredHullKey(variant));
+    const patchKeys = murkyPatchSizes(AREAS).flatMap(([w, h]) => murkyPatchKeys(w, h));
+    const earlierKeys = Object.values(DEEP_CANAL_TEX).filter((key) => !LURE_NET_KEYS.includes(key));
+    expect(keys.sort()).toEqual([...earlierKeys, ...hullKeys, ...patchKeys].sort());
+  });
+
+  it('bakes the fishing trajinera art and the drag net art each only for an area that has them', () => {
+    const fishOnly = { ...DEEP_CANAL_3_AREA, layout: { ...DEEP_CANAL_3_AREA.layout, dragNets: [] } };
+    const netsOnly = { ...DEEP_CANAL_3_AREA, layout: { ...DEEP_CANAL_3_AREA.layout, fishingBoats: [] } };
+    const fish = bakeAt(2, [], [fishOnly]);
+    expect(fish.art.fishingTrajinera).not.toBeNull();
+    expect(fish.art.dragNet).toBeNull();
+    const nets = bakeAt(2, [], [netsOnly]);
+    expect(nets.art.fishingTrajinera).toBeNull();
+    expect(nets.art.dragNet).not.toBeNull();
+    expect(nets.created.map((c) => c.key)).not.toContain(DEEP_CANAL_TEX.fishingBoat);
+  });
+
   it('re-bakes the murky meter under its one fixed key at any share', () => {
     const created: { key: string; w: number; h: number }[] = [];
     vi.stubGlobal('Path2D', LogPath);
@@ -1194,6 +1333,74 @@ describe('murkyPatchSizes (issue #107)', () => {
   });
 });
 
+describe('drag net curtain heights and hollow sizes (issue #108)', () => {
+  const netAt = (id: string, y1: number, hollowW: number): DragNetSpawn =>
+    dragNetSpawn(id, 0, {
+      stretch: { x0: 1000, x1: 1200, y0: 300, y1 },
+      sweep: 'right',
+      hollows: [
+        { x0: 1020, x1: 1020 + hollowW, y0: 310, y1: 350 },
+        { x0: 1100, x1: 1140, y0: 310, y1: 350 },
+      ],
+    });
+
+  it('measures a curtain from the float line on the water line down to the stretch\'s bottom edge', () => {
+    expect(dragNetCurtainHeight(netAt('a', 520, 40))).toBe(520 - SURF);
+  });
+
+  it('gives every curtain height and hollow size in the areas once, in first-use order', () => {
+    const area = (nets: DragNetSpawn[]) => ({ ...DEEP_CANAL_3_AREA, layout: { ...DEEP_CANAL_3_AREA.layout, dragNets: nets } });
+    const areas = [area([netAt('a', 520, 40), netAt('b', 600, 60)]), area([netAt('c', 520, 40)])];
+    expect(dragNetCurtainHeights(areas)).toEqual([520 - SURF, 600 - SURF]);
+    expect(dragNetHollowSizes(areas)).toEqual([
+      [40, 40],
+      [60, 40],
+    ]);
+  });
+
+  it("gives Area 10's two stretches their curtain heights and its hollows their sizes", () => {
+    const nets = DEEP_CANAL_3_AREA.layout.dragNets ?? [];
+    expect(nets).toHaveLength(2);
+    expect(dragNetCurtainHeights([DEEP_CANAL_3_AREA])).toEqual([...new Set(nets.map((net) => net.dragNet.stretch.y1 - SURF))]);
+    const sizes = dragNetHollowSizes([DEEP_CANAL_3_AREA]);
+    for (const net of nets) {
+      for (const hollow of net.dragNet.hollows) expect(sizes).toContainEqual([hollow.x1 - hollow.x0, hollow.y1 - hollow.y0]);
+    }
+  });
+});
+
+describe('Area 10 depths (issue #108, guide 7p, provisional)', () => {
+  it('puts the fishing hull, its shadow and the net boats in the moving hazard band', () => {
+    expect(DEPTH.fishingBoat).toBe(DEPTH.movingHazard);
+    expect(DEPTH.fishingShadow).toBe(DEPTH.movingHazard);
+    expect(DEPTH.dragNetBoat).toBe(DEPTH.movingHazard);
+  });
+
+  it('puts the line and lure above the collectibles and under every predator, the halo and the axolotl', () => {
+    expect(DEPTH.fishingLure).toBe(34.5);
+    for (const below of [DEPTH.collectibles, DEPTH.murkyCloud, DEPTH.darkWater, DEPTH.glowPlant, DEPTH.rock]) {
+      expect(DEPTH.fishingLure).toBeGreaterThan(below);
+    }
+    for (const above of [DEPTH.tilapia, DEPTH.movingHazard, DEPTH.heronStab, DEPTH.halo, DEPTH.axolotl]) {
+      expect(DEPTH.fishingLure).toBeLessThan(above);
+    }
+  });
+
+  it('puts the mesh over the water and the snacks and under the murky cloud, the halo and the axolotl', () => {
+    expect(DEPTH.dragNetMesh).toBe(30.5);
+    expect(DEPTH.dragNetMesh).toBeGreaterThan(DEPTH.collectibles);
+    for (const above of [DEPTH.murkyCloud, DEPTH.tilapia, DEPTH.movingHazard, DEPTH.halo, DEPTH.axolotl]) {
+      expect(DEPTH.dragNetMesh).toBeLessThan(above);
+    }
+  });
+
+  it('puts the floats, lit or not, on top of the surface and under the pads', () => {
+    expect(DEPTH.dragNetFloats).toBe(61);
+    expect(DEPTH.dragNetFloats).toBeGreaterThan(DEPTH.surface);
+    expect(DEPTH.dragNetFloats).toBeLessThan(DEPTH.pads);
+  });
+});
+
 describe('which areas need the deep canal bake (issue #78)', () => {
   it('gives Area 8 gliding trajineras, so the deep canal props are baked whatever its look', () => {
     expect(DEEP_CANAL_AREA.layout.trajineras?.length ?? 0).toBeGreaterThan(0);
@@ -1210,6 +1417,16 @@ describe('which areas need the deep canal bake (issue #78)', () => {
       expect(look.cave.kind, area.id).not.toBe('sunkenHull');
       expect(area.layout.trajineras ?? [], area.id).toHaveLength(0);
     }
+  });
+
+  it('gives Areas 1 to 9 no fishing trajineras or drag nets, and Area 10 both (issue #108)', () => {
+    const earlier = AREAS.filter((area) => area.number < DEEP_CANAL_3_AREA.number);
+    expect(hasFishingBoats(earlier)).toBe(false);
+    expect(earlier.flatMap((area) => area.layout.dragNets ?? [])).toHaveLength(0);
+    expect(dragNetCurtainHeights(earlier)).toEqual([]);
+    expect(dragNetHollowSizes(earlier)).toEqual([]);
+    expect(hasFishingBoats([DEEP_CANAL_3_AREA])).toBe(true);
+    expect(DEEP_CANAL_3_AREA.layout.dragNets?.length ?? 0).toBeGreaterThan(0);
   });
 
   it("bakes every size of Area 8's divider in the spring cave rock wall bake, one texture per size", () => {

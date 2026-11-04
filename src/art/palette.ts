@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the twenty-four Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the twenty-six Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -483,7 +483,9 @@ export type DreamLookId =
   | 'jade'
   | 'fiesta-shine'
   | 'olive'
-  | 'lantern-shine';
+  | 'lantern-shine'
+  | 'peach'
+  | 'confetti-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -585,6 +587,16 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // Iridescent, the light sheen. 4.70:1 with ink and 3.06:1 with white, so ink spots and, as Crystal shine, no rim light.
   // The lantern red gill #b5172f is 2.19:1 against it.
   'lantern-shine': dreamSlots('#e07800', '#ca6e0a', '#ecae66', '#f1c28c', ['#b5172f', '#c54a5d'], ['#a71832', '#b9475c']),
+  // Deep canal Area 10 Dream colour (Peach, issue #108). Body #ffa9a8 is a soft peach (relative luminance 0.525), a step
+  // darker than Sunset orange (1.15:1) and Bubblegum (1.16:1) and 0.078 and 0.077 from them in OKLab, over the 0.075 floor.
+  // 7.88:1 with ink and 1.83:1 with white, so ink spots and, as Jade, the rim light. The apricot gill #f5862e is 1.38:1
+  // against it.
+  peach: dreamSlots('#ffa9a8', '#e6999d', '#ffcbcb', '#ffd8d8', ['#f5862e', '#f7a15c'], ['#e17c31', '#e7975b']),
+  // Deep canal Area 10 Legendary Dream colour (Confetti shine, the first dark sheen). Body #6a008a is a deep grape-violet
+  // (relative luminance 0.049), in the window between Tie-dye galaxy (1.06:1) and Midnight blue (1.07:1), 7.06:1 from
+  // Iridescent, the light sheen. 10.61:1 with white and 1.36:1 with ink, so it follows the dark-body rules (white spots,
+  // eye ring, rim light). The confetti aqua gill #56e0f0 is 6.73:1 against it.
+  'confetti-shine': dreamSlots('#6a008a', '#620483', '#a666b9', '#bc8cca', ['#56e0f0', '#7be7f3'], ['#52cde0', '#75d7e6']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -602,7 +614,15 @@ export const DREAM_RIM_LIGHT: MorphRim = { colour: '#cec9f0', width: 2, fin: tru
 export const DREAM_EYE_RING: MorphEyeRing = { colour: '#cec9f0', width: 1.5 };
 
 /** The dark Dream bodies (guide 3f): the morph eye is under 3:1 on them, so they get the eye ring and white spots. */
-const DREAM_DARK_IDS: readonly DreamLookId[] = ['midnight-blue', 'galaxy', 'tie-dye-galaxy', 'plum', 'chocolate', 'glowworm'];
+const DREAM_DARK_IDS: readonly DreamLookId[] = [
+  'midnight-blue',
+  'galaxy',
+  'tie-dye-galaxy',
+  'plum',
+  'chocolate',
+  'glowworm',
+  'confetti-shine',
+];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
 const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -614,6 +634,8 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'glowworm',
   'jade',
   'fiesta-shine',
+  'peach',
+  'confetti-shine',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

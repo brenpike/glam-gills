@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dragNetSpawn } from './dragNets';
 import { GHOST_NET, netDrift } from './ghostNets';
 import type { HazardShape, HazardSpawn } from './hazards';
 import {
@@ -12,10 +13,11 @@ import {
   type ExtraObstacle,
   type Gap,
 } from './layoutGaps';
+import { LURES, TRAJINERA_LURE, fishingBoatSpawn, lurePath } from './lures';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
 import { murkyPatchSpawn } from './murkyWater';
 import { TILAPIA } from './tuning';
-import { SURF, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
+import { SURF, areaSize, swimBounds, type Point, type TilapiaRoute, type ZoneLayout } from './zone';
 
 const NET_TEN = { ...GHOST_NET, reach: 10 };
 const STRIKE = 30;
@@ -39,6 +41,23 @@ function gapNamed(gaps: Gap[], between: string): Gap {
   if (!gap) throw new Error(`no gap ${between}`);
   return gap;
 }
+
+/** A fishing boat whose two lures hang 200 px below SURF: the first over x 460 to 640, the second over x 520 to 700. */
+const BOAT = fishingBoatSpawn(
+  'boat-1',
+  0,
+  { x0: 400, x1: 700, lures: [{ along: 60, depth: 200 }, { along: 120, depth: 200 }] },
+  swimBounds(areaSize(10, 3)),
+);
+/** A drag-net stretch, crossed by timing, never a gap obstacle. */
+const DRAG_NET = dragNetSpawn('drag-1', 0, {
+  stretch: { x0: 800, x1: 1000, y0: SURF, y1: SURF + 200 },
+  sweep: 'right',
+  hollows: [
+    { x0: 800, x1: 820, y0: SURF, y1: SURF + 200 },
+    { x0: 980, x1: 1000, y0: SURF, y1: SURF + 200 },
+  ],
+});
 
 const square: TilapiaRoute = {
   id: 'route-1',
@@ -124,6 +143,34 @@ describe('obstaclesOf', () => {
     ]);
   });
 
+  it("lists each lure's whole path after the moving hazards and before the extras, by the eat reach (ND-1)", () => {
+    const pole = movingHazardSpawn('pole-1', PUNTING_POLE, 300, 0);
+    const geo = { ...geometry([net('net-1', rect(200, 260, 0, 100))], [square]), movingHazards: [pole], fishingBoats: [BOAT] };
+    const mat: ExtraObstacle = { id: 'mat-1', shape: rect(1200, 1300, 0, 50), keepOut: 4 };
+    expect(obstaclesOf(geo, [mat])).toEqual([
+      { id: 'net-1', kind: 'shape', shape: rect(200, 260, 0, 100), keepOut: 10 },
+      { id: 'pole-1', kind: 'shape', shape: movingHazardSweep(pole), keepOut: PUNTING_POLE.touchReach },
+      { id: 'boat-1-lure-1', kind: 'shape', shape: lurePath(BOAT, 0), keepOut: TRAJINERA_LURE.reach },
+      { id: 'boat-1-lure-2', kind: 'shape', shape: lurePath(BOAT, 1), keepOut: TRAJINERA_LURE.reach },
+      { id: 'mat-1', kind: 'shape', shape: rect(1200, 1300, 0, 50), keepOut: 4 },
+      { id: 'route-1', kind: 'route', waypoints: square.waypoints, keepOut: STRIKE },
+    ]);
+    const y = SURF + 200;
+    expect(lurePath(BOAT, 0)).toEqual(rect(460, 640, y - LURES.bobAmplitude, y + LURES.bobAmplitude));
+  });
+
+  it('leaves out a drag-net stretch, which is crossed by timing, as a pulsing current is (ND-2)', () => {
+    const geo = { ...geometry([net('net-1', rect(200, 260, 0, 100))], [square]), dragNets: [DRAG_NET] };
+    expect(obstaclesOf(geo)).toEqual(obstaclesOf(geometry([net('net-1', rect(200, 260, 0, 100))], [square])));
+    expect(obstaclesOf(geo).map((obstacle) => obstacle.id)).toEqual(['net-1', 'route-1']);
+  });
+
+  it('gives the same obstacles with empty fishing boat and drag net lists as with none (Areas 1 to 9)', () => {
+    const geo = geometry([net('net-1', rect(200, 260, 0, 100))], [square]);
+    const empty = { ...geo, fishingBoats: [], dragNets: [] };
+    expect(obstaclesOf(empty)).toEqual(obstaclesOf(geo));
+  });
+
   it('leaves out a murky patch, which is swum through, not round (issue #107)', () => {
     const murky = murkyPatchSpawn('murky-1', { x0: 300, x1: 500, y0: 0, y1: 200 });
     const geo = geometry([net('net-1', rect(200, 260, 0, 100)), murky], [square]);
@@ -183,6 +230,15 @@ describe('gapsOf', () => {
     const [gap] = gapsOf(geo);
     expect(gap.between).toBe('a and pole-1');
     expect(gap.width).toBe(295 - 100 - 10 - PUNTING_POLE.touchReach);
+    expect(gap.hazard).toBe(true);
+  });
+
+  it("measures a gap beside a lure's whole path, less the eat reach", () => {
+    const y = SURF + 200;
+    const geo = { ...geometry([net('a', rect(0, 100, y - 50, y + 50))]), fishingBoats: [{ ...BOAT, lures: [BOAT.lures[0]] }] };
+    const [gap] = gapsOf(geo);
+    expect(gap.between).toBe('a and boat-1-lure-1');
+    expect(gap.width).toBe(460 - 100 - 10 - TRAJINERA_LURE.reach);
     expect(gap.hazard).toBe(true);
   });
 

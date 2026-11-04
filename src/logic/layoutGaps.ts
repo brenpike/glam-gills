@@ -6,6 +6,7 @@
 import { GHOST_NET } from './ghostNets';
 import { hazardSweep, type HazardShape } from './hazards';
 import { zoneThreats } from './hiding';
+import { lurePath, TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
 import { isMurkyPatch } from './murkyWater';
 import { PERK_CAPS } from './perks';
@@ -16,11 +17,12 @@ import type { Point, ZoneLayout } from './zone';
 const SAMPLE_STEP = 1;
 
 /**
- * The zone geometry the gap measure reads: its hazards, its predator routes with their tuning and
- * its moving hazards (ND-8). Absent moving hazards mean none.
+ * The zone geometry the gap measure reads: its hazards, its predator routes with their tuning, its
+ * moving hazards (ND-8) and its fishing boats (ND-1). Absent moving hazards or fishing boats mean none.
  */
 type GapGeometry = Pick<ZoneLayout, 'hazards' | 'tilapiaRoutes' | 'tilapia' | 'predatorRoutes'> & {
   movingHazards?: readonly Readonly<MovingHazardSpawn>[];
+  fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
 };
 
 /**
@@ -41,7 +43,7 @@ export const NET_CURRENT_CLEARANCE =
 /**
  * One obstacle of the gap measure: a hazard shape, kept out of by its touch reach from the shape
  * edge, or a predator route, kept out of by its strike range from the loop (zoneThreats). Both
- * measure to the axolotl's body centre, except a plastic worm, which measures to the head.
+ * measure to the axolotl's body centre, except a plastic worm and a lure, which measure to the head.
  */
 export type Obstacle =
   | { id: string; kind: 'shape'; shape: HazardShape; keepOut: number }
@@ -63,8 +65,10 @@ export interface Gap {
 /**
  * Every obstacle of a zone: each hazard by its reach from its whole drift path (hazardSweep, N3),
  * but a pulsing current (issue #105, ND-6) and a murky patch (issue #107), which are swum through, not round,
- * then each moving hazard sweep by its touch reach (ND-8), then each extra shape by its keep-out,
- * then each predator route by its strike range (zoneThreats). No extras gives the zone's own obstacles.
+ * then each moving hazard sweep by its touch reach (ND-8), then each lure's whole path (lurePath) by
+ * the eat reach, boat by boat and lure by lure (ND-1), then each extra shape by its keep-out, then
+ * each predator route by its strike range (zoneThreats). Drag-net stretches are left out: like a
+ * pulsing current, they are crossed by timing (ND-2). No extras gives the zone's own obstacles.
  */
 export function obstaclesOf(layout: GapGeometry, extras: readonly ExtraObstacle[] = []): Obstacle[] {
   const hazards = layout.hazards
@@ -73,11 +77,17 @@ export function obstaclesOf(layout: GapGeometry, extras: readonly ExtraObstacle[
   const moving = (layout.movingHazards ?? []).map(
     (spawn): Obstacle => ({ id: spawn.id, kind: 'shape', shape: movingHazardSweep(spawn), keepOut: spawn.type.touchReach }),
   );
+  const lures = (layout.fishingBoats ?? []).flatMap((boat) => boat.lures.map((lure, index) => lureObstacle(boat, lure.id, index)));
   const shapes = extras.map((extra): Obstacle => ({ id: extra.id, kind: 'shape', shape: extra.shape, keepOut: extra.keepOut }));
   const routes = zoneThreats(layout).flatMap((threat): Obstacle[] =>
     threat.kind === 'route' ? [{ id: threat.route.id, kind: 'route', waypoints: threat.route.waypoints, keepOut: threat.strike }] : [],
   );
-  return [...hazards, ...moving, ...shapes, ...routes];
+  return [...hazards, ...moving, ...lures, ...shapes, ...routes];
+}
+
+/** One lure's gap obstacle: its whole path, kept out of by the eat reach (ND-1). */
+function lureObstacle(boat: Readonly<FishingBoatSpawn>, id: string, index: number): Obstacle {
+  return { id, kind: 'shape', shape: lurePath(boat, index), keepOut: TRAJINERA_LURE.reach };
 }
 
 /** Every gap between two obstacles of a zone, with any extra shape obstacles. */

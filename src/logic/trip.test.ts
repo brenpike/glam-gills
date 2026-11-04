@@ -15,6 +15,8 @@ import {
 } from './predators';
 import { GAME_EVENTS, REGISTRY_KEYS } from './gameEvents';
 import { createLegs, isProtected, presentCount, tryHit, type LegsState } from './legs';
+import { DRAG_NETS, dragNetPhase, dragNetSpawn, sweepFront } from './dragNets';
+import { LURES, createLureState, fishingBoatHull, fishingBoatSpawn, lureAt, lureStill, type FishingBoatSpawn } from './lures';
 import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
 import { MURKY_WATER_TIMING, createMurkyTimer, murkyPatchSpawn } from './murkyWater';
 import { CANAL_AREA } from './areas';
@@ -40,6 +42,7 @@ import {
   sameTripSnapshot,
   stepTrip,
   tripAxolotlPos,
+  tripFishingSnapshot,
   tripMurkyGauge,
   tripSnapshot,
   tripTossPose,
@@ -3241,5 +3244,323 @@ describe('bailing buckets in the trip (issue #107, ND-2)', () => {
     const landed = tossUntilLanded(stepAt(createTrip(boatZone), underBucket).state, underBucket).state;
     const done = goHome({ ...landed, inHomeSpot: true }).state;
     expect(newTrip(done, 42)).toEqual(createTrip(boatZone, LEGS, [], 42));
+  });
+});
+
+describe('trajinera lures and drag nets in the trip (issue #108)', () => {
+  const bounds = swimBounds(zone);
+  /** A lure 60 px along a hull that starts at x 700 at element time 0: it hangs at x 760 + 12 px/s, y 230. */
+  const boat = fishingBoatSpawn('canal/fishing-1', 0, { x0: 700, x1: 1000, lures: [{ along: 60, depth: 150 }] }, bounds);
+  /** Two lures 20 px apart: a head between them reaches both. */
+  const twinBoat = fishingBoatSpawn('canal/fishing-2', 0, { x0: 700, x1: 1000, lures: [{ along: 50, depth: 150 }, { along: 70, depth: 150 }] }, bounds);
+  /** Offset -5 starts the sweep at element time 0: the front crosses x 1100 to 1300 by element time 2.5. */
+  const net = dragNetSpawn('canal/drag-net-1', -5, {
+    stretch: { x0: 1100, x1: 1300, y0: 100, y1: 290 },
+    sweep: 'right',
+    hollows: [
+      { x0: 1120, x1: 1160, y0: 250, y1: 290 },
+      { x0: 1240, x1: 1280, y0: 250, y1: 290 },
+    ],
+  });
+  const lureZone: TripSource = { ...findZone, fishingBoats: [boat] };
+  const netZone: TripSource = { ...findZone, dragNets: [net] };
+  const bothZone: TripSource = { ...findZone, fishingBoats: [boat], dragNets: [net] };
+  const inNet: Point = { x: 1101, y: 200 };
+  const inHollow: Point = { x: 1140, y: 270 };
+  const clear: Point = { x: 800, y: 120 };
+  const shellCtx = createTripContext({ encounter: createEncounterContext({ legs: { ...LEGS, regrowTime: 1e9 }, shell: true }) });
+
+  /** One reduced-motion step with the centre at `pos` and the head at `head`. */
+  function fish(state: TripState, pos: Point, head: Point = pos, dashing = false, tripCtx = ctx): TripStepResult {
+    return stepTrip(state, { axolotlPos: pos, head, reduced: true, dashing }, DT, tripCtx);
+  }
+
+  /** Where the boat's first lure hangs, still, on the next step from `state`. */
+  function nextLure(state: TripState, spawn: FishingBoatSpawn = boat): Point {
+    return lureStill(spawn, 0, state.elementTime + DT);
+  }
+
+  /** Steps for `seconds` with the head and centre on the first lure's next place, collecting the events. */
+  function followLure(state: TripState, seconds: number): Drive {
+    let current = state;
+    const events: TripEvent[] = [];
+    let last: TripStepResult = { state, events: [] };
+    const steps = Math.round(seconds / DT);
+    for (let step = 0; step < steps; step++) {
+      last = fish(current, nextLure(current));
+      current = last.state;
+      events.push(...last.events);
+    }
+    return { state: current, events, last, seconds: steps * DT };
+  }
+
+  /** Steps for `seconds` at `pos`, the head on the centre, collecting the events. */
+  function hold(state: TripState, pos: Point, seconds: number, dashing = false): Drive {
+    let current = state;
+    const events: TripEvent[] = [];
+    let last: TripStepResult = { state, events: [] };
+    const steps = Math.round(seconds / DT);
+    for (let step = 0; step < steps; step++) {
+      last = fish(current, pos, pos, dashing);
+      current = last.state;
+      events.push(...last.events);
+    }
+    return { state: current, events, last, seconds: steps * DT };
+  }
+
+  /** The trip with only its last leg left and no protected time. */
+  function lastLeg(state: TripState): TripState {
+    let legs = createLegs();
+    for (let lost = 0; lost < LEGS.count - 1; lost++) legs = { ...tryHit(legs).state, protectedLeft: 0 };
+    return { ...state, encounter: { ...state.encounter, legs } };
+  }
+
+  function hitEvents(events: readonly TripEvent[]): TripEvent[] {
+    return events.filter((event) => ['lureTug', 'netCatch', 'hit', 'shellBlock'].includes(event.type));
+  }
+
+  it('copies the boats and nets with every lure down and no sweep caught, and has none in an area with neither', () => {
+    const trip = createTrip(bothZone);
+    expect(trip.fishingBoats).toEqual([boat]);
+    expect(trip.fishingBoats[0]).not.toBe(boat);
+    expect(trip.fishingBoats[0].lures[0]).not.toBe(boat.lures[0]);
+    expect(trip.dragNets).toEqual([net]);
+    expect(trip.dragNets[0].dragNet.stretch).not.toBe(net.dragNet.stretch);
+    expect(trip.dragNets[0].dragNet.hollows[0]).not.toBe(net.dragNet.hollows[0]);
+    expect(trip.dragNets[0].type).toBe(net.type);
+    expect(trip.lures).toEqual(createLureState([boat]));
+    expect(trip.netCatches).toEqual([null]);
+    const plain = createTrip(zone);
+    expect(plain.fishingBoats).toEqual([]);
+    expect(plain.dragNets).toEqual([]);
+    expect(plain.lures).toEqual({ lures: [] });
+    expect(plain.netCatches).toEqual([]);
+    expect(createTrip({ ...zone, fishingBoats: [], dragNets: [] })).toEqual(createTrip(zone));
+  });
+
+  it('leaves a trip with neither untouched: no head needed, and the lures and catches are the same objects', () => {
+    const plain = createTrip(findZone);
+    const next = stepAt(plain, clear).state;
+    expect(next.lures).toBe(plain.lures);
+    expect(next.netCatches).toBe(plain.netCatches);
+  });
+
+  it('throws on a swimming step in an area with fishing boats and no head', () => {
+    expect(() => stepAt(createTrip(lureZone), clear)).toThrow(/needs input.head/);
+  });
+
+  it('lands one hit from the lure where it hung when the head eats it, and pulls it up for 5 s', () => {
+    const start = createTrip(lureZone);
+    const at = nextLure(start);
+    const { state, events } = fish(start, clear, at);
+    expect(hitEvents(events)).toEqual([
+      { type: 'lureTug', lureId: 'canal/fishing-1-lure-1', at },
+      { type: 'hit', sourceId: 'trajinera-lure', leg: 0, from: at },
+    ]);
+    expect(state.legsLost).toBe(1);
+    expect(presentCount(state.encounter.legs)).toBe(LEGS.count - 1);
+    expect(isProtected(state.encounter.legs)).toBe(true);
+    expect(state.lures.lures).toEqual([{ id: 'canal/fishing-1-lure-1', up: true, upLeft: LURES.pulledFor }]);
+  });
+
+  it('eats the lure at its bobbing place under full motion and its still place under reduced motion', () => {
+    const start = createTrip(lureZone);
+    const full = stepTrip(start, { axolotlPos: clear, head: lureAt(boat, 0, DT, false), reduced: false, dashing: false }, DT, ctx);
+    expect(full.events[0]).toEqual({ type: 'lureTug', lureId: 'canal/fishing-1-lure-1', at: lureAt(boat, 0, DT, false) });
+    expect(fish(start, clear, nextLure(start)).events[0]).toMatchObject({ at: lureStill(boat, 0, DT) });
+    const offReach: Point = { x: nextLure(start).x, y: nextLure(start).y + LURES.eatReach + 0.5 };
+    expect(fish(start, clear, offReach).events).toEqual([]);
+  });
+
+  it('lets the Shell block the lure hit, and still pulls the lure up', () => {
+    const start = createTrip(lureZone);
+    const at = nextLure(start);
+    const { state, events } = fish(start, clear, at, false, shellCtx);
+    expect(hitEvents(events)).toEqual([
+      { type: 'lureTug', lureId: 'canal/fishing-1-lure-1', at },
+      { type: 'shellBlock', sourceId: 'trajinera-lure', from: at },
+    ]);
+    expect(state.legsLost).toBe(0);
+    expect(state.encounter.shellUsed).toBe(true);
+    expect(state.lures.lures[0].up).toBe(true);
+  });
+
+  it('pulls up a lure eaten while protected, with no hit', () => {
+    const start = createTrip(lureZone);
+    const guarded: TripState = { ...start, encounter: { ...start.encounter, legs: tryHit(createLegs()).state } };
+    const { state, events } = fish(guarded, clear, nextLure(guarded));
+    expect(hitEvents(events).map((event) => event.type)).toEqual(['lureTug']);
+    expect(state.legsLost).toBe(0);
+    expect(state.lures.lures[0].up).toBe(true);
+  });
+
+  it('lands one hit when two lures are in reach on the same frame, and pulls both up', () => {
+    const start = createTrip({ ...findZone, fishingBoats: [twinBoat] });
+    const between: Point = { x: (lureStill(twinBoat, 0, DT).x + lureStill(twinBoat, 1, DT).x) / 2, y: lureStill(twinBoat, 0, DT).y };
+    const { state, events } = fish(start, clear, between);
+    expect(hitEvents(events).map((event) => event.type)).toEqual(['lureTug', 'hit']);
+    expect(events[0]).toMatchObject({ lureId: 'canal/fishing-2-lure-1' });
+    expect(state.legsLost).toBe(1);
+    expect(state.lures.lures.map((status) => status.up)).toEqual([true, true]);
+  });
+
+  it('keeps the lure up for 5 s, then until the head leaves its reach, so it never returns onto the head', () => {
+    const tugged = fish(createTrip(lureZone), clear, nextLure(createTrip(lureZone))).state;
+    const waited = followLure(tugged, LURES.pulledFor + 1);
+    expect(hitEvents(waited.events)).toEqual([]);
+    expect(waited.state.lures.lures[0]).toEqual({ id: 'canal/fishing-1-lure-1', up: true, upLeft: 0 });
+    const away = fish(waited.state, clear, clear).state;
+    expect(away.lures.lures[0]).toEqual({ id: 'canal/fishing-1-lure-1', up: false, upLeft: 0 });
+    const early = hold(tugged, clear, LURES.pulledFor - 0.5).state;
+    expect(early.lures.lures[0].up).toBe(true);
+    const back = hold(tugged, clear, LURES.pulledFor + 0.1).state;
+    expect(back.lures.lures[0].up).toBe(false);
+  });
+
+  it('counts a lure hit against Star 3', () => {
+    const tugged = fish(createTrip(lureZone), clear, nextLure(createTrip(lureZone))).state;
+    expect(beatArea(tugged, { specialTreasureId: PLANT }).state.ending?.stars?.legsOrRescue).toBe(false);
+  });
+
+  it('carries the axolotl home on a last-leg lure hit, with every lure down and no sweep caught again', () => {
+    const start = lastLeg(createTrip(bothZone));
+    const caught: TripState = { ...start, netCatches: [0] };
+    const { state, events } = fish(caught, clear, nextLure(caught));
+    expect(events.map((event) => event.type).filter((type) => ['lureTug', 'hit', 'carryStart'].includes(type))).toEqual(['lureTug', 'hit', 'carryStart']);
+    expect(state.phase).toBe('carrying');
+    expect(state.legsLost).toBe(1);
+    expect(state.lures).toEqual(createLureState([boat]));
+    expect(state.netCatches).toEqual([null]);
+  });
+
+  it('feeds no regrowth, counts no snack and moves nothing else when a lure is eaten', () => {
+    const start = createTrip(lureZone);
+    const hurt: TripState = { ...start, encounter: { ...start.encounter, legs: { ...regrowingLegs(0.3), protectedLeft: 0 } } };
+    const result = fish(hurt, clear, nextLure(hurt));
+    expect(result.events.some((event) => event.type === 'regrown')).toBe(false);
+    expect(result.state.encounter.legs.slots[0].progress).toBeLessThanOrEqual(0.3 + 1e-9);
+    expect(result.state.holdings).toBe(hurt.holdings);
+    expect(result.state.found).toBe(hurt.found);
+    expect(result).not.toHaveProperty('impulse');
+  });
+
+  it('catches the axolotl once per sweep at its place, as one hit, and never moves, holds or traps it', () => {
+    const start = createTrip(netZone);
+    const first = fish(start, inNet);
+    expect(hitEvents(first.events)).toEqual([
+      { type: 'netCatch', stretchId: 'canal/drag-net-1', at: inNet },
+      { type: 'hit', sourceId: 'drag-net', leg: 0, from: inNet },
+    ]);
+    expect(first.state.netCatches).toEqual([0]);
+    expect(first.state.legsLost).toBe(1);
+    expect(first.state.phase).toBe('swimming');
+    expect(first).not.toHaveProperty('impulse');
+    expect(first).not.toHaveProperty('outOfHull');
+    expect(first).not.toHaveProperty('landed');
+    expect(tripAxolotlPos(first.state)).toBeNull();
+    const rest = hold(first.state, inNet, DRAG_NETS.sweepFor);
+    expect(hitEvents(rest.events)).toEqual([]);
+    const cycle = DRAG_NETS.quietFor + DRAG_NETS.warnFor + DRAG_NETS.sweepFor;
+    const nextSweep = hold(rest.state, inNet, cycle);
+    expect(nextSweep.events.filter((event) => event.type === 'netCatch')).toHaveLength(1);
+    expect(nextSweep.state.netCatches).toEqual([1]);
+    expect(nextSweep.state.legsLost).toBe(2);
+  });
+
+  it('catches only once the front reaches the axolotl, never in a hollow, and Tail Dash gives no immunity', () => {
+    const ahead: Point = { x: 1250, y: 150 };
+    expect(fish(createTrip(netZone), ahead).events).toEqual([]);
+    const reached = hold(createTrip(netZone), ahead, DRAG_NETS.sweepFor);
+    expect(reached.events.filter((event) => event.type === 'netCatch')).toHaveLength(1);
+    expect(hitEvents(hold(createTrip(netZone), inHollow, DRAG_NETS.sweepFor).events)).toEqual([]);
+    const dashed = fish(createTrip(netZone), inNet, inNet, true);
+    expect(dashed.events.map((event) => event.type)).toContain('netCatch');
+    expect(dashed.state.legsLost).toBe(1);
+  });
+
+  it('lets the Shell block a net hit, and carries the axolotl home on a last-leg net hit', () => {
+    const blocked = fish(createTrip(netZone), inNet, inNet, false, shellCtx);
+    expect(hitEvents(blocked.events).map((event) => event.type)).toEqual(['netCatch', 'shellBlock']);
+    expect(blocked.state.legsLost).toBe(0);
+    const carried = fish(lastLeg(createTrip(bothZone)), inNet);
+    expect(carried.events.map((event) => event.type)).toContain('carryStart');
+    expect(carried.state.phase).toBe('carrying');
+    expect(carried.state.netCatches).toEqual([null]);
+    expect(carried.state.lures).toEqual(createLureState([boat]));
+  });
+
+  it('freezes the drift, the lures and the net cycle while paused and on the banked card', () => {
+    const tugged = fish(createTrip(bothZone), clear, nextLure(createTrip(bothZone))).state;
+    for (const dt of PAUSE_DTS) {
+      expect(stepTrip(tugged, { axolotlPos: clear, head: clear, reduced: true, dashing: false }, dt, ctx).state).toBe(tugged);
+    }
+    const banked: TripState = { ...tugged, phase: 'banked', heldAt: home };
+    expect(fish(banked, inNet).state).toBe(banked);
+    expect(tripFishingSnapshot(banked, true)).toEqual(tripFishingSnapshot(tugged, true));
+  });
+
+  it('lets no lure or net act during a bailing bucket toss', () => {
+    const landing: Point = { x: 700, y: 260 };
+    const bucket = bailingBoatSpawn('canal/bailing-1', -6, { x0: 1400, x1: 1600, bucketX: 1500, landing }, bounds);
+    const source: TripSource = { ...findZone, fishingBoats: [boat], dragNets: [net], bailingBoats: [bucket] };
+    const caught = fish(createTrip(source), { x: 1500, y: 120 }).state;
+    expect(caught.toss).not.toBeNull();
+    const tossed = fish(caught, inNet, nextLure(caught));
+    expect(hitEvents(tossed.events)).toEqual([]);
+    expect(tossed.state.lures).toBe(caught.lures);
+    expect(tossed.state.netCatches).toBe(caught.netCatches);
+    expect(tossed.state.legsLost).toBe(0);
+  });
+
+  it('meets the lure card within LURE_MEET_RANGE of a lure that is down, and the net card within DRAG_NET_MEET_RANGE of a stretch', () => {
+    const start = createTrip(bothZone);
+    const lure = nextLure(start);
+    expect(fish(start, { x: lure.x - 119, y: lure.y }, clear).state.met).toEqual(['trajinera-lure']);
+    expect(fish(start, { x: lure.x - 121, y: lure.y }, clear).state.met).toEqual([]);
+    const up: TripState = { ...start, lures: { lures: [{ id: 'canal/fishing-1-lure-1', up: true, upLeft: 3 }] } };
+    expect(fish(up, { x: lure.x - 100, y: lure.y }, clear).state.met).toEqual([]);
+    expect(fish(start, { x: 1100 - 180, y: 200 }, clear).state.met).toEqual(['drag-net']);
+    expect(fish(start, { x: 1100 - 181, y: 200 }, clear).state.met).toEqual([]);
+  });
+
+  it('meets neither card inside the safe area', () => {
+    const homeBoat = fishingBoatSpawn('canal/fishing-3', 0, { x0: 100, x1: 400, lures: [{ along: 60, depth: 150 }] }, bounds);
+    const start = createTrip({ ...findZone, fishingBoats: [homeBoat] });
+    const lure = nextLure(start, homeBoat);
+    const inSafe: Point = { x: 200, y: lure.y };
+    expect(Math.hypot(inSafe.x - lure.x, 0)).toBeLessThan(120);
+    expect(fish(start, inSafe, inSafe).state.met).toEqual([]);
+  });
+
+  it('starts fresh on newTrip: the same boats and nets, every lure down, no sweep caught and the clock at 0', () => {
+    const tugged = fish(createTrip(bothZone), clear, nextLure(createTrip(bothZone))).state;
+    const netted = fish(tugged, inNet).state;
+    const done = goHome({ ...netted, inHomeSpot: true }).state;
+    expect(newTrip(done, 42)).toEqual(createTrip(bothZone, LEGS, [], 42));
+  });
+
+  it('snapshots each boat hull and lure, and each net phase and front, at the element time', () => {
+    const tugged = fish(createTrip(bothZone), clear, nextLure(createTrip(bothZone))).state;
+    const t = tugged.elementTime;
+    const snapshot = tripFishingSnapshot(tugged, true);
+    expect(snapshot.boats).toEqual([
+      {
+        id: 'canal/fishing-1',
+        hull: fishingBoatHull(boat, t),
+        lures: [
+          {
+            id: 'canal/fishing-1-lure-1',
+            at: { x: lureStill(boat, 0, t).x, y: SURF },
+            line: { from: { x: lureStill(boat, 0, t).x, y: SURF }, to: { x: lureStill(boat, 0, t).x, y: SURF } },
+            up: true,
+            lift: 1,
+          },
+        ],
+      },
+    ]);
+    expect(snapshot.nets).toEqual([{ id: 'canal/drag-net-1', phase: dragNetPhase(net, t), front: sweepFront(net, t) }]);
+    const fresh = tripFishingSnapshot(createTrip(bothZone), false);
+    expect(fresh.boats[0].lures[0]).toMatchObject({ at: lureAt(boat, 0, 0, false), up: false, lift: 0 });
+    expect(tripFishingSnapshot(createTrip(zone), false)).toEqual({ boats: [], nets: [] });
   });
 });

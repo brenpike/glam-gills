@@ -1,8 +1,12 @@
 import type { Rarity, TreasureCategory } from './catalogue';
+import type { DragNetPhase } from './dragNets';
+import type { HazardRect } from './hazards';
 import type { LegStatus } from './legs';
+import type { LureLine } from './lures';
 import type { RealMorphId } from './morphs';
 import type { RescueStatus } from './rescue';
 import type { AreaStars } from './stars';
+import type { Point } from './zone';
 
 /**
  * Event names for a trip, shared between the game scene and the UI scene. The `TripSnapshot`
@@ -96,6 +100,62 @@ export interface TripSnapshot {
   factCardDue: string | null;
   litGlowPlants: string[];
   glowPlantHint: string | null;
+}
+
+/**
+ * A trajinera lure eaten (issue #108, ND-1): lure `lureId` tugged and pulled up, `at` where it hung.
+ * The shared `hit` or `shellBlock` it lands follows it; none follows while protected time runs.
+ */
+export interface LureTugEvent {
+  type: 'lureTug';
+  lureId: string;
+  at: Point;
+}
+
+/**
+ * A drag net's catch (issue #108, ND-2): stretch `stretchId` caught the axolotl, its centre at `at`,
+ * where it stays. The shared `hit` or `shellBlock` it lands follows it; none follows while protected
+ * time runs.
+ */
+export interface NetCatchEvent {
+  type: 'netCatch';
+  stretchId: string;
+  at: Point;
+}
+
+/**
+ * One trajinera lure as the scene draws it (issue #108, ND-1): its id, where it is drawn, its line up
+ * to its boat, whether it is pulled up, and its lift share, 0 where it hangs to 1 at its boat.
+ */
+export interface LureSnapshot {
+  id: string;
+  at: Point;
+  line: LureLine;
+  up: boolean;
+  lift: number;
+}
+
+/** One fishing trajinera as the scene draws it (issue #108, ND-1): its id, its hull and its lures, in order. */
+export interface FishingBoatSnapshot {
+  id: string;
+  hull: HazardRect;
+  lures: LureSnapshot[];
+}
+
+/**
+ * One drag-net stretch as the scene draws it (issue #108, ND-2): its id, the part of its cycle and
+ * the sweep front's place along its axis, or null outside the sweep.
+ */
+export interface DragNetSnapshot {
+  id: string;
+  phase: DragNetPhase;
+  front: number | null;
+}
+
+/** The fishing boats and drag nets as the scene draws them (issue #108), each in area data order. */
+export interface FishingSnapshot {
+  boats: FishingBoatSnapshot[];
+  nets: DragNetSnapshot[];
 }
 
 /** Payload type for each event; `undefined` marks payload-less events. */

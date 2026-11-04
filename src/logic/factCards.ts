@@ -396,6 +396,37 @@ export const MURKY_WATER_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The fishing lines fact card, shown the first time the axolotl meets a trajinera lure (PRD C13;
+ * issue #108). The title and body are the owner's, word for word.
+ * Sources: none checked (a web search of 2026-11-03 found no page on axolotls and fishing lines, and
+ * did not confirm Mexico's protection of the axolotl; the game fetches nothing).
+ * Owner to verify: "People in Xochimilco fish from boats", "A worm on a line can be a trap" and
+ * "Axolotls are protected in Mexico" (the protected listing is NOM-059-SEMARNAT, not read here).
+ */
+export const LURE_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'trajinera-lure',
+  name: 'Fishing lines',
+  title: 'Fishing lines',
+  body: 'People in Xochimilco fish from boats. A worm on a line can be a trap, so look up for the line! Axolotls are protected in Mexico, so people should never fish for them.',
+});
+
+/**
+ * The fishing nets fact card, shown the first time the axolotl meets a drag net (PRD C13; issue
+ * #108). The title and body are the owner's, word for word.
+ * Sources: none checked (a web search of 2026-11-03 found no page on axolotls caught by mistake in
+ * fishing nets; the game fetches nothing).
+ * Owner to verify: "Some fishing nets in Xochimilco catch axolotls by mistake", "That is one reason
+ * wild axolotls are rare" (the sources found name invasive fish, polluted water and lost habitat
+ * as the main threats) and "Safe refuges help them hide".
+ */
+export const DRAG_NET_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'drag-net',
+  name: 'Fishing nets',
+  title: 'Fishing nets',
+  body: 'Some fishing nets in Xochimilco catch axolotls by mistake. That is one reason wild axolotls are rare. Safe refuges help them hide.',
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources, checked 2026-10-24 (web research only; the game fetches nothing):
  * Alex Zaragoza, NPR, "In Mexico City, A Technicolor Borough Serves Up Tasty Street Foods - On Water",
@@ -578,6 +609,18 @@ export const PULSING_CURRENT_MEET_RANGE = 60;
  * card shows when the axolotl's centre first enters a patch.
  */
 export const MURKY_WATER_MEET_RANGE = 0;
+
+/**
+ * Centre distance in px within which the axolotl meets a trajinera lure (issue #108). Provisional;
+ * tune in play.
+ */
+export const LURE_MEET_RANGE = 120;
+
+/**
+ * Centre distance in px within which the axolotl meets a drag net (issue #108). Provisional; tune in
+ * play. The same as the tilapia's.
+ */
+export const DRAG_NET_MEET_RANGE = 180;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl

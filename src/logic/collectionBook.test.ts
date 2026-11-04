@@ -101,8 +101,8 @@ const ALL_MORPHS: readonly RealMorphId[] = REAL_MORPHS.map((morph) => morph.id);
  * Every hazard, predator, element and mobile snack met that has an area fact card: the canal's
  * tilapia, the pond's carp, plastic worm, tadpole and shrimp, Area 3's heron, Area 4's ghost net
  * and punting pole, Area 5's garter snake and water hyacinth, Area 6's crayfish, stalactite drip
- * and geyser vent, Area 7's pulsing current, Area 8's black bass, and Area 9's murky water, anchor
- * drop and mud seep.
+ * and geyser vent, Area 7's pulsing current, Area 8's black bass, Area 9's murky water, anchor
+ * drop and mud seep, and Area 10's trajinera lure and drag net.
  */
 const ALL_AREA_MET: readonly string[] = [
   'tilapia',
@@ -123,6 +123,8 @@ const ALL_AREA_MET: readonly string[] = [
   'murky-water',
   'anchor-drop',
   'mud-seep',
+  'trajinera-lure',
+  'drag-net',
 ];
 
 /** Every fact card found by playing: the area cards, then the two refuge cards. */
@@ -331,17 +333,17 @@ describe('bookListing', () => {
     expect(sections.map((section) => section.heading)).toEqual([
       'Morphs: 0 of 8 found',
       'Dream colours',
-      'Facts: 1 of 21 found',
+      'Facts: 1 of 23 found',
     ]);
   });
 
   it('counts found morphs and fact cards in the headings', () => {
     const [morphs, , factCards] = bookListing(['wild', 'melanoid', 'wild'], ['tilapia']);
     expect(morphs.heading).toBe('Morphs: 2 of 8 found');
-    expect(factCards.heading).toBe('Facts: 2 of 21 found');
-    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 19 of 21 found');
-    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 21 found');
-    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 21 of 21 found');
+    expect(factCards.heading).toBe('Facts: 2 of 23 found');
+    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 21 of 23 found');
+    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 23 found');
+    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 23 of 23 found');
     expect(bookListing(ALL_MORPHS, ['tilapia'])[0].heading).toBe('Morphs: 8 of 8 found');
   });
 
@@ -626,6 +628,8 @@ describe('bookListing', () => {
       ['murky-water', 'Explore the deep canal to find this card.'],
       ['anchor-drop', 'Explore the deep canal to find this card.'],
       ['mud-seep', 'Explore the deep canal to find this card.'],
+      ['trajinera-lure', 'Explore the deep canal to find this card.'],
+      ['drag-net', 'Explore the deep canal to find this card.'],
       ['axolotl-refuges', 'Visit the refuge to find this card.'],
       ['canal-clean-ups', 'Beat an area, then visit the refuge to find this card.'],
     ]);
@@ -634,13 +638,13 @@ describe('bookListing', () => {
 
   it('holds the refuge cards after the area cards, found once found, with their own hint and never a picture (C14)', () => {
     const [, , found] = bookListing([], ALL_MET);
-    expect(found.entries.slice(18, 20)).toEqual([
+    expect(found.entries.slice(20, 22)).toEqual([
       { id: 'axolotl-refuges', found: true, name: 'Axolotl refuges', text: AXOLOTL_REFUGES_FACT.body, hasPicture: false },
       { id: 'canal-clean-ups', found: true, name: 'Canal clean-ups', text: CANAL_CLEAN_UPS_FACT.body, hasPicture: false },
     ]);
     const [, , refugeOnly] = bookListing([], ['axolotl-refuges']);
-    expect(refugeOnly.entries[18].found).toBe(true);
-    expect(refugeOnly.entries[19]).toEqual({
+    expect(refugeOnly.entries[20].found).toBe(true);
+    expect(refugeOnly.entries[21]).toEqual({
       id: 'canal-clean-ups',
       found: false,
       name: '???',
@@ -689,11 +693,13 @@ describe('bookListing', () => {
         'murky-water',
         'anchor-drop',
         'mud-seep',
+        'trajinera-lure',
+        'drag-net',
         'axolotl-refuges',
         'canal-clean-ups',
         'boyOrGirl',
       ]);
-      expect(factCards.entries[20]).toEqual(boyOrGirl);
+      expect(factCards.entries[22]).toEqual(boyOrGirl);
     }
   });
 
@@ -720,7 +726,10 @@ describe('bookPages', () => {
       ['dreamColour', 5],
       ['dreamColour', 5],
       ['dreamColour', 5],
-      ['dreamColour', 4],
+      ['dreamColour', 5],
+      ['dreamColour', 1],
+      ['factCard', 1],
+      ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
@@ -749,8 +758,8 @@ describe('bookPages', () => {
   });
 
   it('puts every Dream colour on its own page at one row per page', () => {
-    expect(DREAM_COLOURS).toHaveLength(24);
-    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + 24 + 21);
+    expect(DREAM_COLOURS).toHaveLength(26);
+    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + DREAM_COLOURS.length + 23);
   });
 
   it('gives an empty section one page', () => {
@@ -1030,7 +1039,7 @@ describe('collection book fit', () => {
     },
   );
 
-  it('hides the title only for the found plastic worm, shrimp, heron, punting pole, water hyacinth, crayfish, geyser, black bass and murky water pages, and only below 520 x 360', () => {
+  it('hides the title only for the found plastic worm, shrimp, heron, punting pole, water hyacinth, crayfish, geyser, black bass, murky water and fishing lines pages, and only below 520 x 360', () => {
     const hidden = supportedCanvases().flatMap((view) =>
       featuredEntries()
         .filter((entry) => !featurePageOf(view, entry).page.showsTitle)
@@ -1046,9 +1055,11 @@ describe('collection book fit', () => {
       '320x440 geyser-vent found=true',
       '320x440 black-bass found=true',
       '320x440 murky-water found=true',
+      '320x440 trajinera-lure found=true',
       '340x440 shrimp found=true',
       '340x440 heron found=true',
       '340x440 murky-water found=true',
+      '340x440 trajinera-lure found=true',
       '460x320 plastic-worm found=true',
       '460x320 shrimp found=true',
       '460x320 heron found=true',
@@ -1057,6 +1068,7 @@ describe('collection book fit', () => {
       '460x320 crayfish found=true',
       '460x320 black-bass found=true',
       '460x320 murky-water found=true',
+      '460x320 trajinera-lure found=true',
       '460x340 plastic-worm found=true',
       '460x340 shrimp found=true',
       '460x340 heron found=true',
@@ -1065,16 +1077,19 @@ describe('collection book fit', () => {
       '460x340 crayfish found=true',
       '460x340 black-bass found=true',
       '460x340 murky-water found=true',
+      '460x340 trajinera-lure found=true',
       '480x320 shrimp found=true',
       '480x320 heron found=true',
       '480x320 water-hyacinth found=true',
       '480x320 crayfish found=true',
       '480x320 murky-water found=true',
+      '480x320 trajinera-lure found=true',
       '480x340 shrimp found=true',
       '480x340 heron found=true',
       '480x340 water-hyacinth found=true',
       '480x340 crayfish found=true',
       '480x340 murky-water found=true',
+      '480x340 trajinera-lure found=true',
     ]);
   });
 

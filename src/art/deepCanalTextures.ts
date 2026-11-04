@@ -6,7 +6,11 @@
  * texture (springCaveTextures.ts), so neither has a texture here. It also bakes Area 9's murky water
  * (issue #107, ND-1: each patch size's still, swirl and outline frames, the dim ring, the meter,
  * the cheek tint and the bubbles) and bailing bucket (ND-2: the boat, the bucket and its front
- * wall, the shadow, the ripples and the splash), so the deep canal bake covers them too.
+ * wall, the shadow, the ripples and the splash), so the deep canal bake covers them too. Area 10's
+ * fishing trajinera (issue #108, ND-1: the hull, the rod, the shadow, the float bead and the lure)
+ * and drag net (ND-2: the boat, the float, the lit float, the strands, one curtain per stretch
+ * height and one hollow shade per hollow size) are baked only when some area has fishing boats or
+ * drag nets. A lure's line and a net's float line are drawn live, never baked.
  * Visual only. No game state, no input, no physics.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale` through the context transform,
@@ -14,7 +18,9 @@
  */
 import * as Phaser from 'phaser';
 import { AREAS, type AreaData } from '../logic/areas';
+import type { DragNetSpawn } from '../logic/dragNets';
 import { murkyPatches } from '../logic/murkyWater';
+import { SURF } from '../logic/zone';
 import {
   BAILING_BOAT_TEX,
   BAILING_BUCKET_FRONT_TEX,
@@ -43,6 +49,32 @@ import {
   paintTrajineraHull,
   paintTrajineraShadow,
 } from './drawDeepCanal';
+import {
+  DRAG_NET_BOAT_TEX,
+  DRAG_NET_FLOAT_LIT_TEX,
+  DRAG_NET_FLOAT_TEX,
+  DRAG_NET_STRANDS_TEX,
+  dragNetCurtainTex,
+  dragNetHollowShadeTex,
+  paintDragNetBoat,
+  paintDragNetCurtain,
+  paintDragNetFloat,
+  paintDragNetFloatLit,
+  paintDragNetHollowShade,
+  paintDragNetStrands,
+} from './drawDragNet';
+import {
+  FISHING_BEAD_TEX,
+  FISHING_BOAT_TEX,
+  FISHING_LURE_TEX,
+  FISHING_ROD_TEX,
+  FISHING_SHADOW_TEX,
+  paintFishingBead,
+  paintFishingBoat,
+  paintFishingLure,
+  paintFishingRod,
+  paintFishingShadow,
+} from './drawFishingTrajinera';
 import {
   MURKY_BUBBLES_TEX,
   MURKY_CHEEKS_TEX,
@@ -77,7 +109,27 @@ export const DEEP_CANAL_TEX = {
   murkyMeter: 'deep-canal-murky-meter',
   murkyCheeks: 'deep-canal-murky-cheeks',
   murkyBubbles: 'deep-canal-murky-bubbles',
+  fishingBoat: 'deep-canal-fishing-boat',
+  fishingRod: 'deep-canal-fishing-rod',
+  fishingShadow: 'deep-canal-fishing-shadow',
+  fishingBead: 'deep-canal-fishing-bead',
+  fishingLure: 'deep-canal-fishing-lure',
+  netBoat: 'deep-canal-net-boat',
+  netFloat: 'deep-canal-net-float',
+  netFloatLit: 'deep-canal-net-float-lit',
+  netStrands: 'deep-canal-net-strands',
 } as const;
+
+/** Prefix of a drag net curtain's key (issue #108, ND-2): it ends with the curtain's height, `deep-canal-net-curtain-<h>`. */
+export const NET_CURTAIN_KEY_PREFIX = 'deep-canal-net-curtain-';
+
+/** Prefix of a drag net hollow shade's key (issue #108, ND-2): it ends with the hollow's size, `deep-canal-net-hollow-<w>x<h>`. */
+export const NET_HOLLOW_KEY_PREFIX = 'deep-canal-net-hollow-';
+
+/** The key a drag net hollow shade `w` x `h` logical px is found by in DragNetTextures.hollowShades. */
+export function netHollowSizeKey(w: number, h: number): string {
+  return `${w}x${h}`;
+}
 
 /**
  * Prefix of a murky patch's keys (issue #107, ND-1): each ends with the patch's size
@@ -146,6 +198,40 @@ export interface BailingBucketTextures {
   readonly splash: TexInfo;
 }
 
+/** The fishing trajinera art (issue #108, ND-1), each in its drawFishingTrajinera.ts frame and anchor. */
+export interface FishingTrajineraTextures {
+  /** The hull (FISHING_BOAT_TEX, depth DEPTH.fishingBoat). Anchor is the middle of the hull on the water line. Never mirrored. */
+  readonly boat: TexInfo;
+  /** A rod (FISHING_ROD_TEX, depth DEPTH.fishingBoat), leaning to +x. Anchor is its holder; mirror it for the hull's left end. */
+  readonly rod: TexInfo;
+  /** The always-shown shadow (FISHING_SHADOW_TEX, depth DEPTH.fishingShadow). Same anchor as the hull. */
+  readonly shadow: TexInfo;
+  /** A line's float bead (FISHING_BEAD_TEX, depth DEPTH.fishingLure). Anchor is its centre, on the water line at the lure's x. */
+  readonly bead: TexInfo;
+  /** A lure (FISHING_LURE_TEX, depth DEPTH.fishingLure). Anchor is the worm's centre, at the lure's drawn position. */
+  readonly lure: TexInfo;
+}
+
+/** The drag net art (issue #108, ND-2), each in its drawDragNet.ts frame and anchor. */
+export interface DragNetTextures {
+  /** A net boat (DRAG_NET_BOAT_TEX, depth DEPTH.dragNetBoat). Anchor is the middle of the hull on the water line. */
+  readonly boat: TexInfo;
+  /** A cork float (DRAG_NET_FLOAT_TEX, depth DEPTH.dragNetFloats). Anchor is its centre, on the rope. */
+  readonly float: TexInfo;
+  /** A lit float, the reduced-motion warning (DRAG_NET_FLOAT_LIT_TEX, depth DEPTH.dragNetFloats). Same anchor as `float`. */
+  readonly floatLit: TexInfo;
+  /** The wriggle-out strands (DRAG_NET_STRANDS_TEX, depth DEPTH.fx). Anchor is the caught axolotl's centre. */
+  readonly strands: TexInfo;
+  /**
+   * One flat curtain (dragNetCurtainTex, depth DEPTH.dragNetMesh) per curtain height in the areas,
+   * keyed by the height (dragNetCurtainHeight). Anchor is the top of the leading edge on the water
+   * line. Painted for a sweep to the right: mirror it for a sweep to the left.
+   */
+  readonly curtains: ReadonlyMap<number, TexInfo>;
+  /** One hollow shade (dragNetHollowShadeTex, depth DEPTH.dragNetMesh) per hollow size in the areas, keyed by netHollowSizeKey. Anchor is its top-left corner. */
+  readonly hollowShades: ReadonlyMap<string, TexInfo>;
+}
+
 export interface DeepCanalTextures {
   /**
    * The gliding trajinera hull (TRAJINERA_HULL_TEX). Anchor is the top-centre of the hull's rect, on
@@ -176,6 +262,10 @@ export interface DeepCanalTextures {
   readonly murkyWater: MurkyWaterTextures;
   /** Area 9's bailing bucket (issue #107, ND-2). */
   readonly bailingBucket: BailingBucketTextures;
+  /** Area 10's fishing trajinera (issue #108, ND-1), or null when no area has fishing boats. */
+  readonly fishingTrajinera: FishingTrajineraTextures | null;
+  /** Area 10's drag net (issue #108, ND-2), or null when no area has drag nets. */
+  readonly dragNet: DragNetTextures | null;
 }
 
 /** The [w, h] in logical px of every murky patch in `areas`, each size once, in first-use order. */
@@ -185,6 +275,41 @@ export function murkyPatchSizes(areas: readonly Readonly<AreaData>[]): [number, 
     for (const { shape } of murkyPatches(area.layout.hazards)) {
       const size: [number, number] = [shape.x1 - shape.x0, shape.y1 - shape.y0];
       sizes.set(murkyPatchSizeKey(...size), size);
+    }
+  }
+  return [...sizes.values()];
+}
+
+/** Whether any of `areas` has a fishing trajinera (issue #108, ND-1). */
+export function hasFishingBoats(areas: readonly Readonly<AreaData>[]): boolean {
+  return areas.some((area) => (area.layout.fishingBoats ?? []).length > 0);
+}
+
+/** Every drag net in `areas`, in area order and then data order (issue #108, ND-2). */
+function dragNetsOf(areas: readonly Readonly<AreaData>[]): Readonly<DragNetSpawn>[] {
+  return areas.flatMap((area) => area.layout.dragNets ?? []);
+}
+
+/**
+ * The height in logical px of a net's curtain (issue #108, ND-2, guide 7p): from the float line on
+ * the water line (SURF) down to the stretch's bottom edge.
+ */
+export function dragNetCurtainHeight(net: Readonly<DragNetSpawn>): number {
+  return net.dragNet.stretch.y1 - SURF;
+}
+
+/** The curtain height of every drag net in `areas`, each height once, in first-use order. */
+export function dragNetCurtainHeights(areas: readonly Readonly<AreaData>[]): number[] {
+  return [...new Set(dragNetsOf(areas).map(dragNetCurtainHeight))];
+}
+
+/** The [w, h] in logical px of every drag net hollow in `areas`, each size once, in first-use order. */
+export function dragNetHollowSizes(areas: readonly Readonly<AreaData>[]): [number, number][] {
+  const sizes = new Map<string, [number, number]>();
+  for (const net of dragNetsOf(areas)) {
+    for (const hollow of net.dragNet.hollows) {
+      const size: [number, number] = [hollow.x1 - hollow.x0, hollow.y1 - hollow.y0];
+      sizes.set(netHollowSizeKey(...size), size);
     }
   }
   return [...sizes.values()];
@@ -239,15 +364,60 @@ function bakeBailingBucket(scene: Phaser.Scene, bakeScale: number): BailingBucke
   };
 }
 
+/** Bake the fishing trajinera art (issue #108, ND-1). */
+function bakeFishingTrajinera(scene: Phaser.Scene, bakeScale: number): FishingTrajineraTextures {
+  return {
+    boat: bake(scene, DEEP_CANAL_TEX.fishingBoat, FISHING_BOAT_TEX, bakeScale, paintFishingBoat),
+    rod: bake(scene, DEEP_CANAL_TEX.fishingRod, FISHING_ROD_TEX, bakeScale, paintFishingRod),
+    shadow: bake(scene, DEEP_CANAL_TEX.fishingShadow, FISHING_SHADOW_TEX, bakeScale, paintFishingShadow),
+    bead: bake(scene, DEEP_CANAL_TEX.fishingBead, FISHING_BEAD_TEX, bakeScale, paintFishingBead),
+    lure: bake(scene, DEEP_CANAL_TEX.fishingLure, FISHING_LURE_TEX, bakeScale, paintFishingLure),
+  };
+}
+
+/** Bake one flat drag net curtain `h` logical px tall (issue #108, ND-2). Throws RangeError for a height dragNetCurtainTex refuses. */
+function bakeDragNetCurtain(scene: Phaser.Scene, bakeScale: number, h: number): TexInfo {
+  return bake(scene, `${NET_CURTAIN_KEY_PREFIX}${h}`, dragNetCurtainTex(h), bakeScale, (ctx) => paintDragNetCurtain(ctx, h));
+}
+
+/** Bake one drag net hollow shade `w` x `h` logical px (issue #108, ND-2). Throws RangeError for a size dragNetHollowShadeTex refuses. */
+function bakeDragNetHollowShade(scene: Phaser.Scene, bakeScale: number, w: number, h: number): TexInfo {
+  const key = `${NET_HOLLOW_KEY_PREFIX}${netHollowSizeKey(w, h)}`;
+  return bake(scene, key, dragNetHollowShadeTex(w, h), bakeScale, (ctx) => paintDragNetHollowShade(ctx, w, h));
+}
+
+/** Bake the drag net art (issue #108, ND-2): one curtain per height and one hollow shade per size of the nets in `areas`. */
+function bakeDragNet(scene: Phaser.Scene, bakeScale: number, areas: readonly Readonly<AreaData>[]): DragNetTextures {
+  const curtains = new Map<number, TexInfo>();
+  for (const h of dragNetCurtainHeights(areas)) curtains.set(h, bakeDragNetCurtain(scene, bakeScale, h));
+  const hollowShades = new Map<string, TexInfo>();
+  for (const [w, h] of dragNetHollowSizes(areas)) {
+    hollowShades.set(netHollowSizeKey(w, h), bakeDragNetHollowShade(scene, bakeScale, w, h));
+  }
+  return {
+    boat: bake(scene, DEEP_CANAL_TEX.netBoat, DRAG_NET_BOAT_TEX, bakeScale, paintDragNetBoat),
+    float: bake(scene, DEEP_CANAL_TEX.netFloat, DRAG_NET_FLOAT_TEX, bakeScale, paintDragNetFloat),
+    floatLit: bake(scene, DEEP_CANAL_TEX.netFloatLit, DRAG_NET_FLOAT_LIT_TEX, bakeScale, paintDragNetFloatLit),
+    strands: bake(scene, DEEP_CANAL_TEX.netStrands, DRAG_NET_STRANDS_TEX, bakeScale, paintDragNetStrands),
+    curtains,
+    hollowShades,
+  };
+}
+
 /**
  * Bake the deep canal props at `bakeScale` texture pixels per logical unit, with one set of murky
  * patch frames for each of `murkyPatchSizesToBake`, [w, h] in logical px: by default every patch
- * size in AREAS. Throws RangeError for a patch size murkyPatchTex refuses.
+ * size in AREAS. The fishing trajinera art is baked only when some area of `lureNetAreas` (by
+ * default AREAS) has fishing boats, and the drag net art only when some has drag nets, with one
+ * curtain per height and one hollow shade per size of its nets; else each is null. Throws
+ * RangeError for a patch size murkyPatchTex refuses, or a curtain height or hollow size the drag net
+ * art refuses.
  */
 export function bakeDeepCanalTextures(
   scene: Phaser.Scene,
   bakeScale: number,
   murkyPatchSizesToBake: readonly (readonly [number, number])[] = murkyPatchSizes(AREAS),
+  lureNetAreas: readonly Readonly<AreaData>[] = AREAS,
 ): DeepCanalTextures {
   return {
     trajineraHull: bake(scene, DEEP_CANAL_TEX.trajineraHull, TRAJINERA_HULL_TEX, bakeScale, paintTrajineraHull),
@@ -262,5 +432,7 @@ export function bakeDeepCanalTextures(
     },
     murkyWater: bakeMurkyWater(scene, bakeScale, murkyPatchSizesToBake),
     bailingBucket: bakeBailingBucket(scene, bakeScale),
+    fishingTrajinera: hasFishingBoats(lureNetAreas) ? bakeFishingTrajinera(scene, bakeScale) : null,
+    dragNet: dragNetsOf(lureNetAreas).length > 0 ? bakeDragNet(scene, bakeScale, lureNetAreas) : null,
   };
 }

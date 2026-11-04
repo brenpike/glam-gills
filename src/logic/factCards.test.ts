@@ -10,6 +10,8 @@ import {
   CARP_MEET_RANGE,
   CRAYFISH_FACT,
   CRAYFISH_MEET_RANGE,
+  DRAG_NET_FACT,
+  DRAG_NET_MEET_RANGE,
   FACT_CARD_OK_LABEL,
   FACT_CARD_UNFOUND_HINT,
   GARTER_SNAKE_FACT,
@@ -18,6 +20,8 @@ import {
   GHOST_NET_FACT,
   HERON_FACT,
   HERON_MEET_RANGE,
+  LURE_FACT,
+  LURE_MEET_RANGE,
   MUD_SEEP_FACT,
   MURKY_WATER_FACT,
   MURKY_WATER_MEET_RANGE,
@@ -564,6 +568,60 @@ describe('murky water fact card copy (issue #107)', () => {
 
   it.each([MURKY_WATER_FACT.name, MURKY_WATER_FACT.title, MURKY_WATER_FACT.body])('"%s" avoids banned words', (text) => {
     expect(findBannedWords(text)).toEqual([]);
+  });
+});
+
+describe('lure and drag net fact card copy (issue #108)', () => {
+  it("has the trajinera-lure id, name, title and the owner's body, and no hint of its own", () => {
+    expect(LURE_FACT).toEqual({
+      id: 'trajinera-lure',
+      name: 'Fishing lines',
+      title: 'Fishing lines',
+      body: 'People in Xochimilco fish from boats. A worm on a line can be a trap, so look up for the line! Axolotls are protected in Mexico, so people should never fish for them.',
+    });
+    expect(LURE_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(LURE_FACT)).toBe(true);
+  });
+
+  it("has the drag-net id, name, title and the owner's body, and no hint of its own", () => {
+    expect(DRAG_NET_FACT).toEqual({
+      id: 'drag-net',
+      name: 'Fishing nets',
+      title: 'Fishing nets',
+      body: 'Some fishing nets in Xochimilco catch axolotls by mistake. That is one reason wild axolotls are rare. Safe refuges help them hide.',
+    });
+    expect(DRAG_NET_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(DRAG_NET_FACT)).toBe(true);
+  });
+
+  it('has ids apart from the other cards and from each other', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      UNDERWATER_SPRINGS_FACT.id,
+      BLACK_BASS_FACT.id,
+      ANCHOR_DROP_FACT.id,
+      MUD_SEEP_FACT.id,
+      MURKY_WATER_FACT.id,
+    ];
+    expect(others).not.toContain(LURE_FACT.id);
+    expect(others).not.toContain(DRAG_NET_FACT.id);
+    expect(LURE_FACT.id).not.toBe(DRAG_NET_FACT.id);
+  });
+
+  it.each([LURE_FACT, DRAG_NET_FACT].flatMap((card) => [card.name, card.title, card.body]))('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('uses a meet range of 120 px for the lure and 180 px for the drag net', () => {
+    expect(LURE_MEET_RANGE).toBe(120);
+    expect(DRAG_NET_MEET_RANGE).toBe(180);
   });
 });
 

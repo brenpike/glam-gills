@@ -5,6 +5,7 @@ import {
   CHINAMPA_2_TREASURES,
   CHINAMPA_TREASURES,
   DEEP_CANAL_2_TREASURES,
+  DEEP_CANAL_3_TREASURES,
   DEEP_CANAL_TREASURES,
   PERK_VALUES,
   POND_2_TREASURES,
@@ -102,6 +103,9 @@ const AREA_8_WEARABLE_IDS: readonly string[] = DEEP_CANAL_TREASURES.filter((trea
   (treasure) => treasure.id,
 );
 const AREA_9_WEARABLE_IDS: readonly string[] = DEEP_CANAL_2_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
+  (treasure) => treasure.id,
+);
+const AREA_10_WEARABLE_IDS: readonly string[] = DEEP_CANAL_3_TREASURES.filter((treasure) => treasure.category === 'wearable').map(
   (treasure) => treasure.id,
 );
 
@@ -250,6 +254,22 @@ describe('catalogue Wearable perks (F9)', () => {
       expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
     }
     expect(new Set(area9.map((wearable) => wearable.perk.type)).size).toBe(area9.length);
+  });
+
+  it('gives the Area 10 Wearables existing perks at the PERK_VALUES value for their rarity, no two the same type (ND-5)', () => {
+    const area10 = CATALOGUE_WEARABLES.filter((wearable) => AREA_10_WEARABLE_IDS.includes(wearable.id));
+    expect(area10.map((wearable) => [wearable.id, wearable.rarity, wearable.slot, wearable.perk])).toEqual([
+      ['deep-canal/party-hat', 'common', 'head', { type: 'dash', value: 10 }],
+      ['deep-canal/confetti-scarf', 'common', 'neck', { type: 'treasureSense', value: 15 }],
+      ['deep-canal/festival-shirt', 'rare', 'shirt', { type: 'speed', value: 6 }],
+      ['deep-canal/hero-medal', 'epic', 'neck', { type: 'shell', value: 1 }],
+      ['deep-canal/champion-crown', 'legendary', 'head', { type: 'regrowth', value: 25 }],
+    ]);
+    for (const wearable of area10) {
+      expect(PERK_ORDER, wearable.id).toContain(wearable.perk.type);
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+    }
+    expect(new Set(area10.map((wearable) => wearable.perk.type)).size).toBe(area10.length);
   });
 
   it('puts Shell only on Epic or Legendary Wearables', () => {

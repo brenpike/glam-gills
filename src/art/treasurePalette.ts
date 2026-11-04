@@ -337,6 +337,52 @@ export const TAIL_BELL_CLAPPER = DEEP_CANAL_WEIGHT;
 /** Golden boatman cape, a pale gold cream (the gold trim and the gem sit inside it). 12.78:1. */
 export const BOATMAN_CAPE_FILL = '#fff2b8';
 
+// ---- Deep canal Area 10 silhouette fills (issue #108; all at least 9:1 with ink) ----
+// Icons and the worn looks of the five Area 10 Wearables share these names. Area 10 is the festival after the work:
+// flags, candles, party hats, confetti, marigolds, music and a champion's prizes, all pale. Four fills are new (a
+// pale party blue, a pale rose stone, a pale embroidered white and a pale crown gold); the rest are shipped colours
+// reused by name. None equals a BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour
+// say so.
+
+/** Party hat cone, a pale party blue. 11.41:1. */
+export const PARTY_HAT_FILL = '#cfe8ff';
+/** Axolotl statue stone, a pale rose stone. 10.69:1. */
+export const AXOLOTL_STATUE_STONE = '#f6d6de';
+/** Festival shirt, a pale embroidered white. 13.36:1. */
+export const FESTIVAL_SHIRT_FILL = '#fbf4ff';
+/** Champion crown, a pale crown gold. 12.01:1. */
+export const CHAMPION_CROWN_FILL = '#ffeaa0';
+/** Festival flag string flags, in turn the lotus lantern pink, the pale teal and the butter yellow. 9.90:1, 11.05:1 and 12.53:1. */
+export const FESTIVAL_FLAG_FILLS: readonly string[] = [TRAJINERA_BLOSSOM_PINK, TRAJINERA_ARCH, MARIACHI_JACKET_FILL];
+/** Floating candle wax, the captain's cream. Alias of CAPTAINS_HAT_FILL. 13.34:1. */
+export const CANDLE_WAX_FILL = CAPTAINS_HAT_FILL;
+/** Floating candle flower float, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const CANDLE_FLOAT_FILL = TRAJINERA_BLOSSOM_PINK;
+/** Floating candle flame, the firefly string light bulb yellow. Alias of FIREFLY_BULB. 11.84:1. */
+export const CANDLE_FLAME_FILL = FIREFLY_BULB;
+/** Marigold boat hull, the trajinera's warm cream. Alias of TRAJINERA_HULL. 12.72:1. */
+export const MARIGOLD_BOAT_HULL = TRAJINERA_HULL;
+/** Confetti scarf, the Gemstone cape's pale amethyst. Alias of GEMSTONE_CAPE_FILL. 11.00:1. */
+export const CONFETTI_SCARF_FILL = GEMSTONE_CAPE_FILL;
+/** Mariachi band figures' bodies and heads, soft pink. Alias of UI_PANEL_PINK. 11.19:1. */
+export const BAND_FIGURE_BODY = UI_PANEL_PINK;
+/** Mariachi band figures' sombreros, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const BAND_FIGURE_HAT = MARIACHI_JACKET_FILL;
+/** Mariachi band figures' plinth and the Refuge snow globe's base, pebble C. Alias of GOLDEN_LOTUS_BASE. 10.70:1. */
+export const FESTIVAL_PLINTH = GOLDEN_LOTUS_BASE;
+/** Hero medal disc, the gold cream. Alias of BOATMAN_CAPE_FILL. 12.78:1. */
+export const HERO_MEDAL_FILL = BOATMAN_CAPE_FILL;
+/** Hero medal ribbon, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const HERO_MEDAL_RIBBON = TRAJINERA_ARCH;
+/** Refuge snow globe glass, the firefly jar glass. Alias of FIREFLY_JAR_GLASS. 11.84:1. */
+export const SNOW_GLOBE_GLASS = FIREFLY_JAR_GLASS;
+/** Refuge snow globe's resting axolotl, soft pink. Alias of UI_PANEL_PINK. 11.19:1; inside the glass, so free. */
+export const SNOW_GLOBE_AXOLOTL = UI_PANEL_PINK;
+/** Refuge snow globe's waterweed, the reed leaf green. Alias of PLANT_LEAF. 9.25:1; inside the glass, so free. */
+export const SNOW_GLOBE_WEED = PLANT_LEAF;
+/** Refuge snow globe's drifting flecks, a cream (never white, so a fleck is never read as a gem glint); inside the glass, so free. */
+export const SNOW_GLOBE_FLECK = '#fff3d6';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -384,7 +430,7 @@ export const PAINT_SHELL_FILL = PEBBLE_C;
 export const PAINT_SHELL_RIDGE = PEBBLE_E;
 /**
  * Rim light along the top of a dark Dream blob (Midnight blue, Galaxy,
- * Tie-dye galaxy). 9.07:1 with ink (guide 3f).
+ * Tie-dye galaxy, Plum, Chocolate, Glowworm, Confetti shine). 9.07:1 with ink (guide 3f).
  */
 export const DREAM_RIM = '#cec9f0';
 /** Thin divider between Rainbow and Tie-dye bands. */
@@ -392,7 +438,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-four Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-six Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -417,7 +463,9 @@ export type DreamSwatchId =
   | 'jade'
   | 'fiesta-shine'
   | 'olive'
-  | 'lantern-shine';
+  | 'lantern-shine'
+  | 'peach'
+  | 'confetti-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -496,5 +544,13 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     pattern: 'stripes',
     marks: ['rgba(255,246,204,0.85)', 'rgba(255,214,102,0.8)'],
     dark: false,
+  },
+  peach: { body: '#ffa9a8', pattern: 'plain', marks: [], dark: false },
+  // Dark sheen: a confetti pink and a confetti lemon stripe, both lighter than the grape-violet body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p). Dark body, so the rim light carries the outline.
+  'confetti-shine': {
+    body: '#6a008a',
+    pattern: 'stripes',
+    marks: ['rgba(255,128,204,0.85)', 'rgba(255,236,110,0.85)'],
+    dark: true,
   },
 };

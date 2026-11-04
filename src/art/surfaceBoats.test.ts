@@ -1,13 +1,16 @@
 /**
- * Surface boats and moored hull slots (Areas 8 and 9): the x-extent of every surface boat's art, and the
+ * Surface boats and moored hull slots (Areas 8 to 10): the x-extent of every surface boat's art, and the
  * whole moored hulls that fit in each bank overhang rect clear of them. Unit cases run on synthetic
- * spans; the layout cases run on the current Area 8 data, read generically so they hold when the
- * routes move. No Phaser is loaded.
+ * spans; the layout cases run on the current Area 8 and Area 10 data, read generically so they hold
+ * when the routes move. No Phaser is loaded.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { AREAS, habitatById, type AreaData } from '../logic/areas';
 import { bailingBoatSpawn } from '../logic/bailingBuckets';
+import { DEEP_CANAL_3_LAYOUT } from '../logic/deepCanal3Layout';
 import { DEEP_CANAL_LAYOUT } from '../logic/deepCanalLayout';
+import { dragNetSpawn } from '../logic/dragNets';
+import { LURES, fishingBoatSpawn } from '../logic/lures';
 import { DEV_AREAS } from '../logic/devAreas';
 import { PUNTING_POLE, STALACTITE_DRIP, movingHazardBaseY, movingHazardSpawn } from '../logic/movingHazards';
 import { trajineraSpawn } from '../logic/trajineras';
@@ -20,9 +23,12 @@ import {
   BAILING_SHADOW_TEX,
 } from './drawBailingBucket';
 import { MOORED_HULL_TEX, TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
+import { DRAG_NET_BOAT_TEX, DRAG_NET_MOTION } from './drawDragNet';
+import { FISHING_BOAT_TEX, FISHING_BOAT_W, FISHING_SHADOW_TEX } from './drawFishingTrajinera';
 import { habitatLook } from './habitatLook';
 import { MOVING_HAZARD_LOOKS } from './movingHazardTextures';
 import {
+  DRAG_NET_BOAT_REACH,
   MOORED_HULL_GAP,
   SURFACE_BOAT_GAP,
   TRAJINERA_FRAME_OVERHANG,
@@ -34,6 +40,20 @@ import {
 vi.mock('phaser', () => ({}));
 
 const span = (id: string, x0: number, x1: number): SurfaceBoatSpan => ({ id, x0, x1 });
+
+/** Wide swim bounds for synthetic fishing boats. */
+const WIDE_BOUNDS = { minX: 0, maxX: 4000, minY: 0, maxY: 1000 };
+
+/** A synthetic drag net on the stretch x0..x1, y 400..520, sweeping right. */
+const netOn = (id: string, x0: number, x1: number) =>
+  dragNetSpawn(id, 0, {
+    stretch: { x0, x1, y0: 400, y1: 520 },
+    sweep: 'right',
+    hollows: [
+      { x0: x0 + 20, x1: x0 + 60, y0: 410, y1: 450 },
+      { x0: x1 - 60, x1: x1 - 20, y0: 470, y1: 510 },
+    ],
+  });
 
 describe('surface boat gaps', () => {
   it('keeps 8 px of water between a moored hull and any other surface boat, and 14 px hull to hull', () => {
@@ -116,6 +136,40 @@ describe('surfaceBoatSpans', () => {
       const clear = slotX + hullW <= bailSpan.x0 - SURFACE_BOAT_GAP || slotX >= bailSpan.x1 + SURFACE_BOAT_GAP;
       expect(clear, `hull at ${slotX}`).toBe(true);
     }
+  });
+
+  it('widens a fishing trajinera\'s whole drift span by its widest frame from the hull middle: its shadow, 70 px', () => {
+    const boat = fishingBoatSpawn('fish', 0, { x0: 400, x1: 700, lures: [{ along: 0, depth: 200 }, { along: LURES.hullLength, depth: 150 }] }, WIDE_BOUNDS);
+    const shadowReach = Math.max(FISHING_SHADOW_TEX.originX, FISHING_SHADOW_TEX.w - FISHING_SHADOW_TEX.originX);
+    expect(shadowReach).toBe(70);
+    expect(shadowReach).toBeGreaterThanOrEqual(FISHING_BOAT_TEX.originX);
+    expect(surfaceBoatSpans({ fishingBoats: [boat] })).toEqual([
+      { id: 'fish', x0: 400 + FISHING_BOAT_W / 2 - shadowReach, x1: 700 - FISHING_BOAT_W / 2 + shadowReach },
+    ]);
+    // The span covers every place the whole hull frame can be drawn as the boat drifts.
+    const [fishSpan] = surfaceBoatSpans({ fishingBoats: [boat] });
+    expect(fishSpan.x0).toBeLessThanOrEqual(400 + FISHING_BOAT_W / 2 - FISHING_BOAT_TEX.originX);
+    expect(fishSpan.x1).toBeGreaterThanOrEqual(700 - FISHING_BOAT_W / 2 + FISHING_BOAT_TEX.w - FISHING_BOAT_TEX.originX);
+  });
+
+  it('gives a drag net both its boats, middles a half hull outside the stretch, at their warning lean, and the float line between', () => {
+    const { w, h, originX, originY } = DRAG_NET_BOAT_TEX;
+    const lean = DRAG_NET_MOTION.leanRad;
+    expect(DRAG_NET_BOAT_REACH).toBeCloseTo(Math.max(originX, w - originX) * Math.cos(lean) + Math.max(originY, h - originY) * Math.sin(lean), 9);
+    expect(DRAG_NET_BOAT_REACH).toBeGreaterThan(originX);
+    const [netSpan] = surfaceBoatSpans({ dragNets: [netOn('net', 1000, 1200)] });
+    expect(netSpan.id).toBe('net');
+    expect(netSpan.x0).toBeCloseTo(1000 - FISHING_BOAT_W / 2 - DRAG_NET_BOAT_REACH, 9);
+    expect(netSpan.x1).toBeCloseTo(1200 + FISHING_BOAT_W / 2 + DRAG_NET_BOAT_REACH, 9);
+  });
+
+  it('lists fishing trajineras and then drag nets after the bailing boats', () => {
+    const bail = bailingBoatSpawn('bail', 0, { x0: 3000, x1: 3120, bucketX: 3060, landing: { x: 1800, y: 400 } }, swimBounds(areaSize(9, 2)));
+    const fish = fishingBoatSpawn('fish', 0, { x0: 400, x1: 700, lures: [{ along: 0, depth: 200 }] }, WIDE_BOUNDS);
+    const pole = movingHazardSpawn('pole', PUNTING_POLE, 2000, 0);
+    expect(
+      surfaceBoatSpans({ dragNets: [netOn('net', 1000, 1200)], fishingBoats: [fish], bailingBoats: [bail], movingHazards: [pole] }).map((s) => s.id),
+    ).toEqual(['pole', 'bail', 'fish', 'net']);
   });
 
   it('throws for a surface moving hazard whose look has no art', () => {
@@ -220,6 +274,60 @@ describe('moored hulls on the current Area 8 layout', () => {
 
   it('sets the 4 hulls ADR 0036 records: one west, none in the short row, one middle, two east', () => {
     expect(rects.map((rect) => mooredHullSlots(rect, spans, hullW).length)).toEqual([1, 0, 1, 2]);
+  });
+});
+
+describe('surface boats on the current Area 10 layout (issue #108)', () => {
+  const spans = surfaceBoatSpans(DEEP_CANAL_3_LAYOUT);
+  const rects = DEEP_CANAL_3_LAYOUT.bankOverhangs ?? [];
+  const hullW = MOORED_HULL_TEX.w;
+
+  it('gives every surface boat a span: its surface poles, trajineras, bailing boats, fishing trajineras and drag nets', () => {
+    const fishing = DEEP_CANAL_3_LAYOUT.fishingBoats ?? [];
+    const nets = DEEP_CANAL_3_LAYOUT.dragNets ?? [];
+    expect(fishing.length).toBeGreaterThan(0);
+    expect(nets.length).toBeGreaterThan(0);
+    const surfaceHazards = (DEEP_CANAL_3_LAYOUT.movingHazards ?? []).filter((spawn) => movingHazardBaseY(spawn) === SURF);
+    expect(spans.map((s) => s.id)).toEqual([
+      ...surfaceHazards.map((hazard) => hazard.id),
+      ...(DEEP_CANAL_3_LAYOUT.trajineras ?? []).map((boat) => boat.id),
+      ...(DEEP_CANAL_3_LAYOUT.bailingBoats ?? []).map((boat) => boat.id),
+      ...fishing.map((boat) => boat.id),
+      ...nets.map((net) => net.id),
+    ]);
+    for (const boat of fishing) {
+      const boatSpan = spans.find((s) => s.id === boat.id);
+      expect(boatSpan?.x0, boat.id).toBeLessThan(boat.x0);
+      expect(boatSpan?.x1, boat.id).toBeGreaterThan(boat.x1);
+    }
+  });
+
+  it('keeps every two surface boats at least SURFACE_BOAT_GAP apart: no fishing trajinera or drag net overlaps another boat', () => {
+    expect(findCrowdedPairs(spans)).toEqual([]);
+  });
+
+  it('keeps every moored hull inside its rect and at least SURFACE_BOAT_GAP from every surface boat, never stretched', () => {
+    expect(rects.length).toBeGreaterThan(0);
+    for (const rect of rects) {
+      const slots = mooredHullSlots(rect, spans, hullW);
+      for (const slotX of slots) {
+        const label = `hull at ${slotX} in ${rect.x0}..${rect.x1}`;
+        expect(slotX, label).toBeGreaterThanOrEqual(rect.x0);
+        expect(slotX + hullW, label).toBeLessThanOrEqual(rect.x1);
+        for (const boat of spans) {
+          expect(isClearOf({ x0: slotX, x1: slotX + hullW }, boat), `${label} against ${boat.id} ${boat.x0}..${boat.x1}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('keeps every fishing trajinera and drag net at least SURFACE_BOAT_GAP from every moored row', () => {
+    const boats = surfaceBoatSpans({ fishingBoats: DEEP_CANAL_3_LAYOUT.fishingBoats, dragNets: DEEP_CANAL_3_LAYOUT.dragNets });
+    for (const boat of boats) {
+      for (const rect of rects) {
+        expect(isClearOf(boat, rect), `${boat.id} ${boat.x0}..${boat.x1} and moored row ${rect.x0}..${rect.x1}`).toBe(true);
+      }
+    }
   });
 });
 

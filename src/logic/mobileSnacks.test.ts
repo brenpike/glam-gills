@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, CANAL_AREA } from './areas';
 import {
+  SNACK_BOB_PX,
   createCollectibles,
   drawnSnackX,
   drawnSnackY,
@@ -10,10 +11,12 @@ import {
   type SnackDrift,
   type SnackFrame,
 } from './collectibles';
+import { dragNetSpawn, dragNetSweep } from './dragNets';
 import { netDrift } from './ghostNets';
 import { hazardSweep, type ElementSpawn, type HazardRect, type HazardSpawn, type HazardType } from './hazards';
 import { zoneThreats } from './hiding';
 import { legSwimTuning } from './legs';
+import { fishingBoatSpawn, lureLinePath, lurePath } from './lures';
 import {
   SHRIMP_FLICK_FRAME,
   SHRIMP_REST_FRAME,
@@ -431,6 +434,88 @@ describe('mobileSnackAvoid (ND-26)', () => {
     expect(avoid.worms).toEqual([{ x: 5, y: 6 }]);
     expect(avoid.threats).toEqual(zoneThreats(zone));
     expect(mobileSnackAvoid(zone).worms).toEqual([]);
+  });
+});
+
+/** A fishing boat over x 1400..1700 with one lure 60 px along its hull, 200 px below SURF: its path and line cover x 1460..1640. */
+const FISHING_BOAT = fishingBoatSpawn('dev/fishing-1', 0, { x0: 1400, x1: 1700, lures: [{ along: 60, depth: 200 }] }, swimBounds(OPEN_ZONE));
+/** A drag net over x 1000..1200, y 300..500. */
+const DRAG_NET = dragNetSpawn('dev/drag-net-1', 0, {
+  stretch: { x0: 1000, x1: 1200, y0: 300, y1: 500 },
+  sweep: 'right',
+  hollows: [{ x0: 1020, x1: 1060, y0: 320, y1: 360 }, { x0: 1140, x1: 1180, y0: 440, y1: 480 }],
+});
+
+describe('mobileSnackAvoid with lures and drag nets (issue #108, ND-1, ND-2)', () => {
+  it('keeps away from every lure path and line, and keeps out of every drag-net stretch', () => {
+    const avoid = mobileSnackAvoid(zoneWith({ elements: [MATS], fishingBoats: [FISHING_BOAT], dragNets: [DRAG_NET] }));
+    const lures = [lurePath(FISHING_BOAT, 0), lureLinePath(FISHING_BOAT, 0)];
+    const matSweep = { kind: 'rect', x0: 1000, x1: 1060, y0: 360, y1: 678 };
+    expect(avoid.mats).toEqual([matSweep, dragNetSweep(DRAG_NET)]);
+    expect(avoid.hazards).toEqual(lures);
+    expect(avoid.keepAway).toEqual([matSweep, dragNetSweep(DRAG_NET), ...lures]);
+  });
+
+  it('keeps a box 80 px from a lure\'s line, from the surface down to its lure', () => {
+    expect(SNACK_HAZARD_CLEARANCE).toBe(80);
+    const avoid = mobileSnackAvoid(zoneWith({ fishingBoats: [FISHING_BOAT] }));
+    expect(mobileSnackHardClear(pointBox(1380, 200), avoid)).toBe(true);
+    expect(mobileSnackHardClear(pointBox(1380.5, 200), avoid)).toBe(false);
+    expect(mobileSnackHardClear(pointBox(1720, 120), avoid)).toBe(true);
+    expect(mobileSnackHardClear(pointBox(1719.5, 120), avoid)).toBe(false);
+    expect(mobileSnackClear(pointBox(1380.5, 200), avoid)).toBe(false);
+  });
+
+  it('keeps a box 80 px from a lure\'s whole path, bob included', () => {
+    const avoid = mobileSnackAvoid(zoneWith({ fishingBoats: [FISHING_BOAT] }));
+    const bottom = lurePath(FISHING_BOAT, 0).y1;
+    expect(bottom).toBe(SURF + 200 + SNACK_BOB_PX);
+    expect(mobileSnackHardClear(pointBox(1550, bottom + 80), avoid)).toBe(true);
+    expect(mobileSnackHardClear(pointBox(1550, bottom + 79.5), avoid)).toBe(false);
+  });
+
+  it('keeps a box out of every drag-net stretch, its edges counting as inside', () => {
+    const avoid = mobileSnackAvoid(zoneWith({ dragNets: [DRAG_NET] }));
+    expect(mobileSnackHardClear(pointBox(1100, 400), avoid)).toBe(false);
+    expect(mobileSnackHardClear(pointBox(1040, 340), avoid)).toBe(false);
+    expect(mobileSnackHardClear(pointBox(1200, 400), avoid)).toBe(false);
+    expect(mobileSnackHardClear(pointBox(1200.5, 400), avoid)).toBe(true);
+    expect(mobileSnackHardClear(pointBox(1100, 299.5), avoid)).toBe(true);
+    expect(mobileSnackClear(pointBox(1100, 400), avoid)).toBe(false);
+  });
+
+  it('refuses a tadpole loop near a lure line or across a drag-net stretch', () => {
+    const rule = tadpoleRule(60);
+    const avoid = mobileSnackAvoid(zoneWith({ fishingBoats: [FISHING_BOAT], dragNets: [DRAG_NET] }));
+    expect(tadpoleWanderClear(tadpoleWander(rule, [[2000, 300], [2300, 300], [2300, 400], [2000, 400]], 0), avoid)).toBe(true);
+    expect(tadpoleWanderClear(tadpoleWander(rule, [[1300, 150], [1420, 150]], 0), avoid)).toBe(false);
+    expect(tadpoleWanderClear(tadpoleWander(rule, [[800, 400], [1080, 400]], 0), avoid)).toBe(false);
+  });
+
+  it('refuses a shrimp home near a lure line or across a drag-net stretch', () => {
+    const drift: SnackDrift = { amplitudeX: 16, amplitudeY: 8, periodX: 7.6, periodY: 6.08 };
+    const avoid = mobileSnackAvoid(zoneWith({ fishingBoats: [FISHING_BOAT], dragNets: [DRAG_NET] }));
+    expect(shrimpHomeClear(shrimpHome([[2400, 400], [2450, 430]]), drift, avoid)).toBe(true);
+    expect(shrimpHomeClear(shrimpHome([[1400, 200]]), drift, avoid)).toBe(false);
+    expect(shrimpHomeClear(shrimpHome([[900, 400], [1300, 400]]), drift, avoid)).toBe(false);
+  });
+
+  it('refuses a flick glide or landing near a lure line or across a drag-net stretch', () => {
+    const drift: SnackDrift = { amplitudeX: 16, amplitudeY: 8, periodX: 7.6, periodY: 6.08 };
+    const avoid = mobileSnackAvoid(zoneWith({ fishingBoats: [FISHING_BOAT], dragNets: [DRAG_NET] }));
+    expect(shrimpGlideClear({ x: 900, y: 250 }, { x: 1300, y: 250 }, drift, avoid)).toBe(true);
+    expect(shrimpGlideClear({ x: 900, y: 400 }, { x: 1300, y: 400 }, drift, avoid)).toBe(false);
+    expect(mobileSnackHardClear(shrimpBox({ x: 900, y: 400 }, drift), avoid)).toBe(true);
+    expect(mobileSnackHardClear(shrimpBox({ x: 1300, y: 400 }, drift), avoid)).toBe(true);
+    expect(shrimpGlideClear({ x: 1300, y: 600 }, { x: 1700, y: 600 }, drift, avoid)).toBe(true);
+    expect(mobileSnackHardClear(shrimpBox({ x: 1800, y: 200 }, drift), avoid)).toBe(true);
+    expect(shrimpGlideClear({ x: 1300, y: 200 }, { x: 1800, y: 200 }, drift, avoid)).toBe(false);
+    expect(mobileSnackClear(shrimpBox({ x: 1400, y: 200 }, drift), avoid)).toBe(false);
+  });
+
+  it('measures every zone without fishing boats or drag nets as before', () => {
+    const zone = zoneWith({ elements: [MATS] });
+    expect(mobileSnackAvoid({ ...zone, fishingBoats: [], dragNets: [] })).toEqual(mobileSnackAvoid(zone));
   });
 });
 
@@ -876,11 +961,11 @@ describe('snackTopSpeed and snackMagnetSpeed (ND-28)', () => {
 });
 
 describe('oneTimeDarts (ND-27)', () => {
-  it('gives Areas 1, 2, 6, 7, 8 and 9 none', () => {
+  it('gives Areas 1, 2, 6, 7, 8, 9 and 10 none', () => {
     for (const area of AREAS.filter((each) => !each.snackDart)) {
       expect(oneTimeDarts(area, buildZone(area.layout, 3))).toBeNull();
     }
-    expect(AREAS.filter((each) => !each.snackDart).map((each) => each.number)).toEqual([1, 2, 6, 7, 8, 9]);
+    expect(AREAS.filter((each) => !each.snackDart).map((each) => each.number)).toEqual([1, 2, 6, 7, 8, 9, 10]);
   });
 
   it.each(SEEDS)('gives Areas 3, 4 and 5 exactly today\'s darters, or none once the area has shrimp, for seed %i', (seed) => {

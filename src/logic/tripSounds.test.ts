@@ -47,6 +47,8 @@ const SILENT_EVENTS: readonly TripEvent[] = [
   { type: 'arrivedHome', still: false, returned: [] },
   { type: 'scoop', boatId: 'bailing-1', at: AT },
   { type: 'splashDown', boatId: 'bailing-1', at: AT },
+  { type: 'lureTug', lureId: 'fishing-1-lure-1', at: AT },
+  { type: 'netCatch', stretchId: 'drag-net-1', at: AT },
 ];
 
 /** Each trip event with a sound of its own from issue #166, and that sound (ND-3, ND-7, ND-8, ND-10 to ND-12, ND-16). */

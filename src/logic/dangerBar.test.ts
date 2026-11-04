@@ -22,12 +22,13 @@ import {
   BLACK_BASS_SPECIES,
   CARP_SPECIES,
   GARTER_SNAKE_SPECIES,
+  HERON_SPECIES,
   TILAPIA_SPECIES,
   tunedSpecies,
   type PredatorRoute,
   type PredatorSpecies,
 } from './predators';
-import { CARP, GARTER_SNAKE, TILAPIA, type ChaseTuning } from './tuning';
+import { CARP, GARTER_SNAKE, HERON, TILAPIA, type ChaseTuning } from './tuning';
 import {
   DEFAULT_ZONE_SEED,
   SCREEN_W,
@@ -51,6 +52,8 @@ const CHASING_TILAPIA = { ...STILL_TILAPIA, chase: CHASE };
 const STILL_CARP = tunedSpecies(CARP_SPECIES, { ...CARP, lungeRange: STRIKE });
 const CHASING_CARP = tunedSpecies(CARP_SPECIES, { ...CARP, lungeRange: STRIKE, chase: CHASE });
 const CHASING_SNAKE = tunedSpecies(GARTER_SNAKE_SPECIES, { ...GARTER_SNAKE, lungeRange: STRIKE, chase: CHASE });
+const HERON_STAB = 120;
+const STABBING_HERON = tunedSpecies(HERON_SPECIES, { ...HERON, lungeRange: HERON_STAB });
 const POLE_REACH = PUNTING_POLE.halfWidth + PUNTING_POLE.touchReach;
 const OTHER_TYPE = { ...PUNTING_POLE, id: 'test-jab' };
 
@@ -173,6 +176,10 @@ describe('longestQuietStretch', () => {
 
   it('counts the leash as 0 for a warn-on-route species, whatever its chase says', () => {
     expect(longestQuietStretch(layout({ predatorRoutes: [predatorRoute('snake-1', CHASING_SNAKE, 300, 500)] }))).toBe(500 - STRIKE);
+  });
+
+  it('measures a heron by its stab reach with no leash (ADR 0038)', () => {
+    expect(longestQuietStretch(layout({ predatorRoutes: [predatorRoute('heron-1', STABBING_HERON, 300, 500)] }))).toBe(500 - HERON_STAB);
   });
 
   it('keeps a moving hazard in reach within its touch reach of its sweep', () => {
@@ -517,6 +524,24 @@ describe('meetsWholeWaterDangerBar', () => {
     expect(meetsWholeWaterDangerBar(wholeBarWater(0, { height: 2 * WORLD_H }))).toBe(false);
     const tunedTilapia = tunedSpecies(TILAPIA_SPECIES, CHASING_TILAPIA);
     expect(meetsWholeWaterDangerBar(wholeBarWater(0, { predatorRoutes: [predatorLoop('t-9', tunedTilapia, loop(520, 1360, 120, 270))] }))).toBe(false);
+  });
+
+  it('passes a heron, built never to chase, beside predators that all chase (ADR 0038)', () => {
+    const heron = predatorLoop('heron-1', STABBING_HERON, across(600, 800, 130));
+    const withHeron = wholeBarWater(0, { predatorRoutes: [...wholeBarWater().predatorRoutes, heron] });
+    expect(STABBING_HERON.tuning.chase).toBeUndefined();
+    expect(movingThreatCount(withHeron)).toBe(movingThreatCount(wholeBarWater()) + 1);
+    expect(meetsWholeWaterDangerBar(withHeron)).toBe(true);
+  });
+
+  it('still fails a predator with no chase that is not built never to chase', () => {
+    const still = (species: Readonly<PredatorSpecies>) => predatorLoop('still-1', species, loop(600, 800, 120, 270));
+    const stillSnake = tunedSpecies(GARTER_SNAKE_SPECIES, { ...GARTER_SNAKE, lungeRange: STRIKE });
+    expect(meetsWholeWaterDangerBar(wholeBarWater(0, { predatorRoutes: [...wholeBarWater().predatorRoutes, still(CHASING_CARP)] }))).toBe(true);
+    expect(meetsWholeWaterDangerBar(wholeBarWater(0, { predatorRoutes: [...wholeBarWater().predatorRoutes, still(STILL_CARP)] }))).toBe(false);
+    expect(meetsWholeWaterDangerBar(wholeBarWater(0, { predatorRoutes: [...wholeBarWater().predatorRoutes, still(stillSnake)] }))).toBe(false);
+    const heron = still(STABBING_HERON);
+    expect(meetsWholeWaterDangerBar(wholeBarWater(0, { tilapia: STILL_TILAPIA, predatorRoutes: [...wholeBarWater().predatorRoutes, heron] }))).toBe(false);
   });
 });
 

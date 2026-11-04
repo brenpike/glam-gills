@@ -21,7 +21,8 @@ import {
   type EncounterSource,
   type EncounterState,
 } from './encounter';
-import { metThreatIds, type ThreatSighting } from './factCards';
+import { DRAG_NET, dragNetCatch, dragNetPhase, sweepFront, type DragNetSpawn } from './dragNets';
+import { DRAG_NET_MEET_RANGE, LURE_MEET_RANGE, metThreatIds, type ThreatSighting } from './factCards';
 import { createGhostNets, endSnag, isSnagged, stepGhostNets, type GhostNetState } from './ghostNets';
 import {
   darkHintPlant,
@@ -33,6 +34,20 @@ import {
 import { elementSweep, hazardCentre, hazardShapeAt, shapeDistance, type ElementSpawn } from './hazards';
 import { zoneThreats } from './hiding';
 import { createLegs, isProtected, presentCount, quantizeProgress, type LegsState } from './legs';
+import {
+  TRAJINERA_LURE,
+  createLureState,
+  eatLure,
+  fishingBoatHull,
+  lureAt,
+  lureDrawn,
+  lureLift,
+  lureLine,
+  tickLures,
+  type FishingBoatSpawn,
+  type LureState,
+  type LureStatus,
+} from './lures';
 import { isAxolotlFindId, type RealMorphId } from './morphs';
 import { movingHazardSweep } from './movingHazards';
 import {
@@ -79,7 +94,20 @@ import {
   type TrajineraLane,
   type TrajineraPush,
 } from './trajineras';
-import type { FoundInfo, LegsSnapshot, RescueSnapshot, TripEnding, TripPhase, TripSnapshot } from './tripEvents';
+import type {
+  DragNetSnapshot,
+  FishingBoatSnapshot,
+  FishingSnapshot,
+  FoundInfo,
+  LegsSnapshot,
+  LureSnapshot,
+  LureTugEvent,
+  NetCatchEvent,
+  RescueSnapshot,
+  TripEnding,
+  TripPhase,
+  TripSnapshot,
+} from './tripEvents';
 import {
   CARRY,
   FINDS,
@@ -112,11 +140,12 @@ export const LEG_PROGRESS_STEPS = 10;
  * when absent) and the dark water (none when absent). The gliding trajineras (none when absent)
  * read the area's width, bed top and rock walls (none when absent) for where a push may go. The
  * bailing boats (issue #107, ND-2) are none when absent. The murky patches (issue #107, ND-1) are
- * the encounter hazards of type murky water.
+ * the encounter hazards of type murky water. The fishing boats (issue #108, ND-1) and drag nets
+ * (issue #108, ND-2) are none when absent.
  */
 export type TripSource = EncounterSource &
   Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> &
-  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras' | 'bailingBoats'>> & {
+  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras' | 'bailingBoats' | 'fishingBoats' | 'dragNets'>> & {
     elements?: readonly Readonly<ElementSpawn>[];
   };
 
@@ -188,6 +217,12 @@ export interface MurkyGauge {
  * `murkyTimer` is the murky timer (issue #107, ND-1), fresh at a new trip. `bailingBoats` is the
  * trip's bailing boats, none when the area has none, and `toss` the bucket toss under way, or null
  * (issue #107, ND-2). The phase stays 'swimming' through a toss.
+ * `fishingBoats` is the trip's fishing trajineras, none when the area has none, each hull and lure
+ * where the drift puts it at `elementTime`, and `lures` each lure's pulled-up state (issue #108,
+ * ND-1). `dragNets` is the trip's drag-net stretches, none when the area has none, each on its cycle
+ * at `elementTime`, and `netCatches` the number of the last sweep that caught for each stretch, in
+ * stretch order, or null when none has (issue #108, ND-2). Both start fresh at a new trip and when
+ * the carry starts.
  */
 export interface TripState {
   phase: TripPhase;
@@ -225,6 +260,10 @@ export interface TripState {
   murkyTimer: MurkyTimer;
   bailingBoats: BailingBoatSpawn[];
   toss: BucketToss | null;
+  fishingBoats: FishingBoatSpawn[];
+  lures: LureState;
+  dragNets: DragNetSpawn[];
+  netCatches: (number | null)[];
 }
 
 /**
@@ -259,12 +298,15 @@ export interface TripContext {
 
 /**
  * Input for one trip step: the axolotl centre, whether reduced motion is on and whether a Tail
- * Dash is active this step.
+ * Dash is active this step. `head` is the head reach centre (headPoint of the drawn body), which
+ * eats a trajinera lure (issue #108, ND-1); a swimming step in an area with fishing boats needs it,
+ * and any other step ignores it.
  */
 export interface TripInput {
   axolotlPos: Point;
   reduced: boolean;
   dashing: boolean;
+  head?: Point;
 }
 
 /**
@@ -279,7 +321,9 @@ export interface TripInput {
  * `snagged` is the explorer, with its centre at `at`, entering the reach of ghost net `id` and a
  * new snag starting. `scoop` is bailing boat `boatId`'s bucket catching the axolotl, its centre at
  * `at`, and its toss starting; `splashDown` is the toss ending at the boat's landing point `at`
- * (issue #107, ND-2).
+ * (issue #107, ND-2). `lureTug` is a trajinera lure eaten and pulled up (issue #108, ND-1) and
+ * `netCatch` a drag net's catch (issue #108, ND-2); the hit or Shell block each lands follows it as
+ * the shared `hit` or `shellBlock`, and none follows while protected time runs.
  */
 export type TripEvent =
   | Exclude<EncounterEvent, { type: 'carriedHome' }>
@@ -293,7 +337,9 @@ export type TripEvent =
   | { type: 'wormSpat'; id: string; from: Point; to: Point }
   | { type: 'snagged'; id: string; at: Point }
   | { type: 'scoop'; boatId: string; at: Point }
-  | { type: 'splashDown'; boatId: string; at: Point };
+  | { type: 'splashDown'; boatId: string; at: Point }
+  | LureTugEvent
+  | NetCatchEvent;
 
 /**
  * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump or a
@@ -315,7 +361,8 @@ export interface TripStepResult {
   landed?: Point;
 }
 
-type PassedEncounterEvent = Exclude<EncounterEvent, { type: 'carriedHome' }>;
+/** An event of a lure or drag net hit: the tug or catch, then the shared hit path's events. */
+type FishingEvent = EncounterEvent | LureTugEvent | NetCatchEvent;
 
 // INVARIANT: frozen and shared; no caller mutates the events of a trip step result.
 const NO_EVENTS = Object.freeze<TripEvent[]>([]) as TripEvent[];
@@ -358,7 +405,9 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * the source's area, or the source has trajineras but no width or bed top. Throws createTrajineraLane's
  * RangeError when, for some boat, the row a body reach under its hull band is out of the swim bounds
  * or meets rock, or two boats' spans are less than twice the body reach apart. The murky timer starts
- * fresh, and the source's bailing boats are the trip's, copied, with no toss (issue #107).
+ * fresh, and the source's bailing boats are the trip's, copied, with no toss (issue #107). The
+ * source's fishing boats and drag nets are the trip's, copied, with every lure down and no sweep
+ * caught (issue #108).
  */
 export function createTrip(
   source: TripSource,
@@ -414,7 +463,31 @@ export function createTrip(
     murkyTimer: createMurkyTimer(),
     bailingBoats: (source.bailingBoats ?? []).map(copyBailingBoat),
     toss: null,
+    fishingBoats: (source.fishingBoats ?? []).map(copyFishingBoat),
+    lures: createLureState(source.fishingBoats ?? []),
+    dragNets: (source.dragNets ?? []).map(copyDragNet),
+    netCatches: noNetCatches(source.dragNets ?? []),
   };
+}
+
+/** A copy of the fishing boat; its lures are copied. */
+function copyFishingBoat(boat: Readonly<FishingBoatSpawn>): FishingBoatSpawn {
+  return { ...boat, lures: boat.lures.map((lure) => ({ ...lure })) };
+}
+
+/** A copy of the drag net sharing its type; its stretch, hollows and timing are copied. */
+function copyDragNet(net: Readonly<DragNetSpawn>): DragNetSpawn {
+  const { stretch, sweep, hollows, timing } = net.dragNet;
+  const [first, second] = hollows;
+  return {
+    ...copyTripElement(net),
+    dragNet: { stretch: { ...stretch }, sweep, hollows: [{ ...first }, { ...second }], timing: { ...timing } },
+  };
+}
+
+/** No sweep caught yet for each of `nets`: the start of a trip and of the carry home. */
+function noNetCatches(nets: readonly Readonly<DragNetSpawn>[]): (number | null)[] {
+  return nets.map(() => null);
 }
 
 /** A copy of the bailing boat sharing its type; its boat and landing point are copied. */
@@ -457,7 +530,8 @@ function tripTrajineras(source: TripSource): TrajineraLane | null {
  * slots. Every plastic worm is back at its spawn and the axolotl is neither queasy nor snagged. The
  * elements, moving hazards and gliding trajineras are the same, and the element clock and the
  * moving hazard clock are back at 0, with every push cooldown at 0. The bailing boats are the same,
- * with no toss, and the murky timer is fresh. It
+ * with no toss, and the murky timer is fresh. The fishing boats and drag nets are the same, with
+ * every lure down and no sweep caught (issue #108). It
  * passes no other trip options, so the new trip has no stranded axolotl and every fact card counts
  * as unseen. Any other phase returns the input state unchanged.
  */
@@ -474,6 +548,8 @@ export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.
       mainPath: state.mainPath,
       elements: state.elements,
       bailingBoats: state.bailingBoats,
+      fishingBoats: state.fishingBoats,
+      dragNets: state.dragNets,
       ...(state.darkWater ? { darkWater: state.darkWater } : {}),
     },
     { count: state.encounter.legs.slots.length },
@@ -674,6 +750,25 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * still counts down. The toss follows `input.reduced` on every step. The step on which it reaches
  * its time (tossDone) ends it: `splashDown` is emitted and `landed` is the landing point. A catch
  * costs no leg and no hit, drops no find and starts no protected time.
+ * Trajinera lures (issue #108, ND-1), after murky water, unless the trip ended: each pulled-up
+ * lure's time counts down by the capped step, and one whose time is up comes back only when
+ * `input.head` is out of its reach at the new element time (tickLures). Then every lure down and
+ * in reach of `input.head` is eaten and pulled up for 5 s (eatLure), even when the hit is blocked or
+ * protected; the first of them emits `lureTug` and lands the step's one hit through the shared hit
+ * path (hitEncounter) with sourceId 'trajinera-lure', from the lure where it hung. Throws when the
+ * trip has fishing boats and `input.head` is absent. A lure is never a snack: it is never counted,
+ * never feeds regrowth and never opens the exit.
+ * Drag nets (issue #108, ND-2), after the lures, unless the trip ended: each stretch whose sweep
+ * catches the axolotl centre at the new element time (dragNetCatch), at most once per sweep, emits
+ * `netCatch` at that centre and lands one hit through the shared hit path with sourceId 'drag-net',
+ * from that centre. `input.dashing` gives no immunity, and a net never moves, holds or traps the
+ * axolotl: it sets no impulse, `outOfHull` or `landed`.
+ * A lure or net hit, like a murky one, may be blocked by the Shell, starts protected time on a lost
+ * leg, adds to `legsLost` and carries the axolotl home on the last leg. When the carry starts, every
+ * lure is down again and no sweep counts as caught. The lures and nets never act during a bailing
+ * bucket toss. The lure and drag net card is met when the axolotl centre comes within
+ * LURE_MEET_RANGE of a lure that is down, or within DRAG_NET_MEET_RANGE of a stretch, outside the
+ * safe area.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -727,6 +822,49 @@ export function tripMurkyGauge(state: TripState): MurkyGauge {
     meter: Math.min(1, Math.max(0, built / MURKY_WATER_TIMING.legAt)),
     warning: built >= MURKY_WATER_TIMING.warnAt,
   };
+}
+
+/**
+ * The fishing boats and drag nets as the scene draws them at the trip's element time, with reduced
+ * motion `reduced` (issue #108): each boat's hull (fishingBoatHull) and lures, each lure where it is
+ * drawn (lureDrawn), its line (lureLine), whether it is pulled up and its lift share (lureLift); and
+ * each stretch's phase (dragNetPhase) and sweep front (sweepFront). Both lists are empty in an area
+ * with neither. Throws when a lure has no state in `state.lures`.
+ */
+export function tripFishingSnapshot(state: TripState, reduced: boolean): FishingSnapshot {
+  const t = state.elementTime;
+  const boats = state.fishingBoats.map(
+    (boat): FishingBoatSnapshot => ({
+      id: boat.id,
+      hull: fishingBoatHull(boat, t),
+      lures: boat.lures.map((_, index) => lureSnapshot(state, boat, index, reduced)),
+    }),
+  );
+  const nets = state.dragNets.map(
+    (net): DragNetSnapshot => ({ id: net.id, phase: dragNetPhase(net, t), front: sweepFront(net, t) }),
+  );
+  return { boats, nets };
+}
+
+/** The boat's lure at `index` as the scene draws it at the trip's element time (tripFishingSnapshot). */
+function lureSnapshot(state: TripState, boat: FishingBoatSpawn, index: number, reduced: boolean): LureSnapshot {
+  const { id } = boat.lures[index];
+  const status = lureStatus(state.lures, id);
+  const t = state.elementTime;
+  return {
+    id,
+    at: lureDrawn(boat, index, status, t, reduced),
+    line: lureLine(boat, index, status, t, reduced),
+    up: status.up,
+    lift: lureLift(status, reduced),
+  };
+}
+
+/** The state of lure `id`. Throws when `lures` has none. */
+function lureStatus(lures: LureState, id: string): LureStatus {
+  const status = lures.lures.find((candidate) => candidate.id === id);
+  if (status === undefined) throw new Error(`trip: lure ${id} has no lure state`);
+  return status;
 }
 
 /** The bailing boat of `toss`. Throws when it is not one of the trip's bailing boats. */
@@ -875,7 +1013,7 @@ function sameLegsSnapshot(a: LegsSnapshot, b: LegsSnapshot): boolean {
   );
 }
 
-function isPassedEvent(event: EncounterEvent): event is PassedEncounterEvent {
+function isPassedEvent<E extends FishingEvent>(event: E): event is Exclude<E, { type: 'carriedHome' }> {
   return event.type !== 'carriedHome';
 }
 
@@ -932,26 +1070,70 @@ function elementSighting(element: ElementSpawn, pos: Point, met: readonly string
 }
 
 /**
- * `met` with the ids of the hazards, moving hazards, predators and elements the axolotl at `pos`
- * meets now at `elementTime` appended, in sighting order. Runs every swimming frame, so it returns
- * `met` itself when nothing new is met.
+ * The trajinera lure as the axolotl at `pos` sees it (issue #108, ND-1): the centre distance to the
+ * nearest lure that is down in `lures`, where it hangs at `elementTime` (lureAt), and
+ * LURE_MEET_RANGE. Null when the trip has no fishing boats, the lure is in `met` or every lure is up.
+ */
+function lureSighting(
+  boats: readonly FishingBoatSpawn[],
+  lures: LureState,
+  pos: Point,
+  met: readonly string[],
+  elementTime: number,
+  reduced: boolean,
+): ThreatSighting | null {
+  if (boats.length === 0 || met.includes(TRAJINERA_LURE.id)) return null;
+  let distance = Infinity;
+  let flat = 0;
+  for (const boat of boats) {
+    for (let index = 0; index < boat.lures.length; index++, flat++) {
+      // INVARIANT: lures.lures is createLureState(boats)'s order, so flat indexes the same lure.
+      if (lures.lures[flat].up) continue;
+      distance = Math.min(distance, distanceTo(lureAt(boat, index, elementTime, reduced), pos));
+    }
+  }
+  return distance === Infinity ? null : { id: TRAJINERA_LURE.id, distance, meetRange: LURE_MEET_RANGE };
+}
+
+/**
+ * The drag net as the axolotl at `pos` sees it (issue #108, ND-2): the shape distance to the nearest
+ * stretch and DRAG_NET_MEET_RANGE. Null when the trip has no drag nets or the net is in `met`.
+ */
+function dragNetSighting(nets: readonly DragNetSpawn[], pos: Point, met: readonly string[]): ThreatSighting | null {
+  if (nets.length === 0 || met.includes(DRAG_NET.id)) return null;
+  let distance = Infinity;
+  for (const net of nets) distance = Math.min(distance, shapeDistance(pos, net.dragNet.stretch));
+  return { id: DRAG_NET.id, distance, meetRange: DRAG_NET_MEET_RANGE };
+}
+
+/**
+ * `state.met` with the ids of the hazards, moving hazards, predators and elements the axolotl at
+ * `input.axolotlPos` meets now at `elementTime` appended, in sighting order, then the trajinera lure
+ * (lureSighting, with the lures `lures`) and the drag net (dragNetSighting). Runs every swimming
+ * frame, so it returns `state.met` itself when nothing new is met.
  */
 function meetThreats(
-  met: string[],
+  state: TripState,
   encounter: EncounterState,
-  elements: readonly ElementSpawn[],
-  pos: Point,
+  lures: LureState,
+  input: TripInput,
   elementTime: number,
   ctx: EncounterContext,
 ): string[] {
-  const sightings = unmetSightings(encounter, elements, pos, met, elementTime, ctx);
+  const { met } = state;
+  const pos = input.axolotlPos;
+  const sightings = unmetSightings(encounter, state.elements, pos, met, elementTime, ctx);
+  const lure = lureSighting(state.fishingBoats, lures, pos, met, elementTime, input.reduced);
+  if (lure !== null) sightings.push(lure);
+  const net = dragNetSighting(state.dragNets, pos, met);
+  if (net !== null) sightings.push(net);
   if (sightings.length === 0) return met;
   const metNow = metThreatIds(pos, encounter.safeArea, sightings);
   return metNow.length === 0 ? met : [...met, ...metNow];
 }
 
 /** How many `hit` events, each a leg lost, are in `events`. Runs every swimming frame, so it allocates nothing. */
-function countHits(events: readonly EncounterEvent[]): number {
+function countHits(events: readonly FishingEvent[]): number {
   let hitCount = 0;
   for (const event of events) {
     if (event.type === 'hit') hitCount += 1;
@@ -966,8 +1148,9 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   if (catcher !== undefined) return startToss(state, catcher, input, step, ctx);
   const encountered = stepEncounter(state.encounter, input.axolotlPos, step, ctx.encounter);
   const murky = stepMurky(state.murkyTimer, encountered.state, input.axolotlPos, step, ctx.encounter);
-  const { encounter } = murky;
-  const allEvents = murky.events.length === 0 ? encountered.events : [...encountered.events, ...murky.events];
+  const fishing = stepFishing(state, murky.encounter, input, step, elementTime, ctx.encounter);
+  const { encounter } = fishing;
+  const allEvents = joinEvents(encountered.events, joinEvents(murky.events, fishing.events));
   const events: TripEvent[] = allEvents.filter(isPassedEvent);
   const legsLost = state.legsLost + countHits(allEvents);
   const murkyTimer = murky.timer;
@@ -989,6 +1172,8 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
         ghostNets,
         elementTime,
         murkyTimer,
+        lures: createLureState(state.fishingBoats),
+        netCatches: noNetCatches(state.dragNets),
       },
       events,
     };
@@ -997,7 +1182,7 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const pickup = pickUpNearby({ ...state, ...pots }, input.axolotlPos, ctx.finds, events);
   const rescued = stepRescue({ ...state, ...pickup }, input.axolotlPos, step, events);
   const ghostNets = stepSnag(state.ghostNets, input.axolotlPos, step, elementTime, events);
-  const met = meetThreats(state.met, encounter, state.elements, input.axolotlPos, elementTime, ctx.encounter);
+  const met = meetThreats(state, encounter, fishing.lures, input, elementTime, ctx.encounter);
   const glow = stepGlowPlants(state, input.axolotlPos, step);
   const boats =
     state.trajineras === null
@@ -1018,6 +1203,8 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
     elementTime,
     trajineras: boats.lane,
     murkyTimer,
+    lures: fishing.lures,
+    netCatches: fishing.netCatches,
   };
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
   const stepped: TripStepResult = { state: next, events };
@@ -1058,6 +1245,113 @@ function stepMurky(
   if (!ticked.legDue || patch === undefined) return { timer: ticked.timer, encounter, events: NO_ENCOUNTER_EVENTS };
   const hit = hitEncounter(encounter, MURKY_WATER.id, hazardCentre(patch.shape), ctx);
   return { timer: ticked.timer, encounter: hit.state, events: hit.events };
+}
+
+/** `first` then `second`; either one itself when the other is empty, so a step with no extra events allocates nothing. */
+function joinEvents(first: readonly FishingEvent[], second: readonly FishingEvent[]): readonly FishingEvent[] {
+  if (second.length === 0) return first;
+  if (first.length === 0) return second;
+  return [...first, ...second];
+}
+
+/** The lures and sweep catches after a step, and the encounter and events after their hits. */
+interface FishingPass {
+  lures: LureState;
+  netCatches: (number | null)[];
+  encounter: EncounterState;
+  events: readonly FishingEvent[];
+}
+
+/**
+ * Steps the trajinera lures (stepLures), then the drag nets (stepDragNets), with the encounter after
+ * this step's murky water (issue #108). A trip with neither, or an encounter whose trip is over,
+ * returns the state's own lures and sweep catches and `encounter` itself with no events.
+ */
+function stepFishing(
+  state: TripState,
+  encounter: EncounterState,
+  input: TripInput,
+  step: number,
+  elementTime: number,
+  ctx: EncounterContext,
+): FishingPass {
+  const { lures, netCatches } = state;
+  if (encounter.tripOver || (state.fishingBoats.length === 0 && state.dragNets.length === 0)) {
+    return { lures, netCatches, encounter, events: NO_ENCOUNTER_EVENTS };
+  }
+  const events: FishingEvent[] = [];
+  const lured = stepLures(state, encounter, input, step, elementTime, ctx, events);
+  const netted = stepDragNets(state, lured.encounter, input.axolotlPos, elementTime, ctx, events);
+  return { lures: lured.lures, netCatches: netted.netCatches, encounter: netted.encounter, events };
+}
+
+/**
+ * Ticks the pulled-up lures (tickLures), then eats the lures in reach of `input.head` (eatLure) at
+ * `elementTime` (issue #108, ND-1): a tug pushes `lureTug` and lands one hit with sourceId
+ * 'trajinera-lure' from the lure where it hung, then the hit's events. Throws when the trip has
+ * fishing boats and `input.head` is absent.
+ */
+function stepLures(
+  state: TripState,
+  encounter: EncounterState,
+  input: TripInput,
+  step: number,
+  elementTime: number,
+  ctx: EncounterContext,
+  events: FishingEvent[],
+): { lures: LureState; encounter: EncounterState } {
+  const boats = state.fishingBoats;
+  if (boats.length === 0) return { lures: state.lures, encounter };
+  const { head, reduced } = input;
+  if (head === undefined) throw new Error(`stepTrip: ${state.areaId} has fishing boats, so a swimming step needs input.head`);
+  const ticked = tickLures(state.lures, boats, head, elementTime, step, reduced);
+  const tug = eatLure(ticked, boats, head, elementTime, reduced);
+  if (tug === null) return { lures: ticked, encounter };
+  const at = lureHangAt(boats, tug.lureId, elementTime, reduced);
+  events.push({ type: 'lureTug', lureId: tug.lureId, at });
+  const hit = hitEncounter(encounter, TRAJINERA_LURE.id, { x: at.x, y: at.y }, ctx);
+  events.push(...hit.events);
+  return { lures: tug.state, encounter: hit.state };
+}
+
+/** Where lure `lureId` of `boats` hangs at `elementTime` (lureAt). Throws when no boat has it. */
+function lureHangAt(boats: readonly FishingBoatSpawn[], lureId: string, elementTime: number, reduced: boolean): Point {
+  for (const boat of boats) {
+    const index = boat.lures.findIndex((lure) => lure.id === lureId);
+    if (index >= 0) return lureAt(boat, index, elementTime, reduced);
+  }
+  throw new Error(`trip: lure ${lureId} is on no fishing boat`);
+}
+
+/**
+ * Checks each drag net, in stretch order, for a catch of the axolotl centre `pos` at `elementTime`
+ * (dragNetCatch, issue #108, ND-2), stopping once the trip is over: a catch keeps its sweep number in
+ * the stretch's slot of the sweep catches, pushes `netCatch` and lands one hit with sourceId
+ * 'drag-net' from `pos`, then the hit's events. The sweep catches are the state's own array when no
+ * net caught.
+ */
+function stepDragNets(
+  state: TripState,
+  encounter: EncounterState,
+  pos: Point,
+  elementTime: number,
+  ctx: EncounterContext,
+  events: FishingEvent[],
+): { netCatches: (number | null)[]; encounter: EncounterState } {
+  let netCatches = state.netCatches;
+  let current = encounter;
+  for (const [index, net] of state.dragNets.entries()) {
+    if (current.tripOver) break;
+    const sweep = dragNetCatch(net, pos, elementTime, netCatches[index]);
+    if (sweep === null) continue;
+    if (netCatches === state.netCatches) netCatches = [...state.netCatches];
+    netCatches[index] = sweep;
+    events.push({ type: 'netCatch', stretchId: net.id, at: { x: pos.x, y: pos.y } });
+    const hit = hitEncounter(current, DRAG_NET.id, { x: pos.x, y: pos.y }, ctx);
+    events.push(...hit.events);
+    current = hit.state;
+  }
+  return { netCatches, encounter: current };
 }
 
 /**

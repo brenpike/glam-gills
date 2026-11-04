@@ -18,11 +18,13 @@ import {
   type SnackFrame,
   type SnackWander,
 } from './collectibles';
+import { dragNetSweep } from './dragNets';
 import { drawnAxolotl } from './drawnAxolotl';
 import { SHRIMP_FACT, SHRIMP_MEET_RANGE, TADPOLE_FACT, TADPOLE_MEET_RANGE } from './factCards';
 import { elementSweep, hazardSweep, type HazardRect, type HazardShape } from './hazards';
 import { zoneThreats, type Threat } from './hiding';
 import { legSwimTuning } from './legs';
+import { lureLinePath, lurePath } from './lures';
 import { movingHazardSweep } from './movingHazards';
 import { createSnackDarts, type SnackDartState } from './snackDart';
 import { stepSwim, type SwimEnv, type SwimState } from './swimPhysics';
@@ -92,21 +94,26 @@ export interface MobileSnackAvoid {
   homeSpot: HomeSpot;
   safeArea: SafeArea;
   currents: readonly CurrentZone[];
-  /** Each mat pair's whole sweep (elementSweep); a box overlapping one, edges included, is not clear. */
+  /**
+   * Each mat pair's whole sweep (elementSweep), then each drag-net stretch (dragNetSweep; issue
+   * #108, ND-2); a box overlapping one, edges included, is not clear.
+   */
   mats: readonly HazardRect[];
   /** Where each plastic worm is now; a box keeps SNACK_HAZARD_CLEARANCE px from each. */
   worms: readonly Readonly<Point>[];
   /**
    * Shapes a box keeps SNACK_HAZARD_CLEARANCE px from: every hazard by hazardSweep (a drifting
-   * net's whole drift path), every element sweep, every moving hazard's sweep, and every rock wall
-   * and side room (issue #105, ND-8).
+   * net's whole drift path), every element sweep and drag-net stretch, every moving hazard's sweep,
+   * every rock wall and side room (issue #105, ND-8), and every trajinera lure's whole path and line
+   * (lurePath, lureLinePath; issue #108, ND-1).
    */
   keepAway: readonly HazardShape[];
   /**
    * Every hazard by hazardSweep (a drifting net's whole drift path), then every rock wall and side
-   * room (issue #105, ND-8), which mobileSnackHardClear() keeps SNACK_HAZARD_CLEARANCE px from
-   * (issue #131, ND-7). mobileSnackAvoid() always sets it; absent, mobileSnackHardClear() uses
-   * `keepAway`, which holds every hazard sweep and more.
+   * room (issue #105, ND-8), then every trajinera lure's whole path and line (issue #108, ND-1),
+   * which mobileSnackHardClear() keeps SNACK_HAZARD_CLEARANCE px from (issue #131, ND-7).
+   * mobileSnackAvoid() always sets it; absent, mobileSnackHardClear() uses `keepAway`, which holds
+   * every hazard sweep and more.
    */
   hazards?: readonly HazardShape[];
   /** The zone's B10 threats (zoneThreats); a box stays farther than each one's strike range. */
@@ -396,11 +403,18 @@ function elementSweeps(zone: Pick<ZoneLayout, 'elements'>): HazardRect[] {
   });
 }
 
+/** Each lure's whole path and then its line (issue #108, ND-1), boat by boat and lure by lure, in data order. */
+function lureShapes(zone: Partial<Pick<ZoneLayout, 'fishingBoats'>>): HazardRect[] {
+  return (zone.fishingBoats ?? []).flatMap((boat) => boat.lures.flatMap((_, index) => [lurePath(boat, index), lureLinePath(boat, index)]));
+}
+
 /**
  * What a mobile snack keeps out of in this zone (ND-26). `plasticWorms` is where each plastic worm
  * is now; absent means none beyond the zone's hazards, which already hold each worm's start.
  * Measures every moving hazard's sweep itself as well as through zoneThreats. Every rock wall and
  * side room is kept away from too (issue #105, ND-8), so no snack swims into rock or behind the pebble.
+ * Every tadpole loop, shrimp home and flick landing keeps SNACK_HAZARD_CLEARANCE px from every
+ * trajinera lure's whole path and line, and out of every drag-net stretch (issue #108, ND-1, ND-2).
  */
 export function mobileSnackAvoid(
   zone: Pick<
@@ -417,11 +431,12 @@ export function mobileSnackAvoid(
     | 'tilapia'
     | 'predatorRoutes'
   > &
-    Partial<Pick<ZoneLayout, 'rockWalls' | 'sideRooms'>>,
+    Partial<Pick<ZoneLayout, 'rockWalls' | 'sideRooms' | 'fishingBoats' | 'dragNets'>>,
   plasticWorms: readonly Readonly<Point>[] = [],
 ): MobileSnackAvoid {
-  const mats = elementSweeps(zone);
+  const mats = [...elementSweeps(zone), ...(zone.dragNets ?? []).map(dragNetSweep)];
   const hazards = zone.hazards.map(hazardSweep);
+  const lures = lureShapes(zone);
   const rock = [...(zone.rockWalls ?? []), ...(zone.sideRooms ?? [])].map(
     (wall): HazardRect => ({ kind: 'rect', x0: wall.x0, x1: wall.x1, y0: wall.y0, y1: wall.y1 }),
   );
@@ -432,8 +447,8 @@ export function mobileSnackAvoid(
     currents: zone.currents,
     mats,
     worms: plasticWorms,
-    keepAway: [...hazards, ...mats, ...(zone.movingHazards ?? []).map(movingHazardSweep), ...rock],
-    hazards: [...hazards, ...rock],
+    keepAway: [...hazards, ...mats, ...(zone.movingHazards ?? []).map(movingHazardSweep), ...rock, ...lures],
+    hazards: [...hazards, ...rock, ...lures],
     threats: zoneThreats(zone),
   };
 }
@@ -552,8 +567,8 @@ function boxClearOfWorms(box: Readonly<HazardRect>, worms: readonly Readonly<Poi
 /**
  * Whether a mobile snack's box (such as a leg box or shrimpBox) is a clear place for it (ND-26, PRD
  * open question 273): inside the bounds and below the highest wave; out of the Home Spot ring, the
- * safe area, every current and every mat sweep (edges count as inside); SNACK_HAZARD_CLEARANCE px
- * or more from every worm and every `keepAway` shape; and farther than its strike range from every
+ * safe area, every current and every `mats` rect, mat sweep or drag-net stretch (edges count as
+ * inside); SNACK_HAZARD_CLEARANCE px or more from every worm and every `keepAway` shape; and farther than its strike range from every
  * B10 threat, a route measured from its patrol loop.
  */
 export function mobileSnackClear(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boolean {
@@ -570,9 +585,10 @@ export function mobileSnackClear(box: Readonly<HazardRect>, avoid: MobileSnackAv
 
 /**
  * Whether the box meets the hard rules for every mobile snack (issue #131, ND-7): inside the bounds
- * and below the highest wave; out of the Home Spot ring, the safe area, every current and every mat
- * sweep (edges count as inside); and SNACK_HAZARD_CLEARANCE px or more from every plastic worm and
- * every hazard by hazardSweep (a ghost net by its whole drift path). Moving hazards and predators
+ * and below the highest wave; out of the Home Spot ring, the safe area, every current and every
+ * `mats` rect, mat sweep or drag-net stretch (edges count as inside); and SNACK_HAZARD_CLEARANCE px
+ * or more from every plastic worm and every `hazards` shape: every hazard by hazardSweep (a ghost
+ * net by its whole drift path), rock wall, side room and lure path and line. Moving hazards and predators
  * are left to the threat rules of tadpoleWanderClear() and shrimpHomeClear().
  */
 export function mobileSnackHardClear(box: Readonly<HazardRect>, avoid: MobileSnackAvoid): boolean {
@@ -588,8 +604,8 @@ export function mobileSnackHardClear(box: Readonly<HazardRect>, avoid: MobileSna
  * Whether a shrimp gliding in a straight line from base `from` to base `to` meets the hard rules
  * that do not move at every point on the way, its drift and bob included (issue #131, ND-7): at
  * each base between the two, its shrimpBox is inside the bounds and below the highest wave; out of
- * the Home Spot ring, the safe area, every current and every mat sweep (edges count as inside); and
- * SNACK_HAZARD_CLEARANCE px or more from every hazard by hazardSweep, as mobileSnackHardClear()
+ * the Home Spot ring, the safe area, every current and every `mats` rect (edges count as inside);
+ * and SNACK_HAZARD_CLEARANCE px or more from every `hazards` shape, as mobileSnackHardClear()
  * measures. Exact: the shrimpBox at base c meets a shape just when c meets the shape grown by the
  * shrimpBox's half size, so each rule is measured from the glide's path to its grown shape. The
  * plastic worms where they are now are left to the landing's own check, so a shrimp resting near a

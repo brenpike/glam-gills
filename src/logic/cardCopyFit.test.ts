@@ -21,6 +21,8 @@ import {
 import {
   ANCHOR_DROP_FACT,
   CARP_FACT,
+  DRAG_NET_FACT,
+  LURE_FACT,
   MUD_SEEP_FACT,
   PUNTING_POLE_FACT,
   REFUGE_FACT_CARDS,
@@ -413,9 +415,9 @@ describe('card copy fit', () => {
     expect(SORTED_AXOLOTL_NAMES[0]).toBe('Golden albino axolotl');
   });
 
-  it('brings home at most the 20 canal treasures on one trip, of the 124 in the catalogue', () => {
+  it('brings home at most the 20 canal treasures on one trip, of the 137 in the catalogue', () => {
     expect(MAX_TRIP_FINDS).toBe(20);
-    expect(SORTED_NAMES).toHaveLength(124);
+    expect(SORTED_NAMES).toHaveLength(137);
   });
 
   it.each(CANVAS_WIDTHS)(
@@ -464,7 +466,7 @@ describe('card copy fit', () => {
 });
 
 describe('area fact card copy fit', () => {
-  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor and the mud seep', () => {
+  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor, the mud seep, the trajinera lure and the drag net', () => {
     expect(AREA_FACT_CARDS.map((card) => card.id)).toEqual([
       'tilapia',
       'carp',
@@ -484,6 +486,8 @@ describe('area fact card copy fit', () => {
       'murky-water',
       'anchor-drop',
       'mud-seep',
+      'trajinera-lure',
+      'drag-net',
     ]);
   });
 
@@ -520,14 +524,20 @@ describe('area fact card copy fit', () => {
     },
   );
 
-  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440, which use the tight width', () => {
+  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440 and the trajinera lure at 320 x 440 and 460 x 320, which use the tight width', () => {
     const tightBodies = supportedCanvases().flatMap((canvas) =>
       AREA_FACT_CARDS.flatMap((card) => {
         const combination = factCardCombination(card, canvas);
         return fitCard(combination.availH, combination.sections).bodyVariant === 0 ? [] : [combination.label];
       }),
     );
-    expect(tightBodies).toEqual(['shrimp fact 320x440', 'heron fact 320x440', 'water-hyacinth fact 320x440']);
+    expect(tightBodies).toEqual([
+      'shrimp fact 320x440',
+      'heron fact 320x440',
+      'water-hyacinth fact 320x440',
+      'trajinera-lure fact 320x440',
+      'trajinera-lure fact 460x320',
+    ]);
   });
 
   it.each(['heron', 'water-hyacinth'])('fits the %s body at 320 x 440 only at the tight width', (id) => {
@@ -585,6 +595,48 @@ describe('refuge fact card copy fit (C14)', () => {
       expect(fit.clipped, card.id).toBe(false);
       expect(fit.bodyVariant, card.id).toBe(0);
     }
+  });
+});
+
+/** Area 10's fact cards (C13; issue #108): the trajinera lure and the drag net. */
+const AREA_10_FACT_CARDS: readonly Readonly<FactCard>[] = [LURE_FACT, DRAG_NET_FACT];
+
+describe('Area 10 fact card copy fit (C13)', () => {
+  it('checks the trajinera lure and the drag net fact cards', () => {
+    expect(AREA_10_FACT_CARDS.map((card) => card.id)).toEqual(['trajinera-lure', 'drag-net']);
+  });
+
+  it('fits both Area 10 fact cards on every supported canvas without clipping', () => {
+    const problems = supportedCanvases().flatMap((canvas) =>
+      AREA_10_FACT_CARDS.flatMap((card) => {
+        const combination = factCardCombination(card, canvas);
+        return fitProblems(combination, fitCard(combination.availH, combination.sections));
+      }),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  it.each([SMALLEST_CANVAS.landscape, SMALLEST_CANVAS.portrait])(
+    'shows both Area 10 fact cards in full at $cssW x $cssH',
+    (canvas) => {
+      for (const card of AREA_10_FACT_CARDS) {
+        const combination = factCardCombination(card, canvas);
+        const fit = fitCard(combination.availH, combination.sections);
+        const wrapW = factCardBodyWrapWidths(canvas.cssW)[fit.bodyVariant];
+        expect(fit.clipped, card.id).toBe(false);
+        expect(fit.bodyLines, card.id).toBe(bodyFit(card.body, wrapW).lines);
+      }
+    },
+  );
+
+  it('wraps both Area 10 fact card bodies at the body width, except the trajinera lure at 320 x 440 and 460 x 320, which uses the tight width', () => {
+    const tightBodies = supportedCanvases().flatMap((canvas) =>
+      AREA_10_FACT_CARDS.flatMap((card) => {
+        const combination = factCardCombination(card, canvas);
+        return fitCard(combination.availH, combination.sections).bodyVariant === 0 ? [] : [combination.label];
+      }),
+    );
+    expect(tightBodies).toEqual(['trajinera-lure fact 320x440', 'trajinera-lure fact 460x320']);
   });
 });
 
@@ -855,6 +907,7 @@ describe('area beaten card copy fit (H5, H8)', () => {
       'Ancient clay pot',
       'Little trajinera',
       'Little bailing bucket',
+      'Axolotl statue',
     ]);
   });
 
