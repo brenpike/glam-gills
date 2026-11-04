@@ -1,5 +1,5 @@
 /**
- * Where the boats at the surface are drawn, and where the moored hulls fit between them (Areas 8 to 10).
+ * Where the boats at the surface are drawn, and where the moored hulls fit between them (Areas 8 to 11).
  * Every surface boat has painted art wider than the zone it blocks: a punting pole's bow and
  * shadow reach well past its thin touch zone, a gliding trajinera's hull and shadow frames
  * reach past its route, a bailing boat's hull and its bucket's frames (Area 9, issue #107) need

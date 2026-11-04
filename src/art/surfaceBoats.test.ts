@@ -1,13 +1,14 @@
 /**
- * Surface boats and moored hull slots (Areas 8 to 10): the x-extent of every surface boat's art, and the
+ * Surface boats and moored hull slots (Areas 8 to 11): the x-extent of every surface boat's art, and the
  * whole moored hulls that fit in each bank overhang rect clear of them. Unit cases run on synthetic
- * spans; the layout cases run on the current Area 8 and Area 10 data, read generically so they hold
- * when the routes move. No Phaser is loaded.
+ * spans; the layout cases run on the current Area 8, Area 10 and Area 11 data, read generically so
+ * they hold when the routes move. No Phaser is loaded.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { AREAS, habitatById, type AreaData } from '../logic/areas';
 import { bailingBoatSpawn } from '../logic/bailingBuckets';
 import { DEEP_CANAL_3_LAYOUT } from '../logic/deepCanal3Layout';
+import { DEEP_CANAL_4_CORMORANT, DEEP_CANAL_4_LAYOUT } from '../logic/deepCanal4Layout';
 import { DEEP_CANAL_LAYOUT } from '../logic/deepCanalLayout';
 import { dragNetSpawn } from '../logic/dragNets';
 import { LURES, fishingBoatSpawn } from '../logic/lures';
@@ -22,6 +23,7 @@ import {
   BAILING_RIPPLES_TEX,
   BAILING_SHADOW_TEX,
 } from './drawBailingBucket';
+import { CORMORANT_TEX } from './drawCormorant';
 import { MOORED_HULL_TEX, TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
 import { DRAG_NET_BOAT_TEX, DRAG_NET_MOTION } from './drawDragNet';
 import { FISHING_BOAT_TEX, FISHING_BOAT_W, FISHING_SHADOW_TEX } from './drawFishingTrajinera';
@@ -326,6 +328,74 @@ describe('surface boats on the current Area 10 layout (issue #108)', () => {
     for (const boat of boats) {
       for (const rect of rects) {
         expect(isClearOf(boat, rect), `${boat.id} ${boat.x0}..${boat.x1} and moored row ${rect.x0}..${rect.x1}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('surface boats on the current Area 11 layout (issue #112)', () => {
+  const spans = surfaceBoatSpans(DEEP_CANAL_4_LAYOUT);
+  const rects = DEEP_CANAL_4_LAYOUT.bankOverhangs ?? [];
+  const hullW = MOORED_HULL_TEX.w;
+  /** A floating cormorant's frame reaches this far either side of its x: it faces either way. */
+  const cormorantHalfW = Math.max(CORMORANT_TEX.originX, CORMORANT_TEX.w - CORMORANT_TEX.originX);
+  const stretches = DEEP_CANAL_4_LAYOUT.predatorRoutes
+    .filter((route) => route.species === DEEP_CANAL_4_CORMORANT)
+    .map((route) => {
+      const xs = route.waypoints.map((point) => point.x);
+      return { id: route.id, x0: Math.min(...xs) - cormorantHalfW, x1: Math.max(...xs) + cormorantHalfW };
+    });
+
+  it('gives every surface boat a span: its anchor drops and fishing trajineras', () => {
+    const fishing = DEEP_CANAL_4_LAYOUT.fishingBoats ?? [];
+    expect(fishing.length).toBeGreaterThan(0);
+    const surfaceHazards = (DEEP_CANAL_4_LAYOUT.movingHazards ?? []).filter((spawn) => movingHazardBaseY(spawn) === SURF);
+    expect(surfaceHazards.length).toBeGreaterThan(0);
+    expect(spans.map((s) => s.id)).toEqual([...surfaceHazards.map((hazard) => hazard.id), ...fishing.map((boat) => boat.id)]);
+    for (const boat of fishing) {
+      const boatSpan = spans.find((s) => s.id === boat.id);
+      expect(boatSpan?.x0, boat.id).toBeLessThan(boat.x0);
+      expect(boatSpan?.x1, boat.id).toBeGreaterThan(boat.x1);
+    }
+  });
+
+  it('keeps every two surface boats at least SURFACE_BOAT_GAP apart (ADR 0036)', () => {
+    expect(findCrowdedPairs(spans)).toEqual([]);
+  });
+
+  it('keeps every moored hull inside its rect and at least SURFACE_BOAT_GAP from every surface boat, never stretched', () => {
+    expect(rects.length).toBeGreaterThan(0);
+    for (const rect of rects) {
+      const slots = mooredHullSlots(rect, spans, hullW);
+      for (const slotX of slots) {
+        const label = `hull at ${slotX} in ${rect.x0}..${rect.x1}`;
+        expect(slotX, label).toBeGreaterThanOrEqual(rect.x0);
+        expect(slotX + hullW, label).toBeLessThanOrEqual(rect.x1);
+        for (const boat of spans) {
+          expect(isClearOf({ x0: slotX, x1: slotX + hullW }, boat), `${label} against ${boat.id} ${boat.x0}..${boat.x1}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('still sets some whole hulls in Area 11; a row split by an anchor drop may get the shade only', () => {
+    const total = rects.reduce((sum, rect) => sum + mooredHullSlots(rect, spans, hullW).length, 0);
+    expect(total).toBeGreaterThan(0);
+  });
+
+  it('keeps every fishing trajinera at least SURFACE_BOAT_GAP from every moored row', () => {
+    for (const boat of surfaceBoatSpans({ fishingBoats: DEEP_CANAL_4_LAYOUT.fishingBoats })) {
+      for (const rect of rects) {
+        expect(isClearOf(boat, rect), `${boat.id} ${boat.x0}..${boat.x1} and moored row ${rect.x0}..${rect.x1}`).toBe(true);
+      }
+    }
+  });
+
+  it('keeps each cormorant\'s stretch, widened by its frame, at least SURFACE_BOAT_GAP from every surface boat and moored row', () => {
+    expect(stretches).toHaveLength(3);
+    for (const stretch of stretches) {
+      for (const boat of [...spans, ...rects.map((rect) => ({ id: `moored row ${rect.x0}..${rect.x1}`, x0: rect.x0, x1: rect.x1 }))]) {
+        expect(isClearOf(stretch, boat), `${stretch.id} ${stretch.x0}..${stretch.x1} and ${boat.id} ${boat.x0}..${boat.x1}`).toBe(true);
       }
     }
   });

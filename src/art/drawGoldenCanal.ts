@@ -10,8 +10,9 @@
  * and no randomness, so a look that paints none of this keeps its random draws. Each decoration has a
  * place in world x (the placement tables below), and a chunk paints every decoration that reaches into
  * it, in world coordinates less the chunk's left edge, so a decoration crossing a chunk edge is drawn
- * whole in both chunks and meets itself there. The placements are provisional: STEP-010 tunes them
- * against the real Area 11 layout (10 by 2 screens, a U-turn).
+ * whole in both chunks and meets itself there. The placements fit the Area 11 layout (10 by 2
+ * screens, a U-turn): clear of the cormorants' stretches, the surface boats, the lures and the
+ * gameplay places, as goldenCanalPlacement.test.ts checks.
  *
  * Readability (guide 2): the axolotl stays the brightest, warmest thing. Every decoration fill is
  * darker than the Leucistic belly and less colourful (OKLCH chroma) than the Leucistic body, and
@@ -81,7 +82,7 @@ export const GOLDEN_DECOR_FILLS: readonly string[] = [
 const DECOR_LW = LW * 0.4;
 
 // ---------------------------------------------------------------------------
-// Placement tables (world x, provisional)
+// Placement tables (world x)
 // ---------------------------------------------------------------------------
 
 /** A papel picado banner: a string from `x0` to `x1` hung at `y`, sagging `sag` px at its middle. */
@@ -92,14 +93,19 @@ export interface BannerSpec {
   readonly sag: number;
 }
 
-/** Papel picado banners across the sky strip (y 0 to 86). Several cross a chunk edge. */
+/**
+ * Papel picado banners across the sky strip (y 0 to 86), hung high enough that every flag clears
+ * the top of a floating cormorant's frame. Several cross a chunk edge.
+ */
 export const PAPEL_PICADO_BANNERS: readonly BannerSpec[] = [
-  { x0: 150, x1: 410, y: 8, sag: 10 },
-  { x0: 820, x1: 1130, y: 10, sag: 12 },
-  { x0: 1720, x1: 2080, y: 8, sag: 12 },
-  { x0: 2560, x1: 2820, y: 10, sag: 9 },
-  { x0: 3200, x1: 3540, y: 8, sag: 12 },
-  { x0: 4140, x1: 4480, y: 10, sag: 11 },
+  { x0: 80, x1: 340, y: 5, sag: 9 },
+  { x0: 430, x1: 870, y: 4, sag: 10 },
+  { x0: 1225, x1: 1370, y: 6, sag: 8 },
+  { x0: 2180, x1: 2480, y: 5, sag: 9 },
+  { x0: 3120, x1: 3330, y: 4, sag: 10 },
+  { x0: 3670, x1: 3900, y: 6, sag: 8 },
+  { x0: 4190, x1: 4340, y: 5, sag: 9 },
+  { x0: 4560, x1: 4750, y: 4, sag: 10 },
 ];
 
 /** A surface decoration centred at world `x`, `w` px wide. */
@@ -110,22 +116,29 @@ export interface SurfaceSpec {
 
 /** Marigold petal patches floating just under the surface line. Several cross a chunk edge. */
 export const MARIGOLD_PATCHES: readonly SurfaceSpec[] = [
-  { x: 300, w: 64 },
-  { x: 950, w: 70 },
-  { x: 1660, w: 56 },
-  { x: 2240, w: 68 },
-  { x: 2880, w: 60 },
-  { x: 3620, w: 66 },
-  { x: 4300, w: 58 },
+  { x: 390, w: 60 },
+  { x: 1300, w: 64 },
+  { x: 2212, w: 56 },
+  { x: 3292, w: 56 },
+  { x: 3850, w: 56 },
 ];
 
 /** Water hyacinth rafts floating at the surface, roots hanging. Scenery only, never cover. */
 export const HYACINTH_RAFTS: readonly SurfaceSpec[] = [
-  { x: 560, w: 80 },
-  { x: 1440, w: 88 },
-  { x: 2560, w: 76 },
-  { x: 3330, w: 84 },
-  { x: 4020, w: 80 },
+  { x: 500, w: 64 },
+  { x: 1816, w: 48 },
+  { x: 3720, w: 72 },
+  { x: 4250, w: 72 },
+];
+
+/**
+ * Stretches of stake-and-weave chinampa wall, with their ahuejote root curtains, along the willow
+ * banks. A bank chunk paints the wall only where a stretch reaches it, and only inside the bank's
+ * rounded ends, so a bank over a surface boat or by a moving hazard keeps its willows but no wall.
+ */
+export const BANK_WALLS: readonly SurfaceSpec[] = [
+  { x: 720, w: 232 },
+  { x: 3178, w: 116 },
 ];
 
 /** A sunken trajinera arch standing on the bed at world `x`, leaning by `tilt` radians. */
@@ -134,12 +147,13 @@ export interface ArchSpec {
   readonly tilt: number;
 }
 
-/** Sunken trajinera arches on the bed. One crosses a chunk edge. */
+/** Sunken trajinera arches on the bed, a screen or more from the sunken hull cave. One crosses a chunk edge. */
 export const SUNKEN_ARCHES: readonly ArchSpec[] = [
-  { x: 760, tilt: -0.08 },
-  { x: 1920, tilt: 0.06 },
-  { x: 3300, tilt: -0.05 },
-  { x: 4380, tilt: 0.09 },
+  { x: 620, tilt: -0.08 },
+  { x: 1440, tilt: 0.06 },
+  { x: 2180, tilt: -0.05 },
+  { x: 2770, tilt: 0.04 },
+  { x: 3560, tilt: 0.09 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -170,9 +184,10 @@ function spanReachesChunk(x0: number, x1: number, wx0: number): boolean {
 
 /**
  * Paint the golden-hour decorations of one chunk. A row with the sky gets the banners, the marigold
- * patches, the hyacinth rafts and, on a bank chunk, the bank wall and its root curtains; a row with
- * the bed gets the sunken arches. The first and last chunks of a row with the sky or the bed get an
- * edge chinampa wall. A middle row paints nothing: its one flat chunk is shared by every column.
+ * patches, the hyacinth rafts and, on a bank chunk, each bank wall stretch (BANK_WALLS) that reaches
+ * it, with its root curtains; a row with the bed gets the sunken arches. The first and last chunks
+ * of a row with the sky or the bed get an edge chinampa wall. A middle row paints nothing: its one
+ * flat chunk is shared by every column.
  */
 export function paintGoldenDecor(ctx: CanvasRenderingContext2D, chunk: GoldenChunk): void {
   if (!chunk.hasSky && !chunk.hasBed) return;
@@ -187,7 +202,11 @@ export function paintGoldenDecor(ctx: CanvasRenderingContext2D, chunk: GoldenChu
     for (const patch of MARIGOLD_PATCHES) {
       if (spanReachesChunk(patch.x - patch.w / 2 - 8, patch.x + patch.w / 2 + 8, wx0)) paintMarigoldPatch(ctx, patch, wx0);
     }
-    if (chunk.bank !== null) paintBankWall(ctx, chunk.bank, wx0);
+    if (chunk.bank !== null) {
+      for (const wall of BANK_WALLS) {
+        if (spanReachesChunk(wall.x - wall.w / 2, wall.x + wall.w / 2, wx0)) paintBankWall(ctx, chunk.bank, wall, wx0);
+      }
+    }
   }
   if (chunk.hasBed) {
     for (const arch of SUNKEN_ARCHES) {
@@ -428,14 +447,19 @@ function curtainSegs(x: number, k: number): Seg[] {
 }
 
 /**
- * Paint the stake-and-weave chinampa wall along a willow bank, across the water line, and the
- * ahuejote root curtains hanging under it. A rounded bank end stops the wall inside it. The backing
- * and the withies are painted stake gap by stake gap on the world-x stake grid, so the gaps that
- * cross a chunk edge are painted the same in both chunks.
+ * Paint one stretch of stake-and-weave chinampa wall (`wall`, in world x) along a willow bank,
+ * across the water line, and the ahuejote root curtains hanging under it. A rounded bank end stops
+ * the wall inside it. The backing and the withies are painted stake gap by stake gap on the world-x
+ * stake grid, so the gaps that cross a chunk edge are painted the same in both chunks.
  */
-function paintBankWall(ctx: CanvasRenderingContext2D, bank: { readonly capLeft: boolean; readonly capRight: boolean }, wx0: number): void {
-  const x0 = bank.capLeft ? BANK_CAP_INSET : -BANK_OVERRUN;
-  const x1 = bank.capRight ? VIEW_W - BANK_CAP_INSET : VIEW_W + BANK_OVERRUN;
+function paintBankWall(
+  ctx: CanvasRenderingContext2D,
+  bank: { readonly capLeft: boolean; readonly capRight: boolean },
+  wall: SurfaceSpec,
+  wx0: number,
+): void {
+  const x0 = Math.max(bank.capLeft ? BANK_CAP_INSET : -BANK_OVERRUN, wall.x - wall.w / 2 - wx0);
+  const x1 = Math.min(bank.capRight ? VIEW_W - BANK_CAP_INSET : VIEW_W + BANK_OVERRUN, wall.x + wall.w / 2 - wx0);
   const firstK = Math.ceil((wx0 + x0) / BANK_STAKE_STEP);
   const lastK = Math.floor((wx0 + x1) / BANK_STAKE_STEP);
   const curtains: Seg[] = [];
