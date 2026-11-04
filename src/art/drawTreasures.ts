@@ -3,8 +3,8 @@
  * Decorations and Wearables, the eleven pond ones (issue #75), the eleven pond
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
- * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), and one Paint shell per
- * Dream colour.
+ * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
+ * Area 10 ones (issue #108), and one Paint shell per Dream colour.
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -31,7 +31,7 @@
  * also the reduced-motion version. Presentational only: no Phaser. Every value
  * is derived (provisional).
  */
-import { INK, PEBBLE_A } from './palette';
+import { EYE, INK, PEBBLE_A } from './palette';
 import { TAU, ell, frameFromBounds, inkMany, line, seg, shape, type Seg, type TexSize } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
 import {
@@ -173,6 +173,25 @@ import {
   WATERFALL_ROCK,
   WATERFALL_WATER,
   WIND_CHIME_HOOK,
+  AXOLOTL_STATUE_STONE,
+  BAND_FIGURE_BODY,
+  BAND_FIGURE_HAT,
+  CANDLE_FLAME_FILL,
+  CANDLE_FLOAT_FILL,
+  CANDLE_WAX_FILL,
+  CHAMPION_CROWN_FILL,
+  CONFETTI_SCARF_FILL,
+  FESTIVAL_FLAG_FILLS,
+  FESTIVAL_PLINTH,
+  FESTIVAL_SHIRT_FILL,
+  HERO_MEDAL_FILL,
+  HERO_MEDAL_RIBBON,
+  MARIGOLD_BOAT_HULL,
+  PARTY_HAT_FILL,
+  SNOW_GLOBE_AXOLOTL,
+  SNOW_GLOBE_FLECK,
+  SNOW_GLOBE_GLASS,
+  SNOW_GLOBE_WEED,
   type DreamSwatchId,
 } from './treasurePalette';
 
@@ -338,7 +357,7 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * eleven pond ones and the eleven pond Area 3 ones (the text after `pond/`), then the eleven chinampa
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
  * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
- * Area 8 ones and the eleven deep canal Area 9 ones (the text after `deep-canal/`), in catalogue order.
+ * Area 8 ones, the eleven deep canal Area 9 ones and the eleven deep canal Area 10 ones (the text after `deep-canal/`), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -440,7 +459,18 @@ export type TreasureItemSlug =
   | 'paper-lantern-boat'
   | 'tail-bell'
   | 'floating-music-stage'
-  | 'golden-boatman-cape';
+  | 'golden-boatman-cape'
+  | 'festival-flag-string'
+  | 'floating-candle'
+  | 'party-hat'
+  | 'confetti-scarf'
+  | 'axolotl-statue'
+  | 'marigold-boat'
+  | 'festival-shirt'
+  | 'mariachi-band-figures'
+  | 'hero-medal'
+  | 'refuge-snow-globe'
+  | 'champion-crown';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -545,14 +575,26 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'tail-bell',
   'floating-music-stage',
   'golden-boatman-cape',
+  'festival-flag-string',
+  'floating-candle',
+  'party-hat',
+  'confetti-scarf',
+  'axolotl-statue',
+  'marigold-boat',
+  'festival-shirt',
+  'mariachi-band-figures',
+  'hero-medal',
+  'refuge-snow-globe',
+  'champion-crown',
 ];
 
 /**
- * All one hundred and twenty-four icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and thirty-seven icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
- * items, then the twenty-four Paint shells in Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the
- * spring cave's; the last four, Jade, Fiesta shine, Olive and Lantern shine, the deep canal's).
+ * items, the eleven deep canal Area 10 items, then the twenty-six Paint shells in Dream order (Moonstone, Chocolate,
+ * Crystal shine and Glowworm are the spring cave's; the last six, Jade, Fiesta shine, Olive, Lantern shine, Peach and
+ * Confetti shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -639,6 +681,10 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The six deep canal Area 9 Decorations (issue #107) end on the same 12.6 edge: the Clay jug's foot and the Little
  * bailing bucket's base (Floor items), the weights of the Floating cork, the Paper lantern boat and the Floating music
  * stage (Floating items, so the box edge) and the foot of the Painted name sign's board (a Hanging item).
+ * The six deep canal Area 10 Decorations (issue #108) end on the same 12.6 edge: the Axolotl statue's plinth, the
+ * Mariachi band figures' plinth and the Refuge snow globe's base (Floor items), the weights of the Floating candle and
+ * the Marigold boat (Floating items, so the box edge) and the lowest flag tips of the Festival flag string (a Hanging
+ * item).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -690,6 +736,12 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'painted-name-sign': 12.6,
   'paper-lantern-boat': 12.6,
   'floating-music-stage': 12.6,
+  'festival-flag-string': 12.6,
+  'floating-candle': 12.6,
+  'axolotl-statue': 12.6,
+  'marigold-boat': 12.6,
+  'mariachi-band-figures': 12.6,
+  'refuge-snow-globe': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -817,13 +869,14 @@ function shine(pen: Pen, x: number, y: number, rx: number, ry: number, rot = 0):
   });
 }
 
-/** A round gem of radius 2.5 with a small glint. */
-function gem(pen: Pen, x: number, y: number, fill: string): void {
+/** A round gem of radius 2.5 (or `r`, for a gem on a small part) with a small glint. */
+function gem(pen: Pen, x: number, y: number, fill: string, r: number = GEM_R): void {
   const { ctx, k } = pen;
+  const f = r / GEM_R;
   detail(pen, () => {
-    shape(ctx, ellipse(x * k, y * k, GEM_R * k, GEM_R * k), fill, DETAIL_LW);
+    shape(ctx, ellipse(x * k, y * k, r * k, r * k), fill, DETAIL_LW);
     ctx.fillStyle = GEM_GLINT;
-    ctx.fill(ellipse((x - 0.8) * k, (y - 0.9) * k, 0.8 * k, 0.5 * k, -0.7));
+    ctx.fill(ellipse((x - 0.8 * f) * k, (y - 0.9 * f) * k, 0.8 * f * k, 0.5 * f * k, -0.7));
   });
 }
 
@@ -4165,6 +4218,561 @@ function paintGoldenBoatmanCape(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 10 items (issue #108)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Every outer fill is one of the Area 10 fills of treasurePalette.ts
+// (9:1 or more with ink); the five Wearables' worn looks use the same names. Area 10 is the festival after the work.
+// Shape carries the meaning: swags of little flags, a candle on a flower float, a cone hat with a pompom, a scarf
+// with two crossed tails, a stone axolotl on a plinth, a boat heaped with marigolds, a puff-sleeved blouse, three
+// little musicians in sombreros, a medal on a V ribbon, a globe on a base and a crown of ball-topped points. The
+// Peach and Confetti shine Paint shells use the generic Paint shell painter (below).
+
+/** y of a swag's string at x: a parabola from `endY` at x = +-half to `midY` at x = 0 (a quadratic curve with its control point over the middle). */
+function swagY(x: number, half: number, endY: number, midY: number): number {
+  const u = x / half;
+  return midY + (endY - midY) * u * u;
+}
+
+/** A swag's string as a path: from (-half, endY) sagging to (0, midY) and back up to (half, endY). */
+function flagSwagPath(half: number, endY: number, midY: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(-half, endY);
+  p.quadraticCurveTo(0, 2 * midY - endY, half, endY);
+  return p;
+}
+
+/** The Festival flag string's flags: each is a rounded triangle this wide and this tall, pointing down. */
+const FLAG_W = 5.6;
+const FLAG_H = 6.4;
+const FLAG_TIP_R = 1;
+const FLAG_TOP_R = 0.8;
+/** How far the flag's top edge hangs below its string, so the string shows above it. */
+const FLAG_HANG = 0.4;
+/** The two swags: how far out their strings run, where they end, and where they sag to (the lowest tips are the 12.6 edge). */
+const FLAG_HALF = 12.2;
+const FLAG_UPPER_END_Y = -6;
+const FLAG_UPPER_MID_Y = -1;
+const FLAG_LOWER_END_Y = 1.4;
+/** The lower swag sags until its lowest flag tips reach the 12.6 edge. */
+const FLAG_LOWER_MID_Y = (() => {
+  const x = 2.4;
+  const u2 = (x / FLAG_HALF) ** 2;
+  // The lowest rounded tip is FLAG_H below the string there: string(x) = 12.6 - FLAG_H - FLAG_HANG.
+  const want = AREA3_FOOT_Y - FLAG_H - FLAG_HANG;
+  return (want - FLAG_LOWER_END_Y * u2) / (1 - u2);
+})();
+
+/**
+ * How far the flag's sharp corner is set below its rounded tip. A rounded tip sits r * (1 / sin(half angle) - 1) above
+ * its corner, and the half angle itself depends on how far down the corner is, so the two settle together.
+ */
+const FLAG_TIP_OVER = (() => {
+  let over = 0;
+  for (let i = 0; i < 12; i++) over = FLAG_TIP_R * (1 / Math.sin(Math.atan(FLAG_W / 2 / (FLAG_H + over))) - 1);
+  return over;
+})();
+
+/** A flag hanging at x from a string at height `sy`: a rounded triangle, its rounded tip `FLAG_H` below the top edge. */
+function flagPath(x: number, sy: number): Path2D {
+  const half = FLAG_W / 2;
+  const top = sy + FLAG_HANG;
+  const over = FLAG_TIP_OVER;
+  return roundedPolygon(pts(x - half, top, x + half, top, x, top + FLAG_H + over), [FLAG_TOP_R, FLAG_TOP_R, FLAG_TIP_R]);
+}
+
+/**
+ * Common, Hanging: two swags of little flags on thin ink strings, hung from a pebble A hook ring on its top-centre by
+ * two hanger strings. The upper swag has five flags, the lower swag four, each a rounded triangle pointing down in the
+ * lotus pink, the pale teal and the butter yellow in turn. One shine on the middle upper flag. The lower flags' tips
+ * are the lowest fill edge.
+ */
+function paintFestivalFlagString(pen: Pen): void {
+  const { ctx, k } = pen;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  const strings = new Path2D();
+  strings.addPath(flagSwagPath(FLAG_HALF, FLAG_UPPER_END_Y, FLAG_UPPER_MID_Y));
+  strings.addPath(flagSwagPath(FLAG_HALF, FLAG_LOWER_END_Y, FLAG_LOWER_MID_Y));
+  for (const s of [-1, 1]) {
+    strings.moveTo(0, -10);
+    strings.lineTo(s * FLAG_HALF, FLAG_UPPER_END_Y);
+    strings.moveTo(s * FLAG_HALF, FLAG_UPPER_END_Y);
+    strings.lineTo(s * FLAG_HALF, FLAG_LOWER_END_Y);
+  }
+  ctx.stroke(place(strings, k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, FIREFLY_HOOK), DETAIL_LW);
+  const fills = FESTIVAL_FLAG_FILLS;
+  const lower = [-7.2, -2.4, 2.4, 7.2];
+  const upper = [-9.6, -4.8, 0, 4.8, 9.6];
+  lower.forEach((x, i) => {
+    const sy = swagY(x, FLAG_HALF, FLAG_LOWER_END_Y, FLAG_LOWER_MID_Y);
+    outerShape(pen, place(flagPath(x, sy), k), fills[(i + 1) % fills.length], ITEM_LW);
+  });
+  upper.forEach((x, i) => {
+    const sy = swagY(x, FLAG_HALF, FLAG_UPPER_END_Y, FLAG_UPPER_MID_Y);
+    outerShape(pen, place(flagPath(x, sy), k), fills[i % fills.length], ITEM_LW);
+  });
+  shine(pen, -1, 1, 0.5, 1.1, 0.35);
+}
+
+/**
+ * Common, Floating: a short candle of pale cream wax standing in a lotus pink flower float (five rounded petals, the
+ * middle one highest), with a short ink wick (1.2) and a rounded teardrop flame in the firefly bulb yellow round a
+ * #ffd34d core. A thin ink cord and a pebble A weight hang below. One shine on the wax. The float's top is on the
+ * waterline, 20 below the top of the 80 box; the weight is the lowest fill edge, the box edge.
+ */
+function paintFloatingCandle(pen: Pen): void {
+  const { ctx, k } = pen;
+  const top = waterlineY(INK_OUT_SHAPE) - 0.6;
+  boatTether(pen, 0, 0.8);
+  // Outer petals first, the middle one last, so each sits over its neighbour; the outer ones droop outward.
+  for (const [x, dip, ry, rot] of [
+    [-9.4, 1.6, 3.1, -0.45],
+    [9.4, 1.6, 3.1, 0.45],
+    [-4.8, 0.5, 3.3, -0.2],
+    [4.8, 0.5, 3.3, 0.2],
+    [0, 0, 3.5, 0],
+  ] as const) {
+    outerShape(pen, place(ellipse(x, top + dip + ry, x === 0 ? 3.4 : 3.2, ry, rot), k), CANDLE_FLOAT_FILL, ITEM_LW);
+  }
+  const flame = new Path2D();
+  flame.moveTo(0, -12.6);
+  flame.bezierCurveTo(0.6, -11.6, 2.2, -11.4, 2.2, -9.9);
+  flame.arc(0, -9.9, 2.2, 0, Math.PI, false);
+  flame.bezierCurveTo(-2.2, -11.4, -0.6, -11.6, 0, -12.6);
+  flame.closePath();
+  outerShape(pen, place(flame, k), CANDLE_FLAME_FILL, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = LANTERN_FLAME;
+    ctx.fill(place(ellipse(0, -9.6, 1, 1.4), k));
+  });
+  const wax = roundedPolygon(pts(-3.6, -7.2, 3.6, -7.2, 3.6, 1.2, -3.6, 1.2), [1.4, 1.4, 1.2, 1.2]);
+  outerShape(pen, place(wax, k), CANDLE_WAX_FILL, ITEM_LW);
+  detail(pen, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(0, -7.4, 0, -9.2), k));
+  });
+  shine(pen, -1.8, -3.2, 0.6, 1.7, 0.05);
+}
+
+/** The Party hat's six ink dots (alpha 0.30): x, y pairs inside the cone. */
+const PARTY_HAT_DOTS: readonly number[] = [0.6, -3.4, 4, 1.4, 0.2, 3.6, 6.6, 7.8, -1.8, 8.2, -7, 8.6];
+
+/**
+ * Common: a cone party hat in pale party blue, from a rounded tip flaring to a gently curved foot, with a lotus pink
+ * pompom on the tip and six ink dots (alpha 0.30) on the cone. One shine on the cone.
+ */
+function paintPartyHat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const cone = new Path2D();
+  cone.moveTo(-10.6, 11.4);
+  cone.lineTo(0.07, -7);
+  cone.quadraticCurveTo(1, -8.6, 1.77, -7);
+  cone.lineTo(10.6, 11.4);
+  cone.bezierCurveTo(4.4, 13, -4.4, 13, -10.6, 11.4);
+  cone.closePath();
+  silhouette(pen, place(cone, k), PARTY_HAT_FILL, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (let i = 0; i < PARTY_HAT_DOTS.length; i += 2) ctx.fill(place(ellipse(PARTY_HAT_DOTS[i], PARTY_HAT_DOTS[i + 1], 0.9, 0.9), k));
+    ctx.globalAlpha = 1;
+  });
+  outerShape(pen, place(ellipse(1, -9.2, 3.4, 3.4), k), TRAJINERA_BLOSSOM_PINK, ITEM_LW);
+  shine(pen, -4.2, 2.4, 0.8, 2.3, 0.3);
+}
+
+/** A square of side `s` centred on the origin, to be placed and turned. */
+function squarePath(s: number): Path2D {
+  const h = s / 2;
+  const p = new Path2D();
+  p.rect(-h, -h, s, s);
+  return p;
+}
+
+/** The Confetti scarf's bits: x, y and turn of each tiny square, and x, y of each dot. */
+const CONFETTI_BAND_SQUARES: readonly (readonly [number, number, number])[] = [
+  [-11.2, -6, 0.4],
+  [-5.8, -3.8, 1.1],
+  [-1.6, -2.4, 0.7],
+  [2.4, -2.8, 1.3],
+  [7, -4.8, 0.3],
+  [10.8, -7.2, 0.9],
+];
+const CONFETTI_BAND_DOTS: readonly (readonly [number, number])[] = [
+  [-8.4, -4.2],
+  [-3.8, -4.4],
+  [5, -3],
+  [9, -5.6],
+];
+const CONFETTI_TAIL_SQUARES: readonly (readonly [number, number, number])[] = [
+  [3.4, 7, 0.5],
+  [-3.4, 7, -0.5],
+];
+const CONFETTI_TAIL_DOTS: readonly (readonly [number, number])[] = [
+  [4.4, 10.6],
+  [-4.4, 10.6],
+];
+
+/**
+ * Common: a scarf in the pale amethyst: a sagging band with two short tails crossing under its middle, scattered with
+ * confetti in ink (alpha 0.30): eight tiny squares turned at angles and six dots. One shine on the band. Two crossed
+ * tails, never the Striped scarf's one long tail.
+ */
+function paintConfettiScarf(pen: Pen): void {
+  const { ctx, k } = pen;
+  const confetti = (squares: readonly (readonly [number, number, number])[], dots: readonly (readonly [number, number])[]) => (): void => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [x, y, rot] of squares) ctx.fill(place(squarePath(1.4), k, x, y, rot));
+    for (const [x, y] of dots) ctx.fill(place(ellipse(0, 0, 0.8, 0.8), k, x, y));
+    ctx.globalAlpha = 1;
+  };
+  const tailA = roundedPolygon(pts(-4.8, -4.6, -0.4, -4.6, 7.6, 12.6, 2.8, 12.6), [1, 1, 1.6, 1.6]);
+  const tailB = roundedPolygon(pts(4.8, -4.6, 0.4, -4.6, -7.6, 12.6, -2.8, 12.6), [1, 1, 1.6, 1.6]);
+  silhouette(pen, place(tailA, k), CONFETTI_SCARF_FILL, ITEM_LW, confetti([CONFETTI_TAIL_SQUARES[0]], [CONFETTI_TAIL_DOTS[0]]));
+  silhouette(pen, place(tailB, k), CONFETTI_SCARF_FILL, ITEM_LW, confetti([CONFETTI_TAIL_SQUARES[1]], [CONFETTI_TAIL_DOTS[1]]));
+  const drape = new Path2D();
+  drape.moveTo(-12.6, -10.6);
+  drape.bezierCurveTo(-8, -10.6, -6, -5.4, 0, -5.4);
+  drape.bezierCurveTo(6, -5.4, 8, -10.6, 12.6, -10.6);
+  drape.lineTo(12.6, -4.4);
+  drape.bezierCurveTo(8, -4.4, 6, 1, 0, 1);
+  drape.bezierCurveTo(-6, 1, -8, -4.4, -12.6, -4.4);
+  drape.closePath();
+  silhouette(pen, place(drape, k), CONFETTI_SCARF_FILL, ITEM_LW, confetti(CONFETTI_BAND_SQUARES, CONFETTI_BAND_DOTS));
+  shine(pen, -8.6, -7.8, 1.8, 0.7, 0.35);
+}
+
+/**
+ * Rare, Floor: a little stone axolotl in pale rose stone sitting up on a pebble A plinth: a round head with three
+ * rounded gill fronds each side (each with an ink midline, 1.2), two bead eyes and a small ink smile, over a round
+ * body with its tail curled round to the left. One yellow trim band across the plinth. One shine on the head. The
+ * plinth is the lowest fill edge.
+ */
+function paintAxolotlStatue(pen: Pen): void {
+  const { ctx, k } = pen;
+  const head = { cx: 0, cy: -5.4, rx: 7, ry: 6 };
+  const tail = new Path2D();
+  tail.moveTo(-6.4, 6.2);
+  tail.bezierCurveTo(-10.8, 7, -13, 2.6, -10.8, -1.4);
+  tail.bezierCurveTo(-10, 0.4, -9.4, 3, -6, 3.4);
+  tail.closePath();
+  outerShape(pen, place(tail, k), AXOLOTL_STATUE_STONE, ITEM_LW);
+  for (const side of [-1, 1]) {
+    for (const lift of [-0.6, 0, 0.6]) {
+      const phi = side === 1 ? lift : Math.PI - lift;
+      const cx = head.cx + 9.3 * Math.cos(phi);
+      const cy = head.cy + 8 * Math.sin(phi);
+      silhouette(pen, place(ellipse(0, 0, 3.3, 1.5), k, cx, cy, phi), AXOLOTL_STATUE_STONE, ITEM_LW, () => {
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = BAND_LW;
+        ctx.stroke(place(line(-2.4, 0, 2.4, 0), k, cx, cy, phi));
+      });
+    }
+  }
+  outerShape(pen, place(ellipse(0, 2.4, 8, 5.4), k), AXOLOTL_STATUE_STONE, ITEM_LW);
+  outerShape(pen, place(ellipse(head.cx, head.cy, head.rx, head.ry), k), AXOLOTL_STATUE_STONE, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    for (const x of [-2.8, 2.8]) ctx.fill(place(ellipse(x, -5.8, 1.1, 1.1), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    const smile = new Path2D();
+    smile.moveTo(-1.7, -2.7);
+    smile.quadraticCurveTo(0, -1.2, 1.7, -2.7);
+    ctx.stroke(place(smile, k));
+  });
+  const plinth = roundedPolygon(pts(-10.6, 12.6, -10.6, 6.6, 10.6, 6.6, 10.6, 12.6), 1.6);
+  silhouette(pen, place(plinth, k), FIREFLY_HOOK, ITEM_LW, () => trimBand(pen, 8.6, 10.6, BOAT_TRIM));
+  shine(pen, -3.4, -8.2, 0.8, 1.7, 0.5);
+}
+
+/**
+ * Rare, Floating: a little cream boat with both ends turned up, heaped with five marigold blossoms (round frilled
+ * heads, the middle one tallest) each with an ink centre ring (1.2), one yellow trim band along the hull, a thin ink
+ * cord and a pebble A weight hanging below. One shine on the middle blossom. The hull's top is on the waterline, 20
+ * below the top of the 80 box; the weight is the lowest fill edge, the box edge. Never the Little trajinera's flower
+ * arch or the Floating flower market's barge.
+ */
+function paintMarigoldBoat(pen: Pen): void {
+  const { ctx, k } = pen;
+  const top = waterlineY(INK_OUT_SHAPE) - 0.6;
+  const bottom = top + 7;
+  boatTether(pen, 0, bottom - 0.4);
+  const hull = new Path2D();
+  hull.moveTo(-12.6, top - 1.8);
+  hull.quadraticCurveTo(0, top + 1.6, 12.6, top - 1.8);
+  hull.bezierCurveTo(12.4, top + 1.6, 10.6, bottom, 8.8, bottom);
+  hull.lineTo(-8.8, bottom);
+  hull.bezierCurveTo(-10.6, bottom, -12.4, top + 1.6, -12.6, top - 1.8);
+  hull.closePath();
+  silhouette(pen, place(hull, k), MARIGOLD_BOAT_HULL, ITEM_LW, () => trimBand(pen, bottom - 3.6, bottom - 1.6, BOAT_TRIM));
+  for (const [x, cy, r] of [
+    [-8.2, -4.4, 3],
+    [8.2, -4.4, 3],
+    [-4.2, -5.6, 3.4],
+    [4.2, -5.6, 3.4],
+    [0, -6.6, 3.8],
+  ] as const) {
+    outerShape(pen, place(blossomPath(x, cy, r), k), MARIGOLD_PETAL, ITEM_LW);
+    detail(pen, () => {
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = BAND_LW;
+      ctx.stroke(place(ellipse(x, cy, r * 0.32, r * 0.32), k));
+    });
+  }
+  shine(pen, -1.4, -8.6, 0.6, 1.1, 0.5);
+}
+
+/**
+ * Rare: an embroidered festival blouse in pale embroidered white: a round neck, short puffed sleeves and a body to a
+ * straight hem, with three small embroidered flowers across the chest (five ink petals, 1.2, round a lotus pink
+ * centre) and one yellow trim band across the body above the hem. One shine on the left shoulder.
+ */
+function paintFestivalShirt(pen: Pen): void {
+  const { ctx, k } = pen;
+  const shirt = new Path2D();
+  shirt.moveTo(-4.6, -10.8);
+  shirt.quadraticCurveTo(0, -2, 4.6, -10.8);
+  shirt.bezierCurveTo(8, -10.8, 12.6, -10.2, 12.6, -6);
+  shirt.lineTo(12.6, 0.6);
+  shirt.quadraticCurveTo(12.6, 2.4, 10.4, 2.4);
+  shirt.lineTo(9.4, 2.4);
+  shirt.lineTo(9.4, 9.4);
+  shirt.quadraticCurveTo(9.4, 10.6, 8.2, 10.6);
+  shirt.lineTo(-8.2, 10.6);
+  shirt.quadraticCurveTo(-9.4, 10.6, -9.4, 9.4);
+  shirt.lineTo(-9.4, 2.4);
+  shirt.lineTo(-10.4, 2.4);
+  shirt.quadraticCurveTo(-12.6, 2.4, -12.6, 0.6);
+  shirt.lineTo(-12.6, -6);
+  shirt.bezierCurveTo(-12.6, -10.2, -8, -10.8, -4.6, -10.8);
+  shirt.closePath();
+  silhouette(pen, place(shirt, k), FESTIVAL_SHIRT_FILL, ITEM_LW, () => {
+    trimBand(pen, 7.4, 9.8, BOAT_TRIM);
+    for (const x of [-6.8, 0, 6.8]) {
+      const cy = x === 0 ? -1.2 : -0.6;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = BAND_LW;
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i * TAU) / 5;
+        ctx.stroke(place(ellipse(0, 0, 1.3, 0.8, a), k, x + 2 * Math.cos(a), cy + 2 * Math.sin(a)));
+      }
+      ctx.fillStyle = TRAJINERA_BLOSSOM_PINK;
+      ctx.fill(place(ellipse(x, cy, 1.2, 1.2), k));
+    }
+  });
+  shine(pen, -8.6, -4.6, 0.8, 2.2, 0.2);
+}
+
+/** One of the Mariachi band figures: where it stands, how big it is (1 is the middle one's size, scaled in a hair), and its instrument. */
+interface BandFigure {
+  readonly x: number;
+  readonly s: number;
+  readonly instrument: 'guitar' | 'violin' | 'trumpet';
+}
+/** The row stands on this y, on the plinth's top. The figures' bodies sink 0.2 into it. */
+const BAND_BASE_Y = 8.6;
+const BAND_FIGURES: readonly BandFigure[] = [
+  { x: -7, s: 0.8, instrument: 'guitar' },
+  { x: 7, s: 0.8, instrument: 'trumpet' },
+  { x: 0, s: 0.98, instrument: 'violin' },
+];
+
+/**
+ * One little toy axolotl musician: a soft pink body, round head and stubby gill fronds, under a wide butter yellow
+ * sombrero (the brim's ink keeps the hat apart from the head in greyscale), with two bead eyes, a tiny ink smile and
+ * its instrument in ink.
+ */
+function paintBandFigure(pen: Pen, fig: BandFigure): void {
+  const { ctx, k } = pen;
+  const { x, s } = fig;
+  const bodyCy = BAND_BASE_Y - 5.6 * s;
+  const headCy = BAND_BASE_Y - 13.3 * s;
+  const brimCy = headCy - 2.6 * s;
+  for (const side of [-1, 1]) {
+    outerShape(pen, place(ellipse(x + side * 4.2 * s, headCy + 0.2 * s, 1.5 * s, 0.9 * s, side * 0.3), k), BAND_FIGURE_BODY, ITEM_LW);
+  }
+  outerShape(pen, place(ellipse(x, bodyCy, 3.6 * s, 5.6 * s), k), BAND_FIGURE_BODY, ITEM_LW);
+  outerShape(pen, place(ellipse(x, headCy, 3.4 * s, 3.4 * s), k), BAND_FIGURE_BODY, ITEM_LW);
+  const crown = roundedPolygon(
+    pts(x - 2.4 * s, brimCy, x - 2.4 * s, brimCy - 4 * s, x + 2.4 * s, brimCy - 4 * s, x + 2.4 * s, brimCy),
+    [0.4, 1.6 * s, 1.6 * s, 0.4],
+  );
+  outerShape(pen, place(crown, k), BAND_FIGURE_HAT, ITEM_LW);
+  outerShape(pen, place(ellipse(x, brimCy, 5.2 * s, 1.4 * s), k), BAND_FIGURE_HAT, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    for (const side of [-1, 1]) ctx.fill(place(ellipse(x + side * 1.4 * s, headCy + 0.9 * s, 0.7, 0.7), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    const smile = new Path2D();
+    smile.moveTo(x - 1.1 * s, headCy + 1.9 * s);
+    smile.quadraticCurveTo(x, headCy + 2.8 * s, x + 1.1 * s, headCy + 1.9 * s);
+    ctx.stroke(place(smile, k));
+    const horn = new Path2D();
+    if (fig.instrument === 'guitar') {
+      // A small round-bodied guitar across the belly, its neck rising to the right.
+      horn.moveTo(x + 0.4 * s + 2.2 * s, bodyCy + 1.4 * s);
+      horn.ellipse(x + 0.4 * s, bodyCy + 1.4 * s, 2.2 * s, 1.6 * s, -0.5, 0, TAU);
+      horn.moveTo(x + 2 * s, bodyCy + 0.4 * s);
+      horn.lineTo(x + 5.6 * s, bodyCy - 2.6 * s);
+    } else if (fig.instrument === 'violin') {
+      // A small violin under the chin and a bow across the chest.
+      horn.moveTo(x - 0.4 * s + 1.5 * s, bodyCy - 3 * s);
+      horn.ellipse(x - 0.4 * s, bodyCy - 3 * s, 1.5 * s, 1 * s, 0.4, 0, TAU);
+      horn.moveTo(x - 3.2 * s, bodyCy + 0.6 * s);
+      horn.lineTo(x + 3.4 * s, bodyCy - 1.8 * s);
+    } else {
+      // A trumpet held out to the right with its bell flared.
+      horn.moveTo(x - 1 * s, bodyCy - 0.6 * s);
+      horn.lineTo(x + 4.4 * s, bodyCy - 1.6 * s);
+      horn.moveTo(x + 4.4 * s, bodyCy - 3.2 * s);
+      horn.lineTo(x + 6.2 * s, bodyCy - 4.2 * s);
+      horn.lineTo(x + 6.2 * s, bodyCy + 0.8 * s);
+      horn.lineTo(x + 4.4 * s, bodyCy + 0.2 * s);
+      horn.closePath();
+    }
+    ctx.stroke(place(horn, k));
+  });
+}
+
+/**
+ * Epic, Floor: three little toy axolotl musicians standing in a row on a pebble C plinth: soft pink bodies with round
+ * heads and stubby gill fronds, each under a wide butter yellow sombrero, the middle one standing taller, holding a
+ * guitar, a violin and a trumpet drawn in ink (1.2). One aqua gem on the plinth front. One shine on the middle
+ * sombrero. The plinth is the lowest fill edge.
+ */
+function paintMariachiBandFigures(pen: Pen): void {
+  const { k } = pen;
+  for (const fig of BAND_FIGURES) paintBandFigure(pen, fig);
+  const plinth = roundedPolygon(pts(-12.6, 12.6, -12.6, 8, 12.6, 8, 12.6, 12.6), [2, 1.4, 1.4, 2]);
+  outerShape(pen, place(plinth, k), FESTIVAL_PLINTH, ITEM_LW);
+  gem(pen, 0, 10.3, CASTLE_GEM, 1.8);
+  shine(pen, -1.6, -9.4, 0.6, 1.1, 0.4);
+}
+
+/** The Hero medal: its centre, its radius to the middle of the bumps, and the twelve bumps of its rim. */
+const MEDAL = { x: 0, y: 4.8, r: 7.4, bumps: 12 } as const;
+
+/** The medal's scalloped rim: twelve rounded bumps round a circle. */
+function medalPath(): Path2D {
+  const { x, y, r, bumps } = MEDAL;
+  const base = r - 0.7;
+  const swell = r + 0.7;
+  const p = new Path2D();
+  for (let i = 0; i < bumps; i++) {
+    const a0 = (i * TAU) / bumps;
+    const a1 = ((i + 1) * TAU) / bumps;
+    const am = (a0 + a1) / 2;
+    if (i === 0) p.moveTo(x + base * Math.cos(a0), y + base * Math.sin(a0));
+    p.quadraticCurveTo(x + (swell + 0.7) * Math.cos(am), y + (swell + 0.7) * Math.sin(am), x + base * Math.cos(a1), y + base * Math.sin(a1));
+  }
+  p.closePath();
+  return p;
+}
+
+/**
+ * Epic: a round medal in gold cream with a scalloped rim of twelve bumps, hanging from a pale teal ribbon: two
+ * straight bands from the top corners meeting in a V at the medal's top, with one ink fold line (1.2) where they
+ * cross. One aqua gem at the medal's centre. One shine on the medal. The medal's foot is the lowest fill edge.
+ */
+function paintHeroMedal(pen: Pen): void {
+  const { ctx, k } = pen;
+  const left = roundedPolygon(pts(-12.4, -12.6, -7.2, -12.6, 3, -2, -2.2, -2), 0.6);
+  const right = roundedPolygon(pts(12.4, -12.6, 7.2, -12.6, -3, -2, 2.2, -2), 0.6);
+  silhouette(pen, place(left, k), HERO_MEDAL_RIBBON, ITEM_LW);
+  silhouette(pen, place(right, k), HERO_MEDAL_RIBBON, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(1.77, -6.85, 4.37, -4.35), k));
+  });
+  outerShape(pen, place(medalPath(), k), HERO_MEDAL_FILL, ITEM_LW);
+  gem(pen, MEDAL.x, MEDAL.y, CASTLE_GEM);
+  shine(pen, -3.2, 1.4, 0.8, 1.7, 0.4);
+}
+
+/** The Refuge snow globe's six drifting flecks (x, y), inside the glass. */
+const SNOW_GLOBE_FLECKS: readonly number[] = [-7.8, -3.6, 5.8, -8.2, -3.2, -0.2, 7.2, -2.6, 2.6, -5.4, -1.6, -9.4];
+
+/**
+ * Legendary, Floor: a round glass globe in the firefly jar glass on a pebble C base, holding a tiny clean refuge: a soft
+ * pink axolotl resting on a mound beside a sprig of waterweed, six cream flecks drifting in the glass and one white shine
+ * arc (1.6). One gold band across the base, one pink gem on it and one 4-point star. One shine on the glass. The base is
+ * the lowest fill edge.
+ */
+function paintRefugeSnowGlobe(pen: Pen): void {
+  const { ctx, k } = pen;
+  const glass = ellipse(0, -2.4, 10.2, 10.2);
+  silhouette(pen, place(glass, k), SNOW_GLOBE_GLASS, ITEM_LW, () => {
+    // The mound, the axolotl resting on it, and the waterweed beside it.
+    ctx.fillStyle = FESTIVAL_PLINTH;
+    ctx.fill(place(ellipse(0, 7.6, 8, 3), k));
+    ctx.fillStyle = SNOW_GLOBE_WEED;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    for (const [deg, len] of [
+      [-20, 6.6],
+      [18, 5.4],
+    ] as const) {
+      const leaf = place(pointedPetal(5.4, 5.4, deg, len, 1.6), k);
+      ctx.fill(leaf);
+      ctx.stroke(leaf);
+    }
+    const axolotl = place(ellipse(-1, 3, 3.8, 2.2), k);
+    ctx.fillStyle = SNOW_GLOBE_AXOLOTL;
+    ctx.fill(axolotl);
+    ctx.stroke(axolotl);
+    ctx.fillStyle = EYE;
+    ctx.fill(place(ellipse(1.4, 2.4, 0.7, 0.7), k));
+    ctx.fillStyle = SNOW_GLOBE_FLECK;
+    for (let i = 0; i < SNOW_GLOBE_FLECKS.length; i += 2) ctx.fill(place(ellipse(SNOW_GLOBE_FLECKS[i], SNOW_GLOBE_FLECKS[i + 1], 0.7, 0.7), k));
+    ctx.strokeStyle = TREASURE_SHINE;
+    ctx.lineWidth = DETAIL_LW;
+    const arc = new Path2D();
+    arc.arc(0, -2.4, 8, -1.2, -0.5);
+    ctx.stroke(place(arc, k));
+  });
+  const base = roundedPolygon(pts(-12.6, 12.6, -9.6, 6.8, 9.6, 6.8, 12.6, 12.6), [1.8, 1.2, 1.2, 1.8]);
+  silhouette(pen, place(base, k), FESTIVAL_PLINTH, ITEM_LW, () => trimBand(pen, 7.6, 9.6, GOLD_TRIM));
+  gem(pen, 0, 10.4, PYRAMID_GEM, 1.9);
+  shine(pen, -5, -7.4, 0.8, 1.7, 0.6);
+  legendStar(pen, 9.8, -9.8);
+}
+
+/** The Champion crown's five points: x of each, and the y of its ball. The middle one is tallest. */
+const CHAMPION_POINTS: readonly { readonly x: number; readonly ball: number; readonly half: number }[] = [
+  { x: -9.2, ball: -1.6, half: 2.4 },
+  { x: -4.6, ball: -4.4, half: 2.6 },
+  { x: 0, ball: -7.2, half: 3.8 },
+  { x: 4.6, ball: -4.4, half: 2.6 },
+  { x: 9.2, ball: -1.6, half: 2.4 },
+];
+const CHAMPION_BALL_R = 2;
+
+/**
+ * Legendary: a champion's crown in pale crown gold: a straight band under five rounded points, the middle one
+ * tallest, each topped with a ball. One gold band across the crown band, one pink gem on the middle point and one
+ * 4-point star. One shine on the band. Rounded, ball-topped points, never the Crystal crown's crystal points.
+ */
+function paintChampionCrown(pen: Pen): void {
+  const { k } = pen;
+  const bandTop = 2.4;
+  for (const p of CHAMPION_POINTS) {
+    const point = roundedPolygon(pts(p.x - p.half, bandTop + 1, p.x - 0.9, p.ball, p.x + 0.9, p.ball, p.x + p.half, bandTop + 1), [0.4, 0.8, 0.8, 0.4]);
+    outerShape(pen, place(point, k), CHAMPION_CROWN_FILL, ITEM_LW);
+    outerShape(pen, place(ellipse(p.x, p.ball, CHAMPION_BALL_R, CHAMPION_BALL_R), k), CHAMPION_CROWN_FILL, ITEM_LW);
+  }
+  const band = roundedPolygon(pts(-12.6, bandTop, 12.6, bandTop, 12.6, 9.4, -12.6, 9.4), [1.4, 1.4, 1.8, 1.8]);
+  silhouette(pen, place(band, k), CHAMPION_CROWN_FILL, ITEM_LW, () => trimBand(pen, 5, 7.2, GOLD_TRIM));
+  gem(pen, 0, -1.6, PYRAMID_GEM);
+  shine(pen, -7.6, 4.4, 1, 0.7, -0.1);
+  legendStar(pen, 9.8, -9.8);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -4886,6 +5494,39 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'golden-boatman-cape':
       paintGoldenBoatmanCape({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'festival-flag-string':
+      paintFestivalFlagString({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'floating-candle':
+      paintFloatingCandle({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'party-hat':
+      paintPartyHat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'confetti-scarf':
+      paintConfettiScarf({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'axolotl-statue':
+      paintAxolotlStatue({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'marigold-boat':
+      paintMarigoldBoat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'festival-shirt':
+      paintFestivalShirt({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'mariachi-band-figures':
+      paintMariachiBandFigures({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'hero-medal':
+      paintHeroMedal({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'refuge-snow-globe':
+      paintRefugeSnowGlobe({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'champion-crown':
+      paintChampionCrown({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

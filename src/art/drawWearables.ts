@@ -1,5 +1,5 @@
 /**
- * Worn looks of the fifty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the fifty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -11,7 +11,8 @@
  * Miner's headlamp, Crystal pendant, Explorer vest, Crystal tail cuff and Crystal crown, and the spring cave Area 7's
  * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, and the deep canal Area 8's
  * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, and the deep canal Area 9's
- * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, painted on the anchors
+ * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, and the deep canal Area 10's Party hat,
+ * Confetti scarf, Festival shirt, Hero medal and Champion crown, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -85,6 +86,13 @@
  * worn look and its icon cannot drift. Their other colours are internal details: ink at the stripe alpha (the rope's
  * twists, the poncho's fringe, the cape's folds), the hat's eyelets and seam in ink, and the gold or boat-yellow
  * trim. No look has net-like lines.
+ *
+ * The Area 10 looks (issue #108) keep to the same footprints and rules. Their outer fills are the icons' own colours,
+ * imported by name from treasurePalette.ts (PARTY_HAT_FILL with TRAJINERA_BLOSSOM_PINK for the pompom,
+ * CONFETTI_SCARF_FILL, FESTIVAL_SHIRT_FILL, HERO_MEDAL_FILL with HERO_MEDAL_RIBBON, CHAMPION_CROWN_FILL; each 9:1 or
+ * better with ink, none red), so a worn look and its icon cannot drift. Their other colours are internal details: ink
+ * at the stripe alpha (the hat's dots, the scarf's confetti, the ribbon's fold), the shirt's ink-petalled flowers
+ * with their pink centres, and the gold, boat-yellow or aqua trim and gem. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -200,6 +208,14 @@ import {
   TREASURE_STAR,
   WATER_LILY_BLOSSOM,
   WATER_LILY_SHIRT_FILL,
+  CASTLE_GEM,
+  CHAMPION_CROWN_FILL,
+  CONFETTI_SCARF_FILL,
+  FESTIVAL_SHIRT_FILL,
+  HERO_MEDAL_FILL,
+  HERO_MEDAL_RIBBON,
+  PARTY_HAT_FILL,
+  TRAJINERA_BLOSSOM_PINK,
   WORN_FAR_INK_MIX,
 } from './treasurePalette';
 
@@ -273,7 +289,12 @@ export type WearableArtSlug =
   | 'rope-necklace'
   | 'poncho'
   | 'tail-bell'
-  | 'golden-boatman-cape';
+  | 'golden-boatman-cape'
+  | 'party-hat'
+  | 'confetti-scarf'
+  | 'festival-shirt'
+  | 'hero-medal'
+  | 'champion-crown';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
@@ -333,6 +354,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   poncho: 'shirt',
   'tail-bell': 'tail',
   'golden-boatman-cape': 'back',
+  'party-hat': 'head',
+  'confetti-scarf': 'neck',
+  'festival-shirt': 'shirt',
+  'hero-medal': 'neck',
+  'champion-crown': 'head',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -533,11 +559,12 @@ function leafPath(cx: number, cy: number, half: number, wide: number, rot: numbe
   return p;
 }
 
-/** A round gem of radius 2.5 with a small glint. `ink` is the outline width. */
-function gem(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, ink = DETAIL_LW): void {
-  shape(ctx, ellipsePath(x, y, GEM_R, GEM_R), fill, ink);
+/** A round gem of radius 2.5 (or `r`, for a gem on a small part) with a small glint. `ink` is the outline width. */
+function gem(ctx: CanvasRenderingContext2D, x: number, y: number, fill: string, ink = DETAIL_LW, r = GEM_R): void {
+  const f = r / GEM_R;
+  shape(ctx, ellipsePath(x, y, r, r), fill, ink);
   ctx.fillStyle = GEM_GLINT;
-  ctx.fill(ellipsePath(x - 0.8, y - 0.9, 0.8, 0.5, -0.7));
+  ctx.fill(ellipsePath(x - 0.8 * f, y - 0.9 * f, 0.8 * f, 0.5 * f, -0.7));
 }
 
 /** The Legendary static 4-point star (guide 4e): outer R 3, inner 0.38 R, white with ink 1.6 unless `ink` says otherwise. */
@@ -3699,6 +3726,323 @@ function paintGoldenBoatmanCape(ctx: CanvasRenderingContext2D, box: BackFrameBox
 }
 
 // ---------------------------------------------------------------------------
+// Head: Party hat (Common)
+// ---------------------------------------------------------------------------
+
+/** The cone's three corners: the foot left and right, sunk to the Head footprint's floor (as the Sailor cap's brim), and the tip. */
+const PARTY_CONE: readonly Pt[] = [
+  { x: 17.2, y: -21.5 },
+  { x: 44.8, y: -21.5 },
+  { x: 31, y: -40 },
+];
+const PARTY_CONE_RADII: readonly number[] = [1, 1, 1.8];
+/** The pompom on the tip: centre and radius. */
+const PARTY_POMPOM: Pt = { x: 31, y: -38.8 };
+const PARTY_POMPOM_R = 2.6;
+/** The six dots on the cone: centres and radius; ink at the stripe alpha. */
+const PARTY_DOTS: readonly Pt[] = [
+  { x: 29, y: -30.6 },
+  { x: 34, y: -26.6 },
+  { x: 27.4, y: -24.6 },
+  { x: 31.6, y: -23.6 },
+  { x: 38.8, y: -24.2 },
+  { x: 22.4, y: -23.4 },
+];
+const PARTY_DOT_R = 0.8;
+
+/**
+ * Common (issue #108): a PARTY_HAT_FILL pale party blue cone hat standing on the head top: a flat foot sunk to the Head
+ * footprint's floor (as the Sailor cap's brim) narrowing to a rounded tip under a lotus pink pompom, merged into one
+ * `blob` silhouette (ink 2.0 all outside the fill) in two fills. Six dots on the cone (ink at the stripe alpha, the same
+ * colour darkened, not a second colour), clipped to it; one shine; no trim. Ink included it stays inside
+ * HEAD_FOOTPRINT: x about 16.2 to 45.9, lowest ink y -19.5 on the foot, the pompom's top about y -43.4.
+ */
+function paintPartyHat(ctx: CanvasRenderingContext2D): void {
+  const cone = roundedPolygon(PARTY_CONE, PARTY_CONE_RADII);
+  silhouette(ctx, [
+    { path: cone, fill: PARTY_HAT_FILL },
+    { path: ellipsePath(PARTY_POMPOM.x, PARTY_POMPOM.y, PARTY_POMPOM_R, PARTY_POMPOM_R), fill: TRAJINERA_BLOSSOM_PINK },
+  ]);
+  ctx.save();
+  ctx.clip(cone);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  for (const dot of PARTY_DOTS) ctx.fill(ellipsePath(dot.x, dot.y, PARTY_DOT_R, PARTY_DOT_R));
+  ctx.restore();
+  shine(ctx, 25.2, -30, 0.7, 2.2, 0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Head: Champion crown (Legendary)
+// ---------------------------------------------------------------------------
+
+/**
+ * The five rounded points: x of each base centre, height above the band's top edge to its tip, and half width at the
+ * shoulders. Each is topped with a ball, the middle one tallest.
+ */
+const CHAMPION_POINTS: readonly { readonly x: number; readonly height: number; readonly half: number }[] = [
+  { x: 22.2, height: 6.4, half: 2 },
+  { x: 27, height: 9.2, half: 2.2 },
+  { x: 31.8, height: 12, half: 3 },
+  { x: 36.4, height: 8.8, half: 2.2 },
+  { x: 40.4, height: 6, half: 1.9 },
+];
+const CHAMPION_BALL_R = 1.5;
+/** The gem on the middle point: how far above the band's top edge it sits. */
+const CHAMPION_GEM_RISE = 3.6;
+/** The star's centre: above the front point and its ball, clear of both, and inside the Head footprint. */
+const CHAMPION_STAR: Pt = { x: 41.8, y: -39.8 };
+
+/**
+ * Legendary (issue #108): a CHAMPION_CROWN_FILL pale crown gold band hugging the head top (as the Crystal crown's) under
+ * five rounded points, the middle one tallest, each topped with a ball, all one merged silhouette (ink 2.0 all outside
+ * the fill). The Legendary trim is one #ffc12e gold band along the middle of the band (between two 0.6 ink lines,
+ * clipped inside it), one pink gem on the middle point and one static 4-point star (R 3, outline 1.2) above the front
+ * point, outside the silhouette. One shine on the band. Rounded, ball-topped points, never the Crystal crown's crystal
+ * points. The band rests on the head as the Crystal crown's does; ink included it stays inside HEAD_FOOTPRINT.
+ */
+function paintChampionCrown(ctx: CanvasRenderingContext2D): void {
+  const band = crownBandPath();
+  const parts = CHAMPION_POINTS.map((p) => {
+    const bandTop = crownLowerAt(p.x) - CROWN_BAND_THICK;
+    const baseY = bandTop + CROWN_POINT_SINK;
+    const tipY = bandTop - p.height;
+    return {
+      bandTop,
+      tipY,
+      point: roundedPolygon(
+        [
+          { x: p.x - p.half - CROWN_POINT_FOOT, y: baseY },
+          { x: p.x - 0.8, y: tipY },
+          { x: p.x + 0.8, y: tipY },
+          { x: p.x + p.half + CROWN_POINT_FOOT, y: baseY },
+        ],
+        [0.4, 0.8, 0.8, 0.4],
+      ),
+      ball: ellipsePath(p.x, tipY, CHAMPION_BALL_R, CHAMPION_BALL_R),
+    };
+  });
+  silhouette(ctx, [
+    { path: band, fill: CHAMPION_CROWN_FILL },
+    ...parts.flatMap(({ point, ball }) => [
+      { path: point, fill: CHAMPION_CROWN_FILL },
+      { path: ball, fill: CHAMPION_CROWN_FILL },
+    ]),
+  ]);
+  ctx.save();
+  ctx.clip(band);
+  const mid = new Path2D();
+  const xa = CROWN_BAND_X0 - 1;
+  const xb = CROWN_BAND_X1 + 1;
+  for (let x = xa; x <= xb + 1e-9; x += 0.5) {
+    const y = crownLowerAt(x) - CROWN_BAND_THICK / 2;
+    if (x === xa) mid.moveTo(x, y);
+    else mid.lineTo(x, y);
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = CROWN_GOLD_W + 2 * CROWN_GOLD_LW;
+  ctx.stroke(mid);
+  ctx.strokeStyle = GOLD_TRIM;
+  ctx.lineWidth = CROWN_GOLD_W;
+  ctx.stroke(mid);
+  ctx.restore();
+  const middle = parts[2];
+  gem(ctx, CHAMPION_POINTS[2].x, middle.bandTop - CHAMPION_GEM_RISE, BOW_GEM, BAND_LW);
+  shine(ctx, 21.4, parts[0].bandTop + 1.8, 1, 0.5, -0.1);
+  legendStar(ctx, CHAMPION_STAR.x, CHAMPION_STAR.y, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Confetti scarf (Common)
+// ---------------------------------------------------------------------------
+
+/**
+ * The confetti: x of each tiny square, how far across the band it sits (share of the band height from its centre, -1 the
+ * top edge, 1 the bottom) and how far it is turned; then the same for each dot. Ink at the stripe alpha.
+ */
+const CONFETTI_SQUARES: readonly (readonly [number, number, number])[] = [
+  [6.4, 0.2, 0.4],
+  [10.6, -0.35, 1.1],
+  [19.4, 0.3, 0.7],
+  [23.4, -0.3, 1.3],
+  [27.2, 0.35, 0.3],
+  [31.4, -0.25, 0.9],
+  [35, 0.3, 1.2],
+  [38, -0.2, 0.6],
+];
+const CONFETTI_DOTS: readonly (readonly [number, number])[] = [
+  [8.4, 0.4],
+  [17.6, -0.3],
+  [21.4, 0.1],
+  [25.4, 0.4],
+  [29.4, -0.4],
+  [33.2, 0.1],
+];
+const CONFETTI_SQUARE_SIDE = 1.5;
+const CONFETTI_DOT_R = 0.7;
+
+/**
+ * Common (issue #108): the Pond-weed scarf's band (the whole Neck footprint, under the chin and round the back of the
+ * neck, one `blob` with 0.6 of ink outside the fill) in a CONFETTI_SCARF_FILL pale amethyst, scattered with confetti:
+ * eight tiny squares turned at angles and six dots, ink at the stripe alpha (the same colour darkened, not a second
+ * colour), clipped to the band; one shine. No trim. The icon's two crossed tails would leave the Neck footprint, so they
+ * are left off (as the Rope necklace's frayed tails are). It keeps every clearance of the scarf's band, so it keeps off
+ * the gill-root zone and the cheek heart zone; the mouth paints over its front.
+ */
+function paintConfettiScarf(ctx: CanvasRenderingContext2D): void {
+  const band = scarfBandPath();
+  silhouette(ctx, [{ path: band, fill: CONFETTI_SCARF_FILL }], SCARF_OL);
+  ctx.save();
+  ctx.clip(band);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  const across = (x: number, share: number): number => (scarfUpperAt(x) + scarfLowerAt(x)) / 2 + (share * (scarfLowerAt(x) - scarfUpperAt(x))) / 2;
+  for (const [x, share, rot] of CONFETTI_SQUARES) {
+    const h = CONFETTI_SQUARE_SIDE / 2;
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    const y = across(x, share);
+    const square = new Path2D();
+    square.moveTo(x + (-h * c + h * s), y + (-h * s - h * c));
+    square.lineTo(x + (h * c + h * s), y + (h * s - h * c));
+    square.lineTo(x + (h * c - h * s), y + (h * s + h * c));
+    square.lineTo(x + (-h * c - h * s), y + (-h * s + h * c));
+    square.closePath();
+    ctx.fill(square);
+  }
+  for (const [x, share] of CONFETTI_DOTS) ctx.fill(ellipsePath(x, across(x, share), CONFETTI_DOT_R, CONFETTI_DOT_R));
+  ctx.restore();
+  shine(ctx, 14.5, 16.4, 2, 0.6);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Hero medal (Epic)
+// ---------------------------------------------------------------------------
+
+/** The medal hangs from the ribbon left of the mouth (where the Rope necklace's knot is), so the mouth never paints over it; its rim has this many bumps, each this deep. */
+const MEDAL_X = 19.6;
+const MEDAL_MAX_R = 4.3;
+const MEDAL_BUMPS = 12;
+const MEDAL_BUMP = 0.5;
+/** The thin ink ring that sets the medal off the ribbon, as the pendant's, and the fold line across the ribbon beside it. */
+const MEDAL_RING_LW = 0.9;
+const MEDAL_FOLD_X = MEDAL_X - 9.4;
+const MEDAL_FOLD_LEAN = 2;
+
+/** The medal's scalloped rim: MEDAL_BUMPS rounded bumps round a circle whose bump tips reach `r`. */
+function medalPath(cx: number, cy: number, r: number): Path2D {
+  const base = r - MEDAL_BUMP;
+  const swell = r + MEDAL_BUMP;
+  const p = new Path2D();
+  for (let i = 0; i < MEDAL_BUMPS; i++) {
+    const a0 = (i * TAU) / MEDAL_BUMPS;
+    const a1 = ((i + 1) * TAU) / MEDAL_BUMPS;
+    const am = (a0 + a1) / 2;
+    if (i === 0) p.moveTo(cx + base * Math.cos(a0), cy + base * Math.sin(a0));
+    p.quadraticCurveTo(cx + swell * Math.cos(am), cy + swell * Math.sin(am), cx + base * Math.cos(a1), cy + base * Math.sin(a1));
+  }
+  p.closePath();
+  return p;
+}
+
+/**
+ * Epic (issue #108): a HERO_MEDAL_FILL gold cream round medal with a scalloped rim of twelve bumps hanging on a
+ * HERO_MEDAL_RIBBON pale teal ribbon strung round the neck: the Pond-weed scarf's whole band, with the medal fitted to the
+ * band left of the mouth (the Rope necklace knot's place), merged into one `blob` silhouette in two fills with ink 0.6 outside (as the scarf:
+ * the Neck footprint is too shallow for 2.0). A thin ink ring (0.9) sets the medal off the ribbon, one fold line across
+ * the ribbon beside it (ink at the stripe alpha, clipped inside it), and one aqua gem (outline 1.2) at the medal's
+ * centre, the Epic detail; one shine on the medal; no trim. The icon's V of ribbon would leave the Neck footprint, so the
+ * ribbon is the band. Everything lies inside the scarf's band, so it keeps the gill-root zone, the cheek heart zone and
+ * the silhouette outline's outer half as the scarf does; the mouth paints over its front.
+ */
+function paintHeroMedal(ctx: CanvasRenderingContext2D): void {
+  const band = scarfBandPath();
+  const upper = scarfUpperAt(MEDAL_X);
+  const lower = scarfLowerAt(MEDAL_X);
+  const cy = (upper + lower) / 2;
+  const r = Math.min(MEDAL_MAX_R, (lower - upper) / 2 - 0.1);
+  const medal = medalPath(MEDAL_X, cy, r);
+  silhouette(
+    ctx,
+    [
+      { path: band, fill: HERO_MEDAL_RIBBON },
+      { path: medal, fill: HERO_MEDAL_FILL },
+    ],
+    SCARF_OL,
+  );
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = MEDAL_RING_LW;
+  ctx.stroke(medal);
+  ctx.save();
+  ctx.clip(band);
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.lineWidth = BAND_LW;
+  ctx.stroke(line(MEDAL_FOLD_X, scarfUpperAt(MEDAL_FOLD_X) - 1, MEDAL_FOLD_X + MEDAL_FOLD_LEAN, scarfLowerAt(MEDAL_FOLD_X + MEDAL_FOLD_LEAN) + 1));
+  ctx.restore();
+  gem(ctx, MEDAL_X, cy, CASTLE_GEM, BAND_LW, Math.min(2.2, r - 1.9));
+  shine(ctx, MEDAL_X - r * 0.55, cy - r * 0.55, 0.5, 0.9, 0.7);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Festival shirt (Rare)
+// ---------------------------------------------------------------------------
+
+/** The hem band's place: how far down the torso half it starts (share of the inset ry below the centre line), and its height. */
+const FESTIVAL_BAND_AT = 0.56;
+const FESTIVAL_BAND_H = 3;
+/** Thin ink lines on each side of the band, as the Embroidered shirt's. */
+const FESTIVAL_BAND_LW = 0.6;
+/** The embroidered flowers: how far above the centre line they sit (share of the inset ry), the petals' distance out, their radii and the ink width. */
+const FESTIVAL_FLOWER_RISE = 0.12;
+const FESTIVAL_PETAL_OUT = 1.5;
+const FESTIVAL_PETAL_RX = 1;
+const FESTIVAL_PETAL_RY = 0.6;
+const FESTIVAL_PETAL_LW = 0.6;
+const FESTIVAL_CENTRE_R = 0.7;
+/** The gap kept between a flower and the shirt's rear cut, the neckline's ink and the next flower. */
+const FESTIVAL_FLOWER_GAP = 0.4;
+/** The most flowers across the chest. */
+const FESTIVAL_FLOWERS = 3;
+
+/**
+ * Rare (issue #108): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) in a
+ * FESTIVAL_SHIRT_FILL pale embroidered white, with one #ffe14a trim band across the lower torso (the one trim band,
+ * between two 0.6 ink lines, clipped inside the silhouette) and small embroidered flowers across the chest, each five
+ * ink petals (0.6) round a lotus pink centre, above the band. Three flowers when the Shirt has room for them, spread
+ * evenly between the rear cut and the neckline (keeping 0.4 from each and from one another); fewer on a short Shirt (a
+ * Baby's has room for one, centred). One shine placed as on the Tank top. The icon's puffed sleeves would leave the
+ * Shirt footprint, so there are none. It sits inside the silhouette, so it never reaches the torso edge band, the
+ * front line, the tail root or a leg.
+ */
+function paintFestivalShirt(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, FESTIVAL_SHIRT_FILL, () => {
+    const y0 = e.cy + e.ry * FESTIVAL_BAND_AT;
+    trimBand(ctx, { x0: outline.xr - 1, x1: outline.xf + 1, y0, y1: y0 + FESTIVAL_BAND_H }, BOAT_TRIM, true, FESTIVAL_BAND_LW);
+    const reach = FESTIVAL_PETAL_OUT + FESTIVAL_PETAL_RX + FESTIVAL_PETAL_LW / 2;
+    const first = outline.xr + reach + FESTIVAL_FLOWER_GAP;
+    const last = shirt.neckline.apexX - 2 * outline.half - reach - FESTIVAL_FLOWER_GAP;
+    const spacing = 2 * reach + FESTIVAL_FLOWER_GAP;
+    const count = last <= first ? 1 : Math.min(FESTIVAL_FLOWERS, Math.floor((last - first) / spacing) + 1);
+    const cy = e.cy - e.ry * FESTIVAL_FLOWER_RISE;
+    for (let n = 0; n < count; n++) {
+      const cx = count === 1 ? (first + last) / 2 : first + ((last - first) * n) / (count - 1);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = FESTIVAL_PETAL_LW;
+      for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (k * TAU) / 5;
+        ctx.stroke(ellipsePath(cx + Math.cos(a) * FESTIVAL_PETAL_OUT, cy + Math.sin(a) * FESTIVAL_PETAL_OUT, FESTIVAL_PETAL_RX, FESTIVAL_PETAL_RY, a));
+      }
+      ctx.fillStyle = TRAJINERA_BLOSSOM_PINK;
+      ctx.fill(ellipsePath(cx, cy, FESTIVAL_CENTRE_R, FESTIVAL_CENTRE_R));
+    }
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -3884,6 +4228,21 @@ export function paintBodyWearable(
       inFrame(ctx, back.frame, () => paintGoldenBoatmanCape(ctx, back.box));
       break;
     }
+    case 'party-hat':
+      paintPartyHat(ctx);
+      break;
+    case 'confetti-scarf':
+      paintConfettiScarf(ctx);
+      break;
+    case 'festival-shirt':
+      paintFestivalShirt(ctx, look);
+      break;
+    case 'hero-medal':
+      paintHeroMedal(ctx);
+      break;
+    case 'champion-crown':
+      paintChampionCrown(ctx);
+      break;
     default:
       break;
   }
