@@ -214,9 +214,9 @@ describe('chestListing', () => {
   it('shows 0 found and every treasure unfound when nothing is owned', () => {
     const sections = chestListing([]);
     expect(sections.map((section) => section.countText)).toEqual([
-      '0 of 55 found',
       '0 of 56 found',
-      '0 of 26 found',
+      '0 of 56 found',
+      '0 of 28 found',
     ]);
     for (const section of sections) {
       expect(section.found).toBe(0);
@@ -248,9 +248,9 @@ describe('chestListing', () => {
     ]);
     expect(dreamColours.entries.filter((entry) => entry.found).map((entry) => entry.id)).toEqual(['mint', 'galaxy']);
     expect([decorations, wearables, dreamColours].map((section) => section.countText)).toEqual([
-      '1 of 55 found',
+      '1 of 56 found',
       '2 of 56 found',
-      '2 of 26 found',
+      '2 of 28 found',
     ]);
   });
 
@@ -363,9 +363,9 @@ describe('chestListing', () => {
   it('shows everything found when everything is owned', () => {
     const sections = chestListing(ALL_IDS);
     expect(sections.map((section) => section.countText)).toEqual([
-      '55 of 55 found',
       '56 of 56 found',
-      '26 of 26 found',
+      '56 of 56 found',
+      '28 of 28 found',
     ]);
     for (const section of sections) expect(section.found).toBe(section.total);
   });
@@ -396,7 +396,7 @@ describe('chestListing', () => {
     expect(foundIds(decorations)).toEqual(['canal/pond-plant']);
     expect(foundIds(wearables)).toEqual(['canal/sun-hat']);
     expect(foundIds(dreamColours)).toEqual(['mint']);
-    expect(dreamColours.countText).toBe('1 of 26 found');
+    expect(dreamColours.countText).toBe('1 of 28 found');
   });
 
   it('ignores unknown and axolotl ids', () => {
@@ -500,7 +500,7 @@ describe('chestListing', () => {
     ]);
   });
 
-  it('lists the pond Decorations after the canal ones, then the Area 3 ones, then the Area 4 ones, then the Area 5 ones, then the Area 6 ones, then the Area 7 ones, then the Area 8 ones, then the Area 9 ones, then the Area 10 ones', () => {
+  it('lists the pond Decorations after the canal ones, then the Area 3 ones, then the Area 4 ones, then the Area 5 ones, then the Area 6 ones, then the Area 7 ones, then the Area 8 ones, then the Area 9 ones, then the Area 10 ones, then the Area 11 ones', () => {
     const [decorations] = chestListing(['pond/frog-statue']);
     expect(decorations.entries.map((entry) => entry.id)).toEqual([
       'canal/pond-plant',
@@ -558,9 +558,10 @@ describe('chestListing', () => {
       'deep-canal/marigold-boat',
       'deep-canal/mariachi-band-figures',
       'deep-canal/refuge-snow-globe',
+      'deep-canal/little-cormorant',
     ]);
     expect(decorations.entries.filter((entry) => entry.found).map((entry) => entry.name)).toEqual(['Frog statue']);
-    expect(decorations.countText).toBe('1 of 55 found');
+    expect(decorations.countText).toBe('1 of 56 found');
   });
 
   it('shows Lily green as ??? with the Area 2 rare hint until the pond Paint shell is banked', () => {
@@ -577,11 +578,11 @@ describe('chestListing', () => {
       category: 'dreamColour',
       areaId: POND_AREA.id,
     });
-    expect(chestListing(canalShells)[2].countText).toBe('12 of 26 found');
+    expect(chestListing(canalShells)[2].countText).toBe('12 of 28 found');
     expect(lilyGreen(['pond/paint-shell-lily-green'])).toMatchObject({ name: 'Lily green', found: true, hint: '' });
   });
 
-  it('marks patterned and sheen Dream colours as patterned, all 26 in the Dream colours section', () => {
+  it('marks patterned and sheen Dream colours as patterned, all 28 in the Dream colours section', () => {
     const [, , dreamColours] = chestListing(PAINT_SHELLS.map((shell) => shell.id));
     expect(dreamColours.entries).toHaveLength(DREAM_COLOURS.length);
     for (const [index, entry] of dreamColours.entries.entries()) {
@@ -797,10 +798,10 @@ describe('wearableDetailText', () => {
 });
 
 describe('chestPages', () => {
-  it('splits 26 Dream colours at 3 per page into 8 full pages and one of 2', () => {
+  it('splits 28 Dream colours at 3 per page into 9 full pages and one of 1', () => {
     const [, , dreamColours] = chestListing(PAINT_SHELLS.map((shell) => shell.id));
     const pages = chestPages([dreamColours], 3);
-    expect(pages.map((page) => page.entries.length)).toEqual([3, 3, 3, 3, 3, 3, 3, 3, 2]);
+    expect(pages.map((page) => page.entries.length)).toEqual([3, 3, 3, 3, 3, 3, 3, 3, 3, 1]);
     for (const page of pages) expect(page.section).toBe(dreamColours);
     expect(pages.flatMap((page): readonly ChestEntry[] => page.entries)).toEqual(dreamColours.entries);
   });
@@ -809,7 +810,7 @@ describe('chestPages', () => {
     ['nothing', [] as string[]],
     ['some', ['canal/sun-hat', 'canal/paint-shell-mint']],
     ['everything', ALL_IDS],
-  ])('keeps section order and pages every treasure at 3 rows, 19 + 19 + 9 pages, with %s banked', (_, banked) => {
+  ])('keeps section order and pages every treasure at 3 rows, 19 + 19 + 10 pages, with %s banked', (_, banked) => {
     const sections = chestListing(banked);
     const pages = chestPages(sections, 3);
     expect(pages.map((page) => [page.section.category, page.entries.length])).toEqual([
@@ -831,7 +832,7 @@ describe('chestPages', () => {
       ['decoration', 3],
       ['decoration', 3],
       ['decoration', 3],
-      ['decoration', 1],
+      ['decoration', 2],
       ['wearable', 3],
       ['wearable', 3],
       ['wearable', 3],
@@ -859,7 +860,8 @@ describe('chestPages', () => {
       ['dreamColour', 3],
       ['dreamColour', 3],
       ['dreamColour', 3],
-      ['dreamColour', 2],
+      ['dreamColour', 3],
+      ['dreamColour', 1],
     ]);
     for (const section of sections) {
       const listed = pages.filter((page) => page.section === section).flatMap((page): readonly ChestEntry[] => page.entries);

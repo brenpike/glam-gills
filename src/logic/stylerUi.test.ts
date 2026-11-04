@@ -757,12 +757,12 @@ describe('stylerLayout', () => {
     expect(() => stylerLayout(view, { mode: 'restyle', step: 'eyes', optionCount: 3, tabPage: 0.5 }, measure)).toThrow(RangeError);
   });
 
-  it('rejects a Dream colour option count outside 1 to 27, and the Dream colour step in the creator', () => {
+  it('rejects a Dream colour option count outside 1 to 29, and the Dream colour step in the creator', () => {
     const view = { cssW: 844, cssH: 390 };
     const measure = measureFor('restyle', 'dream');
     const at = (mode: StylerMode, optionCount: number): StylerLayout =>
       stylerLayout(view, { mode, step: 'dream', optionCount, tabPage: null }, measure);
-    expect(MAX_DREAM_OPTIONS).toBe(27);
+    expect(MAX_DREAM_OPTIONS).toBe(29);
     expect(() => at('restyle', 0)).toThrow(RangeError);
     expect(() => at('restyle', MAX_DREAM_OPTIONS + 1)).toThrow(RangeError);
     expect(() => at('restyle', 2.5)).toThrow(RangeError);
@@ -846,10 +846,10 @@ describe('stylerLayout Dream colour step', () => {
     }
   }, MATRIX_TIMEOUT_MS);
 
-  it('pages every Dream colour as 14 pages of 2 on the smallest canvases', () => {
+  it('pages every Dream colour as 15 pages of 2 on the smallest canvases', () => {
     for (const view of SMALLEST) {
       expect(perPageOn(view, MAX_DREAM_OPTIONS), JSON.stringify(view)).toBe(2);
-      expect(Math.ceil(MAX_DREAM_OPTIONS / perPageOn(view, MAX_DREAM_OPTIONS)), JSON.stringify(view)).toBe(14);
+      expect(Math.ceil(MAX_DREAM_OPTIONS / perPageOn(view, MAX_DREAM_OPTIONS)), JSON.stringify(view)).toBe(15);
     }
   });
 

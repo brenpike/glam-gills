@@ -825,7 +825,7 @@ describe('decorateLayout', () => {
   });
 
   it('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    expect(SHIPPED_DECORATIONS).toHaveLength(55);
+    expect(SHIPPED_DECORATIONS).toHaveLength(56);
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const problems = supportedCanvases().flatMap((view) =>
       maxCounts.flatMap((maxTrayCount) =>
