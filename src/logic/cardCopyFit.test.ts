@@ -466,7 +466,7 @@ describe('card copy fit', () => {
 });
 
 describe('area fact card copy fit', () => {
-  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor and the mud seep', () => {
+  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor, the mud seep, the trajinera lure and the drag net', () => {
     expect(AREA_FACT_CARDS.map((card) => card.id)).toEqual([
       'tilapia',
       'carp',
@@ -486,6 +486,8 @@ describe('area fact card copy fit', () => {
       'murky-water',
       'anchor-drop',
       'mud-seep',
+      'trajinera-lure',
+      'drag-net',
     ]);
   });
 
@@ -522,14 +524,20 @@ describe('area fact card copy fit', () => {
     },
   );
 
-  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440, which use the tight width', () => {
+  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440 and the trajinera lure at 320 x 440 and 460 x 320, which use the tight width', () => {
     const tightBodies = supportedCanvases().flatMap((canvas) =>
       AREA_FACT_CARDS.flatMap((card) => {
         const combination = factCardCombination(card, canvas);
         return fitCard(combination.availH, combination.sections).bodyVariant === 0 ? [] : [combination.label];
       }),
     );
-    expect(tightBodies).toEqual(['shrimp fact 320x440', 'heron fact 320x440', 'water-hyacinth fact 320x440']);
+    expect(tightBodies).toEqual([
+      'shrimp fact 320x440',
+      'heron fact 320x440',
+      'water-hyacinth fact 320x440',
+      'trajinera-lure fact 320x440',
+      'trajinera-lure fact 460x320',
+    ]);
   });
 
   it.each(['heron', 'water-hyacinth'])('fits the %s body at 320 x 440 only at the tight width', (id) => {
@@ -899,6 +907,7 @@ describe('area beaten card copy fit (H5, H8)', () => {
       'Ancient clay pot',
       'Little trajinera',
       'Little bailing bucket',
+      'Axolotl statue',
     ]);
   });
 

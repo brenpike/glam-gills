@@ -3,7 +3,7 @@ import { bakeAreaMapTextures, type AreaMapTextures } from '../art/areaMapTexture
 import { bakeAreaTextures, type AreaTextures } from '../art/areaTextures';
 import { createAxolotlRigBake, type AxolotlRigBake } from '../art/axolotlRig';
 import { bakeChinampaTextures, type ChinampaTextures } from '../art/chinampaTextures';
-import { bakeDeepCanalTextures, type DeepCanalTextures } from '../art/deepCanalTextures';
+import { bakeDeepCanalTextures, hasFishingBoats, murkyPatchSizes, type DeepCanalTextures } from '../art/deepCanalTextures';
 import type { GhostNetSize } from '../art/drawChinampa';
 import { CAVE_H, CAVE_W } from '../art/drawFinds';
 import { streamColumnFor, type ReedLook } from '../art/drawScenery';
@@ -108,7 +108,9 @@ export interface BakedDecorationPack {
  * has dark water, else null. The spring cave props also hold one rock wall per wall size of any area,
  * the deep canal's divider included. `deepCanal` holds the deep canal props (the gliding trajinera
  * hull and its shadow, the moored hulls and the sunken hull cave), baked only when some area's look
- * has the sunken hull cave or says it needs them, or some area has gliding trajineras, else null.
+ * has the sunken hull cave or says it needs them, or some area has gliding trajineras, fishing
+ * trajineras or drag nets, else null. Its fishing trajinera and drag net art are baked only when
+ * some area has fishing trajineras or drag nets, else each is null.
  * "Some area" counts the dev area when one was loaded. A dev area that
  * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
  * of `predator`.
@@ -633,10 +635,16 @@ function hasTrajineras(area: Readonly<AreaData>): boolean {
   return (area.layout.trajineras ?? []).length > 0;
 }
 
+/** Whether area `area` has any drag net (issue #108, ND-2). */
+function hasDragNets(area: Readonly<AreaData>): boolean {
+  return (area.layout.dragNets ?? []).length > 0;
+}
+
 /**
  * The deep canal props, baked once for every area: when some area's look has the sunken hull cave or
- * says it needs the deep canal props, or some area has gliding trajineras (in any look). Null when no
- * area needs them.
+ * says it needs the deep canal props, or some area has gliding trajineras, fishing trajineras or drag
+ * nets (in any look). Null when no area needs them. The fishing trajinera and drag net art inside
+ * are baked only for the areas that have them (issue #108).
  */
 function bakeDeepCanalProps(
   scene: Phaser.Scene,
@@ -645,8 +653,10 @@ function bakeDeepCanalProps(
 ): DeepCanalTextures | null {
   const needed =
     areas.map(areaLook).some((look) => look.cave.kind === 'sunkenHull' || look.deepCanalProps) ||
-    areas.some(hasTrajineras);
-  return needed ? bakeDeepCanalTextures(scene, bakeScale) : null;
+    areas.some(hasTrajineras) ||
+    hasFishingBoats(areas) ||
+    areas.some(hasDragNets);
+  return needed ? bakeDeepCanalTextures(scene, bakeScale, murkyPatchSizes(AREAS), areas) : null;
 }
 
 /** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */

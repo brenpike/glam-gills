@@ -19,13 +19,15 @@
  *   from the gliding trajinera and the bailing boat by shape;
  * - rod: the holder, a pebble ring on the gunwale, local (0, 0). The rod leans to +x; the scene
  *   mirrors it for the left end. The holder sits at FISHING_ROD_HOLDER from the hull's anchor and the
- *   tip at FISHING_ROD_TIP from the hull's anchor, which is where a lure's line starts;
+ *   tip at FISHING_ROD_TIP from the hull's anchor: right over the hull's end, where the logic hangs a
+ *   lure at the end of its hull (`along` 0 or the hull's length, 60 px from its middle);
  * - shadow: the hull's anchor (the middle of the hull on the water line). The pool is drawn
  *   FISHING_SHADOW_CY px under it, so the frame's origin is above the frame (originY is negative);
- * - bead: its centre, on the line at the water line under the rod tip;
+ * - bead: its centre, on the line at the water line, at the lure's x from the logic;
  * - lure: the worm's centre (WORM_TEX), at the lure's drawn position from the logic. It lies level
- *   and never turns. The line is not a texture: it is drawn live as one straight vector line (see
- *   FISHING_LINE_W), and paintFishingLureFrame shows how it meets the lure at each frame.
+ *   and never turns. The line is not a texture: it is drawn live as one straight upright vector line
+ *   at the lure's x from the logic (see FISHING_LINE_W), never at a fixed offset along the hull, and
+ *   paintFishingLureFrame shows how it meets the lure at each frame.
  *
  * Greyscale: the hull is cream over three darker bands that ink lines keep apart, with three flowers
  * and a thin inked rod out over each end; the shadow is a soft dark pool; the lure is the mid-tone
@@ -168,13 +170,13 @@ export function paintFishingBoat(ctx: CanvasRenderingContext2D): void {
 /** Where a rod's holder sits from the hull's anchor: 16 px in from the hull's end, on the gunwale. */
 export const FISHING_ROD_HOLDER: Readonly<{ x: number; y: number }> = Object.freeze({ x: HALF_W - 16, y: -12 });
 /**
- * Where a rod's tip is from the hull's anchor: 14 px past the hull's end and 30 px above the water
- * line. A lure's offset from the hull's middle is its x, so its line hangs 14 px clear of the hull.
+ * Where a rod's tip is from the hull's anchor: right over the hull's end and 30 px above the water
+ * line. The logic owns where a lure hangs (src/logic/lures.ts): a lure at a hull end (`along` 0 or
+ * the hull's length) is FISHING_BOAT_W / 2 px from the hull's middle, under this tip (mirrored for
+ * the left end). The line is drawn at the lure's x from the logic, so the art implies no offset.
  */
-export const FISHING_ROD_TIP: Readonly<{ x: number; y: number }> = Object.freeze({ x: HALF_W + 14, y: -30 });
-/** A lure's offset along the hull from the hull's middle, px: the rod tip's x. The left end's is its negative. */
-export const FISHING_LURE_OFFSET = FISHING_ROD_TIP.x;
-/** The rod's tip from the holder: a straight tube rising 18 px over a run of 30 (a slope of 0.6). */
+export const FISHING_ROD_TIP: Readonly<{ x: number; y: number }> = Object.freeze({ x: HALF_W, y: -30 });
+/** The rod's tip from the holder: a straight tube rising 18 px over a run of 16 (a slope of 1.125). */
 const ROD_RUN = FISHING_ROD_TIP.x - FISHING_ROD_HOLDER.x;
 const ROD_RISE = FISHING_ROD_HOLDER.y - FISHING_ROD_TIP.y;
 /** The rod tube: colour width and the ink added each side. */
@@ -186,8 +188,8 @@ const HOLDER_LW = 1.2;
 
 /**
  * Texture frame of the rod (provisional): the tube and the holder ring with their ink plus 4 px of
- * padding. Anchor point is the holder, local (0, 0). The guide asks for 48 x 44 (x -4 to 44); with
- * the ring at the origin and 4 px of padding, the frame is smaller and its origin further in.
+ * padding. Anchor point is the holder, local (0, 0). The tip is right over the hull's end, so the
+ * frame is smaller than the guide's 48 x 44.
  */
 export const FISHING_ROD_TEX: TexSize = frameFromBounds(
   -HOLDER_R - HOLDER_LW / 2,
@@ -237,8 +239,9 @@ export const FISHING_SHADOW_TEX: TexSize = frameFromBounds(
 /**
  * Paint the shadow around the hull's anchor: one soft ellipse in deep blue (TRAJINERA_SHADOW_RGB)
  * at FISHING_SHADOW_ALPHA in the middle fading to nothing at its rim. No ink, no halo, no chevrons,
- * so it never reads as the gliding trajinera's warning. It spans the hull's own length only, so no
- * line or lure is ever over it. The scene always shows it, under its boat, moving with it.
+ * so it never reads as the gliding trajinera's warning. It spans about the hull's own length: a line
+ * at a hull end crosses only its faded rim, and ink keeps 3:1 over even its darkest point, so the
+ * line still reads. The scene always shows it, under its boat, moving with it.
  */
 export function paintFishingShadow(ctx: CanvasRenderingContext2D): void {
   const [r, g, b] = TRAJINERA_SHADOW_RGB;
@@ -260,9 +263,10 @@ export function paintFishingShadow(ctx: CanvasRenderingContext2D): void {
 // ---------------------------------------------------------------------------
 
 /**
- * The line: ink, 1.6 wide and opaque, drawn live each frame as one straight vector line from the
- * rod tip down through the bead to the lure's knot. It is 3:1 or better against every deep canal
- * background, down to the deep stop at the floor (3c).
+ * The line: ink, 1.6 wide and opaque, drawn live each frame as one straight upright vector line at
+ * the lure's x from the logic (lureLine), from the rod tip's height down through the bead to the
+ * lure's knot. It is 3:1 or better against every deep canal background, down to the deep stop at
+ * the floor (3c).
  */
 export const FISHING_LINE_COLOUR = INK;
 export const FISHING_LINE_W = 1.6;
@@ -381,10 +385,11 @@ export const FISHING_MOTION = Object.freeze({
 
 /**
  * Paint one frame of a lure on its line around the lure's rest position (the worm's centre, local
- * (0, 0)): the line first, one straight INK line from `lineLength` px above the rest position (the
- * rod tip, which never moves) down to the lure's drawn position, then the lure over its end. At the
- * tug the line is shortened with the lure. The line is always upright, so the lure hangs straight
- * under its rod tip.
+ * (0, 0)), which the scene places at the lure's position from the logic: the line first, one
+ * straight INK line from `lineLength` px above the rest position (the rod tip's height, which never
+ * moves) down to the lure's drawn position, then the lure over its end. At the tug the line is
+ * shortened with the lure. The line is always upright, at the lure's own x, so it implies no offset
+ * along the hull; a lure at a hull end hangs straight under its rod tip.
  */
 export function paintFishingLureFrame(ctx: CanvasRenderingContext2D, frame: FishingLureFrame, lineLength: number): void {
   const dy = FISHING_LURE_FRAME_DY[frame];

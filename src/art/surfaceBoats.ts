@@ -1,15 +1,19 @@
 /**
- * Where the boats at the surface are drawn, and where the moored hulls fit between them (Areas 8 and 9).
+ * Where the boats at the surface are drawn, and where the moored hulls fit between them (Areas 8 to 10).
  * Every surface boat has painted art wider than the zone it blocks: a punting pole's bow and
  * shadow reach well past its thin touch zone, a gliding trajinera's hull and shadow frames
- * reach past its route, and a bailing boat's hull and its bucket's frames (Area 9, issue #107) need
- * not sit inside its span. The moored boats' shade is stretched to each bank overhang rect, but each
+ * reach past its route, a bailing boat's hull and its bucket's frames (Area 9, issue #107) need
+ * not sit inside its span, a fishing trajinera's hull, shadow, rods and float beads (Area 10, issue
+ * #108) reach past its drift span, and a drag net's two boats (leaning in the warning) sit outside
+ * its stretch with the float line between them. The moored boats' shade is stretched to each bank overhang rect, but each
  * moored hull is a whole, unstretched hull set only where no other surface boat is drawn.
  *
  * Pure: no Phaser calls, no game state, no randomness. It reads the layout data and the texture
  * frames only.
  */
 import type { BailingBoatSpawn } from '../logic/bailingBuckets';
+import type { DragNetSpawn } from '../logic/dragNets';
+import { fishingBoatBand, type FishingBoatSpawn } from '../logic/lures';
 import { movingHazardBaseY, type MovingHazardSpawn } from '../logic/movingHazards';
 import type { TrajineraSpawn } from '../logic/trajineras';
 import { SURF, type BankOverhang } from '../logic/zone';
@@ -22,6 +26,15 @@ import {
   BAILING_SHADOW_TEX,
 } from './drawBailingBucket';
 import { TRAJINERA_HULL_TEX, TRAJINERA_HULL_W, TRAJINERA_SHADOW_TEX } from './drawDeepCanal';
+import { DRAG_NET_BOAT_TEX, DRAG_NET_MOTION } from './drawDragNet';
+import {
+  FISHING_BEAD_TEX,
+  FISHING_BOAT_TEX,
+  FISHING_BOAT_W,
+  FISHING_ROD_HOLDER,
+  FISHING_ROD_TEX,
+  FISHING_SHADOW_TEX,
+} from './drawFishingTrajinera';
 import { MOVING_HAZARD_LOOKS } from './movingHazardTextures';
 
 /** Least clear water in px between a moored hull's frame and any other surface boat's art. */
@@ -36,11 +49,13 @@ export interface SurfaceBoatSpan {
   readonly x1: number;
 }
 
-/** The layout data that holds surface boats: a zone's moving hazards, gliding trajineras and bailing boats. */
+/** The layout data that holds surface boats: a zone's moving hazards, gliding trajineras, bailing boats, fishing trajineras and drag nets. */
 export interface SurfaceBoatSource {
   readonly movingHazards?: readonly Readonly<MovingHazardSpawn>[];
   readonly trajineras?: readonly Readonly<TrajineraSpawn>[];
   readonly bailingBoats?: readonly Readonly<BailingBoatSpawn>[];
+  readonly fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
+  readonly dragNets?: readonly Readonly<DragNetSpawn>[];
 }
 
 /** How far a frame centred on a hull-long rect reaches past either end of it, px: the larger side. */
@@ -99,12 +114,76 @@ function measureBailingBoatSpan(boat: Readonly<BailingBoatSpawn>): SurfaceBoatSp
   };
 }
 
+/** A frame's x-extent from its anchor, px: `x0` to its left edge (negative) and `x1` to its right. */
+interface FrameReach {
+  readonly x0: number;
+  readonly x1: number;
+}
+
+/** The x-extent from the anchor of `tex` placed at `at` px along x, mirrored when `mirrored`. */
+function reachOf(tex: TexSize, at: number, mirrored: boolean): FrameReach {
+  const left = -tex.originX;
+  const right = tex.w - tex.originX;
+  return mirrored ? { x0: at - right, x1: at - left } : { x0: at + left, x1: at + right };
+}
+
+/**
+ * The x-extent from a fishing trajinera's hull middle of its hull and shadow frames, a rod frame at
+ * each end (the right one leaning +x, the left mirrored) and a float bead frame at each lure's place
+ * along the hull: the bead and the rods are drawn at the lures' logic x, the rods only at the ends.
+ */
+function measureFishingFrameReach(boat: Readonly<FishingBoatSpawn>): FrameReach {
+  const reaches = [
+    reachOf(FISHING_BOAT_TEX, 0, false),
+    reachOf(FISHING_SHADOW_TEX, 0, false),
+    reachOf(FISHING_ROD_TEX, FISHING_ROD_HOLDER.x, false),
+    reachOf(FISHING_ROD_TEX, -FISHING_ROD_HOLDER.x, true),
+    ...boat.lures.map((lure) => reachOf(FISHING_BEAD_TEX, lure.along - FISHING_BOAT_W / 2, false)),
+  ];
+  return { x0: Math.min(...reaches.map((reach) => reach.x0)), x1: Math.max(...reaches.map((reach) => reach.x1)) };
+}
+
+/**
+ * A fishing trajinera's span: its whole drift span (fishingBoatBand), the hull middle running from
+ * half a hull in from its west end to half a hull in from its east end, widened by its frames'
+ * reach from the hull middle (measureFishingFrameReach) at each end.
+ */
+function measureFishingBoatSpan(boat: Readonly<FishingBoatSpawn>): SurfaceBoatSpan {
+  const band = fishingBoatBand(boat);
+  const reach = measureFishingFrameReach(boat);
+  return { id: boat.id, x0: band.x0 + FISHING_BOAT_W / 2 + reach.x0, x1: band.x1 - FISHING_BOAT_W / 2 + reach.x1 };
+}
+
+/**
+ * The most a frame reaches from its anchor along x, px, when it is turned up to `rad` either way
+ * about the anchor: its farthest corner's reach along x and along y, turned by `rad`.
+ */
+function measureTurnedReach(tex: TexSize, rad: number): number {
+  const reachX = Math.max(tex.originX, tex.w - tex.originX);
+  const reachY = Math.max(tex.originY, tex.h - tex.originY);
+  return reachX * Math.cos(rad) + reachY * Math.sin(rad);
+}
+
+/** How far a drag net boat's frame reaches from its anchor along x at its warning lean (DRAG_NET_MOTION.leanRad), px. */
+export const DRAG_NET_BOAT_REACH: number = measureTurnedReach(DRAG_NET_BOAT_TEX, DRAG_NET_MOTION.leanRad);
+
+/**
+ * A drag net's span: both its boats, their middles FISHING_BOAT_W / 2 px outside the stretch's west
+ * and east edges, each widened by DRAG_NET_BOAT_REACH, and so the float line and floats between them.
+ */
+function measureDragNetSpan(net: Readonly<DragNetSpawn>): SurfaceBoatSpan {
+  const { x0, x1 } = net.dragNet.stretch;
+  return { id: net.id, x0: x0 - FISHING_BOAT_W / 2 - DRAG_NET_BOAT_REACH, x1: x1 + FISHING_BOAT_W / 2 + DRAG_NET_BOAT_REACH };
+}
+
 /**
  * The x-extent of every surface boat's art in `source`: each moving hazard whose base is the
  * surface (SURF) gets the union of its look's bow and shadow frames, each gliding trajinera its
- * route widened by TRAJINERA_FRAME_OVERHANG, and each bailing boat the union of its hull span and
- * its hull and bucket frames. Moving hazards first, then trajineras, then bailing boats, each in
- * data order. Throws when a surface moving hazard's look has no art.
+ * route widened by TRAJINERA_FRAME_OVERHANG, each bailing boat the union of its hull span and its
+ * hull and bucket frames, each fishing trajinera its whole drift span widened by its frames, and each
+ * drag net both its boats at their lean and the float line between them. Moving hazards first, then
+ * trajineras, bailing boats, fishing trajineras and drag nets, each in data order. Throws when a
+ * surface moving hazard's look has no art.
  */
 export function surfaceBoatSpans(source: Readonly<SurfaceBoatSource>): SurfaceBoatSpan[] {
   const hazards = (source.movingHazards ?? []).filter((spawn) => movingHazardBaseY(spawn) === SURF);
@@ -112,6 +191,8 @@ export function surfaceBoatSpans(source: Readonly<SurfaceBoatSource>): SurfaceBo
     ...hazards.map(measureMovingHazardSpan),
     ...(source.trajineras ?? []).map(measureTrajineraSpan),
     ...(source.bailingBoats ?? []).map(measureBailingBoatSpan),
+    ...(source.fishingBoats ?? []).map(measureFishingBoatSpan),
+    ...(source.dragNets ?? []).map(measureDragNetSpan),
   ];
 }
 

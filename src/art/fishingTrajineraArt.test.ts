@@ -10,7 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 // Loaded first on purpose: src/logic/zone.ts, lures.ts and trajineras.ts import each other, and only
 // this order sets TRAJINERAS before lures.ts reads it (drawDeepCanal.ts pulls trajineras.ts in).
-import { LURES } from '../logic/lures';
+import { LURES, fishingBoatHull, fishingBoatSpawn, lureLine, lureStill } from '../logic/lures';
 import {
   FISHING_BEAD_BOTTOM,
   FISHING_BEAD_R,
@@ -27,7 +27,6 @@ import {
   FISHING_LINE_COLOUR,
   FISHING_LINE_W,
   FISHING_LURE_FRAME_DY,
-  FISHING_LURE_OFFSET,
   FISHING_LURE_TEX,
   FISHING_MOTION,
   FISHING_ROD_HOLDER,
@@ -637,19 +636,19 @@ describe('the fishing rod (guide 7p)', () => {
     expect(cmdNames(wood)).toEqual(['moveTo', 'lineTo']);
     expect(cmdsOf(wood)).toEqual([
       ['moveTo', 0, 0],
-      ['lineTo', 30, -18],
+      ['lineTo', 16, -18],
     ]);
     expect(ops.indexOf(ink)).toBeLessThan(ops.indexOf(wood));
   });
 
-  it('rises at a slope of 0.6, its tip 14 px past the hull\'s end and 30 px above the water line', () => {
+  it('rises at a slope of 1.125, its tip right over the hull\'s end and 30 px above the water line', () => {
     expect(FISHING_ROD_HOLDER).toEqual({ x: 44, y: -12 });
-    expect(FISHING_ROD_TIP).toEqual({ x: 74, y: -30 });
-    expect(FISHING_ROD_TIP.x - FISHING_BOAT_W / 2).toBe(14);
+    expect(FISHING_ROD_TIP).toEqual({ x: 60, y: -30 });
+    expect(FISHING_ROD_TIP.x).toBe(FISHING_BOAT_W / 2);
     expect(FISHING_ROD_HOLDER.x).toBe(FISHING_BOAT_W / 2 - 16);
     const wood = ops.find((op) => isStroke(op) && op.strokeStyle === POLE_WOOD) as Op;
     const [, [, x, y]] = cmdsOf(wood) as [unknown, [string, number, number]];
-    expect(-y / x).toBeCloseTo(0.6, 9);
+    expect(-y / x).toBeCloseTo(1.125, 9);
     expect(FISHING_ROD_HOLDER.x + x).toBe(FISHING_ROD_TIP.x);
     expect(FISHING_ROD_HOLDER.y + y).toBe(FISHING_ROD_TIP.y);
   });
@@ -713,9 +712,10 @@ describe('the fishing shadow (guide 3g, 7p)', () => {
     expect(frame.maxX - FISHING_SHADOW_RX).toBeGreaterThanOrEqual(MIN_PAD);
   });
 
-  it('spans the hull\'s own length only: it ends before a lure\'s line, which hangs 74 px from the middle', () => {
-    expect(FISHING_SHADOW_RX).toBeLessThan(FISHING_LURE_OFFSET);
-    expect(FISHING_SHADOW_RX).toBeLessThan(FISHING_ROD_TIP.x);
+  it('spans about the hull\'s own length: a line at a hull end crosses only its faded rim', () => {
+    expect(FISHING_SHADOW_RX - FISHING_ROD_TIP.x).toBeLessThanOrEqual(4);
+    // the pool's alpha where a hull-end line crosses its middle: the radial fade at FISHING_ROD_TIP.x
+    expect(FISHING_SHADOW_ALPHA * (1 - FISHING_ROD_TIP.x / FISHING_SHADOW_RX)).toBeLessThan(0.03);
   });
 
   it('keeps the deep canal floor under it: over the shallow stop even its darkest point is above 0.1687', () => {
@@ -829,9 +829,21 @@ describe('the line and the lure frames: rest, bob and tug (guide 7p)', () => {
     expect(FISHING_MOTION.hullBobPeriod).toBe(3);
   });
 
-  it('hangs a lure 74 px from the hull\'s middle, its rod tip\'s x, so its line is 14 px clear of the hull', () => {
-    expect(FISHING_LURE_OFFSET).toBe(74);
-    expect(FISHING_LURE_OFFSET).toBe(FISHING_BOAT_W / 2 + 14);
+  it('puts the rod tip over a lure the logic hangs at a hull end, and draws the line at the lure\'s own x', () => {
+    const bounds = { minX: 0, maxX: 2000, minY: 0, maxY: 1000 };
+    const boat = fishingBoatSpawn('boat', 3, { x0: 400, x1: 700, lures: [{ along: 0, depth: 200 }, { along: LURES.hullLength, depth: 160 }] }, bounds);
+    expect(FISHING_BOAT_W).toBe(LURES.hullLength);
+    for (const t of [0, 4.5, 11]) {
+      const hull = fishingBoatHull(boat, t);
+      const middle = (hull.x0 + hull.x1) / 2;
+      expect(lureStill(boat, 0, t).x - middle).toBe(-FISHING_ROD_TIP.x);
+      expect(lureStill(boat, 1, t).x - middle).toBe(FISHING_ROD_TIP.x);
+      // the logic's line is upright at the lure's x, as the art draws it: no fixed offset along the hull
+      const status = { id: boat.lures[0].id, up: false, upLeft: 0 };
+      const { from, to } = lureLine(boat, 0, status, t, true);
+      expect(from.x).toBe(to.x);
+      expect(from.x).toBe(lureStill(boat, 0, t).x);
+    }
   });
 
   it.each(FRAMES)('draws the %s frame: one straight upright INK line from the rod tip to the lure, then the lure over its end', (frame) => {
