@@ -78,7 +78,8 @@ export type IconKind =
   | 'musicOff'
   | 'soundsOn'
   | 'soundsOff'
-  | 'menu';
+  | 'menu'
+  | 'filter';
 
 /**
  * House icon (guide 7d), shared by the Home Spot flag and every "go home" UI.
@@ -631,6 +632,21 @@ export function paintIcon(ctx: CanvasRenderingContext2D, kind: IconKind, size: n
         bars.lineTo(24, y);
       }
       ctx.stroke(bars);
+      break;
+    }
+    case 'filter': {
+      // Treasure Chest Filter tile: a funnel, ink only, one closed outline 3.5 wide with round joins, no
+      // fill. A wide top edge from x 6 to 26 at y 8 narrows to a short stem from x 14 to 18, down to y 25.
+      ctx.lineWidth = 3.5;
+      const funnel = new Path2D();
+      funnel.moveTo(6, 8);
+      funnel.lineTo(26, 8);
+      funnel.lineTo(18, 17);
+      funnel.lineTo(18, 25);
+      funnel.lineTo(14, 25);
+      funnel.lineTo(14, 17);
+      funnel.closePath();
+      ctx.stroke(funnel);
       break;
     }
   }

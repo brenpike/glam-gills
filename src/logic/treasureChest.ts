@@ -21,7 +21,7 @@ import {
 } from './catalogue';
 import { badgeShape, rarityName, type BadgeShape } from './hints';
 
-/** Label every Dream colour carries in the Treasure Chest (PRD C11, F15). */
+/** Dream colour label (PRD C11, F15). The Collection Book shows it once per Dream colour page. */
 export const DREAM_COLOUR_LABEL = 'Dream colour — not found in nature';
 
 /** Name an unfound treasure shows in the Treasure Chest. */
@@ -59,7 +59,7 @@ export const SECTION_LINES: Readonly<Record<ChestCategory, string>> = Object.fre
 export const SHORT_SECTION_LINES: Readonly<Record<ChestCategory, string>> = Object.freeze({
   decoration: 'Place them in decorate mode.',
   wearable: 'Wear them in Restyle for perks.',
-  dreamColour: 'Magic paints. Use in Restyle.',
+  dreamColour: 'Not in nature. Use in Restyle.',
 });
 
 /** Gap between a section heading and its section line, CSS px. */
@@ -74,9 +74,13 @@ export type SlotName = 'Head' | 'Neck' | 'Face' | 'Shirt' | 'Back' | 'Tail' | 'S
 /**
  * Fields every Treasure Chest entry has. An unfound entry is named UNFOUND_NAME and has its area's
  * hint (areaHint), or its rarity's plain hint when no area holds it; a found entry has its own name
- * and an empty hint. Rarity, rarity name and badge always show.
+ * and an empty hint. Rarity, rarity name and badge always show. `category` is the entry's section
+ * kind. `areaId` is the id of the area that holds it (a Dream colour, its Paint shell), the same
+ * area its hint names, or null when no area holds it.
  */
 export interface ChestEntryBase {
+  readonly category: ChestCategory;
+  readonly areaId: string | null;
   readonly name: string;
   readonly rarity: Rarity;
   readonly rarityName: string;
@@ -87,6 +91,7 @@ export interface ChestEntryBase {
 
 /** One catalogue Decoration. `id` is its treasure id. */
 export interface DecorationEntry extends ChestEntryBase {
+  readonly category: 'decoration';
   readonly id: string;
 }
 
@@ -95,6 +100,7 @@ export interface DecorationEntry extends ChestEntryBase {
  * unfound Wearable shows its slot only: perk null, detailText the slot name, e.g. 'Head'.
  */
 export interface WearableEntry extends ChestEntryBase {
+  readonly category: 'wearable';
   readonly id: string;
   readonly slot: WearableSlot;
   readonly slotName: SlotName;
@@ -103,13 +109,14 @@ export interface WearableEntry extends ChestEntryBase {
 }
 
 /**
- * One catalogue Dream colour, found or not; it always carries its label. `id` is the Dream colour id, which is also the swatch id the art layer
- * draws. `patterned` is true for patterned and sheen colours; solid colours show their name.
+ * One catalogue Dream colour, found or not. `id` is the Dream colour id, which is also the swatch id
+ * the art layer draws. `patterned` is true for patterned and sheen colours; solid colours show their
+ * name. Its section line, not the entry, says it is not found in nature.
  */
 export interface DreamColourEntry extends ChestEntryBase {
+  readonly category: 'dreamColour';
   readonly id: DreamColourId;
   readonly patterned: boolean;
-  readonly label: string;
 }
 
 /** Any Treasure Chest entry. */
@@ -282,13 +289,16 @@ export function pageText(pageNumber: number, pageCount: number): string {
   return `Page ${pageNumber} of ${pageCount}`;
 }
 
-function createEntryBase(
+function createEntryBase<C extends ChestCategory>(
+  category: C,
   name: string,
   rarity: Rarity,
   found: boolean,
   area: Readonly<AreaData> | undefined,
-): ChestEntryBase {
+): ChestEntryBase & { readonly category: C } {
   return {
+    category,
+    areaId: area?.id ?? null,
     name: found ? name : UNFOUND_NAME,
     rarity,
     rarityName: rarityName(rarity),
@@ -304,14 +314,14 @@ function createDecorationEntry(
   areas: readonly Readonly<AreaData>[],
 ): DecorationEntry {
   const area = treasureAreaOf(decoration.id, areas);
-  return { id: decoration.id, ...createEntryBase(decoration.name, decoration.rarity, found, area) };
+  return { id: decoration.id, ...createEntryBase('decoration', decoration.name, decoration.rarity, found, area) };
 }
 
 function createWearableEntry(wearable: Wearable, found: boolean, areas: readonly Readonly<AreaData>[]): WearableEntry {
   const area = treasureAreaOf(wearable.id, areas);
   return {
     id: wearable.id,
-    ...createEntryBase(wearable.name, wearable.rarity, found, area),
+    ...createEntryBase('wearable', wearable.name, wearable.rarity, found, area),
     slot: wearable.slot,
     slotName: slotName(wearable.slot),
     perk: found ? wearable.perk : null,
@@ -327,9 +337,8 @@ function createDreamColourEntry(
   const area = dreamColourAreaOf(colour.id, areas);
   return {
     id: colour.id,
-    ...createEntryBase(colour.name, colour.rarity, found, area),
+    ...createEntryBase('dreamColour', colour.name, colour.rarity, found, area),
     patterned: colour.kind !== 'solid',
-    label: DREAM_COLOUR_LABEL,
   };
 }
 
