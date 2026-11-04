@@ -28,6 +28,13 @@ const TAU = Math.PI * 2;
 const MASK_MARGIN = DRAG_NET_CURTAIN_W + DRAG_NET_SWAY_MAX + 24;
 /** Seconds into a quiet after which the lift-out and the settle are both over. */
 const SETTLED_AT_S = DRAG_NET_MOTION.liftFade + DRAG_NET_MOTION.settleFor;
+/** The parked curtain's alpha through the warning under reduced motion: steady, no pulse. */
+const WARN_CURTAIN_ALPHA = 0.45;
+/** The parked curtain's lowest and highest alpha in its pulse through the warning under full motion. */
+const WARN_PULSE_LOW = 0.35;
+const WARN_PULSE_HIGH = 0.6;
+/** Seconds per pulse of the parked curtain: two whole pulses in the 1 s warning, low at its start and end. */
+const WARN_PULSE_PERIOD = 0.5;
 
 /** One frame of drag net rendering input. SwimScene reuses one object for every frame. */
 export interface DragNetFrame {
@@ -64,6 +71,10 @@ interface NetDrawing {
   maskShape: Phaser.GameObjects.Graphics;
   mask: Phaser.Display.Masks.GeometryMask;
   shades: Phaser.GameObjects.Image[];
+  /** The lit floats along the stretch's top edge, one per float on the rope: shown in the warning only. */
+  markers: Phaser.GameObjects.Image[];
+  /** Whether the markers show. */
+  marked: boolean;
 }
 
 function bakedImage(scene: Phaser.Scene, info: TexInfo, depth: number): Phaser.GameObjects.Image {
@@ -178,6 +189,14 @@ function raisedShare(net: Readonly<DragNetSpawn>, phase: DragNetPhase, local: nu
  * about their anchors (dragNetBoatLean). Warning and sweep, reduced motion: the lit floats replace
  * the floats and the boats show their lean at once, held, with no rise and no bob.
  *
+ * Warning, inside the stretch: the surface is off-screen from a deep stretch (the view is one
+ * WORLD_H tall), so the warning shows in the stretch too. The curtain hangs parked with its leading
+ * edge on the edge the sweep starts from, masked out of the hollows as in the sweep, at
+ * WARN_CURTAIN_ALPHA under reduced motion and pulsing between WARN_PULSE_LOW and WARN_PULSE_HIGH under
+ * full motion; and the lit floats (markers) show still along the stretch's top edge, one per float on
+ * the rope, in both motion modes, so the cue never relies on motion or colour. The sweep's front
+ * starts on that same edge, so the curtain does not jump when the sweep starts.
+ *
  * Sweep: the flat baked curtain hangs from the water line with its leading edge on the logic's
  * front, mirrored for a sweep to the left, in both motion modes. After the sweep it lifts out where
  * the front ended, fading over liftFade, and then the floats and boats settle back over settleFor
@@ -253,13 +272,15 @@ export class DragNetView {
       drawing.mask.destroy();
       drawing.maskShape.destroy();
       for (const shade of drawing.shades) shade.destroy();
+      for (const marker of drawing.markers) marker.destroy();
     }
     this.strands.destroy();
   }
 
   /**
-   * The net's boats, rope, floats, hollow shades and masked curtain. The shades are made before the
-   * curtain at the same depth, so the curtain draws over them, and the rope before its floats.
+   * The net's boats, rope, floats, hollow shades, masked curtain and stretch markers. The shades, the
+   * curtain and the markers share a depth and are made in that order, so each draws over the one
+   * before and the axolotl stays in front of all three; the rope is made before its floats.
    */
   private createNet(scene: Phaser.Scene, net: Readonly<DragNetSpawn>): NetDrawing {
     const art = this.textures;
@@ -276,8 +297,12 @@ export class DragNetView {
     const mask = maskShape.createGeometryMask();
     curtain.setMask(mask);
     const rope = scene.add.graphics().setDepth(DEPTH.dragNetFloats);
-    const floats = dragNetFloatXs(stretch.x1 - stretch.x0).map((x) =>
+    const floatXs = dragNetFloatXs(stretch.x1 - stretch.x0);
+    const floats = floatXs.map((x) =>
       bakedImage(scene, art.float, DEPTH.dragNetFloats).setPosition(stretch.x0 + x, SURF).setVisible(true),
+    );
+    const markers = floatXs.map((x) =>
+      bakedImage(scene, art.floatLit, DEPTH.dragNetMesh).setPosition(stretch.x0 + x, stretch.y0),
     );
     const drawing: NetDrawing = {
       net,
@@ -292,6 +317,8 @@ export class DragNetView {
       maskShape,
       mask,
       shades,
+      markers,
+      marked: false,
     };
     this.drawRope(drawing, SURF);
     return drawing;
@@ -331,7 +358,15 @@ export class DragNetView {
         : 0;
       drawing.floats[index].setY(SURF - lift + bob);
     }
-    this.renderCurtain(drawing, snapshot, local, t);
+    this.showMarkers(drawing, snapshot.phase === 'warn');
+    this.renderCurtain(drawing, snapshot, local, t, ambient);
+  }
+
+  /** Shows or hides the net's stretch markers, only when that changes. */
+  private showMarkers(drawing: NetDrawing, marked: boolean): void {
+    if (marked === drawing.marked) return;
+    drawing.marked = marked;
+    for (const marker of drawing.markers) marker.setVisible(marked);
   }
 
   /** Swaps every float of the net to the lit frame or back, only when that changes. */
@@ -343,21 +378,36 @@ export class DragNetView {
   }
 
   /**
-   * The curtain: on the logic's front through the sweep; then, in a quiet after a sweep this trip,
-   * where the front ended, fading over liftFade; else hidden.
+   * The curtain: parked on the sweep's start edge through the warning, faint and, under full motion
+   * (`ambient`), pulsing; on the logic's front through the sweep; then, in a quiet after a sweep this
+   * trip, where the front ended, fading over liftFade; else hidden.
    */
-  private renderCurtain(drawing: NetDrawing, snapshot: Readonly<DragNetSnapshot>, local: number, t: number): void {
+  private renderCurtain(
+    drawing: NetDrawing,
+    snapshot: Readonly<DragNetSnapshot>,
+    local: number,
+    t: number,
+    ambient: boolean,
+  ): void {
     const { curtain, net } = drawing;
+    const { x0, x1 } = net.dragNet.stretch;
+    if (snapshot.phase === 'warn') {
+      const startX = drawing.heading === 1 ? x0 : x1;
+      const intoWarn = local - net.dragNet.timing.quietFor;
+      const pulse = (1 - Math.cos((TAU * intoWarn) / WARN_PULSE_PERIOD)) / 2;
+      const alpha = ambient ? WARN_PULSE_LOW + (WARN_PULSE_HIGH - WARN_PULSE_LOW) * pulse : WARN_CURTAIN_ALPHA;
+      curtain.setVisible(true).setAlpha(alpha).setPosition(startX, SURF);
+      return;
+    }
     if (snapshot.phase === 'sweep') {
       if (snapshot.front === null) throw new Error(`DragNetView: drag net ${net.id} has no sweep front in its sweep`);
       curtain.setVisible(true).setAlpha(1).setPosition(snapshot.front, SURF);
       return;
     }
-    if (snapshot.phase !== 'quiet' || t <= local || local >= DRAG_NET_MOTION.liftFade) {
+    if (t <= local || local >= DRAG_NET_MOTION.liftFade) {
       curtain.setVisible(false);
       return;
     }
-    const { x0, x1 } = net.dragNet.stretch;
     const endX = drawing.heading === 1 ? x1 : x0;
     curtain
       .setVisible(true)
