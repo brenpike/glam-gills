@@ -1,5 +1,5 @@
 /**
- * Treasure Chest filters (PRD C11, C12): which chips are on, which entries match them, and how many
+ * Treasure Chest filters (PRD C11): which chips are on, which entries match them, and how many
  * treasures each area holds and has given up. Pure data; the Filter screen's layout and drawing live
  * elsewhere.
  */

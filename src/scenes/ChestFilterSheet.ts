@@ -38,9 +38,9 @@ import { playSound } from '../platform/soundPlayer';
 import { createButton, cssColor, drawPanel, uiTextStyle, type SceneView, type UiButton } from './BootScene';
 
 /**
- * Game registry key of the remembered chest filter (PRD C12): kept while the game is open, outside
- * the session, never saved. Never equals a `REGISTRY_KEYS`, `TRIP_REGISTRY_KEYS`,
- * `SESSION_REGISTRY_KEY`, `SAVE_GATE_REGISTRY_KEY`, `REFUGE_REGISTRY_KEY`, `DEV_AREA_REGISTRY_KEY`
+ * Game registry key of the remembered chest filter (PRD C11, open question 633): kept while the
+ * game is open, outside the session, never saved. Never equals a `REGISTRY_KEYS`,
+ * `TRIP_REGISTRY_KEYS`, `SESSION_REGISTRY_KEY`, `SAVE_GATE_REGISTRY_KEY`, `REFUGE_REGISTRY_KEY`, `DEV_AREA_REGISTRY_KEY`
  * or `DEV_DECOR_REGISTRY_KEY` value.
  */
 export const CHEST_FILTER_REGISTRY_KEY = 'chestFilter';
