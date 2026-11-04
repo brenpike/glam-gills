@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-11-04
+
+### Added
+
+- Area 11, a fourth deep canal area, at golden hour. It is a U-turn, 10 x 2 screens: swim east along the top, down at the far end, and back west along the bottom to the exit under the Home Spot (issue #112).
+- The Neotropic cormorant, a diving bird. It floats on the surface, then dives down and back up in a U-shaped arc. Swim deep or away to stay safe!
+- The golden-hour look: papel picado banners, marigold petals (a few sink slowly), water hyacinth rafts, ahuejote root curtains and chinampa walls, sunken trajinera arches, warm light rays and a lit lower row.
+- 3 new treasures to find: the Little cormorant, and the Marigold and Golden shine Dream colours.
+- A new fact card: "Meet the cormorant".
+- Area 11 plays the dusk Trajinera Waltz.
+
 ## [0.64.0] - 2026-11-04
 
 ### Added
