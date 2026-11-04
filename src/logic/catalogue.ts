@@ -1,7 +1,7 @@
 /**
  * The treasure catalogue: rarities, categories, wearable slots, perks, Dream colours and the
  * treasures of every area: the canal, the pond, the pond's Area 3, the chinampa gardens' Areas 4 and 5, the spring
- * cave's Areas 6 and 7 and the deep canal's Areas 8, 9 and 10 (PRD B1 to B3, F9).
+ * cave's Areas 6 and 7 and the deep canal's Areas 8 to 11 (PRD B1 to B3, F9).
  * Pure data plus lookups; nothing here applies perks.
  */
 
@@ -97,7 +97,9 @@ export type DreamColourId =
   | 'olive'
   | 'lantern-shine'
   | 'peach'
-  | 'confetti-shine';
+  | 'confetti-shine'
+  | 'marigold'
+  | 'golden-hour-shine';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -259,11 +261,28 @@ export const CONFETTI_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The deep canal's Area 11 Dream colour, a warm marigold held by that area's first Paint shell (issue #112). */
+export const MARIGOLD: DreamColour = Object.freeze({
+  id: 'marigold',
+  name: 'Marigold',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
+/** The deep canal's Area 11 Legendary Dream colour, a deep gold golden hour sheen held by that area's second Paint shell (issue #112). */
+export const GOLDEN_HOUR_SHINE: DreamColour = Object.freeze({
+  id: 'golden-hour-shine',
+  name: 'Golden shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
- * Lantern shine (Area 9), then Peach and Confetti shine (Area 10).
+ * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold and Golden shine
+ * (Area 11).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -284,6 +303,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   LANTERN_SHINE,
   PEACH,
   CONFETTI_SHINE,
+  MARIGOLD,
+  GOLDEN_HOUR_SHINE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -1109,10 +1130,28 @@ export const DEEP_CANAL_3_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The deep canal Area 11 treasures, all new (issue #112): the Little cormorant, a Rare Floating
+ * Decoration and the area's special treasure, then the Marigold Paint shell, then the Golden shine
+ * Paint shell, in rarity order. The newest entry comes last so placement by seed stays the same for
+ * every earlier treasure.
+ */
+export const DEEP_CANAL_4_TREASURES: readonly Treasure[] = Object.freeze([
+  {
+    id: 'deep-canal/little-cormorant',
+    name: 'Little cormorant',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  createPaintShell(MARIGOLD, 'deep-canal'),
+  createPaintShell(GOLDEN_HOUR_SHINE, 'deep-canal'),
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
  * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
  * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's, then
- * the deep canal Area 10's.
+ * the deep canal Area 10's, then the deep canal Area 11's.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -1125,6 +1164,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...DEEP_CANAL_TREASURES,
   ...DEEP_CANAL_2_TREASURES,
   ...DEEP_CANAL_3_TREASURES,
+  ...DEEP_CANAL_4_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

@@ -44,6 +44,7 @@ import {
 } from './palette';
 import { paintChinampaBank, paintChinampaBankRoots } from './drawChinampa';
 import { paintCanalBedStones } from './drawDeepCanal';
+import { paintGoldenDecor, paintLitLowerRow, type GoldenChunk } from './drawGoldenCanal';
 import { paintSpringRowDetails } from './drawSpringCave';
 import { habitatLook, type AreaLookId, type EdgeReedLook, type HabitatLook } from './habitatLook';
 
@@ -97,6 +98,9 @@ export interface ChunkOptions {
    * 'spring-cave' paints a rock roof with no sun and no clouds (so no cloud draws), and its row
    * details (paintSpringRowDetails) last: the sky opening and the lit pool on the top row, rock
    * walls at the row's ends and the rock bed on the bottom row.
+   * 'deep-canal-golden' is the deep canal at golden hour: its own sky, wash, water and warm slanted
+   * rays (the same random draws as the deep canal), then its decorations (paintGoldenDecor) after
+   * every other step, and the lit lower row on a bottom chunk last.
    */
   readonly look?: AreaLookId;
   /**
@@ -366,7 +370,10 @@ function paintWater(ctx: CanvasRenderingContext2D, look: HabitatLook): void {
   ctx.fillRect(0, SURF_WATER_TOP, VIEW_W, VIEW_H - SURF_WATER_TOP);
 }
 
-function paintRays(ctx: CanvasRenderingContext2D, rand: () => number, alphaScale: number): void {
+/** Static light rays (guide 7a) in the look's tint, alpha scale and slant. Draws `rand` three times. */
+function paintRays(ctx: CanvasRenderingContext2D, rand: () => number, look: HabitatLook): void {
+  const [r, g, b] = look.rayTint;
+  const slant = look.raySlant;
   const specs: readonly (readonly [number, number, number])[] = [
     [120, 30, 0.4],
     [250, 38, 2.0],
@@ -375,17 +382,17 @@ function paintRays(ctx: CanvasRenderingContext2D, rand: () => number, alphaScale
   for (const [bx, w, ph] of specs) {
     const x = bx + (rand() - 0.5) * 28;
     const dx = 6 * Math.sin((TAU * T_STATIC) / 8 + ph);
-    const a = (RAY_ALPHA + RAY_ALPHA_SWING * Math.sin((TAU * T_STATIC) / 6 + ph)) * alphaScale;
-    const g = ctx.createLinearGradient(0, SURF, 0, RAY_END_Y);
-    g.addColorStop(0, `rgba(255,255,255,${a.toFixed(3)})`);
-    g.addColorStop(1, 'rgba(255,255,255,0)');
+    const a = (RAY_ALPHA + RAY_ALPHA_SWING * Math.sin((TAU * T_STATIC) / 6 + ph)) * look.rayAlphaScale;
+    const grad = ctx.createLinearGradient(0, SURF, 0, RAY_END_Y);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${a.toFixed(3)})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
     const p = new Path2D();
     p.moveTo(x + dx, SURF + 3);
     p.lineTo(x + w + dx, SURF + 3);
-    p.lineTo(x + w + dx - 70, RAY_END_Y);
-    p.lineTo(x + dx - 70, RAY_END_Y);
+    p.lineTo(x + w + dx - slant, RAY_END_Y);
+    p.lineTo(x + dx - slant, RAY_END_Y);
     p.closePath();
-    ctx.fillStyle = g;
+    ctx.fillStyle = grad;
     ctx.fill(p);
   }
 }
@@ -667,7 +674,9 @@ function paintSpringCaveRow(ctx: CanvasRenderingContext2D, row: ChunkRow, opts: 
  * `stream` adds the stream after the rays (`streamClosed` tapers it out before
  * the mouth), and `streamSpill` adds the left neighbour's overflowing mouth
  * stones at the same step. A look with spring cave row details (`rowDetails`) paints no sun and
- * no clouds on its rock roof, and its row details last (paintSpringCaveRow).
+ * no clouds on its rock roof, and its row details last (paintSpringCaveRow). A look with
+ * `goldenDecor` paints its golden-hour decorations after everything else (drawGoldenCanal.ts), and a
+ * look with `lowerRowLight` then lights a bottom chunk; neither draws randomness.
  */
 export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkOptions): void {
   const { rand } = opts;
@@ -688,7 +697,7 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
     }
     if (look.airWash !== null) paintAirWash(ctx, look.airWash);
     paintWater(ctx, look);
-    paintRays(ctx, rand, look.rayAlphaScale);
+    paintRays(ctx, rand, look);
     // Roots reach into the water, so they go over it, after the rays.
     if (opts.hasBank && look.bank === 'plots') paintChinampaBankRoots(ctx, plotBankOf(opts));
     if (opts.stream === true) paintStream(ctx, opts.streamClosed === true);
@@ -705,6 +714,22 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
     }
   }
   if (rockRoof) paintSpringCaveRow(ctx, row, opts);
+  if (look.goldenDecor) paintGoldenDecor(ctx, goldenChunkOf(row, opts));
+  if (look.lowerRowLight && row === 'bottom') paintLitLowerRow(ctx, opts.index, look.raySlant);
+}
+
+/** What the golden-hour painters need of a chunk (drawGoldenCanal.ts): its rows, bank, edges and own bed edge. */
+function goldenChunkOf(row: ChunkRow, opts: ChunkOptions): GoldenChunk {
+  const wx0 = opts.index * VIEW_W;
+  return {
+    index: opts.index,
+    hasSky: row === 'single' || row === 'top',
+    hasBed: row === 'single' || row === 'bottom',
+    bank: opts.hasBank ? { capLeft: opts.bankCapLeft === true, capRight: opts.bankCapRight === true } : null,
+    edgeLeft: opts.edgeLeft === true,
+    edgeRight: opts.edgeRight === true,
+    bedEdge: (x) => bedEdgeY(wx0 + x),
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -3,6 +3,8 @@ import {
   BLACK_BASS_MEET_RANGE,
   CARP_FACT,
   CARP_MEET_RANGE,
+  CORMORANT_FACT,
+  CORMORANT_MEET_RANGE,
   CRAYFISH_FACT,
   CRAYFISH_MEET_RANGE,
   GARTER_SNAKE_FACT,
@@ -14,7 +16,7 @@ import {
   type FactCard,
 } from './factCards';
 import type { RockWall } from './pebble';
-import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
+import { BLACK_BASS, CARP, CORMORANT, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
 
@@ -57,6 +59,18 @@ export interface PredatorRuleHook {
  * evenly to a stop at the cooldown's end; after a cancelled warning it holds still, keeping its
  * facing. It never changes facing before the cooldown ends, then swims its route again. With
  * `stillCooldown` as well, `stillCooldown` wins.
+ * `diveArc` (issue #112, ND-15): the strike is a dive along a U-shaped arc, kept as
+ * `PredatorState.dive` and locked at the end of the warning toward the target's place then, the aim
+ * spot. The arc goes down from the predator's place through the aim spot, never deeper than
+ * lungeRange below the nearest point of its route, and back up to its start height as far past the
+ * spot. Its width, start to far end, is DIVE_ARC_MIN_WIDTH to DIVE_ARC_MAX_WIDTH px, and its far end
+ * stays within lungeRange of its route. A spot straight below dives along the facing. The dive moves
+ * at lungeSpeed and lasts the arc's length over lungeSpeed, at most lungeDuration. It connects as the
+ * tilapia's strike does: the predator's position, its head, within hitRadius. A dive that connects
+ * ends the strike, and the predator finishes the arc through the cooldown with no further hit. It
+ * then holds where it surfaced through the cooldown, keeping the dive's facing (turned away, drying);
+ * after a cancelled warning it holds where it is. Patrol then swims it back to its route. With
+ * `stillCooldown` or `slowTurn` as well, `stillCooldown` wins, then `diveArc`.
  */
 export interface PredatorRules {
   sightCover?: boolean;
@@ -65,10 +79,38 @@ export interface PredatorRules {
   warnOnRoute?: boolean;
   levelStrike?: boolean;
   slowTurn?: boolean;
+  diveArc?: boolean;
 }
 
 /** How far in px a predator with the `warnOnRoute` rule may be from its route and still warn (inclusive). */
 export const ROUTE_WARN_TOLERANCE = 2;
+
+/** Narrowest dive arc (`diveArc` rule) in px, from its start to its far end (PRD open question 546). */
+export const DIVE_ARC_MIN_WIDTH = 120;
+
+/** Widest dive arc (`diveArc` rule) in px, from its start to its far end (PRD open question 546). */
+export const DIVE_ARC_MAX_WIDTH = 360;
+
+/**
+ * A dive along a U-shaped arc (`diveArc` rule), locked at the end of the warning. `start` is where the
+ * dive began, `bottom` its deepest point, under or at the aim spot, and `end` its far end, back at the
+ * start's height. Each half is a quarter ellipse through `bottom`, followed as DIVE_ARC_SAMPLES / 2
+ * straight pieces between points on it. `length` is the length in px of that path and `travelled`
+ * how far along it the predator has gone.
+ */
+export interface DiveArc {
+  start: Point;
+  bottom: Point;
+  end: Point;
+  length: number;
+  travelled: number;
+}
+
+/** Where a predator's head is and the unit direction it heads along (`diveArcPose`). */
+export interface DiveArcPose {
+  head: Point;
+  tangent: Point;
+}
 
 /**
  * One predator species: its tuning, meet range in px, fact card, optional rule hook and optional
@@ -102,6 +144,9 @@ export type PredatorRoute = TilapiaRoute & { species: Readonly<PredatorSpecies> 
  * `glide` is for a species with the `slowTurn` rule only: the unit direction of its glide through
  * the cooldown after a strike, the strike's aim. It is absent in every other phase, after a
  * cancelled warning and on every other species.
+ * `dive` is for a species with the `diveArc` rule only: its dive arc, from the strike start until it
+ * has surfaced at the arc's far end, through the start of the cooldown after a dive that connected
+ * early. It is absent in every other phase, after a cancelled warning and on every other species.
  */
 export interface PredatorState {
   species: string;
@@ -116,6 +161,7 @@ export interface PredatorState {
   aim: Point | null;
   strikeSpot?: Point;
   glide?: Point;
+  dive?: DiveArc;
 }
 
 /** Phase events emitted by `stepPredator`, in the order they happened within the step. */
@@ -169,6 +215,13 @@ interface PhaseStep {
 
 const MAX_PHASE_STEPS = 8;
 const PROGRESS_EPSILON = 1e-9;
+/** Even angle steps of a dive arc's path, an even number, so its bottom is a corner (`diveArcCorner`). */
+const DIVE_ARC_SAMPLES = 64;
+/** Bisection steps that narrow a dive arc's far half into reach of its route (`farArmWidth`). */
+const DIVE_ARC_BISECTIONS = 32;
+
+/** The shape of a dive arc, without its length or progress. */
+type DiveArcShape = Pick<DiveArc, 'start' | 'bottom' | 'end'>;
 const NO_ROCK: readonly Readonly<RockWall>[] = Object.freeze([]);
 /**
  * Slack in px for the chase: a chase stops this far inside the lungeRange, so float error never
@@ -265,12 +318,31 @@ export const BLACK_BASS_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   rules: Object.freeze({ slowTurn: true }),
 });
 
+/**
+ * The cormorant (issue #112, PRD open question 546, ND-3), a diving water bird: it floats along its
+ * stretch at the surface, hunts by sight and cannot see into cover (`sightCover`), warns only while on
+ * its stretch (`warnOnRoute`), so its chase stays along the stretch, and dives a U-shaped arc at the
+ * aim spot locked at the end of the warning (`diveArc`), so it reaches no deeper than lungeRange below
+ * its stretch. Through the cooldown it floats where it surfaced, drying its wings, then swims back to
+ * its stretch before it can warn again. It never touches or bumps.
+ */
+export const CORMORANT_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
+  id: 'cormorant',
+  name: 'Cormorant',
+  tuning: CORMORANT,
+  meetRange: CORMORANT_MEET_RANGE,
+  fact: CORMORANT_FACT,
+  rules: Object.freeze({ sightCover: true, warnOnRoute: true, diveArc: true }),
+  neverTouches: true,
+});
+
 /** Every predator species. */
 export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.freeze([
   TILAPIA_SPECIES,
   HERON_SPECIES,
   CRAYFISH_SPECIES,
   BLACK_BASS_SPECIES,
+  CORMORANT_SPECIES,
   GARTER_SNAKE_SPECIES,
   CARP_SPECIES,
 ]);
@@ -368,6 +440,18 @@ export function stabTip(state: PredatorState): Point {
 }
 
 /**
+ * The head and heading of a predator (`DiveArcPose`). While it has a dive arc (`PredatorState.dive`),
+ * the head is its position and the tangent the arc's unit direction at how far it has travelled along
+ * it. Otherwise the head is its position and the tangent points along its facing.
+ */
+export function diveArcPose(state: PredatorState): DiveArcPose {
+  const head = { x: state.pos.x, y: state.pos.y };
+  const dive = state.dive;
+  if (!dive) return { head, tangent: { x: state.facing, y: 0 } };
+  return { head, tangent: diveArcTangent(dive, walkDiveArc(dive, dive.travelled).angle) };
+}
+
+/**
  * Whether a non-striking predator touches the target: centre distance within `contactRadius`
  * (inclusive).
  * Always false during a lunge, so a touch never doubles as a hit.
@@ -450,7 +534,9 @@ export function phaseProgress(state: PredatorState): number {
  * (`routeLoopDistance`) to start a warning and at the end-of-warning re-check; movement is unchanged.
  * With `levelStrike`, the aim locked at the end of the warning is level, toward the target's side.
  * With `slowTurn`, the cooldown after a strike glides along the strike's aim to a stop, keeping the
- * facing, and the cooldown after a cancelled warning holds still.
+ * facing, and the cooldown after a cancelled warning holds still. With `diveArc`, the strike dives
+ * along the arc locked at the end of the warning (`lockDiveArc`), a dive that connects early finishes
+ * the arc in the cooldown, and the cooldown otherwise holds still, keeping the facing.
  *
  * Chase (PRD open question 249, ND-2): only with `ctx.tuning.chase`, and only on patrol when no
  * warning starts. See `chaseStep`. Without a chase, patrol is unchanged.
@@ -617,13 +703,18 @@ function stepTelegraph(
     aim,
     facing: faceToward(facing, aim.x),
   };
+  if (ctx.rules?.diveArc) {
+    const dive = lockDiveArc(state, aimAt, facing, ctx.tuning);
+    lunge.dive = dive;
+    lunge.duration = Math.min(ctx.tuning.lungeDuration, dive.length / ctx.tuning.lungeSpeed);
+    lunge.facing = faceToward(facing, dive.end.x - dive.start.x);
+  }
   return { state: lunge, used, event: { type: 'lungeStart', aim: { ...aim } } };
 }
 
 function stepLunge(state: PredatorState, target: Point, dt: number, ctx: PredatorContext): PhaseStep {
   const used = Math.min(dt, state.duration - state.elapsed);
-  const pos = state.strikeSpot ? state.pos : lungePosition(state, used, ctx);
-  const moved: PredatorState = { ...state, pos, elapsed: state.elapsed + used };
+  const moved: PredatorState = { ...lungeMove(state, used, ctx), elapsed: state.elapsed + used };
   const connected =
     lungeConnects(moved, target, ctx.tuning) &&
     targetExposed(target, ctx) &&
@@ -632,6 +723,28 @@ function stepLunge(state: PredatorState, target: Point, dt: number, ctx: Predato
     return { state: enterCooldown(moved, ctx), used, event: { type: 'lungeEnd', connected } };
   }
   return { state: moved, used, event: null };
+}
+
+/**
+ * Moves a striking predator for `used` seconds: along its dive arc when it has one (`diveMove`), not
+ * at all with a fixed strike spot, else along its locked aim (`lungePosition`).
+ */
+function lungeMove(state: PredatorState, used: number, ctx: PredatorContext): PredatorState {
+  if (state.dive) return diveMove(state, state.dive, used, ctx);
+  if (state.strikeSpot) return state;
+  return { ...state, pos: lungePosition(state, used, ctx) };
+}
+
+/**
+ * Moves a diving predator `used` seconds at lungeSpeed along its dive arc, no farther than its far
+ * end. The move to the arc point is clamped as any move (`moveClamped`), so rock and the safe area
+ * stop it; the arc itself is unchanged. Its facing is unchanged.
+ */
+function diveMove(state: PredatorState, dive: Readonly<DiveArc>, used: number, ctx: PredatorContext): PredatorState {
+  const travelled = Math.min(dive.length, dive.travelled + ctx.tuning.lungeSpeed * used);
+  const { point } = walkDiveArc(dive, travelled);
+  const pos = moveClamped(state.pos, { x: point.x - state.pos.x, y: point.y - state.pos.y }, ctx);
+  return { ...state, pos, dive: { ...dive, travelled } };
 }
 
 /** Where a lunging predator gets to after `used` seconds along its locked aim at `lungeSpeed`. */
@@ -654,16 +767,19 @@ function stepCooldown(
   }
   const patrol: PredatorState = { ...drifted, phase: 'patrol', elapsed: 0, duration: 0 };
   delete patrol.glide;
+  delete patrol.dive;
   return { state: patrol, used, event: { type: 'cooldownEnd' } };
 }
 
 /**
  * Moves a cooling-down predator for `used` seconds: a species with the `stillCooldown` rule stands
- * still facing the target, one with the `slowTurn` rule glides (`glideMove`), any other swims its
- * route.
+ * still facing the target, one with the `diveArc` rule finishes its dive arc (`surfaceMove`) and
+ * otherwise holds still keeping its facing, one with the `slowTurn` rule glides (`glideMove`), any
+ * other swims its route.
  */
 function cooldownMove(state: PredatorState, target: Point, used: number, ctx: PredatorContext): PredatorState {
   if (ctx.rules?.stillCooldown) return { ...state, facing: faceToward(state.facing, target.x - state.pos.x) };
+  if (ctx.rules?.diveArc) return state.dive ? surfaceMove(state, state.dive, used, ctx) : state;
   if (ctx.rules?.slowTurn) return glideMove(state, used, ctx);
   return swimRoute(state, used, ctx);
 }
@@ -682,11 +798,126 @@ function glideMove(state: PredatorState, used: number, ctx: PredatorContext): Pr
   return { ...state, pos: moveClamped(state.pos, scale(glide, travelled), ctx) };
 }
 
+/** Finishes a dive arc through the cooldown (`diveMove`), dropping the arc once it has surfaced at its far end. */
+function surfaceMove(state: PredatorState, dive: Readonly<DiveArc>, used: number, ctx: PredatorContext): PredatorState {
+  return withoutFinishedDive(diveMove(state, dive, used, ctx));
+}
+
 function enterCooldown(state: PredatorState, ctx: PredatorContext): PredatorState {
   const cooldown: PredatorState = { ...state, phase: 'cooldown', elapsed: 0, duration: ctx.tuning.cooldown, aim: null };
   delete cooldown.strikeSpot;
   if (ctx.rules?.slowTurn && state.aim) cooldown.glide = { x: state.aim.x, y: state.aim.y };
-  return cooldown;
+  return withoutFinishedDive(cooldown);
+}
+
+/** `state` without its dive arc when it has travelled the whole arc; else `state` itself. */
+function withoutFinishedDive(state: PredatorState): PredatorState {
+  if (!state.dive || state.dive.travelled < state.dive.length - PROGRESS_EPSILON) return state;
+  const surfaced: PredatorState = { ...state };
+  delete surfaced.dive;
+  return surfaced;
+}
+
+/**
+ * Locks the dive arc of a predator at `state.pos` toward the aim spot `spot` (`diveArc` rule). Its
+ * near half reaches `spot`'s x, at most half DIVE_ARC_MAX_WIDTH away, on the spot's side, or the
+ * facing's when the spot is straight below. Its bottom is at `spot`'s depth, kept between the start's
+ * height and lungeRange below the nearest point of the route. Its far half is as wide as the near
+ * half, widened so the whole arc is at least DIVE_ARC_MIN_WIDTH wide (`farArmWidth`).
+ */
+function lockDiveArc(state: PredatorState, spot: Point, facing: -1 | 1, tuning: PredatorTuning): DiveArc {
+  const start = { x: state.pos.x, y: state.pos.y };
+  const offset = spot.x - start.x;
+  const side = faceToward(facing, offset);
+  const near = Math.min(Math.abs(offset), DIVE_ARC_MAX_WIDTH / 2);
+  const deepest = nearestOnLoop(start, state.waypoints).y + tuning.lungeRange;
+  const bottom = { x: start.x + side * near, y: Math.min(deepest, Math.max(start.y, spot.y)) };
+  const far = farArmWidth(state.waypoints, bottom, start.y, side, near, tuning.lungeRange);
+  const shape = { start, bottom, end: { x: bottom.x + side * far, y: start.y } };
+  return { ...shape, length: walkDiveArc(shape, Infinity).walked, travelled: 0 };
+}
+
+/**
+ * The far half's width in px: as wide as the near half `near`, and at least DIVE_ARC_MIN_WIDTH minus
+ * `near`, narrowed by bisection when its far end at `surfaceY` would lie more than `reach` from the
+ * route. The narrowest far half is kept when even it lies out of reach: it ends no farther from the
+ * start than the near half or DIVE_ARC_MIN_WIDTH, both within reach of a start on the route.
+ */
+function farArmWidth(
+  waypoints: readonly Point[],
+  bottom: Point,
+  surfaceY: number,
+  side: -1 | 1,
+  near: number,
+  reach: number,
+): number {
+  const fits = (arm: number): boolean => routeLoopDistance({ x: bottom.x + side * arm, y: surfaceY }, waypoints) <= reach;
+  let narrow = Math.max(0, DIVE_ARC_MIN_WIDTH - near);
+  let wide = Math.max(near, narrow);
+  if (fits(wide)) return wide;
+  if (!fits(narrow)) return narrow;
+  for (let i = 0; i < DIVE_ARC_BISECTIONS; i++) {
+    const middle = (narrow + wide) / 2;
+    if (fits(middle)) narrow = middle;
+    else wide = middle;
+  }
+  return narrow;
+}
+
+/**
+ * The point at `angle` in [0, PI] along a dive arc: angle 0 is its start, PI / 2 its bottom and PI its
+ * far end. Each half is a quarter ellipse whose horizontal radius is that half's width.
+ */
+function diveArcAt(shape: Readonly<DiveArcShape>, angle: number): Point {
+  const arm = angle <= Math.PI / 2 ? shape.bottom.x - shape.start.x : shape.end.x - shape.bottom.x;
+  return {
+    x: shape.bottom.x - arm * Math.cos(angle),
+    y: shape.start.y + (shape.bottom.y - shape.start.y) * Math.sin(angle),
+  };
+}
+
+/** The unit direction of a dive arc at `angle`; level toward the far end where the arc has no direction. */
+function diveArcTangent(shape: Readonly<DiveArcShape>, angle: number): Point {
+  const arm = angle <= Math.PI / 2 ? shape.bottom.x - shape.start.x : shape.end.x - shape.bottom.x;
+  const direction = normalize({ x: arm * Math.sin(angle), y: (shape.bottom.y - shape.start.y) * Math.cos(angle) });
+  if (direction.x === 0 && direction.y === 0) return { x: faceToward(1, shape.end.x - shape.start.x), y: 0 };
+  return direction;
+}
+
+/**
+ * Corner `index` of 0 to DIVE_ARC_SAMPLES of a dive arc's path: the arc point at that many even angle
+ * steps, exactly its start, bottom and far end at the first, middle and last corner.
+ */
+function diveArcCorner(shape: Readonly<DiveArcShape>, index: number): Point {
+  if (index === 0) return shape.start;
+  if (index === DIVE_ARC_SAMPLES / 2) return shape.bottom;
+  if (index === DIVE_ARC_SAMPLES) return shape.end;
+  return diveArcAt(shape, (Math.PI * index) / DIVE_ARC_SAMPLES);
+}
+
+/**
+ * Walks a dive arc's path, the straight pieces between its DIVE_ARC_SAMPLES + 1 corners
+ * (`diveArcCorner`), for `travelled` px: the point reached, the arc angle there, between corners by
+ * its share of that piece, and the px walked, the path's whole length when `travelled` is longer.
+ */
+function walkDiveArc(shape: Readonly<DiveArcShape>, travelled: number): { point: Point; angle: number; walked: number } {
+  let walked = 0;
+  let previous = shape.start;
+  for (let i = 1; i <= DIVE_ARC_SAMPLES; i++) {
+    const corner = diveArcCorner(shape, i);
+    const piece = distance(previous, corner);
+    if (walked + piece >= travelled) {
+      const share = piece > 0 ? Math.max(0, travelled - walked) / piece : 0;
+      const point = {
+        x: previous.x + (corner.x - previous.x) * share,
+        y: previous.y + (corner.y - previous.y) * share,
+      };
+      return { point, angle: (Math.PI * (i - 1 + share)) / DIVE_ARC_SAMPLES, walked: travelled };
+    }
+    walked += piece;
+    previous = corner;
+  }
+  return { point: { x: shape.end.x, y: shape.end.y }, angle: Math.PI, walked };
 }
 
 /**

@@ -23,6 +23,7 @@ import { createLegs, isProtected, legSwimTuning, presentCount, tryHit } from './
 import { GEYSER_VENT, PUNTING_POLE, STALACTITE_DRIP, movingHazardSpawn } from './movingHazards';
 import {
   BLACK_BASS_SPECIES,
+  CORMORANT_SPECIES,
   HERON_SPECIES,
   TILAPIA_SPECIES,
   type PredatorRoute,
@@ -33,7 +34,7 @@ import { mulberry32 } from './rng';
 import { stepSwim, type SwimState } from './swimPhysics';
 import { inSafeArea } from './tilapia';
 import { TRIP_EVENTS, TRIP_REGISTRY_KEYS } from './tripEvents';
-import { BLACK_BASS, HERON, LEGS, SWIM, TILAPIA } from './tuning';
+import { BLACK_BASS, CORMORANT, HERON, LEGS, SWIM, TILAPIA } from './tuning';
 import { normalize } from './vec';
 import {
   BED_TOP,
@@ -1303,4 +1304,95 @@ describe('hitEncounter, the shared hit path (issue #107, ND-1)', () => {
     }
     return legs;
   }
+});
+
+describe('the cormorant in the encounter (#112)', () => {
+  const surfaceY = swimBounds().minY;
+  const floatPoint: Point = { x: 1000, y: surfaceY };
+  const cormorantRoute: PredatorRoute = { id: 'cormorant-float', waypoints: [floatPoint], species: CORMORANT_SPECIES };
+  const cormorantSource: EncounterSource = { ...zone, tilapiaRoutes: [], predatorRoutes: [cormorantRoute] };
+  const inReach: Point = { x: 1060, y: 180 };
+  /** One warning, dive and cooldown, and the swim back to its float point from at most 180 px away. */
+  const round = CORMORANT.windup + CORMORANT.lungeDuration + CORMORANT.cooldown + CORMORANT.lungeRange / CORMORANT.patrolSpeed;
+
+  function floatingAt(id: string, at: Point): PredatorRoute {
+    return { id, waypoints: [at], species: CORMORANT_SPECIES };
+  }
+
+  it('floats on its stretch at the top of the swim water, y 94, and plays its own species and tuning', () => {
+    expect(surfaceY).toBe(94);
+    const state = createEncounter(cormorantSource);
+    expect(state.predators.map((predator) => [predator.routeId, predator.species])).toEqual([['cormorant-float', 'cormorant']]);
+    const species = predatorSpecies(state, state.predators[0], createEncounterContext({ tilapia: { ...TILAPIA, windup: 5 } }));
+    expect(species).toBe(CORMORANT_SPECIES);
+    expect(species.tuning).toBe(CORMORANT);
+  });
+
+  it('lands a connected dive as one hit from its head under the water: one leg and protected time', () => {
+    expect(inSightCover(inReach, createEncounter(cormorantSource))).toBe(false);
+    const { state, events } = run(createEncounter(cormorantSource), inReach, round, noRegrowCtx, 'hit');
+    expect(typesOf(events, ['telegraph', 'lunge', 'hit', 'regrowStart', 'bump'])).toEqual(['telegraph', 'lunge', 'hit', 'regrowStart']);
+    const hit = events.find((event) => event.type === 'hit');
+    expect(hit).toMatchObject({ type: 'hit', sourceId: 'cormorant-float', leg: 0 });
+    if (hit?.type !== 'hit') throw new Error('no hit');
+    expect(hit.from.y).toBeGreaterThan(surfaceY);
+    expect(Math.hypot(hit.from.x - inReach.x, hit.from.y - inReach.y)).toBeLessThanOrEqual(CORMORANT.hitRadius);
+    expect(presentCount(state.legs)).toBe(LEGS.count - 1);
+    expect(state.legs.protectedLeft).toBe(LEGS.protectedTime);
+    expect(state.predators[0].phase).toBe('cooldown');
+  });
+
+  it('never bumps, even with the axolotl in its path, whatever its contactRadius', () => {
+    const wideReach: PredatorSpecies = { ...CORMORANT_SPECIES, tuning: { ...CORMORANT, contactRadius: 1000, bumpSpeed: 500 } };
+    for (const species of [CORMORANT_SPECIES, wideReach]) {
+      const source: EncounterSource = { ...cormorantSource, predatorRoutes: [{ ...cormorantRoute, species }] };
+      const { events, impulses } = run(createEncounter(source), inReach, 2 * round, noRegrowCtx);
+      expect(typesOf(events, ['hit']).length, species.tuning.contactRadius.toString()).toBeGreaterThan(0);
+      expect(typesOf(events, ['bump'])).toEqual([]);
+      expect(impulses).toBe(0);
+    }
+  });
+
+  it('lets only one predator warn or strike at a time across two cormorants and a tilapia (A1)', () => {
+    const fish: TilapiaRoute = { id: 'fish', waypoints: [{ x: 1000, y: 260 }] };
+    const source: EncounterSource = {
+      ...zone,
+      tilapiaRoutes: [fish],
+      predatorRoutes: [floatingAt('cormorant-0', { x: 950, y: surfaceY }), floatingAt('cormorant-1', { x: 1050, y: surfaceY })],
+    };
+    const axolotl: Point = { x: 1000, y: 170 };
+    let state = createEncounter(source);
+    const telegraphs: string[] = [];
+    for (let i = 0; i < Math.round(30 / DT) && !state.tripOver; i++) {
+      const result = stepEncounter(state, axolotl, DT, noRegrowCtx);
+      state = result.state;
+      expect(attackingCount(state)).toBeLessThanOrEqual(1);
+      for (const event of result.events) {
+        if (event.type === 'telegraph') telegraphs.push(event.sourceId);
+      }
+    }
+    expect(new Set(telegraphs)).toEqual(new Set(['fish', 'cormorant-0', 'cormorant-1']));
+  });
+
+  it('cancels its dive into the cooldown when the axolotl takes cover in the reeds during the warning', () => {
+    const reeds = zone.reedPatches[2];
+    const stand: Point = { x: (reeds.x0 + reeds.x1) / 2, y: surfaceY };
+    const open: Point = { x: reeds.x1 + 40, y: 180 };
+    const hidden: Point = { x: stand.x, y: 180 };
+    const source: EncounterSource = { ...cormorantSource, predatorRoutes: [floatingAt('cormorant-reeds', stand)] };
+    const start = createEncounter(source);
+    expect(inSightCover(open, start)).toBe(false);
+    expect(inSightCover(hidden, start)).toBe(true);
+    expect(Math.hypot(open.x - stand.x, open.y - stand.y)).toBeLessThanOrEqual(CORMORANT.lungeRange);
+    expect(Math.hypot(hidden.x - stand.x, hidden.y - stand.y)).toBeLessThanOrEqual(CORMORANT.lungeRange);
+    const warned = run(start, open, CORMORANT.windup / 2, noRegrowCtx);
+    expect(typesOf(warned.events, ['telegraph', 'lunge', 'hit'])).toEqual(['telegraph']);
+    expect(warned.state.predators[0].phase).toBe('telegraph');
+    const covered = run(warned.state, hidden, CORMORANT.windup, noRegrowCtx);
+    expect(typesOf(covered.events, ['telegraph', 'lunge', 'hit'])).toEqual([]);
+    expect(covered.state.predators[0].phase).toBe('cooldown');
+    expect(covered.state.predators[0].dive).toBeUndefined();
+    expect(covered.state.predators[0].pos).toEqual(stand);
+    expect(presentCount(covered.state.legs)).toBe(LEGS.count);
+  });
 });

@@ -102,6 +102,7 @@ const AXOLOTL_STATUE = 'deep-canal/axolotl-statue';
 const MARIGOLD_BOAT = 'deep-canal/marigold-boat';
 const MARIACHI_BAND = 'deep-canal/mariachi-band-figures';
 const SNOW_GLOBE = 'deep-canal/refuge-snow-globe';
+const LITTLE_CORMORANT = 'deep-canal/little-cormorant';
 const WIDE_SHIPPED = [STRING_LIGHTS, PAPEL_PICADO];
 const SHIPPED_FLOOR = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floor');
 const SHIPPED_FLOATING = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floating');
@@ -491,6 +492,7 @@ describe('placement kinds geometry (issue #95)', () => {
       [MARIGOLD_BOAT, 'floating'],
       [MARIACHI_BAND, 'floor'],
       [SNOW_GLOBE, 'floor'],
+      [LITTLE_CORMORANT, 'floating'],
     ]);
     for (const decoration of SHIPPED_DECORATIONS) {
       expect(decorationWidth(decoration), decoration.id).toBe(
@@ -600,6 +602,7 @@ describe('isValidPlacementFor', () => {
       MUSIC_STAGE,
       FLOATING_CANDLE,
       MARIGOLD_BOAT,
+      LITTLE_CORMORANT,
     ]);
     expect(SHIPPED_HANGING.map((decoration) => decoration.id)).toEqual([
       STRING_LIGHTS,

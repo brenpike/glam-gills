@@ -1,5 +1,5 @@
 /**
- * Tilapia, heron, garter snake, carp, crayfish, black bass bake, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
+ * Tilapia, heron, garter snake, carp, crayfish, black bass, cormorant bake, protected ring and leg icon colour rules (guide 3g, 6q, 10), headless.
  * The painters run against a recording context and a stub Path2D (the same approach as
  * treasureArt.test.ts): every fill and stroke is kept with the style, width and alpha it
  * was painted under, and every context call is logged.
@@ -35,6 +35,7 @@ import {
   paintCarpPuffStill,
   type CarpFrame,
 } from './drawCarp';
+import { CORMORANT_BILL, CORMORANT_FEATHER, CORMORANT_FRAMES, CORMORANT_RIM, CORMORANT_TEX } from './drawCormorant';
 import {
   CRAYFISH_BELLY,
   CRAYFISH_CLAW,
@@ -2329,9 +2330,12 @@ describe('bakePredatorTextures', () => {
     'black-bass-still',
   ];
 
-  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake, the carp, the crayfish and the black bass under fixed keys', () => {
+  /** The cormorant (issue #112): five frames. */
+  const CORMORANT = ['cormorant-float-a', 'cormorant-float-b', 'cormorant-warn', 'cormorant-dive', 'cormorant-dry'];
+
+  it('keeps every tilapia, effect and leg texture, and bakes only the wading heron, the garter snake, the carp, the crayfish, the black bass and the cormorant under fixed keys', () => {
     const { baked, made } = withFakeScene((scene, made) => ({ baked: bakePredatorTextures(scene, 2), made }));
-    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP, ...CRAYFISH, ...BLACK_BASS].sort();
+    const all = [...UNCHANGED, ...WADING_HERON, ...GARTER_SNAKE, ...CARP, ...CRAYFISH, ...BLACK_BASS, ...CORMORANT].sort();
     expect([...made.keys()].sort()).toEqual(all);
     expect(Object.keys(baked.info).sort()).toEqual(all);
     for (const retired of ['heron-shadow', 'heron-shadow-warning', 'heron-beak-dip']) {
@@ -2619,6 +2623,53 @@ describe('bakePredatorTextures', () => {
       const ops = (made.get(key) as Recording).ops;
       expect(ops.some((op) => isFill(op) && op.fillStyle === BASS_BODY)).toBe(key !== PREDATOR_TEX.blackBassWarn);
       expect(ops.some((op) => isFill(op) && op.fillStyle === BASS_FLASH_BODY)).toBe(key === PREDATOR_TEX.blackBassWarn);
+    }
+    const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
+    expect(new Set(keys.map(argsOf)).size).toBe(keys.length);
+  });
+
+  it('bakes each cormorant frame under its own key at its own size', () => {
+    const baked = withFakeScene((scene) => bakePredatorTextures(scene, 2));
+    expect(PREDATOR_TEX.cormorantFloatA).toBe('cormorant-float-a');
+    expect(PREDATOR_TEX.cormorantFloatB).toBe('cormorant-float-b');
+    expect(PREDATOR_TEX.cormorantWarn).toBe('cormorant-warn');
+    expect(PREDATOR_TEX.cormorantDive).toBe('cormorant-dive');
+    expect(PREDATOR_TEX.cormorantDry).toBe('cormorant-dry');
+    expect(baked.cormorant.floatA.key).toBe('cormorant-float-a');
+    expect(baked.cormorant.floatB.key).toBe('cormorant-float-b');
+    expect(baked.cormorant.warn.key).toBe('cormorant-warn');
+    expect(baked.cormorant.dive.key).toBe('cormorant-dive');
+    expect(baked.cormorant.dry.key).toBe('cormorant-dry');
+    for (const frame of CORMORANT_FRAMES) {
+      const info = baked.cormorant[frame];
+      expect(info.scale).toBe(2);
+      expect([info.w, info.h, info.originX, info.originY]).toEqual([
+        CORMORANT_TEX.w,
+        CORMORANT_TEX.h,
+        CORMORANT_TEX.originX,
+        CORMORANT_TEX.originY,
+      ]);
+    }
+  });
+
+  it('paints each cormorant texture with its own painter and tone', () => {
+    const made = withFakeScene((scene, made) => {
+      bakePredatorTextures(scene, 1);
+      return made;
+    });
+    const keys = [
+      PREDATOR_TEX.cormorantFloatA,
+      PREDATOR_TEX.cormorantFloatB,
+      PREDATOR_TEX.cormorantWarn,
+      PREDATOR_TEX.cormorantDive,
+      PREDATOR_TEX.cormorantDry,
+    ];
+    for (const key of keys) {
+      const ops = (made.get(key) as Recording).ops;
+      expect(ops.some((op) => isFill(op) && op.fillStyle === CORMORANT_FEATHER)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === CORMORANT_RIM)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === CORMORANT_BILL)).toBe(true);
+      expect(ops.some((op) => isFill(op) && op.fillStyle === EYE)).toBe(true);
     }
     const argsOf = (key: string): string => JSON.stringify((made.get(key) as Recording).ops.map((op) => op.args));
     expect(new Set(keys.map(argsOf)).size).toBe(keys.length);

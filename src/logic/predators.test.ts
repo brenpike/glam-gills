@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BLACK_BASS_FACT,
   BLACK_BASS_MEET_RANGE,
+  CORMORANT_FACT,
+  CORMORANT_MEET_RANGE,
   GARTER_SNAKE_FACT,
   GARTER_SNAKE_MEET_RANGE,
   HERON_FACT,
@@ -14,7 +16,10 @@ import { routeDistance } from './hiding';
 import {
   BLACK_BASS_SPECIES,
   CARP_SPECIES,
+  CORMORANT_SPECIES,
   CRAYFISH_SPECIES,
+  DIVE_ARC_MAX_WIDTH,
+  DIVE_ARC_MIN_WIDTH,
   GARTER_SNAKE_SPECIES,
   HERON_SPECIES,
   PREDATOR_SPECIES,
@@ -23,6 +28,7 @@ import {
   bumpImpulse,
   createPredator,
   crossesRock,
+  diveArcPose,
   lungeConnects,
   phaseProgress,
   routeLoopDistance,
@@ -38,7 +44,7 @@ import {
   type PredatorState,
   type PredatorTuning,
 } from './predators';
-import { BLACK_BASS, BLACK_BASS_CHASE, CARP, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA } from './tuning';
+import { BLACK_BASS, BLACK_BASS_CHASE, CARP, CORMORANT, CORMORANT_CHASE, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA } from './tuning';
 import type { Point } from './zone';
 
 const TEST_TUNING: Readonly<PredatorTuning> = Object.freeze({
@@ -111,6 +117,7 @@ describe('predator species', () => {
       HERON_SPECIES,
       CRAYFISH_SPECIES,
       BLACK_BASS_SPECIES,
+      CORMORANT_SPECIES,
       GARTER_SNAKE_SPECIES,
       CARP_SPECIES,
     ]);
@@ -1761,5 +1768,335 @@ describe('the safe area stops every move along its whole path', () => {
       { from: { x: 300, y: 200 }, to: { x: 250, y: 260 }, end: { x: 250, y: 260 } },
     ];
     for (const { from, to, end } of moves) expect(moveOnce(from, to, ctx)).toEqual(end);
+  });
+});
+
+const CORMORANT_Y = 94;
+const CORMORANT_STRETCH: readonly Point[] = [
+  { x: 1000, y: CORMORANT_Y },
+  { x: 1600, y: CORMORANT_Y },
+];
+const CORMORANT_ROUTE: PredatorRoute = { id: 'cormorant-test', waypoints: [...CORMORANT_STRETCH], species: CORMORANT_SPECIES };
+const CORMORANT_CTX: PredatorContext = {
+  safeArea: { x0: 40, x1: 300, y0: 80, y1: 700 },
+  bounds: { minX: 40, maxX: 3000, minY: CORMORANT_Y, maxY: 700 },
+  tuning: CORMORANT,
+  rules: CORMORANT_SPECIES.rules,
+};
+const CORMORANT_COVERED: PredatorContext = { ...CORMORANT_CTX, targetInCover: true };
+/** A binary fraction, so step times add up exactly. */
+const CORMORANT_DT = 1 / 64;
+const CORMORANT_WINDUP = Math.max(CORMORANT.windup, CORMORANT.minWindup);
+/** The deepest its head goes: its dive depth below its stretch. */
+const DIVE_DEPTH_Y = CORMORANT_Y + CORMORANT.lungeRange;
+/** The deepest it can hit: its dive depth plus its hit reach. */
+const HIT_DEPTH_Y = DIVE_DEPTH_Y + CORMORANT.hitRadius;
+const CORMORANT_MID: Point = { x: 1300, y: CORMORANT_Y };
+const CORMORANT_END: Point = CORMORANT_STRETCH[1];
+const NOWHERE: Point = { x: 2900, y: 690 };
+
+function cormorantAt(pos: Point, facing: -1 | 1 = 1): PredatorState {
+  return { ...createPredator(CORMORANT_ROUTE, CORMORANT_SPECIES.id), pos: { ...pos }, facing };
+}
+
+/** A cormorant at `pos` whose warning ends in one step with the axolotl at `target`, so it dives at `target`. */
+function cormorantDive(target: Point, pos: Point = CORMORANT_MID, facing: -1 | 1 = 1): PredatorState {
+  const ending: PredatorState = {
+    ...cormorantAt(pos, facing),
+    phase: 'telegraph',
+    elapsed: CORMORANT_WINDUP - CORMORANT_DT,
+    duration: CORMORANT_WINDUP,
+  };
+  const result = stepPredator(ending, target, CORMORANT_DT, CORMORANT_CTX);
+  expect(eventTypes(result.events)).toEqual(['lungeStart']);
+  return result.state;
+}
+
+function diveOf(state: PredatorState): NonNullable<PredatorState['dive']> {
+  if (!state.dive) throw new Error(`no dive in phase ${state.phase}`);
+  return state.dive;
+}
+
+/** Every spot on a 20 px grid at or below `from` and within its lunge range. */
+function cormorantReachSpots(from: Point): Point[] {
+  const spots: Point[] = [];
+  for (let dx = -CORMORANT.lungeRange; dx <= CORMORANT.lungeRange; dx += 20) {
+    for (let dy = 0; dy <= CORMORANT.lungeRange; dy += 20) {
+      if (Math.hypot(dx, dy) <= CORMORANT.lungeRange) spots.push({ x: from.x + dx, y: from.y + dy });
+    }
+  }
+  return spots;
+}
+
+describe('cormorant species (issue #112)', () => {
+  it('describes the cormorant: a sight hunter that warns only on its stretch, dives an arc and never bumps', () => {
+    expect(CORMORANT_SPECIES).toEqual({
+      id: 'cormorant',
+      name: 'Cormorant',
+      tuning: CORMORANT,
+      meetRange: CORMORANT_MEET_RANGE,
+      fact: CORMORANT_FACT,
+      rules: { sightCover: true, warnOnRoute: true, diveArc: true },
+      neverTouches: true,
+    });
+    expect(CORMORANT_SPECIES.tuning).toBe(CORMORANT);
+    expect(CORMORANT_SPECIES.fact).toBe(CORMORANT_FACT);
+    expect(CORMORANT_SPECIES.hook).toBeUndefined();
+    expect(CORMORANT_SPECIES.dangerPart).toBeUndefined();
+    expect(Object.isFrozen(CORMORANT_SPECIES)).toBe(true);
+    expect(Object.isFrozen(CORMORANT_SPECIES.rules)).toBe(true);
+  });
+
+  it('uses its provisional values (PRD open question 545): a 1.0 s warning over the 0.8 s floor', () => {
+    expect(CORMORANT).toMatchObject({
+      minWindup: 0.8,
+      windup: 1.0,
+      cooldown: 2.5,
+      lungeRange: 180,
+      lungeSpeed: 450,
+      lungeDuration: 1.3,
+      hitRadius: 26,
+      patrolSpeed: 40,
+    });
+    expect(CORMORANT.windup).toBeGreaterThan(CORMORANT.minWindup);
+    expect(Object.isFrozen(CORMORANT)).toBe(true);
+  });
+
+  it('chases along its stretch only: leash 0, sight 240 px, speed 120 px/s, within the chase limits', () => {
+    expect(CORMORANT_CHASE).toEqual({ sight: 240, leash: 0, speed: 120 });
+    const chaser = tunedSpecies(CORMORANT_SPECIES, { ...CORMORANT, chase: CORMORANT_CHASE });
+    expect(chaser.tuning.chase).toBe(CORMORANT_CHASE);
+    expect(chaser.rules).toBe(CORMORANT_SPECIES.rules);
+  });
+});
+
+describe('cormorant dive arc (issue #112, ND-15)', () => {
+  it('locks a U-shaped arc through the aim spot, 120 to 360 px wide, back up at its start height and within reach of its stretch', () => {
+    for (const spot of cormorantReachSpots(CORMORANT_MID)) {
+      const label = `spot (${spot.x}, ${spot.y})`;
+      const state = cormorantDive(spot);
+      const dive = diveOf(state);
+      const width = Math.abs(dive.end.x - dive.start.x);
+      expect(dive.start, label).toEqual(CORMORANT_MID);
+      expect(dive.bottom, label).toEqual(spot);
+      expect(dive.end.y, label).toBe(CORMORANT_Y);
+      expect(width, label).toBeGreaterThanOrEqual(DIVE_ARC_MIN_WIDTH);
+      expect(width, label).toBeLessThanOrEqual(DIVE_ARC_MAX_WIDTH);
+      expect(routeLoopDistance(dive.end, CORMORANT_STRETCH), label).toBeLessThanOrEqual(CORMORANT.lungeRange);
+      if (Math.abs(spot.x - CORMORANT_MID.x) >= DIVE_ARC_MIN_WIDTH / 2) {
+        expect(dive.end.x - spot.x, `${label}: as far past the spot`).toBe(spot.x - CORMORANT_MID.x);
+      }
+      expect(dive.travelled, label).toBe(0);
+      expect(state.pos, label).toEqual(CORMORANT_MID);
+      expect(state.duration, label).toBeCloseTo(dive.length / CORMORANT.lungeSpeed, 9);
+      expect(state.duration, label).toBeLessThanOrEqual(CORMORANT.lungeDuration);
+    }
+  });
+
+  it('dives along the arc at its dive speed, never deeper than 180 px below its stretch, and surfaces at the far end', () => {
+    const step = CORMORANT.lungeSpeed * CORMORANT_DT;
+    for (const spot of cormorantReachSpots(CORMORANT_MID)) {
+      const label = `spot (${spot.x}, ${spot.y})`;
+      const state = cormorantDive(spot);
+      const dive = diveOf(state);
+      const run = runStalker(state, NOWHERE, CORMORANT.lungeDuration + CORMORANT_DT, CORMORANT_CTX, 'lungeEnd');
+      expect(run.events, label).toEqual([{ type: 'lungeEnd', connected: false }]);
+      let previous = CORMORANT_MID;
+      let nearest = Math.hypot(CORMORANT_MID.x - spot.x, CORMORANT_MID.y - spot.y);
+      for (const pos of run.positions) {
+        expect(Math.hypot(pos.x - previous.x, pos.y - previous.y), label).toBeLessThanOrEqual(step + 1e-9);
+        expect(pos.y, label).toBeLessThanOrEqual(DIVE_DEPTH_Y);
+        expect(pos.y, label).toBeGreaterThanOrEqual(CORMORANT_Y);
+        nearest = Math.min(nearest, Math.hypot(pos.x - spot.x, pos.y - spot.y));
+        previous = pos;
+      }
+      expect(nearest, `${label}: passes through the spot`).toBeLessThanOrEqual(step / 2 + 1e-9);
+      expect(run.state.pos.x, label).toBeCloseTo(dive.end.x, 6);
+      expect(run.state.pos.y, label).toBeCloseTo(dive.end.y, 6);
+      expect(run.state.phase, label).toBe('cooldown');
+      expect(run.state.dive, label).toBeUndefined();
+    }
+  });
+
+  it('dives along its facing at a spot straight below, starting straight down', () => {
+    const below: Point = { x: CORMORANT_MID.x, y: CORMORANT_Y + 120 };
+    for (const facing of [-1, 1] as const) {
+      const state = cormorantDive(below, CORMORANT_MID, facing);
+      const dive = diveOf(state);
+      expect(dive.bottom).toEqual(below);
+      expect(dive.end).toEqual({ x: CORMORANT_MID.x + facing * DIVE_ARC_MIN_WIDTH, y: CORMORANT_Y });
+      expect(state.facing).toBe(facing);
+      expect(diveArcPose(state).tangent).toEqual({ x: 0, y: 1 });
+    }
+  });
+
+  it('narrows its far half to keep the far end within reach of its stretch', () => {
+    const spot: Point = { x: CORMORANT_END.x + 170, y: CORMORANT_Y + 50 };
+    const dive = diveOf(cormorantDive(spot, CORMORANT_END));
+    expect(dive.bottom).toEqual(spot);
+    expect(routeLoopDistance(dive.end, CORMORANT_STRETCH)).toBeLessThanOrEqual(CORMORANT.lungeRange);
+    expect(routeLoopDistance(dive.end, CORMORANT_STRETCH)).toBeGreaterThan(CORMORANT.lungeRange - 1e-6);
+    expect(dive.end.x - dive.start.x).toBeGreaterThanOrEqual(DIVE_ARC_MIN_WIDTH);
+  });
+
+  it('hits no axolotl deeper than y 300 with its stretch at y 94: its dive depth plus its hit reach', () => {
+    expect(HIT_DEPTH_Y).toBe(300);
+    const straightDown = cormorantDive({ x: CORMORANT_MID.x, y: DIVE_DEPTH_Y });
+    const justAbove = runStalker(straightDown, { x: CORMORANT_MID.x, y: HIT_DEPTH_Y - 1 }, CORMORANT.lungeDuration, CORMORANT_CTX, 'lungeEnd');
+    expect(justAbove.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    const deepLocks = cormorantReachSpots(CORMORANT_MID).filter((spot) => spot.y >= DIVE_DEPTH_Y - 60);
+    expect(deepLocks.length).toBeGreaterThan(0);
+    for (const spot of deepLocks) {
+      const state = cormorantDive(spot);
+      for (let x = CORMORANT_MID.x - 200; x <= CORMORANT_MID.x + 400; x += 10) {
+        for (const y of [HIT_DEPTH_Y + 0.001, HIT_DEPTH_Y + 10]) {
+          const run = runStalker(state, { x, y }, CORMORANT.lungeDuration + CORMORANT_DT, CORMORANT_CTX, 'lungeEnd');
+          expect(run.events, `spot (${spot.x}, ${spot.y}), axolotl (${x}, ${y})`).toEqual([{ type: 'lungeEnd', connected: false }]);
+        }
+      }
+    }
+  });
+
+  it('is dodged by swimming deeper than y 300 during the warning', () => {
+    const start = stepPredator(cormorantAt(CORMORANT_MID), { x: CORMORANT_MID.x, y: 250 }, CORMORANT_DT, CORMORANT_CTX);
+    expect(eventTypes(start.events)).toEqual(['telegraphStart']);
+    const run = runStalker(start.state, { x: CORMORANT_MID.x, y: HIT_DEPTH_Y + 1 }, CORMORANT_WINDUP, CORMORANT_CTX, 'telegraphCancel');
+    expect(eventTypes(run.events)).toEqual(['telegraphCancel']);
+    expect(run.state.phase).toBe('cooldown');
+    expect(run.state.dive).toBeUndefined();
+    expect(run.state.pos).toEqual(CORMORANT_MID);
+  });
+
+  it('stops its dive at a rock face, never entering the rock', () => {
+    const rock = { x0: 1350, x1: 1390, y0: 150, y1: 400 };
+    const ctx: PredatorContext = { ...CORMORANT_CTX, rockWalls: [rock] };
+    const ending: PredatorState = { ...cormorantAt(CORMORANT_MID), phase: 'telegraph', elapsed: CORMORANT_WINDUP - CORMORANT_DT, duration: CORMORANT_WINDUP };
+    const start = stepPredator(ending, { x: 1400, y: 200 }, CORMORANT_DT, ctx);
+    expect(eventTypes(start.events)).toEqual(['lungeStart']);
+    const run = runStalker(start.state, NOWHERE, CORMORANT.lungeDuration + CORMORANT_DT, ctx, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    for (const pos of run.positions) expect(insideGrown(pos, rock, CORMORANT.bodyRadius)).toBe(false);
+    expect(run.positions.some((pos) => pos.x === rock.x0 - CORMORANT.bodyRadius)).toBe(true);
+  });
+});
+
+describe('cormorant sight cover, warning on its stretch and chase (issue #112)', () => {
+  const spot: Point = { x: CORMORANT_MID.x + 100, y: 200 };
+
+  it('does not warn at an axolotl in cover, and cancels its dive into the cooldown when the axolotl takes cover during the warning', () => {
+    const hidden = stepPredator(cormorantAt(CORMORANT_MID), spot, CORMORANT_DT, CORMORANT_COVERED);
+    expect(hidden.events).toEqual([]);
+    expect(hidden.state.phase).toBe('patrol');
+    const start = stepPredator(cormorantAt(CORMORANT_MID), spot, CORMORANT_DT, CORMORANT_CTX);
+    expect(eventTypes(start.events)).toEqual(['telegraphStart']);
+    const warned = runStalker(start.state, spot, CORMORANT_WINDUP - 2 * CORMORANT_DT, CORMORANT_CTX);
+    expect(warned.events).toEqual([]);
+    const cancelled = runStalker(warned.state, spot, 2 * CORMORANT_DT, CORMORANT_COVERED, 'telegraphCancel');
+    expect(eventTypes(cancelled.events)).toEqual(['telegraphCancel']);
+    expect(cancelled.state.phase).toBe('cooldown');
+    expect(cancelled.state.dive).toBeUndefined();
+    const cooling = runStalker(cancelled.state, spot, CORMORANT.cooldown, CORMORANT_CTX, 'cooldownEnd');
+    expect(eventTypes(cooling.events)).toEqual(['cooldownEnd']);
+    for (const pos of cooling.positions.slice(0, -1)) expect(pos).toEqual(CORMORANT_MID);
+  });
+
+  it('never hits an axolotl in cover along its dive', () => {
+    const run = runStalker(cormorantDive(spot), spot, CORMORANT.lungeDuration + CORMORANT_DT, CORMORANT_COVERED, 'lungeEnd');
+    expect(run.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+  });
+
+  it('warns only on its stretch, within the route tolerance', () => {
+    const near: Point = { x: CORMORANT_END.x + 60, y: 150 };
+    const onEdge = stepPredator(cormorantAt({ x: CORMORANT_END.x + ROUTE_WARN_TOLERANCE, y: CORMORANT_Y }), near, CORMORANT_DT, CORMORANT_CTX);
+    expect(eventTypes(onEdge.events)).toEqual(['telegraphStart']);
+    const off = stepPredator(cormorantAt({ x: CORMORANT_END.x + ROUTE_WARN_TOLERANCE + 1, y: CORMORANT_Y }), near, CORMORANT_DT, CORMORANT_CTX);
+    expect(off.events).toEqual([]);
+    expect(off.state.phase).toBe('patrol');
+  });
+
+  it('chases along its stretch only, and not at all off it (leash 0)', () => {
+    const chaser = tunedSpecies(CORMORANT_SPECIES, { ...CORMORANT, chase: CORMORANT_CHASE });
+    const ctx: PredatorContext = { ...CORMORANT_CTX, tuning: chaser.tuning };
+    const ahead: Point = { x: CORMORANT_MID.x + 220, y: 150 };
+    const chase = runStalker(cormorantAt(CORMORANT_MID), ahead, 2, ctx, 'telegraphStart');
+    expect(eventTypes(chase.events)).toEqual(['telegraphStart']);
+    expect(chase.state.pos.x).toBeGreaterThan(CORMORANT_MID.x);
+    for (const pos of chase.positions) expect(pos.y).toBe(CORMORANT_Y);
+    const offStretch = cormorantAt({ x: CORMORANT_END.x + 100, y: CORMORANT_Y });
+    const sighted: Point = { x: offStretch.pos.x + 220, y: 150 };
+    const held = stepPredator(offStretch, sighted, CORMORANT_DT, ctx);
+    expect(held.state).toEqual(stepPredator(offStretch, sighted, CORMORANT_DT, CORMORANT_CTX).state);
+    expect(held.state.pos.x).toBeLessThan(offStretch.pos.x);
+  });
+});
+
+describe('cormorant cooldown (issue #112)', () => {
+  it('holds where it surfaced, turned away, then swims back to its stretch before it can warn again', () => {
+    const dived = runStalker(cormorantDive({ x: CORMORANT_END.x + 100, y: 200 }, CORMORANT_END), NOWHERE, 2, CORMORANT_CTX, 'lungeEnd');
+    expect(dived.events).toEqual([{ type: 'lungeEnd', connected: false }]);
+    const surfaced = dived.state.pos;
+    expect(routeLoopDistance(surfaced, CORMORANT_STRETCH)).toBeGreaterThan(ROUTE_WARN_TOLERANCE);
+    expect(dived.state.facing).toBe(1);
+    const behind: Point = { x: surfaced.x - 80, y: 150 };
+    const holding = runStalker(dived.state, behind, CORMORANT.cooldown - CORMORANT_DT, CORMORANT_CTX);
+    expect(holding.events).toEqual([]);
+    for (const pos of holding.positions) expect(pos).toEqual(surfaced);
+    expect(holding.state.phase).toBe('cooldown');
+    expect(holding.state.facing).toBe(1);
+    const cooling = runStalker(holding.state, behind, 2 * CORMORANT_DT, CORMORANT_CTX, 'cooldownEnd');
+    expect(eventTypes(cooling.events)).toEqual(['cooldownEnd']);
+    expect(cooling.state.phase).toBe('patrol');
+    const back = runStalker(cooling.state, behind, 10, CORMORANT_CTX, 'telegraphStart');
+    expect(eventTypes(back.events)).toEqual(['telegraphStart']);
+    expect(back.positions.length).toBeGreaterThan(1);
+    for (const pos of back.positions.slice(0, -1)) {
+      expect(routeLoopDistance(pos, CORMORANT_STRETCH)).toBeGreaterThan(0);
+    }
+    expect(routeLoopDistance(back.state.pos, CORMORANT_STRETCH)).toBeLessThanOrEqual(ROUTE_WARN_TOLERANCE);
+  });
+
+  it('finishes the arc after a dive that connects, with no second hit, then holds where it surfaced', () => {
+    const spot: Point = { x: CORMORANT_MID.x + 100, y: 200 };
+    const state = cormorantDive(spot);
+    const dive = diveOf(state);
+    const hit = runStalker(state, spot, CORMORANT.lungeDuration, CORMORANT_CTX, 'lungeEnd');
+    expect(hit.events).toEqual([{ type: 'lungeEnd', connected: true }]);
+    expect(hit.state.phase).toBe('cooldown');
+    expect(diveOf(hit.state).travelled).toBeLessThan(dive.length);
+    const cooling = runStalker(hit.state, spot, CORMORANT.cooldown, CORMORANT_CTX, 'cooldownEnd');
+    expect(eventTypes(cooling.events)).toEqual(['cooldownEnd']);
+    for (const pos of cooling.positions) expect(pos.y).toBeLessThanOrEqual(DIVE_DEPTH_Y);
+    const surfacedAt = cooling.positions.findIndex((pos) => Math.abs(pos.x - dive.end.x) < 1e-6 && Math.abs(pos.y - dive.end.y) < 1e-6);
+    expect(surfacedAt).toBeGreaterThan(0);
+    for (const pos of cooling.positions.slice(surfacedAt)) expect(pos).toEqual(cooling.positions[surfacedAt]);
+    expect(cooling.state.dive).toBeUndefined();
+    expect(cooling.state.facing).toBe(1);
+  });
+});
+
+describe('diveArcPose (issue #112)', () => {
+  it('gives the head and the facing outside a dive', () => {
+    const floating = cormorantAt(CORMORANT_MID, -1);
+    expect(diveArcPose(floating)).toEqual({ head: CORMORANT_MID, tangent: { x: -1, y: 0 } });
+  });
+
+  it('gives the head and the arc direction through a dive: down, then level at the bottom, then up', () => {
+    const spot: Point = { x: CORMORANT_MID.x + 100, y: 200 };
+    const state = cormorantDive(spot);
+    expect(diveArcPose(state)).toEqual({ head: CORMORANT_MID, tangent: { x: 0, y: 1 } });
+    const run = runStalker(state, NOWHERE, CORMORANT.lungeDuration, CORMORANT_CTX, 'lungeEnd');
+    let sawLevel = false;
+    let current = state;
+    for (let i = 0; i < run.positions.length - 1; i++) {
+      current = stepPredator(current, NOWHERE, CORMORANT_DT, CORMORANT_CTX).state;
+      const pose = diveArcPose(current);
+      expect(pose.head).toEqual(current.pos);
+      expect(Math.hypot(pose.tangent.x, pose.tangent.y)).toBeCloseTo(1, 9);
+      expect(pose.tangent.x).toBeGreaterThanOrEqual(0);
+      if (Math.abs(current.pos.y - spot.y) < 1) sawLevel = sawLevel || Math.abs(pose.tangent.y) < 0.1;
+    }
+    expect(sawLevel).toBe(true);
+    const nearEnd = diveArcPose({ ...current, dive: { ...diveOf(current), travelled: diveOf(current).length - 1 } });
+    expect(nearEnd.tangent.y).toBeLessThan(-0.9);
   });
 });

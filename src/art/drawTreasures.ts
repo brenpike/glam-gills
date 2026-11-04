@@ -4,7 +4,8 @@
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
- * Area 10 ones (issue #108), and one Paint shell per Dream colour.
+ * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), and one Paint shell per Dream colour
+ * (Marigold and Golden shine, issue #112, the last two).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -192,6 +193,8 @@ import {
   SNOW_GLOBE_FLECK,
   SNOW_GLOBE_GLASS,
   SNOW_GLOBE_WEED,
+  LITTLE_CORMORANT_BILL,
+  LITTLE_CORMORANT_BODY,
   type DreamSwatchId,
 } from './treasurePalette';
 
@@ -322,7 +325,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The twenty-six Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, then Peach and Confetti shine, issue #108, last). */
+/** The twenty-eight Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, then Marigold and Golden shine, issue #112, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -350,6 +353,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'lantern-shine',
   'peach',
   'confetti-shine',
+  'marigold',
+  'golden-hour-shine',
 ];
 
 /**
@@ -470,7 +475,8 @@ export type TreasureItemSlug =
   | 'mariachi-band-figures'
   | 'hero-medal'
   | 'refuge-snow-globe'
-  | 'champion-crown';
+  | 'champion-crown'
+  | 'little-cormorant';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -586,15 +592,16 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'hero-medal',
   'refuge-snow-globe',
   'champion-crown',
+  'little-cormorant',
 ];
 
 /**
- * All one hundred and thirty-seven icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and forty icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
- * items, the eleven deep canal Area 10 items, then the twenty-six Paint shells in Dream order (Moonstone, Chocolate,
- * Crystal shine and Glowworm are the spring cave's; the last six, Jade, Fiesta shine, Olive, Lantern shine, Peach and
- * Confetti shine, the deep canal's).
+ * items, the eleven deep canal Area 10 items, the deep canal Area 11's one item, then the twenty-eight Paint shells in
+ * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last eight, Jade, Fiesta
+ * shine, Olive, Lantern shine, Peach, Confetti shine, Marigold and Golden shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -685,6 +692,8 @@ export function treasureIconTextureSize(size: number): TexSize {
  * Mariachi band figures' plinth and the Refuge snow globe's base (Floor items), the weights of the Floating candle and
  * the Marigold boat (Floating items, so the box edge) and the lowest flag tips of the Festival flag string (a Hanging
  * item).
+ * The deep canal Area 11's Little cormorant (issue #112) ends on the same 12.6 edge: its weight (a Floating item, so the
+ * box edge).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -742,6 +751,7 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'marigold-boat': 12.6,
   'mariachi-band-figures': 12.6,
   'refuge-snow-globe': 12.6,
+  'little-cormorant': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -4773,6 +4783,61 @@ function paintChampionCrown(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 11 item (issue #112)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. The Little cormorant is a friendly toy of the area's diving bird
+// (guide 7n), pale where the real bird is dark: its bill closed, no talons and nothing held (ADR 0007).
+
+/**
+ * Rare, Floating: a toy cormorant swimming low on the water in pale dusk blue-grey: a long low body with a stiff tail
+ * held out flat behind, a slender neck rising from the front of the body and curving up to a small round head with a
+ * long, slim, closed bill (round-tipped, no hook) and a throat patch in the cormorant's bill colour. A bead eye, an ink
+ * seam along the closed bill (1.2) and an ink wing line (1.2). One yellow trim band across the lower body, a thin ink
+ * cord and a pebble A weight hanging below. One shine on the back. The back is on the waterline, 20 below the top of the
+ * 80 box; the weight is the lowest fill edge, the box edge. No feet, never holding anything, and never the Wooden duck
+ * decoy's round head on a short neck and upturned tail.
+ */
+function paintLittleCormorant(pen: Pen): void {
+  const { ctx, k } = pen;
+  const body = { cx: -1.8, cy: waterlineY(INK_OUT_SHAPE) + 3, rx: 9, ry: 3 };
+  const head = { cx: 7, cy: -10.3, rx: 2.8, ry: 2.3 };
+  boatTether(pen, body.cx, body.cy + body.ry - 0.4);
+  const tail = roundedPolygon(pts(-9.2, body.cy - 2, -12.6, body.cy - 3.4, -12.6, body.cy - 1, -9.2, body.cy + 0.8), [0.8, 1, 1, 0.8]);
+  outerShape(pen, place(tail, k), LITTLE_CORMORANT_BODY, ITEM_LW);
+  const neck = new Path2D();
+  neck.moveTo(3, body.cy - 1.6);
+  neck.bezierCurveTo(4.2, body.cy - 4.4, 4.8, -8.6, 5.4, -10.2);
+  neck.lineTo(8.6, -9.6);
+  neck.bezierCurveTo(7.8, -8, 7.8, body.cy - 2.6, 7.6, body.cy + 0.6);
+  neck.closePath();
+  outerShape(pen, place(neck, k), LITTLE_CORMORANT_BODY, ITEM_LW);
+  silhouette(pen, place(ellipse(body.cx, body.cy, body.rx, body.ry), k), LITTLE_CORMORANT_BODY, ITEM_LW, () => {
+    trimBand(pen, body.cy + 1.1, body.cy + 2.5, BOAT_TRIM);
+    const wing = new Path2D();
+    wing.moveTo(-8.2, body.cy - 1);
+    wing.quadraticCurveTo(-3, body.cy + 1.8, 2.2, body.cy - 0.8);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(wing, k));
+  });
+  const bill = roundedPolygon(pts(9.2, -11.2, 12.6, -10, 9.2, -8.8), [0.6, 1, 0.6]);
+  outerShape(pen, place(bill, k), LITTLE_CORMORANT_BILL, ITEM_LW);
+  silhouette(pen, place(ellipse(head.cx, head.cy, head.rx, head.ry), k), LITTLE_CORMORANT_BODY, ITEM_LW, () => {
+    ctx.fillStyle = LITTLE_CORMORANT_BILL;
+    ctx.fill(place(ellipse(8.8, -8.4, 1.6, 1.2), k));
+  });
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    ctx.fill(place(ellipse(7.5, -10.8, 0.9, 0.9), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(10, -10, 11.8, -10), k));
+  });
+  shine(pen, -6.2, body.cy - 1.8, 1.8, 0.6, -0.15);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -4966,7 +5031,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Golden shine: a sunset rose and a pale gold stripe on deep gold. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;
@@ -5527,6 +5592,9 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'champion-crown':
       paintChampionCrown({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-cormorant':
+      paintLittleCormorant({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

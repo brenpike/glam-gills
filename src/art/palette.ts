@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the twenty-six Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the twenty-eight Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -485,7 +485,9 @@ export type DreamLookId =
   | 'olive'
   | 'lantern-shine'
   | 'peach'
-  | 'confetti-shine';
+  | 'confetti-shine'
+  | 'marigold'
+  | 'golden-hour-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -597,6 +599,16 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // Iridescent, the light sheen. 10.61:1 with white and 1.36:1 with ink, so it follows the dark-body rules (white spots,
   // eye ring, rim light). The confetti aqua gill #56e0f0 is 6.73:1 against it.
   'confetti-shine': dreamSlots('#6a008a', '#620483', '#a666b9', '#bc8cca', ['#56e0f0', '#7be7f3'], ['#52cde0', '#75d7e6']),
+  // Deep canal Area 11 Dream colour (Marigold, issue #112). Body #ffb736 is a warm marigold (relative luminance 0.554), in
+  // the window between Peach (1.05:1) and Sunset orange (1.10:1), and 0.076 from Sunset orange and Firefly gold in OKLab,
+  // over the 0.075 floor. 8.28:1 with ink and 1.74:1 with white, so ink spots and, as Peach, the rim light. The deep
+  // marigold gill #e0531c is 2.23:1 against it.
+  marigold: dreamSlots('#ffb736', '#e6a539', '#ffd486', '#ffdfa5', ['#e0531c', '#e7794e'], ['#ce4e21', '#d8724e']),
+  // Deep canal Area 11 Legendary Dream colour (Golden hour shine, a sheen). Body #bea015 is a deep golden hour gold
+  // (relative luminance 0.361), in the window between Fiesta shine (1.07:1) and Rainbow (1.09:1), 1.70:1 from Iridescent,
+  // the light sheen, and 0.107 from Lantern shine in OKLab. 5.64:1 with ink and 2.55:1 with white, so ink spots and, as
+  // Fiesta shine, the rim light. The dusky rose gill #c4386a is 2.00:1 against it.
+  'golden-hour-shine': dreamSlots('#bea015', '#ac911c', '#d8c673', '#e2d496', ['#c4386a', '#d1648b'], ['#b53667', '#c45f86']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -636,6 +648,8 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'fiesta-shine',
   'peach',
   'confetti-shine',
+  'marigold',
+  'golden-hour-shine',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

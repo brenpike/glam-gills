@@ -383,6 +383,17 @@ export const SNOW_GLOBE_WEED = PLANT_LEAF;
 /** Refuge snow globe's drifting flecks, a cream (never white, so a fleck is never read as a gem glint); inside the glass, so free. */
 export const SNOW_GLOBE_FLECK = '#fff3d6';
 
+// ---- Deep canal Area 11 silhouette fills (issue #112; all at least 9:1 with ink) ----
+// The Little cormorant, Area 11's special treasure: a friendly toy of the area's diving bird, so pale where the real
+// bird is dark. One fill is new (a pale dusk blue-grey); the bill reuses the shipped colour the cormorant's own bill
+// uses (guide 7n). None equals a BADGE_FILL rarity colour. Ratios are fill against ink. Aliases of a shipped colour say
+// so.
+
+/** Little cormorant body, tail, neck and head, a pale dusk blue-grey. 10.60:1. */
+export const LITTLE_CORMORANT_BODY = '#d9dcf2';
+/** Little cormorant closed bill and throat patch, the cormorant's bill colour. Alias of MINERS_HELMET_FILL. 10.65:1. */
+export const LITTLE_CORMORANT_BILL = MINERS_HELMET_FILL;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -438,7 +449,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-six Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-eight Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -465,7 +476,9 @@ export type DreamSwatchId =
   | 'olive'
   | 'lantern-shine'
   | 'peach'
-  | 'confetti-shine';
+  | 'confetti-shine'
+  | 'marigold'
+  | 'golden-hour-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -552,5 +565,13 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     pattern: 'stripes',
     marks: ['rgba(255,128,204,0.85)', 'rgba(255,236,110,0.85)'],
     dark: true,
+  },
+  marigold: { body: '#ffb736', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a sunset rose and a pale gold stripe, both lighter than the deep gold body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'golden-hour-shine': {
+    body: '#bea015',
+    pattern: 'stripes',
+    marks: ['rgba(255,176,196,0.85)', 'rgba(255,240,170,0.85)'],
+    dark: false,
   },
 };

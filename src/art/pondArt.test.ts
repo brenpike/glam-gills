@@ -783,12 +783,14 @@ describe('pond background chunk', () => {
 const LUMINANCE_FLOOR = 0.1687;
 
 describe('area looks (issue #98)', () => {
-  it('lists the habitat looks, then the dusk variant; only the habitat looks key the area map', () => {
-    expect(AREA_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'pond-dusk']);
+  it('lists the habitat looks, then the dusk and golden-hour variants; only the habitat looks key the area map', () => {
+    expect(AREA_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'pond-dusk', 'deep-canal-golden']);
     expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
     for (const id of AREA_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
     expect(isAreaLookId('pond-dusk')).toBe(true);
     expect(isHabitatLookId('pond-dusk')).toBe(false);
+    expect(isAreaLookId('deep-canal-golden')).toBe(true);
+    expect(isHabitatLookId('deep-canal-golden')).toBe(false);
     expect(isAreaLookId('moon')).toBe(false);
     expect(() => habitatLook('pond-night')).toThrow(RangeError);
   });
@@ -805,6 +807,7 @@ describe('area looks (issue #98)', () => {
       ['spring-cave', false, { kind: 'grotto', anchor: 'bed' }, false, 0],
       ['deep-canal', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
       ['pond-dusk', true, { kind: 'rootArch', anchor: 'bank' }, true, 2],
+      ['deep-canal-golden', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
     ]);
   });
 

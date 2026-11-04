@@ -49,7 +49,7 @@ Every sound is made live in code with Web Audio. There are no audio files (PRD M
 | Lily Pad Hop | Lily pad pond (Areas 2 and 3) | F major | 4/4, straight | 104 bpm | Flute-like whistle tune doubled by marimba, plucked strings going oom-pah, wood block, a boing at phrase ends |
 | Garden Boats | Chinampa gardens (Areas 4 and 5) | D mixolydian | 4/4 on a 3-3-2 beat | 112 bpm | Marimba tune with whistle, nylon guitar strums, guiro, box-drum slap, soft kick |
 | Cenote Glow | Spring cave (Areas 6 and 7) | E dorian | 4/4, slow and straight | 66 bpm | Glass bell tune, a soft pad and a deep bass on each bar, glass sparkles, water drips, and the echo |
-| Trajinera Waltz (provisional name) | Deep canal (from Area 8, once the habitat is built) | D major | 3/4 waltz, straight | 108 bpm | Nylon guitar tune, a deep bass and a soft kick on beat 1, plucked strings and a shaker on beats 2 and 3, a soft pad, a kalimba on pass 2, a second guitar a third below on pass 3, bubbles |
+| Trajinera Waltz (provisional name) | Deep canal (from Area 8, once the habitat is built); its dusk version in Area 11 | D major | 3/4 waltz, straight | 108 bpm | Nylon guitar tune, a deep bass and a soft kick on beat 1, plucked strings and a shaker on beats 2 and 3, a soft pad, a kalimba on pass 2, a second guitar a third below on pass 3, bubbles |
 
 Chords, one bar each (two chords in one bar are split at the half bar):
 
@@ -87,6 +87,7 @@ A dusk or night area plays the dusk version of its habitat's cue, never a cue of
 | Sparkles | Bubbles, boings | Fireflies: soft, high chimes at random from the key's pentatonic notes |
 
 So Area 3, the pond at dusk, sounds like the pond, only sleepier.
+Area 11, the deep canal at golden hour (its look's time is dusk; [ADR 0039](adr/0039-cormorant-dive-arc-and-golden-hour-area-look.md)), plays the dusk version of Trajinera Waltz, at 84 bpm with no swing.
 A night look uses the dusk version too, until a night version is asked for (PRD open question 406).
 
 ## 6. Adding a habitat

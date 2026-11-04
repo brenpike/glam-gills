@@ -26,7 +26,7 @@ import { bake, type TexInfo } from './textures';
  * The Decorations that can stand in the Home Tank: the treasure icon slugs of the four canal
  * Decorations, the four pond ones, the six pond Area 3 ones, the six chinampa Area 4 ones, the five
  * chinampa Area 5 ones, the six spring cave Area 6 ones, the six spring cave Area 7 ones, the six deep canal
- * Area 8 ones, the six deep canal Area 9 ones, then the six deep canal Area 10 ones (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/` or
+ * Area 8 ones, the six deep canal Area 9 ones, the six deep canal Area 10 ones, then the deep canal Area 11's one (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/` or
  * `deep-canal/` in src/logic/catalogue.ts), in catalogue order.
  * This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
@@ -86,6 +86,7 @@ export const TANK_DECORATION_SLUGS = [
   'marigold-boat',
   'mariachi-band-figures',
   'refuge-snow-globe',
+  'little-cormorant',
 ] as const satisfies readonly TreasureIconSlug[];
 export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
 
@@ -101,7 +102,8 @@ export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
  * Legendary; Flower garland Common, Paper boat Common, Little trajinera Rare, Painted oar Rare, Trajinera flower
  * arch Epic, Floating flower market Legendary; Clay jug Common, Floating cork Common, Little bailing bucket Rare, Painted
  * name sign Rare, Paper lantern boat Epic, Floating music stage Legendary; Festival flag string Common, Floating candle
- * Common, Axolotl statue Rare, Marigold boat Rare, Mariachi band figures Epic, Refuge snow globe Legendary). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
+ * Common, Axolotl statue Rare, Marigold boat Rare, Mariachi band figures Epic, Refuge snow globe Legendary; Little
+ * cormorant Rare). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeShape>> = {
   'pond-plant': 'circle',
@@ -159,6 +161,7 @@ export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeSh
   'marigold-boat': 'diamond',
   'mariachi-band-figures': 'shield',
   'refuge-snow-globe': 'star',
+  'little-cormorant': 'diamond',
 };
 
 /** Where a Decoration goes in the Home Tank: on the gravel, on the water surface, or from the glass top. */
@@ -232,6 +235,7 @@ export const TANK_DECORATION_SHAPES: Readonly<Record<TankDecorationSlug, TankDec
   'marigold-boat': { placement: 'floating' },
   'mariachi-band-figures': { placement: 'floor' },
   'refuge-snow-globe': { placement: 'floor' },
+  'little-cormorant': { placement: 'floating' },
 };
 
 /** The standard Decoration footprint in tank units (TANK.decorationPx): a width x this box. */
