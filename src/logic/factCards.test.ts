@@ -8,6 +8,8 @@ import {
   CANAL_CLEAN_UPS_FACT,
   CARP_FACT,
   CARP_MEET_RANGE,
+  CORMORANT_FACT,
+  CORMORANT_MEET_RANGE,
   CRAYFISH_FACT,
   CRAYFISH_MEET_RANGE,
   DRAG_NET_FACT,
@@ -43,7 +45,7 @@ import {
   unfoundFactCardHint,
   type ThreatSighting,
 } from './factCards';
-import { BLACK_BASS, CARP, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
+import { BLACK_BASS, CARP, CORMORANT, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
 import type { SafeArea } from './zone';
 
 const BANNED = [
@@ -474,6 +476,53 @@ describe('black bass fact card copy (issue #78)', () => {
   it('uses a meet range of 180 px, no less than the lunge range', () => {
     expect(BLACK_BASS_MEET_RANGE).toBe(180);
     expect(BLACK_BASS_MEET_RANGE).toBeGreaterThanOrEqual(BLACK_BASS.lungeRange);
+  });
+});
+
+describe('cormorant fact card copy (issue #112)', () => {
+  it('has the cormorant id and name, the title and body from PRD open question 549, and no hint of its own', () => {
+    expect(CORMORANT_FACT).toEqual({
+      id: 'cormorant',
+      name: 'Cormorant',
+      title: 'Meet the cormorant',
+      body: 'Cormorants are dark water birds that dive from the surface. They swim underwater by kicking with their feet. Axolotls stay safe by swimming deep or away.',
+    });
+    expect(CORMORANT_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(CORMORANT_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      BLACK_BASS_FACT.id,
+      ANCHOR_DROP_FACT.id,
+      MUD_SEEP_FACT.id,
+      UNDERWATER_SPRINGS_FACT.id,
+      MURKY_WATER_FACT.id,
+      LURE_FACT.id,
+      DRAG_NET_FACT.id,
+    ];
+    expect(others).not.toContain(CORMORANT_FACT.id);
+  });
+
+  it.each([CORMORANT_FACT.name, CORMORANT_FACT.title, CORMORANT_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('never claims the cormorant lives in Xochimilco', () => {
+    expect(CORMORANT_FACT.body).not.toMatch(/Xochimilco/);
+  });
+
+  it('uses a meet range of 180 px, no less than the lunge range', () => {
+    expect(CORMORANT_MEET_RANGE).toBe(180);
+    expect(CORMORANT_MEET_RANGE).toBeGreaterThanOrEqual(CORMORANT.lungeRange);
   });
 });
 

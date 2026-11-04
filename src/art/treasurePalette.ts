@@ -438,7 +438,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-six Dream colour ids, in the order the guide lists them (3f). */
+/** The twenty-eight Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -465,7 +465,9 @@ export type DreamSwatchId =
   | 'olive'
   | 'lantern-shine'
   | 'peach'
-  | 'confetti-shine';
+  | 'confetti-shine'
+  | 'marigold'
+  | 'golden-hour-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -552,5 +554,13 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     pattern: 'stripes',
     marks: ['rgba(255,128,204,0.85)', 'rgba(255,236,110,0.85)'],
     dark: true,
+  },
+  marigold: { body: '#ffb736', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a sunset rose and a pale gold stripe, both lighter than the deep gold body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'golden-hour-shine': {
+    body: '#bea015',
+    pattern: 'stripes',
+    marks: ['rgba(255,176,196,0.85)', 'rgba(255,240,170,0.85)'],
+    dark: false,
   },
 };

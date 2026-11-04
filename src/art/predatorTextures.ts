@@ -1,7 +1,7 @@
 /**
- * Phaser glue for the predators and leg loss (issues #7, #98, #103, #77 and #78): bakes the
- * tilapia, heron, garter snake, carp, crayfish, black bass, effect and leg icon painters into
- * CanvasTextures.
+ * Phaser glue for the predators and leg loss (issues #7, #98, #103, #77, #78 and #112): bakes the
+ * tilapia, heron, garter snake, carp, crayfish, black bass, cormorant, effect and leg icon painters
+ * into CanvasTextures.
  * Visual only. No game state, no input, no physics.
  *
  * Same rules as textures.ts: every texture is drawn at `bakeScale`, so a
@@ -24,6 +24,7 @@ import {
   paintCarpPuffStill,
   type CarpFrame,
 } from './drawCarp';
+import { CORMORANT_FRAMES, CORMORANT_TEX, paintCormorant, type CormorantFrame } from './drawCormorant';
 import {
   CRAYFISH_FRAMES,
   CRAYFISH_TEX,
@@ -120,7 +121,21 @@ export const PREDATOR_TEX = {
   blackBassWarn: 'black-bass-warn',
   blackBassStrike: 'black-bass-strike',
   blackBassStill: 'black-bass-still',
+  cormorantFloatA: 'cormorant-float-a',
+  cormorantFloatB: 'cormorant-float-b',
+  cormorantWarn: 'cormorant-warn',
+  cormorantDive: 'cormorant-dive',
+  cormorantDry: 'cormorant-dry',
 } as const;
+
+/** Fixed key of each cormorant frame. */
+const CORMORANT_KEYS: Readonly<Record<CormorantFrame, string>> = {
+  floatA: PREDATOR_TEX.cormorantFloatA,
+  floatB: PREDATOR_TEX.cormorantFloatB,
+  warn: PREDATOR_TEX.cormorantWarn,
+  dive: PREDATOR_TEX.cormorantDive,
+  dry: PREDATOR_TEX.cormorantDry,
+};
 
 /** Fixed key of each black bass frame. */
 const BLACK_BASS_KEYS: Readonly<Record<BlackBassFrame, string>> = {
@@ -254,9 +269,16 @@ export interface PredatorTextures {
    * bass's logic point; the tail trails toward -x.
    */
   readonly blackBass: Readonly<Record<BlackBassFrame, TexInfo>>;
+  /**
+   * Cormorant, one still frame each (CORMORANT_TEX), facing right: `floatA` and `floatB` (the float
+   * pose CORMORANT_BOB apart; the scene swaps them, and holds `floatA` under reduced motion), `warn`
+   * (the dive crouch), `dive` (streamlined, the bill closed) and `dry` (the wings half open, the
+   * cooldown). Anchor is the body centre, the cormorant's logic point; the tail trails toward -x.
+   */
+  readonly cormorant: Readonly<Record<CormorantFrame, TexInfo>>;
 }
 
-/** Bake the tilapia, heron, garter snake, carp, crayfish, black bass, effect and leg icon textures into the scene's texture manager. */
+/** Bake the tilapia, heron, garter snake, carp, crayfish, black bass, cormorant, effect and leg icon textures into the scene's texture manager. */
 export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): PredatorTextures {
   const info: Record<string, TexInfo> = {};
   const add = (t: TexInfo): TexInfo => {
@@ -323,6 +345,10 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
   for (const frame of BLACK_BASS_FRAMES) {
     blackBass[frame] = add(bake(scene, BLACK_BASS_KEYS[frame], BLACK_BASS_TEX, bakeScale, (ctx) => paintBlackBass(ctx, frame)));
   }
+  const cormorant = {} as Record<CormorantFrame, TexInfo>;
+  for (const frame of CORMORANT_FRAMES) {
+    cormorant[frame] = add(bake(scene, CORMORANT_KEYS[frame], CORMORANT_TEX, bakeScale, (ctx) => paintCormorant(ctx, frame)));
+  }
 
   return {
     info,
@@ -345,5 +371,6 @@ export function bakePredatorTextures(scene: Phaser.Scene, bakeScale: number): Pr
     carpPuffStill,
     crayfish,
     blackBass,
+    cormorant,
   };
 }

@@ -218,6 +218,23 @@ export const BLACK_BASS_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The cormorant fact card, shown the first time the axolotl comes within CORMORANT_MEET_RANGE of a
+ * cormorant, outside the Home Spot (PRD C13; issue #112, PRD open question 549, ND-6). Provisional copy.
+ * Source, checked 2026-10-29 (web research only; the game fetches nothing): National Audubon Society,
+ * Neotropic Cormorant, https://www.audubon.org/field-guide/bird/neotropic-cormorant ("Forages by diving
+ * from surface and swimming underwater, propelled mostly by feet"; colour tags Black and Brown).
+ * No source places the Neotropic cormorant in Xochimilco, so the card does not claim that. "Axolotls
+ * stay safe by swimming deep or away" is the game's rule (the dive goes only so deep), not checked
+ * against a source.
+ */
+export const CORMORANT_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'cormorant',
+  name: 'Cormorant',
+  title: 'Meet the cormorant',
+  body: 'Cormorants are dark water birds that dive from the surface. They swim underwater by kicking with their feet. Axolotls stay safe by swimming deep or away.',
+});
+
+/**
  * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
  * issue #77, ND-3). Provisional copy.
  * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
@@ -597,6 +614,13 @@ export const CRAYFISH_MEET_RANGE = 180;
  * later than the first warning.
  */
 export const BLACK_BASS_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a cormorant (issue #112, PRD open question
+ * 549). Provisional; tune in play. Equal to the cormorant's 180 px lunge range, so the card shows no
+ * later than the first warning.
+ */
+export const CORMORANT_MEET_RANGE = 180;
 
 /**
  * Distance in px from a pulsing current's band within which the axolotl meets it (issue #105,

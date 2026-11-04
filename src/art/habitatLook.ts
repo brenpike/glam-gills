@@ -49,6 +49,15 @@
  * keeps the pond contrast rule above. Each look also says what its area needs beside
  * colours (stream, cave, pond props, fireflies), so callers read properties and never
  * compare look ids.
+ *
+ * Golden hour (issue #112, Area 11): the deep canal at golden hour ('deep-canal-golden') is the deep
+ * canal look with a warm peach and coral sky and wash, warm shallow and mid water fading to the same
+ * deep teal, a warm haze and surface line, and warm, more slanted light rays (`rayTint`,
+ * `raySlant`). It also lights its lower row (`lowerRowLight`), paints its decorations into its chunks
+ * (`goldenDecor`, drawGoldenCanal.ts) and lets a few marigold petals sink (`sinkingPetalsPerScreen`).
+ * Every other look says white rays at the day slant, false, false and 0, so its bakes are unchanged.
+ * The golden look keeps the deep canal contrast rule: every water stop, haze blend and bed colour has
+ * relative luminance 0.1687 or more.
  */
 import {
   BED_BOTTOM,
@@ -72,8 +81,8 @@ import {
 /** Look ids shipped so far. Must match the logic layer's Habitat.look values. */
 export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave' | 'deep-canal';
 
-/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3). */
-export type AreaLookId = HabitatLookId | 'pond-dusk';
+/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3; the deep canal at golden hour, Area 11). */
+export type AreaLookId = HabitatLookId | 'pond-dusk' | 'deep-canal-golden';
 
 /** Sky gradient (guide 7a): `top` at y 0 down to `horizon` at the surface. */
 export interface SkyLook {
@@ -193,7 +202,31 @@ export interface HabitatLook {
    * and single chunks. Only the deep canal does.
    */
   readonly bedStones: boolean;
+  /** Colour of the light rays as [r, g, b] (guide 7a). White is the day light. */
+  readonly rayTint: RgbTriple;
+  /** How far, px, each light ray runs left between the surface and its end (RAY_END_Y). DAY_RAY_SLANT is the day slant. */
+  readonly raySlant: number;
+  /**
+   * Light the bottom row (drawGoldenCanal.ts paintLitLowerRow): lighten-only light shafts and a glow
+   * over the bed, clear at the chunk's top edge so the rows meet with no seam.
+   */
+  readonly lowerRowLight: boolean;
+  /**
+   * Paint the golden-hour decorations into the chunks (drawGoldenCanal.ts paintGoldenDecor): papel
+   * picado banners, marigold petal patches, water hyacinth rafts, chinampa walls with ahuejote root
+   * curtains, and sunken trajinera arches. Scenery only: none of it is cover or a cue.
+   */
+  readonly goldenDecor: boolean;
+  /** Marigold petals sinking slowly through the water, per screen of area width (drawGoldenCanal.ts paintSinkingPetal). 0 shows none. */
+  readonly sinkingPetalsPerScreen: number;
 }
+
+/** A colour as [r, g, b], each 0 to 255. */
+export type RgbTriple = readonly [number, number, number];
+
+/** Day light rays: white, at the prototype slant (guide 7a). */
+export const DAY_RAY_TINT: RgbTriple = Object.freeze([255, 255, 255] as const);
+export const DAY_RAY_SLANT = 70;
 
 /** Sky of the daytime looks: the prototype sky (guide 7a). */
 const DAY_SKY: SkyLook = Object.freeze({ top: SKY_TOP, horizon: SKY_HORIZON });
@@ -237,6 +270,11 @@ const CANAL_LOOK: HabitatLook = Object.freeze({
   springCaveProps: false,
   deepCanalProps: false,
   bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
 });
 
 /**
@@ -315,6 +353,11 @@ const POND_LOOK: HabitatLook = Object.freeze({
   springCaveProps: false,
   deepCanalProps: false,
   bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
 });
 
 /**
@@ -410,6 +453,11 @@ const POND_DUSK_LOOK: HabitatLook = Object.freeze({
   springCaveProps: false,
   deepCanalProps: false,
   bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
 });
 
 /**
@@ -480,6 +528,11 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   springCaveProps: false,
   deepCanalProps: false,
   bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
 });
 
 /**
@@ -555,6 +608,11 @@ export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   springCaveProps: true,
   deepCanalProps: false,
   bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
 });
 
 /**
@@ -627,6 +685,67 @@ export const DEEP_CANAL_LOOK: HabitatLook = Object.freeze({
   springCaveProps: false,
   deepCanalProps: true,
   bedStones: true,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
+});
+
+/**
+ * Golden-hour sky (issue #112, derived, provisional): coral at the top to peach at the horizon, under
+ * a warm wash. Seen through the wash: #f2a78c (luminance 0.4841) and #ffd1a1 (0.6943).
+ */
+export const GOLDEN_SKY_TOP = '#f0a890';
+export const GOLDEN_SKY_HORIZON = '#ffd8a8';
+/** Golden-hour wash over the sky, sun, clouds, bank and willows: a soft warm coral. */
+export const GOLDEN_AIR_WASH = 'rgba(255,160,110,0.12)';
+/**
+ * Golden-hour water (issue #112, derived, provisional): the low sun warms the shallow water to a soft
+ * gold-green and the mid water to a warmer teal, fading to the deep canal's own deep stop, so the
+ * lower rows and the flat middle chunks keep their colour. Luminance 0.5062, 0.3124 and 0.1809 (the
+ * deep stop, 3.17:1 with ink). Shallow #c2bf8c stays under the Leucistic body (0.5963), so the hero
+ * stays the brightest thing in the water.
+ */
+export const GOLDEN_WATER_SHALLOW = '#c2bf8c';
+export const GOLDEN_WATER_MID = '#5fa3a2';
+export const GOLDEN_WATER_DEEP = DEEP_CANAL_WATER_DEEP;
+/** Golden-hour haze: a warm cream. Lightens every water stop (deep to #3b8a9a, luminance 0.2144) and the bed, so the contrast rule holds. */
+export const GOLDEN_HAZE = 'rgba(250,210,150,0.12)';
+/** Golden-hour surface line: the canal line warmed toward a soft gold cream. */
+export const GOLDEN_SURFACE_LINE = 'rgba(255,240,206,0.95)';
+/** Golden-hour light rays: a warm gold, slanting further than the day rays (the sun is low). */
+export const GOLDEN_RAY_TINT: RgbTriple = Object.freeze([255, 222, 160] as const);
+export const GOLDEN_RAY_SLANT = 130;
+/** Marigold petals sinking through the water, per screen of area width (issue #112: a few). */
+export const GOLDEN_SINKING_PETALS_PER_SCREEN = 3;
+
+/**
+ * Deep canal at golden hour (issue #112, Area 11): the deep canal look with the golden sky, wash,
+ * water, haze, surface line and rays, its lower row lit, its decorations painted into its chunks and
+ * a few sinking petals. The bed, the bed stones, the sunken hull cave, the deep canal props and the
+ * willow bank are the deep canal's own.
+ */
+export const DEEP_CANAL_GOLDEN_LOOK: HabitatLook = Object.freeze({
+  ...DEEP_CANAL_LOOK,
+  id: 'deep-canal-golden',
+  sky: Object.freeze({ top: GOLDEN_SKY_TOP, horizon: GOLDEN_SKY_HORIZON }),
+  airWash: GOLDEN_AIR_WASH,
+  water: Object.freeze({
+    shallow: GOLDEN_WATER_SHALLOW,
+    mid: GOLDEN_WATER_MID,
+    deep: GOLDEN_WATER_DEEP,
+    stopMid: WATER_STOP_MID,
+    gradientEndY: WATER_GRADIENT_END_Y,
+  }),
+  haze: GOLDEN_HAZE,
+  surfaceFill: GOLDEN_WATER_SHALLOW,
+  surfaceLine: GOLDEN_SURFACE_LINE,
+  rayTint: GOLDEN_RAY_TINT,
+  raySlant: GOLDEN_RAY_SLANT,
+  lowerRowLight: true,
+  goldenDecor: true,
+  sinkingPetalsPerScreen: GOLDEN_SINKING_PETALS_PER_SCREEN,
 });
 
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
@@ -636,13 +755,14 @@ const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   'pond-dusk': POND_DUSK_LOOK,
   'spring-cave': SPRING_CAVE_LOOK,
   'deep-canal': DEEP_CANAL_LOOK,
+  'deep-canal-golden': DEEP_CANAL_GOLDEN_LOOK,
 };
 
 /** Every shipped habitat look id, in habitat order. Area-map markers are keyed by these. */
 export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal'];
 
 /** Every shipped area look id: the habitat looks, then the per-area variants. */
-export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk'];
+export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk', 'deep-canal-golden'];
 
 export function isHabitatLookId(id: string): id is HabitatLookId {
   return (HABITAT_LOOK_IDS as readonly string[]).includes(id);

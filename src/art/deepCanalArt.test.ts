@@ -829,6 +829,9 @@ describe('old canal-bed stones (guide 7a, 10; issue #78)', () => {
   });
 });
 
+/** The deep canal look and its golden-hour variant (issue #112): the same bed, stones, props and cave. */
+const DEEP_CANAL_LOOK_IDS: readonly AreaLookId[] = ['deep-canal', 'deep-canal-golden'];
+
 describe('old canal-bed stones in the background chunks (issue #78)', () => {
   const CHUNK_INDEX = 2;
   const STONE_TONES = [CANAL_STONE, CANAL_STONE_LIGHT, CANAL_STONE_DARK];
@@ -842,8 +845,8 @@ describe('old canal-bed stones in the background chunks (issue #78)', () => {
   };
   const stoneFills = (painted: readonly Painted[]): Painted[] => fills(painted).filter((p) => STONE_TONES.includes(p.style));
 
-  it('says only the deep canal look paints bed stones', () => {
-    for (const id of AREA_LOOK_IDS) expect(habitatLook(id).bedStones, id).toBe(id === 'deep-canal');
+  it('says only the deep canal looks paint bed stones', () => {
+    for (const id of AREA_LOOK_IDS) expect(habitatLook(id).bedStones, id).toBe(DEEP_CANAL_LOOK_IDS.includes(id));
   });
 
   it('paints the stones last in a deep canal bottom and single chunk, on that chunk\'s own bed edge', () => {
@@ -855,12 +858,20 @@ describe('old canal-bed stones in the background chunks (issue #78)', () => {
     }
   });
 
+  it('paints the same stones in a golden-hour bottom and single chunk, before its decorations', () => {
+    for (const row of ['bottom', 'single'] as const) {
+      expect(stoneFills(chunkOf('deep-canal-golden', row)), row).toEqual(stoneFills(chunkOf('deep-canal', row)));
+    }
+  });
+
   it('paints no stones in a top or middle deep canal chunk, which have no bed', () => {
-    for (const row of ['top', 'middle'] as const) expect(stoneFills(chunkOf('deep-canal', row)), row).toHaveLength(0);
+    for (const id of DEEP_CANAL_LOOK_IDS) {
+      for (const row of ['top', 'middle'] as const) expect(stoneFills(chunkOf(id, row)), `${id} ${row}`).toHaveLength(0);
+    }
   });
 
   it('paints no stones in any other look', () => {
-    for (const id of AREA_LOOK_IDS.filter((look) => look !== 'deep-canal')) {
+    for (const id of AREA_LOOK_IDS.filter((look) => !DEEP_CANAL_LOOK_IDS.includes(look))) {
       for (const row of ['bottom', 'single'] as const) expect(stoneFills(chunkOf(id, row)), `${id} ${row}`).toHaveLength(0);
     }
   });
@@ -1535,8 +1546,12 @@ describe('the deep canal look (issue #78)', () => {
     expect(look.sky).toEqual({ top: SKY_TOP, horizon: SKY_HORIZON });
   });
 
-  it('is the only look with the deep canal props or a sunken hull cave', () => {
-    for (const id of AREA_LOOK_IDS.filter((other) => other !== 'deep-canal')) {
+  it('is, with its golden-hour variant, the only look with the deep canal props or a sunken hull cave', () => {
+    for (const id of DEEP_CANAL_LOOK_IDS) {
+      expect(habitatLook(id).deepCanalProps, id).toBe(true);
+      expect(habitatLook(id).cave, id).toEqual({ kind: 'sunkenHull', anchor: 'bed' });
+    }
+    for (const id of AREA_LOOK_IDS.filter((other) => !DEEP_CANAL_LOOK_IDS.includes(other))) {
       expect(habitatLook(id).deepCanalProps, id).toBe(false);
       expect(habitatLook(id).cave.kind, id).not.toBe('sunkenHull');
     }

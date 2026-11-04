@@ -541,6 +541,32 @@ export const BLACK_BASS: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
+ * Provisional cormorant values (issue #112, PRD open question 545, ND-2); tune in play. The cormorant
+ * floats along its stretch at the surface at patrolSpeed, crouches to dive for 1.0 s (above the PRD's
+ * 0.8 s floor) when the axolotl is within lungeRange of it, then dives a U-shaped arc at lungeSpeed
+ * (the `diveArc` rule on CORMORANT_SPECIES in src/logic/predators.ts) and floats drying its wings
+ * through the 2.5 s cooldown. lungeRange is also its dive depth below its stretch. The longest arc
+ * is a half circle of radius 180 px, about 565 px, so a dive lasts about 1.26 s; lungeDuration caps
+ * it at 1.3 s. Hit reach and body reach are the tilapia's, so they match a Medium axolotl at every
+ * size (PRD F4). contactRadius and bumpSpeed are 0 and never read, because the cormorant never
+ * touches or bumps (CORMORANT_SPECIES).
+ */
+export const CORMORANT: Readonly<TilapiaTuning> = Object.freeze({
+  minWindup: 0.8,
+  windup: 1.0,
+  cooldown: 2.5,
+  lungeRange: 180,
+  lungeSpeed: 450,
+  lungeDuration: 1.3,
+  hitRadius: TILAPIA.hitRadius,
+  contactRadius: 0,
+  bodyRadius: TILAPIA.bodyRadius,
+  patrolSpeed: 40,
+  bumpSpeed: 0,
+  bumpCooldown: TILAPIA.bumpCooldown,
+});
+
+/**
  * Provisional chase defaults for each predator type (PRD open question 251, ND-4); tune in play.
  * None is wired into a real area. Each speed is strictly between the 2-leg (112.5 px/s) and 4-leg
  * (150 px/s) top speeds, and each sight is greater than its predator's lungeRange (ND-3). This one
@@ -594,6 +620,17 @@ export const BLACK_BASS_CHASE: Readonly<ChaseTuning> = Object.freeze({
   sight: 260,
   leash: 160,
   speed: 130,
+});
+
+/**
+ * Provisional chase default for a cormorant (issue #112, PRD open question 545, ND-2). It chases along
+ * its stretch only, so its leash is 0. Its sight is greater than its 180 px lungeRange, and its speed
+ * is strictly between the 2-leg and 4-leg top speeds.
+ */
+export const CORMORANT_CHASE: Readonly<ChaseTuning> = Object.freeze({
+  sight: 240,
+  leash: 0,
+  speed: 120,
 });
 
 /** Provisional carried-home values; a gentle float of 1.5 to 5 s, or a 1.5 s still bubble. */

@@ -4,7 +4,7 @@
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
- * Area 10 ones (issue #108), and one Paint shell per Dream colour.
+ * Area 10 ones (issue #108), and one Paint shell per Dream colour (Marigold and Golden hour shine, issue #112, the last two).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -322,7 +322,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The twenty-six Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, then Peach and Confetti shine, issue #108, last). */
+/** The twenty-eight Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, then Marigold and Golden hour shine, issue #112, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -350,6 +350,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'lantern-shine',
   'peach',
   'confetti-shine',
+  'marigold',
+  'golden-hour-shine',
 ];
 
 /**
@@ -589,12 +591,12 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All one hundred and thirty-seven icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and thirty-nine icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
- * items, the eleven deep canal Area 10 items, then the twenty-six Paint shells in Dream order (Moonstone, Chocolate,
- * Crystal shine and Glowworm are the spring cave's; the last six, Jade, Fiesta shine, Olive, Lantern shine, Peach and
- * Confetti shine, the deep canal's).
+ * items, the eleven deep canal Area 10 items, then the twenty-eight Paint shells in Dream order (Moonstone, Chocolate,
+ * Crystal shine and Glowworm are the spring cave's; the last eight, Jade, Fiesta shine, Olive, Lantern shine, Peach,
+ * Confetti shine, Marigold and Golden hour shine, the deep canal's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -4966,7 +4968,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Golden hour shine: a sunset rose and a pale gold stripe on deep gold. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;
