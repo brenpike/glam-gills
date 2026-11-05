@@ -4,8 +4,9 @@
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
- * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), and one Paint shell per Dream colour
- * (Marigold and Golden shine, issue #112, then Lime, Hyacinth and Lagoon shine, issue #207, the last three).
+ * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112) and its five Wearables (issue #207),
+ * and one Paint shell per Dream colour (Marigold and Golden shine, issue #112, then Lime, Hyacinth and Lagoon shine,
+ * issue #207, the last three).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -195,6 +196,17 @@ import {
   SNOW_GLOBE_WEED,
   LITTLE_CORMORANT_BILL,
   LITTLE_CORMORANT_BODY,
+  JETPACK_BUBBLE,
+  JETPACK_FRAME,
+  JETPACK_TANK_FILL,
+  PROPELLER_BLADE_FILL,
+  PROPELLER_CAP_FILL,
+  ROBOT_SUIT_FILL,
+  ROBOT_SUIT_LIGHT,
+  STAR_SUNGLASSES_FRAME,
+  WIZARD_HAT_FILL,
+  WIZARD_HAT_STAR,
+  WIZARD_HAT_TIP,
   type DreamSwatchId,
 } from './treasurePalette';
 
@@ -479,7 +491,12 @@ export type TreasureItemSlug =
   | 'hero-medal'
   | 'refuge-snow-globe'
   | 'champion-crown'
-  | 'little-cormorant';
+  | 'little-cormorant'
+  | 'propeller-cap'
+  | 'star-sunglasses'
+  | 'robot-suit'
+  | 'jetpack'
+  | 'wizard-hat';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -596,13 +613,19 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'refuge-snow-globe',
   'champion-crown',
   'little-cormorant',
+  'propeller-cap',
+  'star-sunglasses',
+  'robot-suit',
+  'jetpack',
+  'wizard-hat',
 ];
 
 /**
- * All one hundred and forty-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and forty-eight icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
- * items, the eleven deep canal Area 10 items, the deep canal Area 11's one item, then the thirty-one Paint shells in
+ * items, the eleven deep canal Area 10 items, the deep canal Area 11's six items (the Little cormorant, issue #112, then
+ * its five Wearables in catalogue order, issue #207), then the thirty-one Paint shells in
  * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last eleven, Jade, Fiesta
  * shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine, the
  * deep canal's).
@@ -4842,6 +4865,178 @@ function paintLittleCormorant(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 11 Wearables (issue #207)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Five big, silly looks: a propeller cap, star sunglasses, a robot suit,
+// a jetpack and a wizard hat. Every tip, blade and point is rounded, the lenses are clear, the jetpack puffs bubbles
+// and never flames, and nothing carries letters, numbers or a grid (ADR 0007).
+
+/** The Propeller cap's two blades: the x of each blade's centre, on the hub's line. */
+const PROPELLER_BLADES = [-6.8, 4.4] as const;
+/** The Propeller cap's hub: its centre, where the stalk meets the blades. */
+const PROPELLER_HUB = { x: -1.2, y: -7.2 } as const;
+
+/**
+ * Common: a silly cap in pale apple green: a round dome with a short peak out to the right, and on top a short stalk
+ * holding a big still propeller in the lotus lantern pink: two long round-ended blades either side of a round hub.
+ * One shine on the dome. No trim, no gem and no star. The blades are round at both ends, never sharp.
+ */
+function paintPropellerCap(pen: Pen): void {
+  const { k } = pen;
+  const stalk = roundedPolygon(pts(-2.2, PROPELLER_HUB.y, -0.2, PROPELLER_HUB.y, -0.2, -1, -2.2, -1), 0.4);
+  outerShape(pen, place(stalk, k), PROPELLER_BLADE_FILL, ITEM_LW);
+  for (const x of PROPELLER_BLADES) outerShape(pen, place(ellipse(x, PROPELLER_HUB.y, 5.6, 2.4), k), PROPELLER_BLADE_FILL, ITEM_LW);
+  outerShape(pen, place(ellipse(PROPELLER_HUB.x, PROPELLER_HUB.y, 1.9, 1.9), k), PROPELLER_BLADE_FILL, ITEM_LW);
+  const peak = roundedPolygon(pts(4.4, 6.2, 12.6, 7.4, 12.6, 9.6, 4.4, 9.6), [0.6, 1, 1, 0.6]);
+  outerShape(pen, place(peak, k), PROPELLER_CAP_FILL, ITEM_LW);
+  const dome = new Path2D();
+  dome.moveTo(-11, 9.6);
+  dome.bezierCurveTo(-11, 1.2, -6.4, -2, -1.2, -2);
+  dome.bezierCurveTo(4, -2, 8.4, 1.2, 8.4, 9.6);
+  dome.quadraticCurveTo(-1.3, 11, -11, 9.6);
+  dome.closePath();
+  outerShape(pen, place(dome, k), PROPELLER_CAP_FILL, ITEM_LW);
+  shine(pen, -6.4, 2.6, 0.8, 2, 0.55);
+}
+
+/** The Star sunglasses' two star frames: the centre of each, their tip and notch radii, design units. */
+const STAR_FRAMES = { xs: [-6.9, 6.9], y: 1.2, outer: 6.9, inner: 3.3 } as const;
+
+/** One soft-pointed five-point star frame: every tip and notch rounded. */
+function softStarPath(cx: number, cy: number): Path2D {
+  return roundedPolygon(
+    starVertices(cx, cy, STAR_FRAMES.outer, STAR_FRAMES.inner, 5),
+    Array.from({ length: 10 }, (_, i) => (i % 2 === 0 ? 1.1 : 0.7)),
+  );
+}
+
+/**
+ * Rare: huge star sunglasses: two soft-pointed five-point star frames (band colour 1.5 in the butter yellow with 1.0
+ * ink each side, 3.5 in all, every tip rounded) with clear tinted lenses, never dark, joined by a chunky bridge in the
+ * same yellow that carries the one trim band. One shine on the left lens.
+ */
+function paintStarSunglasses(pen: Pen): void {
+  const { ctx, k } = pen;
+  const [left, right] = STAR_FRAMES.xs.map((x) => place(softStarPath(x, STAR_FRAMES.y), k));
+  detail(pen, () => {
+    ctx.fillStyle = GLASSES_LENS;
+    ctx.fill(left);
+    ctx.fill(right);
+  });
+  inkMany(ctx, [
+    outerSeg(pen, left, GLASSES_W, STAR_SUNGLASSES_FRAME, GLASSES_OL),
+    outerSeg(pen, right, GLASSES_W, STAR_SUNGLASSES_FRAME, GLASSES_OL),
+  ]);
+  const bridge = roundedPolygon(pts(-2.8, -3.8, 2.8, -3.8, 2.8, 1, -2.8, 1), 1.6);
+  silhouette(pen, place(bridge, k), STAR_SUNGLASSES_FRAME, ITEM_LW, () => trimBand(pen, -2.2, -0.6, BOAT_TRIM));
+  shine(pen, -8.6, 0.4, 0.8, 1.6, 0.5);
+}
+
+/**
+ * Rare: a rounded robot suit in pale silver: a round-cornered body with short round-ended arms and a round shoulder
+ * joint each side, an ink collar arc at the neck and a glowing round chest light in the dragonfly aqua (a soft glow
+ * ring round an inked light). One yellow trim band across the waist, the belt. One shine on the body. No letters,
+ * numbers, dials or panel grid (ADR 0007).
+ */
+function paintRobotSuit(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const s of [-1, 1]) {
+    const arm = roundedPolygon(pts(s * 7.6, -6.8, s * 12.6, -6.8, s * 12.6, 3.8, s * 7.6, 3.8), 2.2);
+    outerShape(pen, place(arm, k), ROBOT_SUIT_FILL, ITEM_LW);
+  }
+  const body = roundedPolygon(pts(-8.6, -10.6, 8.6, -10.6, 8.6, 12.4, -8.6, 12.4), [3.2, 3.2, 2.6, 2.6]);
+  silhouette(pen, place(body, k), ROBOT_SUIT_FILL, ITEM_LW, () => {
+    trimBand(pen, 6.4, 8.8, BOAT_TRIM);
+    const collar = new Path2D();
+    collar.ellipse(0, -10.6, 3.6, 2.6, 0, 0, Math.PI);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = DETAIL_LW;
+    ctx.stroke(place(collar, k));
+    ctx.fillStyle = ROBOT_SUIT_LIGHT;
+    ctx.globalAlpha = 0.45;
+    ctx.fill(place(ellipse(0, -1.8, 4.6, 4.6), k));
+    ctx.globalAlpha = 1;
+    shape(ctx, place(ellipse(0, -1.8, 2.8, 2.8), k), ROBOT_SUIT_LIGHT, DETAIL_LW);
+  });
+  for (const s of [-1, 1]) outerShape(pen, place(ellipse(s * 8.6, -7.2, 2.8, 2.8), k), ROBOT_SUIT_FILL, ITEM_LW);
+  shine(pen, -5.4, -6.4, 0.8, 1.8, 0.35);
+}
+
+/** The Jetpack's two tanks: the x of each tank's centre. */
+const JETPACK_TANKS = [-6.2, 6.2] as const;
+
+/**
+ * Epic: a jetpack of two rounded rocket tanks in pale apricot, round-nosed, side by side on a pebble A middle plate,
+ * each with an ink nose seam (1.2) and a pebble A nozzle puffing two round bubbles (bubbles only, never flames, ADR
+ * 0007). One aqua gem on the plate. One shine on the left tank. No trim band, gold or star.
+ */
+function paintJetpack(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const x of JETPACK_TANKS) {
+    const side = Math.sign(x);
+    outerShape(pen, place(ellipse(x, 8.4, 2.2, 2.2), k), JETPACK_BUBBLE, ITEM_LW);
+    outerShape(pen, place(ellipse(x - side * 1.6, 11.2, 1.4, 1.4), k), JETPACK_BUBBLE, ITEM_LW);
+  }
+  const plate = roundedPolygon(pts(-3.4, -8.4, 3.4, -8.4, 3.4, 3.2, -3.4, 3.2), 1.4);
+  outerShape(pen, place(plate, k), JETPACK_FRAME, ITEM_LW);
+  for (const x of JETPACK_TANKS) {
+    const nozzle = roundedPolygon(pts(x - 2.4, 3.6, x + 2.4, 3.6, x + 3.2, 6.4, x - 3.2, 6.4), 0.6);
+    outerShape(pen, place(nozzle, k), JETPACK_FRAME, ITEM_LW);
+    const tank = roundedPolygon(pts(x - 4.2, -12.6, x + 4.2, -12.6, x + 4.2, 4.6, x - 4.2, 4.6), [4.2, 4.2, 1.6, 1.6]);
+    silhouette(pen, place(tank, k), JETPACK_TANK_FILL, ITEM_LW, () => {
+      const seam = new Path2D();
+      seam.moveTo(x - 4.2, -6.4);
+      seam.quadraticCurveTo(x, -5.2, x + 4.2, -6.4);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = BAND_LW;
+      ctx.stroke(place(seam, k));
+    });
+  }
+  gem(pen, 0, -2.6, CASTLE_GEM, 2.2);
+  shine(pen, -8, -3.4, 0.8, 2.2, 0.1);
+}
+
+/** The Wizard hat's little gold stars on the cone: x, y and tip radius of each. */
+const WIZARD_HAT_STARS: readonly (readonly [number, number, number])[] = [
+  [-2.6, -0.4, 2.2],
+  [1.8, -5.2, 1.6],
+];
+
+/**
+ * Legendary: a tall wizard hat in pale starry violet on a wide brim: the cone rises and its point curls over to the
+ * right, ending in a soft round tip in the pale crown gold, never a sharp point. Two little gold stars on the cone
+ * (inked 1.2), one gold band above the brim with one pink gem on it, and the one 4-point star. One shine on the brim.
+ */
+function paintWizardHat(pen: Pen): void {
+  const { ctx, k } = pen;
+  outerShape(pen, place(ellipse(0, 8.4, 12.6, 3.6), k), WIZARD_HAT_FILL, ITEM_LW);
+  const cone = new Path2D();
+  cone.moveTo(-7.6, 8.4);
+  cone.bezierCurveTo(-6.4, 2, -3.6, -6, 0.4, -9.4);
+  cone.bezierCurveTo(2.6, -11.4, 6.4, -12, 8.4, -9.8);
+  cone.bezierCurveTo(6.2, -10.4, 3.8, -8.4, 3.4, -5.4);
+  cone.bezierCurveTo(4.2, 0, 6, 4.4, 7.6, 8.4);
+  cone.quadraticCurveTo(0, 10.2, -7.6, 8.4);
+  cone.closePath();
+  silhouette(pen, place(cone, k), WIZARD_HAT_FILL, ITEM_LW, () => {
+    trimBand(pen, 3.6, 6, GOLD_TRIM);
+    ctx.lineWidth = BAND_LW;
+    ctx.strokeStyle = INK;
+    ctx.fillStyle = WIZARD_HAT_STAR;
+    for (const [x, y, r] of WIZARD_HAT_STARS) {
+      const star = place(roundedPolygon(starVertices(x, y, r, r * 0.45, 5), 0.3), k);
+      ctx.fill(star);
+      ctx.stroke(star);
+    }
+  });
+  outerShape(pen, place(ellipse(9.8, -9.4, 2.4, 2.4), k), WIZARD_HAT_TIP, ITEM_LW);
+  gem(pen, 0, 4.8, PYRAMID_GEM, 1.9);
+  shine(pen, -8.6, 7.4, 1.6, 0.6, -0.15);
+  legendStar(pen, -9.4, -8.8);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -5599,6 +5794,21 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'little-cormorant':
       paintLittleCormorant({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'propeller-cap':
+      paintPropellerCap({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'star-sunglasses':
+      paintStarSunglasses({ ctx, k: fitScale(size, INK_OUT_GLASSES), flat });
+      break;
+    case 'robot-suit':
+      paintRobotSuit({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'jetpack':
+      paintJetpack({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'wizard-hat':
+      paintWizardHat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

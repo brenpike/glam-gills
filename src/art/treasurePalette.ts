@@ -394,10 +394,39 @@ export const LITTLE_CORMORANT_BODY = '#d9dcf2';
 /** Little cormorant closed bill and throat patch, the cormorant's bill colour. Alias of MINERS_HELMET_FILL. 10.65:1. */
 export const LITTLE_CORMORANT_BILL = MINERS_HELMET_FILL;
 
+// ---- Deep canal Area 11 Wearable fills (issue #207; all at least 9:1 with ink) ----
+// The five big, silly Wearables: a propeller cap, star sunglasses, a robot suit, a jetpack and a wizard hat. Three
+// fills are new (a pale apple green, a pale silver and a pale starry violet); the rest reuse shipped colours by name.
+// None equals a BADGE_FILL rarity colour, and none is red. Ratios are fill against ink. Aliases of a shipped colour
+// say so.
+
+/** Propeller cap dome and peak, a pale apple green. 12.03:1. */
+export const PROPELLER_CAP_FILL = '#d6f5b0';
+/** Propeller cap's two round-ended blades, hub and stalk, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const PROPELLER_BLADE_FILL = TRAJINERA_BLOSSOM_PINK;
+/** Star sunglasses' two soft-pointed star frames and bridge, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const STAR_SUNGLASSES_FRAME = MARIACHI_JACKET_FILL;
+/** Robot suit body, shoulders and arms, a pale silver. 11.95:1. */
+export const ROBOT_SUIT_FILL = '#e6eaf4';
+/** Robot suit's round chest light and its soft glow, the dragonfly aqua. Alias of DRAGONFLY_FRAME; inside the suit, so free. */
+export const ROBOT_SUIT_LIGHT = DRAGONFLY_FRAME;
+/** Jetpack's two rounded rocket tanks, a pale apricot. Alias of STRIPED_SCARF_FILL. 10.97:1. */
+export const JETPACK_TANK_FILL = STRIPED_SCARF_FILL;
+/** Jetpack's middle plate and two nozzles, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const JETPACK_FRAME = FIREFLY_HOOK;
+/** Jetpack's puffed bubbles (bubbles, never flames: ADR 0007), the bubble stone's bubble. Alias of BUBBLE_FILL. 12.46:1. */
+export const JETPACK_BUBBLE = BUBBLE_FILL;
+/** Wizard hat cone and brim, a pale starry violet. 10.38:1. */
+export const WIZARD_HAT_FILL = '#ddd6ff';
+/** Wizard hat's soft round tip on the curled point, the pale crown gold. Alias of CHAMPION_CROWN_FILL. 12.01:1. */
+export const WIZARD_HAT_TIP = CHAMPION_CROWN_FILL;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
 export const GOLD_TRIM = '#ffc12e';
+/** Wizard hat's little stars on the cone, the Legendary gold (never the white star, which is the one Legendary star). Alias of GOLD_TRIM. */
+export const WIZARD_HAT_STAR = GOLD_TRIM;
 /** Rare and Epic trim bands. */
 export const BOAT_TRIM = SUN;
 /** Diving tank strap band, the boat yellow (guide 7e). */
