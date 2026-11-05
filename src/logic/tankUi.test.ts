@@ -346,10 +346,21 @@ function captionRuleProblems(label: string, view: HudView, layout: DecorateLayou
  * caption is placed or hidden by its rule; a tray that fits no room goes in pages, with Back and Next.
  */
 function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number, page = 0): string[] {
-  const label = `decorate ${view.cssW}x${view.cssH} tray=${trayCount}/${maxTrayCount} page=${page}`;
-  const frame = tankFrame(view.cssW, view.cssH);
   const sizes = decorateSizes(view);
-  const layout = decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
+  const layout = decorateLayout(view, tankFrame(view.cssW, view.cssH), trayCount, sizes, maxTrayCount, page);
+  return decorateLayoutProblems(view, trayCount, maxTrayCount, page, layout, sizes.caption);
+}
+
+/** decorateProblems for `layout`, the layout of that canvas, tray and page with the `caption` it was measured with. */
+function decorateLayoutProblems(
+  view: HudView,
+  trayCount: number,
+  maxTrayCount: number,
+  page: number,
+  layout: DecorateLayout,
+  caption: Size | null,
+): string[] {
+  const label = `decorate ${view.cssW}x${view.cssH} tray=${trayCount}/${maxTrayCount} page=${page}`;
   const targets = decorateTargets(layout);
   const all: [string, Rect][] = layout.caption ? [...targets, ['caption', layout.caption]] : targets;
   const problems = [
@@ -362,7 +373,7 @@ function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number
     problems.push(...roomProblems(label, view, targets));
     if (layout.caption === null) problems.push(`${label}: no caption`);
   } else {
-    problems.push(...captionRuleProblems(label, view, layout, sizes.caption));
+    problems.push(...captionRuleProblems(label, view, layout, caption));
   }
   problems.push(...pageProblems(label, layout, trayCount));
   if (layout.page !== page) problems.push(`${label}: shows page ${layout.page}`);
@@ -372,11 +383,16 @@ function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number
 
 /**
  * Every decorate problem on every page of one tray. pageProblems pins each page's start, square
- * count and the page count, so each tray item is on exactly one page.
+ * count and the page count, so each tray item is on exactly one page. The first page's layout, which
+ * gives the page count, is the one checked as page 0.
  */
 function trayPagesProblems(view: HudView, trayCount: number, maxTrayCount: number): string[] {
-  const first = decorateLayout(view, tankFrame(view.cssW, view.cssH), trayCount, decorateSizes(view), maxTrayCount);
-  return Array.from({ length: first.pageCount }, (_, page) => page).flatMap((page) => decorateProblems(view, trayCount, maxTrayCount, page));
+  const frame = tankFrame(view.cssW, view.cssH);
+  const sizes = decorateSizes(view);
+  const layoutOf = (page: number): DecorateLayout => decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
+  const first = layoutOf(0);
+  const layouts = Array.from({ length: first.pageCount }, (_, page) => (page === 0 ? first : layoutOf(page)));
+  return layouts.flatMap((layout, page) => decorateLayoutProblems(view, trayCount, maxTrayCount, page, layout, sizes.caption));
 }
 
 /**
@@ -824,16 +840,19 @@ describe('decorateLayout', () => {
     expect(problems).toEqual([]);
   });
 
-  it('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    expect(SHIPPED_DECORATIONS).toHaveLength(59);
-    const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
-    const problems = supportedCanvases().flatMap((view) =>
-      maxCounts.flatMap((maxTrayCount) =>
+  describe('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
+    it('sweeps the 59 shipped Decorations', () => {
+      expect(SHIPPED_DECORATIONS).toHaveLength(59);
+    });
+
+    it.each(supportedCanvases())('at $cssW x $cssH', (view) => {
+      const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
+      const problems = maxCounts.flatMap((maxTrayCount) =>
         maxCounts.filter((trayCount) => trayCount <= maxTrayCount).flatMap((trayCount) => trayPagesProblems(view, trayCount, maxTrayCount)),
-      ),
-    );
-    expect(problems).toEqual([]);
-  }, 60_000);
+      );
+      expect(problems).toEqual([]);
+    });
+  });
 
   it('uses 64 px tray squares and always reserves the Put away slot', () => {
     const view = { cssW: 800, cssH: 600 };
