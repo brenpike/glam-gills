@@ -970,9 +970,12 @@ function largestSize(texts: readonly string[], px: number, wrapW: number, em: nu
   return { w: Math.max(...sizes.map((size) => size.w)), h: Math.max(...sizes.map((size) => size.h)) };
 }
 
+/** Every section heading at its fullest count, built once for chestMeasure. */
+const FULLEST_HEADINGS: readonly string[] = chestListing(ALL_IDS).map((section) => `${section.heading}: ${section.countText}`);
+
 /** The chest measure with every heading at its fullest count, the `length` section lines and the 48 x 48 Filter tile (ICON_TILE). */
 function chestMeasure(length: SectionLineLength): ChestMeasure {
-  const headings = chestListing(ALL_IDS).map((section) => `${section.heading}: ${section.countText}`);
+  const headings = FULLEST_HEADINGS;
   const lines = CHEST_CATEGORIES.map((category) => sectionLine(category, length));
   return {
     titleAt: (wrapW) => estimateSize(CHEST_TITLE, CHEST_TITLE_PX, wrapW, BOLD_EM),
@@ -1024,10 +1027,14 @@ function estimateRowHeight(entry: ChestEntry, rowW: number): number {
   return Math.max(LEAD_PX, nameBlockHeight(entry, textW) + detailBlocksHeight(entry, textW));
 }
 
+/** Every entry, found and unfound, built once for tallestRowHeight. */
+const EVERY_ENTRY: readonly ChestEntry[] = [...chestListing([]), ...chestListing(ALL_IDS)].flatMap(
+  (section): readonly ChestEntry[] => section.entries,
+);
+
 /** Tallest row of every entry, found and unfound, at `rowW`. */
 function tallestRowHeight(rowW: number): number {
-  const entries = [...chestListing([]), ...chestListing(ALL_IDS)].flatMap((section): readonly ChestEntry[] => section.entries);
-  return Math.max(...entries.map((entry) => estimateRowHeight(entry, rowW)));
+  return Math.max(...EVERY_ENTRY.map((entry) => estimateRowHeight(entry, rowW)));
 }
 
 /**

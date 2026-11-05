@@ -1072,11 +1072,16 @@ describe('Outfit step', () => {
     });
   }
 
+  /** Each slot's Wearables, built once for expectBankedOutfit. */
+  const SLOT_WEARABLES: ReadonlyMap<string, readonly string[]> = new Map(
+    WEARABLE_SLOTS.map((slot) => [slot, slotWearables(slot)]),
+  );
+
   function expectBankedOutfit(outfit: Outfit): void {
     expect(Object.keys(outfit).sort()).toEqual([...WEARABLE_SLOTS].sort());
     for (const slot of WEARABLE_SLOTS) {
       const id = outfit[slot];
-      if (id !== null) expect(slotWearables(slot)).toContain(id);
+      if (id !== null) expect(SLOT_WEARABLES.get(slot)).toContain(id);
     }
   }
 
@@ -1388,7 +1393,7 @@ describe('Outfit step', () => {
     }
   });
 
-  it('random actions never change the morph or sex, and the outfit stays banked Wearables in their own slots', () => {
+  describe('random actions never change the morph or sex, and the outfit stays banked Wearables in their own slots', () => {
     const keys = ['Tab', 'Enter', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Escape'];
     function randomAction(rand: () => number): StylerAction {
       const roll = Math.floor(rand() * 8);
@@ -1401,19 +1406,34 @@ describe('Outfit step', () => {
       if (roll === 5) return { type: 'done' };
       return { type: 'key', key: keys[Math.floor(rand() * keys.length)], shiftKey: rand() < 0.5, columns: 4 };
     }
-    for (let seed = 1; seed <= SEED_COUNT; seed++) {
-      const rand = mulberry32(seed);
-      let state = outfitStart();
-      for (let index = 0; index < 60; index++) {
-        if (rand() < 0.1) state = withTabsHidden(withOutfitPerPage(state, 1 + Math.floor(rand() * 4)), rand() < 0.5);
-        const result = reduceStyler(state, randomAction(rand), rand);
-        state = result.state;
-        expect(state.morph).toBe(OWNED.morph);
-        expect(state.look.sex).toBe(OWNED.look.sex);
-        expectBankedOutfit(state.outfit);
-        expect(focusOrder(state)).toContain(state.focus.kind);
-        if (result.effect?.type === 'done') expect(result.effect.outfit).toEqual(state.outfit);
+
+    /** Seeds per test, so each test sits far under the default timeout on a loaded runner. */
+    const SEEDS_PER_TEST = 30;
+    const SEED_RANGES: readonly { first: number; last: number }[] = Array.from(
+      { length: Math.ceil(SEED_COUNT / SEEDS_PER_TEST) },
+      (_, chunk) => ({ first: chunk * SEEDS_PER_TEST + 1, last: Math.min((chunk + 1) * SEEDS_PER_TEST, SEED_COUNT) }),
+    );
+
+    it('runs every seed from 1 to SEED_COUNT once', () => {
+      const seeds = SEED_RANGES.flatMap(({ first, last }) => Array.from({ length: last - first + 1 }, (_, offset) => first + offset));
+      expect(seeds).toEqual(Array.from({ length: SEED_COUNT }, (_, offset) => offset + 1));
+    });
+
+    it.each(SEED_RANGES)('seeds $first to $last', ({ first, last }) => {
+      for (let seed = first; seed <= last; seed++) {
+        const rand = mulberry32(seed);
+        let state = outfitStart();
+        for (let index = 0; index < 60; index++) {
+          if (rand() < 0.1) state = withTabsHidden(withOutfitPerPage(state, 1 + Math.floor(rand() * 4)), rand() < 0.5);
+          const result = reduceStyler(state, randomAction(rand), rand);
+          state = result.state;
+          expect(state.morph).toBe(OWNED.morph);
+          expect(state.look.sex).toBe(OWNED.look.sex);
+          expectBankedOutfit(state.outfit);
+          expect(focusOrder(state)).toContain(state.focus.kind);
+          if (result.effect?.type === 'done') expect(result.effect.outfit).toEqual(state.outfit);
+        }
       }
-    }
-  }, 20_000);
+    });
+  });
 });
