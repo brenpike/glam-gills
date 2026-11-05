@@ -4,9 +4,9 @@
  * Area 3 ones (issue #98), the eleven chinampa Area 4 ones (issue #76), the eleven chinampa Area 5 ones
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
- * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112) and its five Wearables (issue #207),
- * and one Paint shell per Dream colour (Marigold and Golden shine, issue #112, then Lime, Hyacinth and Lagoon shine,
- * issue #207, the last three).
+ * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), its three Decorations and five
+ * Wearables (issue #207), and one Paint shell per Dream colour (Marigold and Golden shine, issue #112, then Lime,
+ * Hyacinth and Lagoon shine, issue #207, the last three).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -207,6 +207,18 @@ import {
   WIZARD_HAT_FILL,
   WIZARD_HAT_STAR,
   WIZARD_HAT_TIP,
+  CAROUSEL_BASE,
+  CAROUSEL_CANOPY,
+  CAROUSEL_FINIAL,
+  CAROUSEL_POLE,
+  CAROUSEL_RIDER,
+  CAROUSEL_STRIPE,
+  FESTIVAL_KITE_BOWS,
+  FESTIVAL_KITE_FILL,
+  FESTIVAL_KITE_PANEL,
+  FLOWER_RAFT_BLOOM,
+  FLOWER_RAFT_EYE,
+  FLOWER_RAFT_LEAF,
   type DreamSwatchId,
 } from './treasurePalette';
 
@@ -377,7 +389,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * eleven pond ones and the eleven pond Area 3 ones (the text after `pond/`), then the eleven chinampa
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
  * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
- * Area 8 ones, the eleven deep canal Area 9 ones and the eleven deep canal Area 10 ones (the text after `deep-canal/`), in catalogue order.
+ * Area 8 ones, the eleven deep canal Area 9 ones, the eleven deep canal Area 10 ones and the nine deep canal Area 11 ones
+ * (the text after `deep-canal/`), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -492,9 +505,12 @@ export type TreasureItemSlug =
   | 'refuge-snow-globe'
   | 'champion-crown'
   | 'little-cormorant'
+  | 'flower-raft'
   | 'propeller-cap'
+  | 'festival-kite'
   | 'star-sunglasses'
   | 'robot-suit'
+  | 'carousel'
   | 'jetpack'
   | 'wizard-hat';
 
@@ -613,19 +629,22 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'refuge-snow-globe',
   'champion-crown',
   'little-cormorant',
+  'flower-raft',
   'propeller-cap',
+  'festival-kite',
   'star-sunglasses',
   'robot-suit',
+  'carousel',
   'jetpack',
   'wizard-hat',
 ];
 
 /**
- * All one hundred and forty-eight icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and fifty-one icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
- * items, the eleven deep canal Area 10 items, the deep canal Area 11's six items (the Little cormorant, issue #112, then
- * its five Wearables in catalogue order, issue #207), then the thirty-one Paint shells in
+ * items, the eleven deep canal Area 10 items, the deep canal Area 11's nine items (the Little cormorant, issue #112, then
+ * its three Decorations and five Wearables in catalogue order, issue #207), then the thirty-one Paint shells in
  * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last eleven, Jade, Fiesta
  * shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine, the
  * deep canal's).
@@ -720,7 +739,8 @@ export function treasureIconTextureSize(size: number): TexSize {
  * the Marigold boat (Floating items, so the box edge) and the lowest flag tips of the Festival flag string (a Hanging
  * item).
  * The deep canal Area 11's Little cormorant (issue #112) ends on the same 12.6 edge: its weight (a Floating item, so the
- * box edge).
+ * box edge). So do its three issue #207 Decorations: the Flower raft's weight (a Floating item, so the box edge), the
+ * lowest bow of the Festival kite's tail (a Hanging item) and the Carousel's platform (a Floor item).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -779,6 +799,9 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'mariachi-band-figures': 12.6,
   'refuge-snow-globe': 12.6,
   'little-cormorant': 12.6,
+  'flower-raft': 12.6,
+  'festival-kite': 12.6,
+  carousel: 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -5037,6 +5060,218 @@ function paintWizardHat(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Deep canal Area 11 Decorations (issue #207)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Three festival Decorations: a little raft of water hyacinth leaves
+// with a lilac bloom spike, a diamond kite with a bow tail, and a little carousel with toy axolotl riders. Every outer
+// fill is one of the Area 11 Decoration fills of treasurePalette.ts (9:1 or more with ink). No net-like lines, no
+// letters or numbers (ADR 0007).
+
+/** One of the Flower raft's round floating leaves: centre x, its centre's drop below the raft top, its radii and turn. */
+interface RaftLeaf {
+  readonly x: number;
+  readonly dip: number;
+  readonly rx: number;
+  readonly ry: number;
+  readonly rot: number;
+}
+/** The two back leaves, drawn before the bloom spike. */
+const RAFT_BACK_LEAVES: readonly RaftLeaf[] = [
+  { x: -6.2, dip: 2, rx: 4.4, ry: 2.2, rot: -0.08 },
+  { x: 6.2, dip: 2, rx: 4.4, ry: 2.2, rot: 0.08 },
+];
+/** The three front leaves, drawn over the foot of the bloom spike; the outer two reach the box edges. */
+const RAFT_FRONT_LEAVES: readonly RaftLeaf[] = [
+  { x: -8.2, dip: 3.6, rx: 4.4, ry: 2.6, rot: 0.06 },
+  { x: 8.2, dip: 3.6, rx: 4.4, ry: 2.6, rot: -0.06 },
+  { x: 0, dip: 4.2, rx: 5.4, ry: 2.8, rot: 0 },
+];
+/** The bloom spike's three florets (x, y): two on the lower row, then the top one, its top lobe on the box edge. */
+const RAFT_FLORETS: readonly (readonly [number, number])[] = [
+  [-3.2, -7.4],
+  [3.2, -7.4],
+  [0, -9.8],
+];
+const RAFT_FLORET_R = 2.8;
+
+/** One raft leaf: a round leaf in the reed leaf green with an ink midline (1.2) along it. */
+function paintRaftLeaf(pen: Pen, top: number, leaf: RaftLeaf): void {
+  const { ctx, k } = pen;
+  const cy = top + leaf.dip;
+  silhouette(pen, place(ellipse(0, 0, leaf.rx, leaf.ry), k, leaf.x, cy, leaf.rot), FLOWER_RAFT_LEAF, ITEM_LW, () => {
+    const vein = new Path2D();
+    vein.moveTo(-leaf.rx * 0.6, 0.3);
+    vein.quadraticCurveTo(0, -0.5, leaf.rx * 0.6, 0.3);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(vein, k, leaf.x, cy, leaf.rot));
+  });
+}
+
+/**
+ * Common, Floating: a little raft of five round water hyacinth leaves in the reed leaf green, each with an ink midline
+ * (1.2), lying on the water, with a bloom spike of three five-lobed florets in the pale hyacinth lilac rising from its
+ * middle, each with a butter yellow eye. A thin ink cord and a pebble A weight hang below. One shine on the top floret.
+ * The raft's top is on the waterline, 20 below the top of the 80 box; the weight is the lowest fill edge, the box edge.
+ * No trim, no gem and no star. Never the Lily pad's one big pad or the Marigold boat's hull.
+ */
+function paintFlowerRaft(pen: Pen): void {
+  const { ctx, k } = pen;
+  const top = waterlineY(INK_OUT_SHAPE) - 0.6;
+  boatTether(pen, 0, top + 6.6);
+  for (const leaf of RAFT_BACK_LEAVES) paintRaftLeaf(pen, top, leaf);
+  for (const [x, y] of RAFT_FLORETS) {
+    outerShape(pen, place(blossomPath(x, y, RAFT_FLORET_R), k), FLOWER_RAFT_BLOOM, ITEM_LW);
+    detail(pen, () => {
+      ctx.fillStyle = FLOWER_RAFT_EYE;
+      ctx.fill(place(ellipse(x, y, 0.8, 0.8), k));
+    });
+  }
+  for (const leaf of RAFT_FRONT_LEAVES) paintRaftLeaf(pen, top, leaf);
+  shine(pen, -1.2, -11.2, 0.4, 0.8, 0.5);
+}
+
+/** The Festival kite's diamond: its top, side and bottom corners, the sides on the cross spar's line. */
+const KITE = { top: -8.6, side: 8.2, cross: -2.6, bottom: 4.6 } as const;
+/** The Festival kite's two tail bows: centre, half width and half height. The lower bow's foot is the 12.6 edge. */
+const KITE_BOWS: readonly { readonly x: number; readonly y: number; readonly w: number; readonly h: number }[] = [
+  { x: -1.8, y: 7.2, w: 3.6, h: 1.9 },
+  { x: 2.4, y: 10.7, w: 3.8, h: 1.9 },
+];
+
+/** A bow-tail ribbon: two rounded wings pinched to a knot at its centre, its top and bottom edges `h` from it. */
+function kiteBowPath(x: number, y: number, w: number, h: number): Path2D {
+  return roundedPolygon(pts(x - w, y - h, x, y - 0.7, x + w, y - h, x + w, y + h, x, y + 0.7, x - w, y + h), [0.7, 0.3, 0.7, 0.7, 0.3, 0.7]);
+}
+
+/**
+ * Rare, Hanging: a diamond kite in the lotus pink with two pale teal quarters, an ink spar (1.2) down its middle and
+ * the one yellow trim band across it as the cross spar, hung by a short ink string from a pebble A hook ring on its
+ * top-centre. A wavy ink tail runs from its foot through two bows, the butter yellow and the pale teal. One shine on
+ * the upper left quarter. The lower bow's foot is the lowest fill edge. A Hanging Decoration moves left and right only.
+ */
+function paintFestivalKite(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { top, side, cross, bottom } = KITE;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  const strings = new Path2D();
+  strings.moveTo(0, -10);
+  strings.lineTo(0, top);
+  const [upper, lower] = KITE_BOWS;
+  strings.moveTo(0, bottom - 0.4);
+  strings.quadraticCurveTo(-2.6, (bottom + upper.y) / 2, upper.x, upper.y);
+  strings.quadraticCurveTo(-0.4, (upper.y + lower.y) / 2 + 0.6, lower.x, lower.y);
+  ctx.stroke(place(strings, k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, FIREFLY_HOOK), DETAIL_LW);
+  KITE_BOWS.forEach((bow, i) => {
+    outerShape(pen, place(kiteBowPath(bow.x, bow.y, bow.w, bow.h), k), FESTIVAL_KITE_BOWS[i % FESTIVAL_KITE_BOWS.length], ITEM_LW);
+  });
+  const kite = roundedPolygon(pts(0, top, side, cross, 0, bottom, -side, cross), [1, 0.9, 1, 0.9]);
+  silhouette(pen, place(kite, k), FESTIVAL_KITE_FILL, ITEM_LW, () => {
+    ctx.fillStyle = FESTIVAL_KITE_PANEL;
+    ctx.fill(place(roundedPolygon(pts(0, top - 1, side + 1, cross, 0, cross), 0), k));
+    ctx.fill(place(roundedPolygon(pts(0, cross, -side - 1, cross, 0, bottom + 1), 0), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(0, top - 1, 0, bottom + 1), k));
+    trimBand(pen, cross - 1, cross + 1, BOAT_TRIM);
+  });
+  shine(pen, -2.6, -5.6, 0.6, 1.4, 0.6);
+}
+
+/** The Carousel's canopy: its apex, the eave line at each box edge (`half` out), and the four scallops that hang below the eave. */
+const CAROUSEL_TOP = { apex: -9.8, eave: -4.2, half: 12.6, scallopDip: -0.6, scallops: 4 } as const;
+/** The canopy's seven stripe wedges fan out from just above the apex: the outer two, and the two either side of the middle, are cream. */
+const CAROUSEL_STRIPE_EDGES: readonly number[] = [-14, -10, -6, -2, 2, 6, 10, 14];
+/** One toy axolotl rider: where its body sits on its pole. Both ride facing right. */
+const CAROUSEL_RIDERS: readonly { readonly x: number; readonly y: number }[] = [
+  { x: -7.4, y: 1.4 },
+  { x: 7, y: 3.6 },
+];
+
+/** The canopy: a soft dome from the left eave over the apex to the right eave, with a scalloped hem back along the bottom. */
+function carouselCanopyPath(): Path2D {
+  const { apex, eave, half, scallopDip, scallops } = CAROUSEL_TOP;
+  const p = new Path2D();
+  p.moveTo(-half, eave);
+  p.bezierCurveTo(-10.6, eave - 3.4, -4.4, apex, 0, apex);
+  p.bezierCurveTo(4.4, apex, 10.6, eave - 3.4, half, eave);
+  const step = (2 * half) / scallops;
+  for (let i = 0; i < scallops; i++) {
+    const x0 = half - i * step;
+    p.quadraticCurveTo(x0 - step / 2, scallopDip, x0 - step, eave);
+  }
+  p.closePath();
+  return p;
+}
+
+/** A rider's three gill fronds, splayed up and back from the top of its head: x and y off the head centre, and turn. */
+const CAROUSEL_RIDER_FRONDS: readonly (readonly [number, number, number])[] = [
+  [-2, -1.4, -1],
+  [-1.1, -2.3, -0.5],
+  [0.1, -2.6, 0],
+];
+
+/**
+ * One toy axolotl rider facing right: a tail, a body, a round head and three gill fronds in soft pink, a bead eye and
+ * a small ink smile (1.2).
+ */
+function paintCarouselRider(pen: Pen, x: number, y: number): void {
+  const { ctx, k } = pen;
+  const head = { x: x + 2.8, y: y - 1.2 };
+  outerShape(pen, place(ellipse(x - 3.4, y + 0.2, 1.7, 1, -0.2), k), CAROUSEL_RIDER, ITEM_LW);
+  for (const [dx, dy, rot] of CAROUSEL_RIDER_FRONDS) {
+    outerShape(pen, place(ellipse(0, 0, 0.8, 1.5), k, head.x + dx, head.y + dy, rot), CAROUSEL_RIDER, ITEM_LW);
+  }
+  outerShape(pen, place(ellipse(x, y, 3.2, 2), k), CAROUSEL_RIDER, ITEM_LW);
+  outerShape(pen, place(ellipse(head.x, head.y, 2.3, 2.3), k), CAROUSEL_RIDER, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    ctx.fill(place(ellipse(head.x + 0.7, head.y - 0.5, 0.7, 0.7), k));
+    const smile = new Path2D();
+    smile.moveTo(head.x + 0.4, head.y + 0.9);
+    smile.quadraticCurveTo(head.x + 1.2, head.y + 1.5, head.x + 1.9, head.y + 0.7);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(smile, k));
+  });
+}
+
+/**
+ * Epic, Floor: a little festival carousel: a soft pale teal dome canopy with four cream stripes fanning from its
+ * apex and a scalloped hem, a butter yellow round finial on top, a pebble A middle pole, and two soft pink toy axolotl
+ * riders on thin ink poles (1.6) at different heights, each with a bead eye and a smile, over a pebble C round platform with one
+ * aqua gem on its front. One shine on the canopy. The platform is the lowest fill edge. No trim band, gold or star.
+ */
+function paintCarousel(pen: Pen): void {
+  const { ctx, k } = pen;
+  const pole = roundedPolygon(pts(-1.2, CAROUSEL_TOP.eave, 1.2, CAROUSEL_TOP.eave, 1.2, 8.4, -1.2, 8.4), 0.6);
+  outerShape(pen, place(pole, k), CAROUSEL_POLE, ITEM_LW);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  const poles = new Path2D();
+  for (const rider of CAROUSEL_RIDERS) {
+    poles.moveTo(rider.x, CAROUSEL_TOP.eave);
+    poles.lineTo(rider.x, 8.4);
+  }
+  ctx.stroke(place(poles, k));
+  for (const rider of CAROUSEL_RIDERS) paintCarouselRider(pen, rider.x, rider.y);
+  silhouette(pen, place(carouselCanopyPath(), k), CAROUSEL_CANOPY, ITEM_LW, () => {
+    ctx.fillStyle = CAROUSEL_STRIPE;
+    for (let i = 0; i + 1 < CAROUSEL_STRIPE_EDGES.length; i += 2) {
+      ctx.fill(place(roundedPolygon(pts(0, CAROUSEL_TOP.apex - 2, CAROUSEL_STRIPE_EDGES[i], 0, CAROUSEL_STRIPE_EDGES[i + 1], 0), 0), k));
+    }
+  });
+  outerShape(pen, place(ellipse(0, -11, 1.6, 1.6), k), CAROUSEL_FINIAL, ITEM_LW);
+  const platform = roundedPolygon(pts(-11.8, 12.6, -11.8, 8, 11.8, 8, 11.8, 12.6), [1.6, 2.4, 2.4, 1.6]);
+  outerShape(pen, place(platform, k), CAROUSEL_BASE, ITEM_LW);
+  gem(pen, 0, 10.3, CASTLE_GEM, 1.8);
+  shine(pen, -6.6, -6.8, 0.6, 1.5, -0.9);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -5809,6 +6044,15 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'wizard-hat':
       paintWizardHat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'flower-raft':
+      paintFlowerRaft({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'festival-kite':
+      paintFestivalKite({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'carousel':
+      paintCarousel({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

@@ -421,6 +421,36 @@ export const WIZARD_HAT_FILL = '#ddd6ff';
 /** Wizard hat's soft round tip on the curled point, the pale crown gold. Alias of CHAMPION_CROWN_FILL. 12.01:1. */
 export const WIZARD_HAT_TIP = CHAMPION_CROWN_FILL;
 
+// ---- Deep canal Area 11 Decoration fills (issue #207; all at least 9:1 with ink) ----
+// The three festival Decorations: a flower raft, a festival kite and a carousel. One fill is new (a pale hyacinth
+// lilac); the rest reuse shipped colours by name. None equals a BADGE_FILL rarity colour, and none is red. Ratios are
+// fill against ink. Aliases of a shipped colour say so.
+
+/** Flower raft's round water hyacinth leaves, the reed leaf green. Alias of PLANT_LEAF. 9.25:1. */
+export const FLOWER_RAFT_LEAF = PLANT_LEAF;
+/** Flower raft's bloom spike of five-lobed florets, a pale hyacinth lilac. 9.95:1. */
+export const FLOWER_RAFT_BLOOM = '#e8ccff';
+/** Flower raft florets' round eyes, the butter yellow. Alias of MARIACHI_JACKET_FILL; inside each floret, so free. */
+export const FLOWER_RAFT_EYE = MARIACHI_JACKET_FILL;
+/** Festival kite's diamond, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const FESTIVAL_KITE_FILL = TRAJINERA_BLOSSOM_PINK;
+/** Festival kite's two teal quarters, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1; inside the kite, so free. */
+export const FESTIVAL_KITE_PANEL = TRAJINERA_ARCH;
+/** Festival kite's tail bows, in turn the butter yellow and the pale teal. 12.53:1 and 11.05:1. */
+export const FESTIVAL_KITE_BOWS: readonly string[] = [MARIACHI_JACKET_FILL, TRAJINERA_ARCH];
+/** Carousel's striped canopy, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const CAROUSEL_CANOPY = TRAJINERA_ARCH;
+/** Carousel canopy's stripes, the captain's cream. Alias of CAPTAINS_HAT_FILL. 13.34:1; inside the canopy, so free. */
+export const CAROUSEL_STRIPE = CAPTAINS_HAT_FILL;
+/** Carousel's round finial on the canopy top, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const CAROUSEL_FINIAL = MARIACHI_JACKET_FILL;
+/** Carousel's middle pole, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const CAROUSEL_POLE = FIREFLY_HOOK;
+/** Carousel's two toy axolotl riders, soft pink. Alias of UI_PANEL_PINK. 11.19:1. */
+export const CAROUSEL_RIDER = UI_PANEL_PINK;
+/** Carousel's round turning platform, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const CAROUSEL_BASE = FESTIVAL_PLINTH;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
