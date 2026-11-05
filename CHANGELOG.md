@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-11-04
+
+### Added
+
+- Area 11 gains 11 treasures (issue #207): the Lime, Hyacinth and Lagoon shine Dream colours (the 7th shine); the Flower raft, Festival kite and Carousel Decorations; and the Propeller cap, Star sunglasses, Robot suit, Jetpack and Wizard hat Wearables.
+- Big hats and back items: the Propeller cap and Wizard hat sit on a larger head, and the Jetpack sits on the back, with matching footprints (ADR 0040).
+- 6 new hiding spots in Area 11. A trip now leaves about 5.6 of its 16 slots empty (it was about 14).
+
 ## [0.65.0] - 2026-11-04
 
 ### Added

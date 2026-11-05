@@ -345,7 +345,7 @@ _Avoid_: loot
 A hidden treasure that holds one Dream colour.
 
 **Dream colour**:
-A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Legendary, except Hearts, Tie-dye, and Iridescent, which came first and stay Epic. Each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour; Areas 1 to 5 came before this rule. There are 28: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, Plum and Tie-dye galaxy from Area 5, Moonstone and Crystal shine from Area 6, Chocolate and Glowworm from Area 7, **Jade** and **Fiesta shine** from Area 8, **Olive** and **Lantern shine** from Area 9, Peach (`'peach'` in code, a soft peach, Rare) and Confetti shine (`'confetti-shine'` in code, a Legendary grape-violet sheen with gliding pink and lemon stripes) from Area 10, and **Marigold** and **Golden shine** from Area 11, which makes 28.
+A fantasy colour, not found in nature, that can be put on any owned axolotl; solid ones are Common or Rare, and patterned and sheen ones are Legendary, except Hearts, Tie-dye, and Iridescent, which came first and stay Epic. Each new area adds at least 2 Dream colours, at least one of them a Legendary patterned or sheen colour; Areas 1 to 5 came before this rule. There are 31: 9 from the canal, Lily green from Area 2, Firefly gold and Galaxy from Area 3, Poppy red and Rainbow from Area 4, Plum and Tie-dye galaxy from Area 5, Moonstone and Crystal shine from Area 6, Chocolate and Glowworm from Area 7, **Jade** and **Fiesta shine** from Area 8, **Olive** and **Lantern shine** from Area 9, Peach (`'peach'` in code, a soft peach, Rare) and Confetti shine (`'confetti-shine'` in code, a Legendary grape-violet sheen with gliding pink and lemon stripes) from Area 10, and **Marigold**, **Golden shine**, **Lime**, **Hyacinth** and **Lagoon shine** from Area 11, which makes 31.
 _Avoid_: skin
 
 **Jade**:
@@ -371,8 +371,18 @@ _Avoid_: Marigold boat (that is an Area 10 **Decoration**), marigold petals (sce
 **Golden shine**:
 Area 11's Legendary sheen **Dream colour** (`'golden-hour-shine'` in code), a deep golden-hour gold with sunset rose and pale gold stripes that glide along the body, held by the second Paint shell of Area 11. Its name was shortened from Golden hour shine to fit the cards. It shares the live stripe with the other sheen Dream colours ([ADR 0031](docs/adr/0031-sheen-dream-colours-share-the-live-stripe.md)).
 
+**Lime**:
+Area 11's Common solid **Dream colour** (`'lime'` in code), a zesty lime green, held by the third Paint shell of Area 11 (the owner's treasure list on #207).
+
+**Hyacinth**:
+Area 11's Rare solid **Dream colour** (`'hyacinth'` in code), a water hyacinth violet, held by the fourth Paint shell of Area 11 (the owner's treasure list on #207).
+_Avoid_: hyacinth alone for the **Water hyacinth mat**, the water hyacinth rafts of the **Golden hour look** or the Flower raft (an Area 11 **Decoration**)
+
+**Lagoon shine**:
+Area 11's Legendary sheen **Dream colour** (`'lagoon-shine'` in code), a lagoon blue with sea foam and coral stripes that glide along the body, held by the last Paint shell of Area 11 (issue #207). It shares the live stripe with the other sheen Dream colours ([ADR 0031](docs/adr/0031-sheen-dream-colours-share-the-live-stripe.md)).
+
 **Little cormorant**:
-Area 11's **Special treasure** (`'deep-canal/little-cormorant'` in code), a Rare Floating **Decoration**: a friendly pale toy of the area's diving bird. It is one of Area 11's 3 treasures, all new and provisional: the Little cormorant, the **Marigold** Paint shell and the **Golden shine** Paint shell.
+Area 11's **Special treasure** (`'deep-canal/little-cormorant'` in code), a Rare Floating **Decoration**: a friendly pale toy of the area's diving bird. It is one of Area 11's 14 treasures, all new: the Little cormorant, the **Marigold** Paint shell and the **Golden shine** Paint shell from #112, then the 11 from the owner's list on #207: the Flower raft, the Festival kite and the Carousel (3 **Decorations**), the Propeller cap, the Star sunglasses, the Robot suit, the Jetpack and the Wizard hat (5 **Wearables**, the Propeller cap, the Jetpack and the Wizard hat as **Big Wearables**), and the **Lime**, **Hyacinth** and **Lagoon shine** Paint shells.
 _Avoid_: cormorant alone (the **Cormorant** is a **Predator**)
 
 **Treasure Chest**:
@@ -430,6 +440,10 @@ The Wearables one axolotl has on, one per slot at most.
 
 **Slot**:
 One of eight places a Wearable goes: Head, Neck, Face, Shirt, Back, Tail, Socks, or Feet.
+
+**Big Wearable**:
+A Head or Back **Wearable** drawn inside its slot's big footprint, which grows only away from the body and keeps every keep-clear rule of its slot ([ADR 0040](docs/adr/0040-big-wearables-larger-head-and-back-footprints.md)): the Propeller cap, the Wizard hat and the Jetpack. Its visible paint always stays under the axolotl's own, so the axolotl stays the hero. Every other Wearable keeps its slot's usual footprint; there is no big Face footprint, so the Star sunglasses are not one.
+_Avoid_: big hat (the Jetpack is one too)
 
 **Perk**:
 The one small gameplay bonus a Wearable gives on trips.
@@ -625,7 +639,7 @@ _Avoid_: carry sound, defeat sound
 - "net" names the **Ghost net**, which only slows, and the **Drag net**, a **Timing element** that costs a leg; their fact cards are titled "Lost fishing nets" and "Fishing nets": resolved: say **Ghost net** or **Drag net** in full, never net alone; the card titles are only titles. The **Trajinera lure**'s card is titled "Fishing lines".
 - "trajinera" names the **Gliding trajinera**, the **Moored trajinera**, the **Sunken trajinera**, the **Fishing trajinera**, a **Bailing bucket**'s boat and a **Drag net**'s two boats: resolved: always name the kind; a boat that is part of a **Bailing bucket** or a **Drag net** is named by that element.
 - **Murky water**'s fact card is titled "Dirty water", and its name in the **Collection Book** is "Murky water": resolved: **Murky water** is the domain term; "Dirty water" is only the card's title.
-- "water hyacinth" names the **Water hyacinth mat** (`'water-hyacinth'`, Area 5's **Timing element**, which blocks the **Explorer**) and the water hyacinth rafts of the **Golden hour look**: resolved: the rafts are scenery painted into Area 11's background, never cover, a cue or a **Timing element**; say **Water hyacinth mat** in full for the element.
+- "hyacinth" and "water hyacinth" name the **Water hyacinth mat** (`'water-hyacinth'`, Area 5's **Timing element**, which blocks the **Explorer**), the water hyacinth rafts of the **Golden hour look**, the **Hyacinth** **Dream colour** (`'hyacinth'`) and the Flower raft (`'deep-canal/flower-raft'`, an Area 11 Common Floating **Decoration**, a little raft of water hyacinth leaves with a lilac bloom spike): resolved: **Hyacinth** alone is the **Dream colour**; say **Water hyacinth mat** in full for the element, water hyacinth rafts for the scenery, which is painted into Area 11's background and is never cover, a cue or a **Timing element**, and Flower raft for the **Decoration**.
 - "marigold" names the **Marigold** **Dream colour** (`'marigold'`), the Marigold boat (`'deep-canal/marigold-boat'`, an Area 10 **Decoration**) and the marigold petals of the **Golden hour look**: resolved: **Marigold** alone is the **Dream colour**; say Marigold boat for the **Decoration** and marigold petals for the scenery.
 - "cormorant" names the **Cormorant** (`'cormorant'`, a **Predator**) and the **Little cormorant** (`'deep-canal/little-cormorant'`, Area 11's **Special treasure**): resolved: say **Little cormorant** in full for the **Decoration**.
 - "murky" and "dark" both describe hard-to-see water: resolved: **Murky water** is a **Hazard** that costs a leg after time inside and hides nothing; **Dark water** hides things outside its lights and never costs a leg.
