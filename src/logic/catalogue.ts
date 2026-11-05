@@ -99,7 +99,10 @@ export type DreamColourId =
   | 'peach'
   | 'confetti-shine'
   | 'marigold'
-  | 'golden-hour-shine';
+  | 'golden-hour-shine'
+  | 'lime'
+  | 'hyacinth'
+  | 'lagoon-shine';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -277,12 +280,36 @@ export const GOLDEN_HOUR_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The deep canal's Area 11 Common Dream colour, a zesty lime green held by that area's Lime Paint shell (issue #207). */
+export const LIME: DreamColour = Object.freeze({
+  id: 'lime',
+  name: 'Lime',
+  rarity: 'common',
+  kind: 'solid',
+});
+
+/** The deep canal's Area 11 Rare Dream colour, a water hyacinth violet held by that area's Hyacinth Paint shell (issue #207). */
+export const HYACINTH: DreamColour = Object.freeze({
+  id: 'hyacinth',
+  name: 'Hyacinth',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
+/** The deep canal's Area 11 second Legendary Dream colour, a lagoon blue sheen held by that area's last Paint shell (issue #207). */
+export const LAGOON_SHINE: DreamColour = Object.freeze({
+  id: 'lagoon-shine',
+  name: 'Lagoon shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
- * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold and Golden shine
- * (Area 11).
+ * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold, Golden shine, Lime,
+ * Hyacinth and Lagoon shine (Area 11).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -305,6 +332,9 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   CONFETTI_SHINE,
   MARIGOLD,
   GOLDEN_HOUR_SHINE,
+  LIME,
+  HYACINTH,
+  LAGOON_SHINE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -1130,10 +1160,12 @@ export const DEEP_CANAL_3_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
- * The deep canal Area 11 treasures, all new (issue #112): the Little cormorant, a Rare Floating
- * Decoration and the area's special treasure, then the Marigold Paint shell, then the Golden shine
- * Paint shell, in rarity order. The newest entry comes last so placement by seed stays the same for
- * every earlier treasure.
+ * The deep canal Area 11 treasures, all new: the Little cormorant, a Rare Floating Decoration and
+ * the area's special treasure, then the Marigold Paint shell, then the Golden shine Paint shell
+ * (issue #112), then the owner's 11 in rarity order (issue #207): 3 Decorations, 5 Wearables and
+ * the Lime and Hyacinth Paint shells, then the Lagoon shine Paint shell last. Every perk comes from
+ * PERK_VALUES for its type and rarity, and no two Area 11 Wearables share a perk type. The newest
+ * entries come last so placement by seed stays the same for every earlier treasure.
  */
 export const DEEP_CANAL_4_TREASURES: readonly Treasure[] = Object.freeze([
   {
@@ -1145,6 +1177,64 @@ export const DEEP_CANAL_4_TREASURES: readonly Treasure[] = Object.freeze([
   },
   createPaintShell(MARIGOLD, 'deep-canal'),
   createPaintShell(GOLDEN_HOUR_SHINE, 'deep-canal'),
+  {
+    id: 'deep-canal/flower-raft',
+    name: 'Flower raft',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'deep-canal/propeller-cap',
+    name: 'Propeller cap',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('speed', 'common'),
+  },
+  createPaintShell(LIME, 'deep-canal'),
+  {
+    id: 'deep-canal/festival-kite',
+    name: 'Festival kite',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'deep-canal/star-sunglasses',
+    name: 'Star sunglasses',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'face',
+    perk: createPerk('treasureSense', 'rare'),
+  },
+  {
+    id: 'deep-canal/robot-suit',
+    name: 'Robot suit',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('regrowth', 'rare'),
+  },
+  createPaintShell(HYACINTH, 'deep-canal'),
+  { id: 'deep-canal/carousel', name: 'Carousel', rarity: 'epic', category: 'decoration' },
+  {
+    id: 'deep-canal/jetpack',
+    name: 'Jetpack',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('dash', 'epic'),
+  },
+  {
+    id: 'deep-canal/wizard-hat',
+    name: 'Wizard hat',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'head',
+    perk: createPerk('shell', 'legendary'),
+  },
+  createPaintShell(LAGOON_SHINE, 'deep-canal'),
 ]);
 
 /**

@@ -125,8 +125,8 @@ const LONGEST_QUIET_SWIM = { length: 451.1, from: { x: 368, y: 654 }, to: { x: 4
 const FLOOR_QUIET_STRETCH = 321;
 /** One-leg seconds along the main path from the Home Spot to the exit with no hit, as measured, and the start time that gives it. */
 const ONE_LEG_RUN = { seconds: 105.7, start: 0 };
-/** Empty treasure slots over the 200 fresh trips, as measured: 16 slots for 3 treasures. */
-const EMPTY_SLOTS = { most: 15, mean: 14.27 };
+/** Empty treasure slots over the 200 fresh trips, as measured: 16 slots for 14 treasures. */
+const EMPTY_SLOTS = { most: 8, mean: 5.605 };
 /** The narrowest gap the main path passes through, as measured. */
 const NARROWEST_GAP = { between: 'deep-canal-4/mud-seep-3 and carp-6', width: 37.29 };
 const TILAPIA_IDS = ['tilapia-0', 'tilapia-1'];
@@ -451,7 +451,7 @@ describe('DEEP_CANAL_4_LAYOUT', () => {
     expect(DEEP_CANAL_4_LAYOUT.tilapia).toBe(DEEP_CANAL_4_TILAPIA);
     expect(tripTreasureTuning(DEEP_CANAL_4_AREA_ID).slots).toBe(16);
     expect(DEEP_CANAL_4_LAYOUT.treasures).toBe(DEEP_CANAL_4_TREASURES);
-    expect(DEEP_CANAL_4_TREASURES).toHaveLength(3);
+    expect(DEEP_CANAL_4_TREASURES).toHaveLength(14);
   });
 
   it("plays its tilapia one step up the ladder: a 500 px/s strike reaching 170 px, a 1.5 s cooldown and a 75 px/s patrol, Area 10's 0.8 s warning and full-bar chase", () => {
@@ -548,9 +548,10 @@ describe('DEEP_CANAL_4_LAYOUT', () => {
     expect(cue.name).toBe('Trajinera Waltz (dusk)');
   });
 
-  it('adds two Dream colours, one of them a Legendary sheen, and every new patterned or sheen colour is Legendary (B3)', () => {
+  it('adds five Dream colours, two of them Legendary sheens, and every new patterned or sheen colour is Legendary (B3)', () => {
     const shells = DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.category === 'paintShell');
-    expect(shells).toHaveLength(2);
+    expect(shells).toHaveLength(5);
+    expect(shells.filter((shell) => shell.rarity === 'legendary' && isPatternedOrSheen(shell))).toHaveLength(2);
     expect(shells.some((shell) => shell.rarity === 'legendary' && isPatternedOrSheen(shell))).toBe(true);
     for (const shell of shells.filter(isPatternedOrSheen)) expect(shell.rarity, shell.id).toBe('legendary');
   });
@@ -926,7 +927,7 @@ describe('Area 11 hiding spots (B5, B6, B10)', () => {
   it('has 4 Common, 7 Rare, 3 Epic and 4 Legendary spots, every pool larger than its Area 11 treasures', () => {
     expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([4, 7, 3, 4]);
     expect(zone.spots).toHaveLength(18);
-    expect(RARITIES.map((rarity) => DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([0, 2, 0, 1]);
+    expect(RARITIES.map((rarity) => DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([3, 6, 2, 3]);
     for (const rarity of RARITIES) {
       const treasures = DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(zone.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);
@@ -1041,7 +1042,7 @@ describe('Area 11 placing treasure (B4)', () => {
     }
   });
 
-  it('puts the Legendary Golden shine shell in a Legendary spot when every treasure must be placed, the cave spot on some trips', () => {
+  it('puts every Legendary treasure, the Golden shine and Lagoon shine shells and the Wizard hat, in a Legendary spot when every treasure must be placed, the cave spot on some trips', () => {
     const all = DEEP_CANAL_4_TREASURES.map((treasure) => treasure.id);
     const legendaryIds = DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === 'legendary').map((treasure) => treasure.id);
     const legendarySpotIds = zone.spots.filter((spot) => spot.rarity === 'legendary').map((spot) => spot.id);
@@ -1058,7 +1059,7 @@ describe('Area 11 placing treasure (B4)', () => {
     expect(used.has(caveId ?? '')).toBe(true);
   });
 
-  it('leaves the 16 slots mostly empty over 200 fresh trips, with only 3 treasures to fill them', () => {
+  it('leaves few of the 16 slots empty over 200 fresh trips', () => {
     const empty = TRIP_SEEDS.map((tripSeed) => tuning.slots + 1 - placeTreasures(zone.finds, zone.spots, [], tripSeed, options).length);
     const mean = empty.reduce((sum, count) => sum + count, 0) / empty.length;
     expect(Math.max(...empty)).toBe(EMPTY_SLOTS.most);

@@ -19,9 +19,12 @@ import {
   GLOWWORM,
   GOLDEN_HOUR_SHINE,
   GRANDFATHERED_EPIC_DREAM_IDS,
+  HYACINTH,
   JADE,
+  LAGOON_SHINE,
   LANTERN_SHINE,
   LILY_GREEN,
+  LIME,
   MARIGOLD,
   MOONSTONE,
   OLIVE,
@@ -1220,7 +1223,7 @@ describe('DEEP_CANAL_3_TREASURES', () => {
 });
 
 describe('DEEP_CANAL_4_TREASURES', () => {
-  it('holds the deep canal Area 11 treasures: the Little cormorant, then the Marigold Paint shell, then the Golden shine one (issue #112)', () => {
+  it('holds the deep canal Area 11 treasures: the Little cormorant, then the Marigold Paint shell, then the Golden shine one (issue #112), then the owner\'s 11 ending with the Lagoon shine one (issue #207)', () => {
     expect(DEEP_CANAL_4_TREASURES).toEqual([
       {
         id: 'deep-canal/little-cormorant',
@@ -1243,6 +1246,82 @@ describe('DEEP_CANAL_4_TREASURES', () => {
         category: 'paintShell',
         dreamColour: 'golden-hour-shine',
       },
+      {
+        id: 'deep-canal/flower-raft',
+        name: 'Flower raft',
+        rarity: 'common',
+        category: 'decoration',
+        placement: 'floating',
+      },
+      {
+        id: 'deep-canal/propeller-cap',
+        name: 'Propeller cap',
+        rarity: 'common',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'speed', value: 4 },
+      },
+      {
+        id: 'deep-canal/paint-shell-lime',
+        name: 'Lime Paint shell',
+        rarity: 'common',
+        category: 'paintShell',
+        dreamColour: 'lime',
+      },
+      {
+        id: 'deep-canal/festival-kite',
+        name: 'Festival kite',
+        rarity: 'rare',
+        category: 'decoration',
+        placement: 'hanging',
+      },
+      {
+        id: 'deep-canal/star-sunglasses',
+        name: 'Star sunglasses',
+        rarity: 'rare',
+        category: 'wearable',
+        slot: 'face',
+        perk: { type: 'treasureSense', value: 25 },
+      },
+      {
+        id: 'deep-canal/robot-suit',
+        name: 'Robot suit',
+        rarity: 'rare',
+        category: 'wearable',
+        slot: 'shirt',
+        perk: { type: 'regrowth', value: 15 },
+      },
+      {
+        id: 'deep-canal/paint-shell-hyacinth',
+        name: 'Hyacinth Paint shell',
+        rarity: 'rare',
+        category: 'paintShell',
+        dreamColour: 'hyacinth',
+      },
+      { id: 'deep-canal/carousel', name: 'Carousel', rarity: 'epic', category: 'decoration' },
+      {
+        id: 'deep-canal/jetpack',
+        name: 'Jetpack',
+        rarity: 'epic',
+        category: 'wearable',
+        slot: 'back',
+        perk: { type: 'dash', value: 20 },
+      },
+      {
+        id: 'deep-canal/wizard-hat',
+        name: 'Wizard hat',
+        rarity: 'legendary',
+        category: 'wearable',
+        slot: 'head',
+        perk: { type: 'shell', value: 1 },
+      },
+      {
+        id: 'deep-canal/paint-shell-lagoon-shine',
+        name: 'Lagoon shine Paint shell',
+        rarity: 'legendary',
+        category: 'paintShell',
+        dreamColour: 'lagoon-shine',
+      },
     ]);
     expect(Object.isFrozen(DEEP_CANAL_4_TREASURES)).toBe(true);
   });
@@ -1253,10 +1332,67 @@ describe('DEEP_CANAL_4_TREASURES', () => {
     expect(cormorant !== undefined && isDecoration(cormorant) && placementKind(cormorant)).toBe('floating');
     expect(cormorant !== undefined && isDecoration(cormorant) && cormorant.width).toBeUndefined();
     expect(cormorant !== undefined && categoryName(cormorant.category)).toBe('Decoration');
-    expect(DEEP_CANAL_4_TREASURES.filter(isDecoration).map((decoration) => decoration.id)).toEqual(['deep-canal/little-cormorant']);
-    expect(DEEP_CANAL_4_TREASURES.filter(isWearable)).toHaveLength(0);
-    const rarityIndexes = DEEP_CANAL_4_TREASURES.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(DEEP_CANAL_4_TREASURES.at(0)?.id).toBe('deep-canal/little-cormorant');
+    const rarityIndexes = DEEP_CANAL_4_TREASURES.slice(0, 3).map((treasure) => RARITIES.indexOf(treasure.rarity));
     expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
+  });
+
+  it('adds the owner\'s 11 after the Golden shine Paint shell, in rarity order: 3 Decorations, 5 Wearables and the Lime, Hyacinth and Lagoon shine Paint shells (issue #207)', () => {
+    expect(DEEP_CANAL_4_TREASURES).toHaveLength(14);
+    expect(DEEP_CANAL_4_TREASURES.at(2)?.id).toBe('deep-canal/paint-shell-golden-hour-shine');
+    const added = DEEP_CANAL_4_TREASURES.slice(3);
+    expect(added).toHaveLength(11);
+    const rarityIndexes = added.map((treasure) => RARITIES.indexOf(treasure.rarity));
+    expect(rarityIndexes).toEqual([...rarityIndexes].sort((left, right) => left - right));
+    expect(RARITIES.map((rarity) => added.filter((treasure) => treasure.rarity === rarity).length)).toEqual([3, 4, 2, 2]);
+    expect(RARITIES.map((rarity) => DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([3, 6, 2, 3]);
+    expect(DEEP_CANAL_4_TREASURES.filter(isDecoration).map((decoration) => decoration.id)).toEqual([
+      'deep-canal/little-cormorant',
+      'deep-canal/flower-raft',
+      'deep-canal/festival-kite',
+      'deep-canal/carousel',
+    ]);
+    expect(DEEP_CANAL_4_TREASURES.filter(isWearable).map((wearable) => wearable.id)).toEqual([
+      'deep-canal/propeller-cap',
+      'deep-canal/star-sunglasses',
+      'deep-canal/robot-suit',
+      'deep-canal/jetpack',
+      'deep-canal/wizard-hat',
+    ]);
+    expect(DEEP_CANAL_4_TREASURES.filter(isPaintShell).map((shell) => shell.id)).toEqual([
+      'deep-canal/paint-shell-marigold',
+      'deep-canal/paint-shell-golden-hour-shine',
+      'deep-canal/paint-shell-lime',
+      'deep-canal/paint-shell-hyacinth',
+      'deep-canal/paint-shell-lagoon-shine',
+    ]);
+    expect(DEEP_CANAL_4_TREASURES.at(-1)?.id).toBe('deep-canal/paint-shell-lagoon-shine');
+  });
+
+  it('places the Flower raft Floating, the Festival kite Hanging and the Carousel on the Floor, each at the standard width (issue #207)', () => {
+    const placements = ['deep-canal/flower-raft', 'deep-canal/festival-kite', 'deep-canal/carousel'].map((id) => {
+      const decoration = treasureById(id);
+      expect(decoration !== undefined && isDecoration(decoration), id).toBe(true);
+      expect(decoration !== undefined && isDecoration(decoration) && decoration.width, id).toBeUndefined();
+      return decoration !== undefined && isDecoration(decoration) ? placementKind(decoration) : undefined;
+    });
+    expect(placements).toEqual(['floating', 'hanging', 'floor']);
+  });
+
+  it('gives every Area 11 Wearable its PERK_VALUES value, no set, and a perk type no other Area 11 Wearable has (issue #207)', () => {
+    const wearables = DEEP_CANAL_4_TREASURES.filter(isWearable);
+    for (const wearable of wearables) {
+      expect(wearable.perk.value, wearable.id).toBe(PERK_VALUES[wearable.perk.type][wearable.rarity]);
+      expect(wearable.setId, wearable.id).toBeUndefined();
+    }
+    expect(new Set(wearables.map((wearable) => wearable.perk.type)).size).toBe(wearables.length);
+    expect(wearables.map((wearable) => [wearable.slot, wearable.perk.type])).toEqual([
+      ['head', 'speed'],
+      ['face', 'treasureSense'],
+      ['shirt', 'regrowth'],
+      ['back', 'dash'],
+      ['head', 'shell'],
+    ]);
   });
 
   it('keeps every slug apart from the Area 8, Area 9 and Area 10 slugs it shares the deep-canal/ prefix with', () => {
@@ -1292,11 +1428,11 @@ describe('ALL_TREASURES', () => {
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 140 treasures: 56 Decorations, 56 Wearables and 28 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(140);
-    expect(ALL_DECORATIONS).toHaveLength(56);
-    expect(ALL_WEARABLES).toHaveLength(56);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(28);
+  it('has 151 treasures: 59 Decorations, 61 Wearables and 31 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(151);
+    expect(ALL_DECORATIONS).toHaveLength(59);
+    expect(ALL_WEARABLES).toHaveLength(61);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(31);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -1308,6 +1444,7 @@ describe('ALL_TREASURES', () => {
       'chinampa/rainbow-serape-cape',
       'spring-cave/gemstone-cape',
       'deep-canal/hero-medal',
+      'deep-canal/wizard-hat',
     ]);
     for (const wearable of shellWearables) {
       expect(['epic', 'legendary'], wearable.id).toContain(wearable.rarity);
@@ -1362,7 +1499,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth, Lagoon shine', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -1385,8 +1522,11 @@ describe('Dream colours', () => {
       CONFETTI_SHINE,
       MARIGOLD,
       GOLDEN_HOUR_SHINE,
+      LIME,
+      HYACINTH,
+      LAGOON_SHINE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(28);
+    expect(DREAM_COLOURS).toHaveLength(31);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -1415,6 +1555,8 @@ describe('Dream colours', () => {
       'olive',
       'peach',
       'marigold',
+      'lime',
+      'hyacinth',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -1536,11 +1678,41 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Golden shine a Legendary sheen, the twenty-eighth and last Dream colour, with a name no other Dream colour has (issue #112)', () => {
+  it('makes Golden shine a Legendary sheen, the twenty-eighth Dream colour, with a name no other Dream colour has (issue #112)', () => {
     expect(GOLDEN_HOUR_SHINE).toEqual({ id: 'golden-hour-shine', name: 'Golden shine', rarity: 'legendary', kind: 'sheen' });
     expect(Object.isFrozen(GOLDEN_HOUR_SHINE)).toBe(true);
     expect(dreamColourById('golden-hour-shine')).toBe(GOLDEN_HOUR_SHINE);
-    expect(DREAM_COLOURS.at(-1)).toBe(GOLDEN_HOUR_SHINE);
+    expect(DREAM_COLOURS.at(27)).toBe(GOLDEN_HOUR_SHINE);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Lime a Common solid, the twenty-ninth Dream colour, with a name no other Dream colour has (issue #207)', () => {
+    expect(LIME).toEqual({ id: 'lime', name: 'Lime', rarity: 'common', kind: 'solid' });
+    expect(Object.isFrozen(LIME)).toBe(true);
+    expect(dreamColourById('lime')).toBe(LIME);
+    expect(DREAM_COLOURS.at(28)).toBe(LIME);
+    expect(dreamRarityAllowed(LIME)).toBe(true);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Hyacinth a Rare solid, the thirtieth Dream colour, with a name no other Dream colour has (issue #207)', () => {
+    expect(HYACINTH).toEqual({ id: 'hyacinth', name: 'Hyacinth', rarity: 'rare', kind: 'solid' });
+    expect(Object.isFrozen(HYACINTH)).toBe(true);
+    expect(dreamColourById('hyacinth')).toBe(HYACINTH);
+    expect(DREAM_COLOURS.at(29)).toBe(HYACINTH);
+    expect(dreamRarityAllowed(HYACINTH)).toBe(true);
+    const names = DREAM_COLOURS.map((colour) => colour.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('makes Lagoon shine a Legendary sheen, the thirty-first and last Dream colour, with a name no other Dream colour has (issue #207)', () => {
+    expect(LAGOON_SHINE).toEqual({ id: 'lagoon-shine', name: 'Lagoon shine', rarity: 'legendary', kind: 'sheen' });
+    expect(Object.isFrozen(LAGOON_SHINE)).toBe(true);
+    expect(dreamColourById('lagoon-shine')).toBe(LAGOON_SHINE);
+    expect(DREAM_COLOURS.at(-1)).toBe(LAGOON_SHINE);
+    expect(dreamRarityAllowed(LAGOON_SHINE)).toBe(true);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -1851,5 +2023,16 @@ describe('ownedDreamColours', () => {
       'deep-canal/paint-shell-confetti-shine',
     ];
     expect(ownedDreamColours(banked)).toEqual(['confetti-shine', 'marigold', 'golden-hour-shine']);
+  });
+
+  it('owns Lime, Hyacinth and Lagoon shine from the newer deep canal Area 11 Paint shells, after Golden shine', () => {
+    const banked = [
+      'deep-canal/paint-shell-lagoon-shine',
+      'deep-canal/paint-shell-hyacinth',
+      'deep-canal/carousel',
+      'deep-canal/paint-shell-lime',
+      'deep-canal/paint-shell-golden-hour-shine',
+    ];
+    expect(ownedDreamColours(banked)).toEqual(['golden-hour-shine', 'lime', 'hyacinth', 'lagoon-shine']);
   });
 });
