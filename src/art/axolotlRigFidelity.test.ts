@@ -1482,6 +1482,7 @@ const SHEEN_DREAMS = [
   'lantern-shine',
   'confetti-shine',
   'golden-hour-shine',
+  'lagoon-shine',
 ] as const satisfies readonly DreamLookId[];
 const SHEEN_NAME: Readonly<Record<(typeof SHEEN_DREAMS)[number], string>> = {
   iridescent: 'Iridescent',
@@ -1490,6 +1491,7 @@ const SHEEN_NAME: Readonly<Record<(typeof SHEEN_DREAMS)[number], string>> = {
   'lantern-shine': 'Lantern shine',
   'confetti-shine': 'Confetti shine',
   'golden-hour-shine': 'Golden shine',
+  'lagoon-shine': 'Lagoon shine',
 };
 
 const sheenPalette = (dream: DreamLookId, n: number): MorphPalette => axolotlPalette(MORPHS[n % MORPHS.length], dream);

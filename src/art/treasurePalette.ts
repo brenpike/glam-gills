@@ -449,7 +449,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-eight Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-one Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -478,7 +478,10 @@ export type DreamSwatchId =
   | 'peach'
   | 'confetti-shine'
   | 'marigold'
-  | 'golden-hour-shine';
+  | 'golden-hour-shine'
+  | 'lime'
+  | 'hyacinth'
+  | 'lagoon-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -572,6 +575,15 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     body: '#bea015',
     pattern: 'stripes',
     marks: ['rgba(255,176,196,0.85)', 'rgba(255,240,170,0.85)'],
+    dark: false,
+  },
+  lime: { body: '#8ecb30', pattern: 'plain', marks: [], dark: false },
+  hyacinth: { body: '#9b7cef', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a sea foam and a coral stripe, both lighter than the lagoon blue body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'lagoon-shine': {
+    body: '#5cb7e0',
+    pattern: 'stripes',
+    marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
     dark: false,
   },
 };

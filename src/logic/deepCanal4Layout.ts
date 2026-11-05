@@ -215,20 +215,26 @@ export const DEEP_CANAL_4_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   safeArea: Object.freeze({ x0: 40, x1: 330, y0: SURF, y1: WORLD_H }),
   homeSpotRadius: 72,
   reedBeds: Object.freeze([]),
-  /** The sunken hull cave (B6), under the wide murky patch: an open Legendary spot within half `tilapia-1`'s strike, and an Epic spot farther off. */
+  /**
+   * The sunken hull cave (B6), under the wide murky patch: an open Legendary spot within half
+   * `tilapia-1`'s strike, and two Epic spots farther off, one at each end of the hull.
+   */
   caveSpots: Object.freeze([
     Object.freeze([4540, 630, 'legendary', false] as const),
     Object.freeze([4470, 640, 'epic', false] as const),
+    Object.freeze([4730, 630, 'epic', false] as const),
   ]),
   /**
    * Just past the side-canal inflow, east of the way down: two open Legendary spots, within half the
-   * strike of `tilapia-0` and of `bass-0`, then an Epic spot farther off. No Dash pot: each Legendary
+   * strike of `tilapia-0` and of `bass-0`, then an Epic spot farther off, then a third open Legendary
+   * spot low by the inflow's edge, within half the strike of `tilapia-0`. No Dash pot: each Legendary
    * spot is deep and near a threat (ADR 0032).
    */
   currentSpots: Object.freeze([
     Object.freeze([4580, 180, 'legendary', false] as const),
     Object.freeze([4640, 200, 'legendary', false] as const),
     Object.freeze([4530, 140, 'epic', false] as const),
+    Object.freeze([4505, 295, 'legendary', false] as const),
   ]),
   /** The side-canal inflow east of the way down, flowing left at Area 10's 72 px/s, which one leg beats by 18 px/s (B6). */
   currents: Object.freeze([
@@ -351,9 +357,15 @@ export const DEEP_CANAL_4_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
   bankChunks: Object.freeze([1, 3, 6]),
   sunChunk: 0,
   tilapia: DEEP_CANAL_4_TILAPIA,
-  /** Moored rows at the surface (B5): one past `cormorant-1` over the main path's rise, and one by `anchor-drop-4`. */
-  bankOverhangs: Object.freeze([mooredRow(2280, 2600), mooredRow(3900, 4180)]),
-  /** Under the moored rows (B5): Common spots by the main path's rise, Rare spots by `anchor-drop-2` and `anchor-drop-4`. */
+  /**
+   * Moored rows at the surface (B5): one past `cormorant-1` over the main path's rise and on past
+   * `anchor-drop-2`, one by `anchor-drop-4`, and one over the side-canal inflow's mouth.
+   */
+  bankOverhangs: Object.freeze([mooredRow(2280, 2720), mooredRow(3900, 4180), mooredRow(4360, 4500)]),
+  /**
+   * Under the moored rows (B5): Common spots by the main path's rise, Rare spots either side of
+   * `anchor-drop-2`, by `anchor-drop-4`, and over the inflow's mouth, in reach of `tilapia-0`.
+   */
   bankSpots: Object.freeze([
     Object.freeze([2340, 136, 'common', false] as const),
     Object.freeze([2400, 136, 'common', false] as const),
@@ -362,6 +374,10 @@ export const DEEP_CANAL_4_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze([3980, 110, 'rare', false] as const),
     Object.freeze([4100, 110, 'rare', false] as const),
     Object.freeze([2565, 100, 'rare', false] as const),
+    Object.freeze([2650, 96, 'rare', false] as const),
+    Object.freeze([2700, 140, 'rare', false] as const),
+    Object.freeze([4410, 100, 'rare', false] as const),
+    Object.freeze([4475, 96, 'rare', false] as const),
   ]),
   /**
    * The two fishing trajineras (carried forward), 4 s out of step, each hanging its lures from the

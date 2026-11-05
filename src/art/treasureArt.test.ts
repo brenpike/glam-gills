@@ -363,11 +363,16 @@ const DEEP_CANAL_3_SHELL_SLUGS: readonly TreasureIconSlug[] = ['paint-shell-peac
 const DEEP_CANAL_4_SLUGS: readonly string[] = addedBy(DEEP_CANAL_4_TREASURES, 'deep-canal').map((treasure) => treasureSlug(treasure.id));
 /** The Paint shell icon slugs of the deep canal Area 11's two Dream colours (issue #112). */
 const DEEP_CANAL_4_SHELL_SLUGS: readonly TreasureIconSlug[] = ['paint-shell-marigold', 'paint-shell-golden-hour-shine'];
+/** The Paint shell icon slugs of the deep canal Area 11's three later Dream colours (issue #207). */
+const DEEP_CANAL_4_NEW_SHELL_SLUGS: readonly TreasureIconSlug[] = ['paint-shell-lime', 'paint-shell-hyacinth', 'paint-shell-lagoon-shine'];
 /** The item icon slugs the deep canal Area 11 added (issue #112): the Little cormorant. */
-const DEEP_CANAL_4_ITEM_SLUGS = TREASURE_ICON_SLUGS.filter((slug) => DEEP_CANAL_4_SLUGS.includes(slug) && !DEEP_CANAL_4_SHELL_SLUGS.includes(slug));
+const DEEP_CANAL_4_ITEM_SLUGS = TREASURE_ICON_SLUGS.filter(
+  (slug) => DEEP_CANAL_4_SLUGS.includes(slug) && !DEEP_CANAL_4_SHELL_SLUGS.includes(slug) && !DEEP_CANAL_4_NEW_SHELL_SLUGS.includes(slug),
+);
 /** The slugs the canal had before the pond: 12 items, then its 12 Paint shells. */
 const CANAL_ICON_SLUGS = TREASURE_ICON_SLUGS.filter(
   (slug) =>
+    !DEEP_CANAL_4_NEW_SHELL_SLUGS.includes(slug) &&
     !DEEP_CANAL_4_SLUGS.includes(slug) &&
     !DEEP_CANAL_3_SLUGS.includes(slug) &&
     !DEEP_CANAL_2_SLUGS.includes(slug) &&
@@ -609,6 +614,21 @@ const DEEP_CANAL_4_SHELL_DIGESTS: Readonly<Record<string, Readonly<Record<number
 const MARIGOLD_SWATCH_DIGEST = '581179dbe44619df:20';
 /** The same digest for the Golden shine swatch, pinned when it was authored. Re-pin it, and only it, when Golden shine is retuned on purpose. */
 const GOLDEN_HOUR_SHINE_SWATCH_DIGEST = '160ff040fb30bdb4:21';
+/**
+ * The same digests for the deep canal Area 11's three later Paint shell icons (issue #207), by slug then size, pinned when they were authored.
+ * Re-pin these, and only these, when Lime, Hyacinth or Lagoon shine is retuned on purpose.
+ */
+const DEEP_CANAL_4_NEW_SHELL_DIGESTS: Readonly<Record<string, Readonly<Record<number, string>>>> = {
+  'paint-shell-lime': { 28: '8d50ec067fd3dbea:21', 32: '21f8cd10155e51ac:21', 48: 'fbf6f8441fe31d38:21', 80: '1a6696f3e388788f:21' },
+  'paint-shell-hyacinth': { 28: '6934a19367c79677:21', 32: 'd13406ef6dab8b1b:21', 48: '2d5ecd4daa59bc41:21', 80: '4bf61250261cf0c4:21' },
+  'paint-shell-lagoon-shine': { 28: '23eaf164b9f2e718:21', 32: 'bb02eba2f56c24fe:21', 48: '2b2402f076d176cc:21', 80: '680bad36655ac7e2:21' },
+};
+/** The same digest for the Lime swatch, pinned when it was authored. Re-pin it, and only it, when Lime is retuned on purpose. */
+const LIME_SWATCH_DIGEST = '63f7ec08179b1b7c:20';
+/** The same digest for the Hyacinth swatch, pinned when it was authored. Re-pin it, and only it, when Hyacinth is retuned on purpose. */
+const HYACINTH_SWATCH_DIGEST = '115240af59735f9b:20';
+/** The same digest for the Lagoon shine swatch, pinned when it was authored. Re-pin it, and only it, when Lagoon shine is retuned on purpose. */
+const LAGOON_SHINE_SWATCH_DIGEST = '7f38c0d373fdb4ff:21';
 /**
  * The same digests for the one icon the deep canal Area 11 added, the Little cormorant (issue #112), pinned when it was
  * authored. Re-pin these, and only these, when the Little cormorant art is retuned on purpose.
@@ -974,6 +994,7 @@ describe('Unfound silhouettes', () => {
       for (const slug of DEEP_CANAL_3_SHELL_SLUGS) expect(digestOf([slug]), `${slug} ${size}`).toBe(DEEP_CANAL_3_SHELL_DIGESTS[slug][size]);
       expect(digestOf(DEEP_CANAL_4_ITEM_SLUGS), `area 11 ${size}`).toBe(DEEP_CANAL_4_ICON_DIGESTS[size]);
       for (const slug of DEEP_CANAL_4_SHELL_SLUGS) expect(digestOf([slug]), `${slug} ${size}`).toBe(DEEP_CANAL_4_SHELL_DIGESTS[slug][size]);
+      for (const slug of DEEP_CANAL_4_NEW_SHELL_SLUGS) expect(digestOf([slug]), `${slug} ${size}`).toBe(DEEP_CANAL_4_NEW_SHELL_DIGESTS[slug][size]);
     }
     expect(
       swatchDigests(
@@ -994,7 +1015,10 @@ describe('Unfound silhouettes', () => {
             id !== 'peach' &&
             id !== 'confetti-shine' &&
             id !== 'marigold' &&
-            id !== 'golden-hour-shine',
+            id !== 'golden-hour-shine' &&
+            id !== 'lime' &&
+            id !== 'hyacinth' &&
+            id !== 'lagoon-shine',
         ),
       ),
       'canal swatches',
@@ -1015,6 +1039,9 @@ describe('Unfound silhouettes', () => {
     expect(swatchDigests(['confetti-shine']), 'confetti-shine swatch').toBe(CONFETTI_SHINE_SWATCH_DIGEST);
     expect(swatchDigests(['marigold']), 'marigold swatch').toBe(MARIGOLD_SWATCH_DIGEST);
     expect(swatchDigests(['golden-hour-shine']), 'golden-hour-shine swatch').toBe(GOLDEN_HOUR_SHINE_SWATCH_DIGEST);
+    expect(swatchDigests(['lime']), 'lime swatch').toBe(LIME_SWATCH_DIGEST);
+    expect(swatchDigests(['hyacinth']), 'hyacinth swatch').toBe(HYACINTH_SWATCH_DIGEST);
+    expect(swatchDigests(['lagoon-shine']), 'lagoon-shine swatch').toBe(LAGOON_SHINE_SWATCH_DIGEST);
   });
 });
 
@@ -2117,10 +2144,10 @@ describe('Pond Area 3 treasure art (issue #98)', () => {
       'pearl-tail-charm',
       'firefly-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS.slice(23, 34)).toEqual(AREA3_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
     expect(AREA3_ICON_SLUGS).toEqual([...AREA3_ITEM_SLUGS, 'paint-shell-firefly-gold']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
   });
@@ -2388,11 +2415,11 @@ describe('Chinampa Area 4 treasure art (issue #76)', () => {
       'golden-corn',
       'monarch-wings',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(34, 45)).toEqual(CHINAMPA_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
     expect(DREAM_SWATCH_IDS[14]).toBe('poppy-red');
     expect(CHINAMPA_ICON_SLUGS).toEqual([...CHINAMPA_ITEM_SLUGS, 'paint-shell-poppy-red']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -2763,11 +2790,11 @@ describe('Chinampa Area 5 treasure art (issue #103)', () => {
       'alebrije-statue',
       'rainbow-serape-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(45, 56)).toEqual(CHINAMPA_2_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
     expect(DREAM_SWATCH_IDS[15]).toBe('plum');
     expect(CHINAMPA_2_ICON_SLUGS).toEqual([...CHINAMPA_2_ITEM_SLUGS, 'paint-shell-plum']);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
@@ -3126,7 +3153,7 @@ describe('Spring cave Area 6 treasure art (issue #77, ND-12)', () => {
       'crystal-arch',
       'crystal-crown',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(56, 67)).toEqual(SPRING_CAVE_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
@@ -3467,10 +3494,10 @@ describe('Spring cave Area 6 treasure art (issue #77, ND-12)', () => {
 
 describe('Moonstone Dream swatch (issue #77)', () => {
   it('lists Moonstone as the seventeenth Dream swatch, with its Paint shell icon slug just before Chocolate\'s', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
     expect(DREAM_SWATCH_IDS[16]).toBe('moonstone');
-    expect(TREASURE_ICON_SLUGS.at(-12)).toBe('paint-shell-moonstone');
-    expect(TREASURE_ICON_SLUGS.at(-11)).toBe('paint-shell-chocolate');
+    expect(TREASURE_ICON_SLUGS.at(-15)).toBe('paint-shell-moonstone');
+    expect(TREASURE_ICON_SLUGS.at(-14)).toBe('paint-shell-chocolate');
   });
 
   it('draws the Moonstone swatch and Paint shell icon in the Moonstone body colour, a light plain tile, baked', () => {
@@ -3573,7 +3600,7 @@ describe('Spring cave Area 7 treasure art (issue #105, ND-13)', () => {
       'underground-waterfall',
       'gemstone-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(56, 67)).toEqual(SPRING_CAVE_ICON_SLUGS.filter((slug) => !slug.startsWith('paint-shell-')));
     expect(TREASURE_ICON_SLUGS.slice(67, 78)).toEqual(SPRING_CAVE_2_ITEM_SLUGS);
@@ -3992,7 +4019,7 @@ describe('Deep canal Area 8 treasure art (issue #78)', () => {
       'floating-flower-market',
       'rainbow-fin-streamers',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(78, 89)).toEqual(DEEP_CANAL_ITEM_SLUGS_HERE);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
@@ -4457,11 +4484,11 @@ describe('Deep canal Area 9 treasure art (issue #107)', () => {
       'floating-music-stage',
       'golden-boatman-cape',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(89, 100)).toEqual(DEEP_CANAL_2_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(TREASURE_ICON_SLUGS.slice(-6, -4)).toEqual(DEEP_CANAL_2_SHELL_SLUGS);
+    expect(TREASURE_ICON_SLUGS.slice(-9, -7)).toEqual(DEEP_CANAL_2_SHELL_SLUGS);
     expect(DEEP_CANAL_2_ICON_SLUGS).toEqual([...DEEP_CANAL_2_ITEM_SLUGS, ...DEEP_CANAL_2_SHELL_SLUGS]);
     expect(DEEP_CANAL_2_TREASURES).toHaveLength(13);
     expect(DEEP_CANAL_2_SLUGS.at(-1)).toBe('paint-shell-lantern-shine');
@@ -4999,11 +5026,11 @@ describe('Deep canal Area 10 treasure art (issue #108)', () => {
       'refuge-snow-globe',
       'champion-crown',
     ]);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(100, 111)).toEqual(DEEP_CANAL_3_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(112)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(TREASURE_ICON_SLUGS.slice(-4, -2)).toEqual(DEEP_CANAL_3_SHELL_SLUGS);
+    expect(TREASURE_ICON_SLUGS.slice(-7, -5)).toEqual(DEEP_CANAL_3_SHELL_SLUGS);
     expect(DEEP_CANAL_3_ICON_SLUGS).toEqual([...DEEP_CANAL_3_ITEM_SLUGS, ...DEEP_CANAL_3_SHELL_SLUGS]);
     expect(DEEP_CANAL_3_TREASURES).toHaveLength(13);
     expect(DEEP_CANAL_3_SLUGS.at(-1)).toBe('paint-shell-confetti-shine');
@@ -5525,7 +5552,7 @@ describe('Deep canal Area 11 treasure art (issue #112)', () => {
         .filter((treasure) => treasure.category !== 'paintShell')
         .map((treasure) => treasureSlug(treasure.id)),
     );
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
     expect(TREASURE_ICON_SLUGS).toHaveLength(ALL_TREASURES.length);
     expect(TREASURE_ICON_SLUGS.slice(100, 111)).toEqual(DEEP_CANAL_3_ITEM_SLUGS);
     expect(TREASURE_ICON_SLUGS.slice(111, 112)).toEqual(DEEP_CANAL_4_ITEM_SLUGS);
@@ -5707,9 +5734,9 @@ describe('Deep canal Area 11 treasure art (issue #112)', () => {
 
 describe('Olive and Lantern shine Dream swatches (issue #107)', () => {
   it('lists Olive and Lantern shine as the two Dream swatches before Peach and Confetti shine, with their Paint shell icon slugs just before the Area 10 ones', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
-    expect(DREAM_SWATCH_IDS.slice(-6, -4)).toEqual(['olive', 'lantern-shine']);
-    expect(TREASURE_ICON_SLUGS.slice(-6, -4)).toEqual(DEEP_CANAL_2_SHELL_SLUGS);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-9, -7)).toEqual(['olive', 'lantern-shine']);
+    expect(TREASURE_ICON_SLUGS.slice(-9, -7)).toEqual(DEEP_CANAL_2_SHELL_SLUGS);
   });
 
   it('draws the Olive swatch and Paint shell icon in the Olive body colour, a plain tile, baked', () => {
@@ -5756,9 +5783,9 @@ describe('Olive and Lantern shine Dream swatches (issue #107)', () => {
 
 describe('Peach and Confetti shine Dream swatches (issue #108)', () => {
   it('lists Peach and Confetti shine as the two Dream swatches before Marigold and Golden shine, with their Paint shell icon slugs just before the Area 11 ones', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
-    expect(DREAM_SWATCH_IDS.slice(-4, -2)).toEqual(['peach', 'confetti-shine']);
-    expect(TREASURE_ICON_SLUGS.slice(-4, -2)).toEqual(DEEP_CANAL_3_SHELL_SLUGS);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-7, -5)).toEqual(['peach', 'confetti-shine']);
+    expect(TREASURE_ICON_SLUGS.slice(-7, -5)).toEqual(DEEP_CANAL_3_SHELL_SLUGS);
   });
 
   it('draws the Peach swatch and Paint shell icon in the Peach body colour, a plain tile with no rim arc, baked', () => {
@@ -5822,10 +5849,10 @@ describe('Peach and Confetti shine Dream swatches (issue #108)', () => {
 });
 
 describe('Marigold and Golden shine Dream swatches (issue #112)', () => {
-  it('lists Marigold and Golden shine as the last two Dream swatches, with their Paint shell icon slugs last', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
-    expect(DREAM_SWATCH_IDS.slice(-2)).toEqual(['marigold', 'golden-hour-shine']);
-    expect(TREASURE_ICON_SLUGS.slice(-2)).toEqual(DEEP_CANAL_4_SHELL_SLUGS);
+  it('lists Marigold and Golden shine as the two Dream swatches before Lime, Hyacinth and Lagoon shine, with their Paint shell icon slugs just before the issue #207 ones', () => {
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-5, -3)).toEqual(['marigold', 'golden-hour-shine']);
+    expect(TREASURE_ICON_SLUGS.slice(-5, -3)).toEqual(DEEP_CANAL_4_SHELL_SLUGS);
     expect(DEEP_CANAL_4_SLUGS).toEqual([...DEEP_CANAL_4_ITEM_SLUGS, ...DEEP_CANAL_4_SHELL_SLUGS]);
     // The canal's own list stays the twelve items and twelve Paint shells it was, with no Area 11 slug among them.
     expect(CANAL_ICON_SLUGS).toHaveLength(24);
@@ -5892,11 +5919,82 @@ describe('Marigold and Golden shine Dream swatches (issue #112)', () => {
   });
 });
 
+describe('Lime, Hyacinth and Lagoon shine Dream swatches (issue #207)', () => {
+  it('lists Lime, Hyacinth and Lagoon shine as the last three Dream swatches, with their Paint shell icon slugs last', () => {
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-3)).toEqual(['lime', 'hyacinth', 'lagoon-shine']);
+    expect(TREASURE_ICON_SLUGS.slice(-3)).toEqual(DEEP_CANAL_4_NEW_SHELL_SLUGS);
+    expect(DEEP_CANAL_4_SLUGS).toEqual(expect.arrayContaining([...DEEP_CANAL_4_NEW_SHELL_SLUGS]));
+    expect(CANAL_ICON_SLUGS.some((slug) => DEEP_CANAL_4_NEW_SHELL_SLUGS.includes(slug))).toBe(false);
+  });
+
+  for (const [id, body, look] of [
+    ['lime', '#8ecb30', 'lime green'],
+    ['hyacinth', '#9b7cef', 'hyacinth violet'],
+  ] as const) {
+    it(`draws the ${id} swatch and Paint shell icon in its ${look} body colour, a plain tile with no rim arc, baked`, () => {
+      expect(DREAM_SWATCH[id]).toEqual({ body, pattern: 'plain', marks: [], dark: false });
+      expect(hexStyles((ctx) => paintTreasureIcon(ctx, `paint-shell-${id}`, 48))).toContain(body);
+      expect(hexStyles((ctx) => paintDreamSwatch(ctx, id, 32))).toContain(body);
+      // Not a dark body, so neither the blob nor the tile has the rim arc.
+      expect(hexStyles((ctx) => paintTreasureIcon(ctx, `paint-shell-${id}`, 48))).not.toContain(DREAM_RIM);
+      expect(hexStyles((ctx) => paintDreamSwatch(ctx, id, 32))).not.toContain(DREAM_RIM);
+      bakes.length = 0;
+      const tex = bakeTreasureTextures({} as never, 2);
+      expect(tex.swatches[id].key).toBe(`dream-swatch-${id}-32`);
+      for (const size of [28, 32, 48] as const) {
+        expect(tex.icons[size][`paint-shell-${id}`].key).toBe(`treasure-paint-shell-${id}-${size}`);
+      }
+    });
+  }
+
+  it('draws the Lagoon shine swatch and Paint shell icon as a lagoon blue sheen with a sea foam and a coral stripe and no rim arc, baked', () => {
+    expect(DREAM_SWATCH['lagoon-shine']).toEqual({
+      body: '#5cb7e0',
+      pattern: 'stripes',
+      marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
+      dark: false,
+    });
+    // A mid body: the ink carries it (6.38:1), not the white edge (2.26:1).
+    expect(contrastRatio(DREAM_SWATCH['lagoon-shine'].body, INK)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(DREAM_SWATCH['lagoon-shine'].body, '#ffffff')).toBeLessThan(3);
+    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-lagoon-shine', 48))).toContain('#5cb7e0');
+    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'lagoon-shine', 32))).toContain('#5cb7e0');
+    const blobOps = record((ctx) => paintTreasureIcon(ctx, 'paint-shell-lagoon-shine', 48)).ops;
+    const tileOps = record((ctx) => paintDreamSwatch(ctx, 'lagoon-shine', 32)).ops;
+    for (const mark of DREAM_SWATCH['lagoon-shine'].marks) {
+      expect(blobOps.some((op) => op.fillStyle === mark), `blob ${mark}`).toBe(true);
+      expect(tileOps.some((op) => op.fillStyle === mark), `tile ${mark}`).toBe(true);
+    }
+    // Not a dark body, so neither the blob nor the tile has the rim arc.
+    expect(hexStyles((ctx) => paintTreasureIcon(ctx, 'paint-shell-lagoon-shine', 48))).not.toContain(DREAM_RIM);
+    expect(hexStyles((ctx) => paintDreamSwatch(ctx, 'lagoon-shine', 32))).not.toContain(DREAM_RIM);
+    bakes.length = 0;
+    const tex = bakeTreasureTextures({} as never, 2);
+    expect(tex.swatches['lagoon-shine'].key).toBe('dream-swatch-lagoon-shine-32');
+    for (const size of [28, 32, 48] as const) {
+      expect(tex.icons[size]['paint-shell-lagoon-shine'].key).toBe(`treasure-paint-shell-lagoon-shine-${size}`);
+    }
+  });
+
+  it('keeps the Lagoon shine stripes lighter than its body, so ink reaches 3:1 on them laid over it (guide 6p)', () => {
+    const { body, marks } = DREAM_SWATCH['lagoon-shine'];
+    const bodyRgb = channelsOf(body);
+    for (const mark of marks) {
+      const { rgb, alpha } = parseRgba(mark);
+      const laid = rgb.map((c, i) => Math.round(alpha * c + (1 - alpha) * bodyRgb[i]));
+      const hex = `#${laid.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+      expect(contrastRatio(hex, INK), mark).toBeGreaterThanOrEqual(3);
+      expect(relativeLuminance(hex), mark).toBeGreaterThan(relativeLuminance(body));
+    }
+  });
+});
+
 describe('Jade and Fiesta shine Dream swatches (issue #78)', () => {
   it('lists Jade and Fiesta shine as the two Dream swatches before Olive and Lantern shine, with their Paint shell icon slugs just before the Area 9 ones', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
-    expect(DREAM_SWATCH_IDS.slice(-8, -6)).toEqual(['jade', 'fiesta-shine']);
-    expect(TREASURE_ICON_SLUGS.slice(-8, -6)).toEqual(DEEP_CANAL_SHELL_SLUGS);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-11, -9)).toEqual(['jade', 'fiesta-shine']);
+    expect(TREASURE_ICON_SLUGS.slice(-11, -9)).toEqual(DEEP_CANAL_SHELL_SLUGS);
   });
 
   it('draws the Jade swatch and Paint shell icon in the Jade body colour, a light plain tile, baked', () => {
@@ -5931,10 +6029,10 @@ describe('Jade and Fiesta shine Dream swatches (issue #78)', () => {
 
 describe('Chocolate Dream swatch (issue #105)', () => {
   it('lists Chocolate as the eighteenth Dream swatch, with its Paint shell icon slug just before Crystal shine\'s', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
     expect(DREAM_SWATCH_IDS[17]).toBe('chocolate');
-    expect(TREASURE_ICON_SLUGS.at(-11)).toBe('paint-shell-chocolate');
-    expect(TREASURE_ICON_SLUGS.at(-10)).toBe('paint-shell-crystal-shine');
+    expect(TREASURE_ICON_SLUGS.at(-14)).toBe('paint-shell-chocolate');
+    expect(TREASURE_ICON_SLUGS.at(-13)).toBe('paint-shell-crystal-shine');
   });
 
   it('draws the Chocolate swatch and Paint shell icon in the Chocolate body colour, a dark plain tile with the rim light, baked', () => {
@@ -5957,10 +6055,10 @@ describe('Chocolate Dream swatch (issue #105)', () => {
 
 describe('Crystal shine and Glowworm Dream swatches', () => {
   it('lists Crystal shine and Glowworm as the two Dream swatches before Jade and Fiesta shine, with their Paint shell icon slugs just before the deep canal\'s', () => {
-    expect(DREAM_SWATCH_IDS).toHaveLength(28);
-    expect(DREAM_SWATCH_IDS.slice(-10, -8)).toEqual(['crystal-shine', 'glowworm']);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(140);
-    expect(TREASURE_ICON_SLUGS.slice(-10, -8)).toEqual(LEGENDARY_CAVE_SHELL_SLUGS);
+    expect(DREAM_SWATCH_IDS).toHaveLength(31);
+    expect(DREAM_SWATCH_IDS.slice(-13, -11)).toEqual(['crystal-shine', 'glowworm']);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(143);
+    expect(TREASURE_ICON_SLUGS.slice(-13, -11)).toEqual(LEGENDARY_CAVE_SHELL_SLUGS);
   });
 
   it('draws the Crystal shine swatch and Paint shell icon as a teal sheen with two light stripes, baked', () => {

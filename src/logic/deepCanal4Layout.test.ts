@@ -923,8 +923,9 @@ describe('Area 11 hiding spots (B5, B6, B10)', () => {
     }
   });
 
-  it('has 4 Common, 3 Rare, 2 Epic and 3 Legendary spots, every pool larger than its Area 11 treasures', () => {
-    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([4, 3, 2, 3]);
+  it('has 4 Common, 7 Rare, 3 Epic and 4 Legendary spots, every pool larger than its Area 11 treasures', () => {
+    expect(RARITIES.map((rarity) => zone.spots.filter((spot) => spot.rarity === rarity).length)).toEqual([4, 7, 3, 4]);
+    expect(zone.spots).toHaveLength(18);
     expect(RARITIES.map((rarity) => DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length)).toEqual([0, 2, 0, 1]);
     for (const rarity of RARITIES) {
       const treasures = DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
@@ -933,8 +934,28 @@ describe('Area 11 hiding spots (B5, B6, B10)', () => {
     for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
   });
 
-  it('hides Commons under the moored row past cormorant-1 by the main path, and Rares under the moored rows by anchor-drop-2 and anchor-drop-4, off the path', () => {
+  it('hides Commons under the moored row past cormorant-1 by the main path, and Rares under the moored rows by anchor-drop-2, anchor-drop-4 and the inflow, off the path', () => {
+    expect((zone.bankOverhangs ?? []).map((moored) => [moored.x0, moored.x1, moored.y0, moored.y1])).toEqual([
+      [2280, 2720, SURF, 140],
+      [3900, 4180, SURF, 140],
+      [4360, 4500, SURF, 140],
+    ]);
+    const bank = zone.spots.filter((spot) => spot.cover === 'bank');
+    expect(bank.map((spot) => [spot.x, spot.y, spot.rarity, spot.container])).toEqual([
+      [2340, 136, 'common', false],
+      [2400, 136, 'common', false],
+      [2460, 136, 'common', false],
+      [2520, 136, 'common', false],
+      [3980, 110, 'rare', false],
+      [4100, 110, 'rare', false],
+      [2565, 100, 'rare', false],
+      [2650, 96, 'rare', false],
+      [2700, 140, 'rare', false],
+      [4410, 100, 'rare', false],
+      [4475, 96, 'rare', false],
+    ]);
     const shallow = zone.spots.filter((spot) => spot.rarity === 'common' || spot.rarity === 'rare');
+    expect(shallow).toEqual(bank);
     for (const spot of shallow) {
       expect(coversAt(spot, zone), spot.id).toEqual(['bank']);
       expect(spot.container, spot.id).toBe(false);
@@ -943,24 +964,30 @@ describe('Area 11 hiding spots (B5, B6, B10)', () => {
     for (const moored of zone.bankOverhangs ?? []) expect(moored.y0, 'moored rows float at the surface').toBe(SURF);
   });
 
-  it('puts an open Legendary spot and an Epic spot in the sunken hull cave under the wide murky patch, the Legendary within half the strike of tilapia-1', () => {
+  it('puts an open Legendary spot and two Epic spots in the sunken hull cave under the wide murky patch, the Legendary within half the strike of tilapia-1', () => {
     const cave = zone.spots.filter((spot) => spot.cover === 'cave');
     expect(cave.map((spot) => [spot.x, spot.y, spot.rarity, spot.container])).toEqual([
       [4540, 630, 'legendary', false],
       [4470, 640, 'epic', false],
+      [4730, 630, 'epic', false],
     ]);
     expect(zone.cave).toEqual({ id: 'deep-canal-4/cave', x0: 4440, x1: 4740, y0: 600, y1: zone.bedTop });
     const tilapia = zone.tilapiaRoutes.find((route) => route.id === 'tilapia-1');
     if (!tilapia) throw new Error('no route tilapia-1');
     expect(routeLoopDistance(cave[0], tilapia.waypoints)).toBeLessThanOrEqual(DEEP_CANAL_4_TILAPIA.lungeRange / 2);
+    for (const spot of cave.filter((each) => each.rarity === 'epic')) {
+      expect(routeLoopDistance(spot, tilapia.waypoints), spot.id).toBeGreaterThan(DEEP_CANAL_4_TILAPIA.lungeRange / 2);
+      expect(routeLoopDistance(spot, tilapia.waypoints), spot.id).toBeLessThanOrEqual(DEEP_CANAL_4_TILAPIA.lungeRange);
+    }
   });
 
-  it('puts two open Legendary spots just past the side-canal inflow, each within half the strike of tilapia-0 or bass-0, and an Epic spot past it farther off', () => {
+  it('puts three open Legendary spots just past the side-canal inflow, each within half the strike of tilapia-0 or bass-0, and an Epic spot past it farther off', () => {
     const past = zone.spots.filter((spot) => spot.cover === 'pastCurrent');
     expect(past.map((spot) => [spot.x, spot.y, spot.rarity, spot.container])).toEqual([
       [4580, 180, 'legendary', false],
       [4640, 200, 'legendary', false],
       [4530, 140, 'epic', false],
+      [4505, 295, 'legendary', false],
     ]);
     const near = [...zone.tilapiaRoutes.filter((route) => route.id === 'tilapia-0'), ...routesOf(zone, BLACK_BASS_SPECIES.id)];
     const halfStrike = (route: TilapiaRoute) => (route.id === 'tilapia-0' ? DEEP_CANAL_4_TILAPIA.lungeRange : DEEP_CANAL_4_BASS.tuning.lungeRange) / 2;

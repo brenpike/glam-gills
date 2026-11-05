@@ -7,7 +7,9 @@
  * looks; size only scales the bake), over SWIM_PHASE_SAMPLES swim phases and
  * TAIL_AMP_SAMPLES tail amplitudes, padded by SLOT_CROP_PAD and rounded outward
  * to whole units, then kept inside the AXO_TEX frame. A grown footprint grows
- * its crop. Socks and Feet share one crop holding all four feet and sleeves.
+ * its crop. The Head and Back crops also hold the opt-in big footprints
+ * (HEAD_BIG_FOOTPRINT, backBigFootprint; issue #207), so a big item fits its
+ * slot picture. Socks and Feet share one crop holding all four feet and sleeves.
  *
  * Crops are plain numbers worked out at load; footprint outlines are Path2D,
  * made only when asked for. Presentational only: no game state, no Phaser.
@@ -20,11 +22,13 @@ import {
   AXO_SEXES,
   AXO_TAILS,
   DEFAULT_ART_LOOK,
+  HEAD_BIG_FOOTPRINT,
   HEAD_FOOTPRINT,
   NECK_FOOTPRINT,
   TAIL_SLOT_REACH,
   WEARABLE_SLOTS,
   axolotlBodyGeometry,
+  backBigFootprint,
   backFootprint,
   feetEnvelope,
   framePoint,
@@ -90,11 +94,14 @@ function legFootprintBoxes(look: AxolotlArtLook, swimPhases: readonly number[]):
   );
 }
 
-/** Boxes of the footprint of `slot` on `look`, over every sampled swim phase and tail amplitude. */
+/**
+ * Boxes of the footprint of `slot` on `look`, over every sampled swim phase and tail amplitude.
+ * Head and Back give both the footprint and its opt-in big footprint.
+ */
 function slotFootprintBoxes(slot: WearableSlot, look: AxolotlArtLook, swimPhases: readonly number[]): Bounds[] {
   switch (slot) {
     case 'head':
-      return [HEAD_FOOTPRINT];
+      return [HEAD_FOOTPRINT, HEAD_BIG_FOOTPRINT];
     case 'neck':
       return [NECK_FOOTPRINT];
     case 'face':
@@ -102,7 +109,7 @@ function slotFootprintBoxes(slot: WearableSlot, look: AxolotlArtLook, swimPhases
     case 'shirt':
       return [shirtGeometry(look).bounds];
     case 'back':
-      return [backFootprint(look).bounds];
+      return [backFootprint(look).bounds, backBigFootprint(look).bounds];
     case 'tail':
       return tailFootprintBoxes(look, swimPhases);
     case 'socks':

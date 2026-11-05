@@ -381,6 +381,12 @@ describe('surface boats on the current Area 11 layout (issue #112)', () => {
   it('still sets some whole hulls in Area 11; a row split by an anchor drop may get the shade only', () => {
     const total = rects.reduce((sum, rect) => sum + mooredHullSlots(rect, spans, hullW).length, 0);
     expect(total).toBeGreaterThan(0);
+    expect(rects.map((rect) => [rect.x0, rect.x1])).toEqual([
+      [2280, 2720],
+      [3900, 4180],
+      [4360, 4500],
+    ]);
+    expect(rects.map((rect) => mooredHullSlots(rect, spans, hullW).length)).toEqual([2, 0, 1]);
   });
 
   it('keeps every fishing trajinera at least SURFACE_BOAT_GAP from every moored row', () => {

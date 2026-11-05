@@ -412,6 +412,7 @@ const SHEEN_DREAMS = [
   'lantern-shine',
   'confetti-shine',
   'golden-hour-shine',
+  'lagoon-shine',
 ] as const satisfies readonly DreamLookId[];
 /** The pattern paints of drawAxolotl carry three clips: silhouette, inset Dream clip, face limit. */
 const PATTERN_CLIPS = 3;
@@ -584,6 +585,18 @@ describe('tailStripe', () => {
     });
   }
 
+  for (const look of LOOKS) {
+    it(`covers exactly the Lagoon shine stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
+      const tally = newTally();
+      tallyLook('lagoon-shine', look, tally);
+      expect(tally.first).toBeNull();
+      expect(tally.mismatches).toBe(0);
+      expect(tally.overlaps).toBe(0);
+      expect(tally.strays).toBe(0);
+      expect(tally.covered).toBeGreaterThan(1000);
+    });
+  }
+
   it('fills each band with its parsed Iridescent mark, white first', () => {
     const parse = (css: string): [number, number] => {
       const m = /^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/.exec(css);
@@ -635,6 +648,14 @@ describe('tailStripe', () => {
     expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
       [0xffb0c4, 0.85],
       [0xfff0aa, 0.85],
+    ]);
+  });
+
+  it('fills each band with its parsed Lagoon shine mark, sea foam first', () => {
+    const stripe = tailStripe('lagoon-shine', DEFAULT_ART_LOOK, 0, 1, 0.5, Infinity);
+    expect(stripe.map((band) => [band.colour, band.alpha])).toEqual([
+      [0xd6fff4, 0.85],
+      [0xffbeb0, 0.85],
     ]);
   });
 
