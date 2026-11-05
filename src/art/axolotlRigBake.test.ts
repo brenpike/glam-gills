@@ -9,9 +9,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as Phaser from 'phaser';
 import { createAxolotlRigBake, createAxolotlRigView, takeRigBakeCount } from './axolotlRig';
-import { RIG_STILL_POSE } from './axolotlRigParts';
+import { RIG_PAD, RIG_STILL_POSE, rigParts } from './axolotlRigParts';
 import { AXO_TEX } from './drawAxolotl';
-import { AXO_SIZE_SCALE, DEFAULT_ART_LOOK, type AxolotlArtLook } from './drawAxolotlParts';
+import {
+  AXO_SIZE_SCALE,
+  DEFAULT_ART_LOOK,
+  HEAD_BIG_FOOTPRINT,
+  HEAD_FOOTPRINT,
+  backBigFootprint,
+  backFootprint,
+  type AxolotlArtLook,
+  type Bounds,
+} from './drawAxolotlParts';
+import { BIG_WEARABLE_ART_SLUGS, NO_OUTFIT, WEARABLE_ART_SLOT, type ArtOutfit, type WearableArtSlug } from './drawWearables';
 import { MORPH_PALETTES, axolotlPalette } from './palette';
 import { makeInfo } from './textures';
 
@@ -304,5 +314,88 @@ describe('rig bake re-bakes lazily, once per batch of changes', () => {
     view.destroy();
     bake.destroy();
     expect([...textures.live]).toEqual([]);
+  });
+});
+
+describe('rig bake face part and the big Wearables (issue #207)', () => {
+  const LARGE: AxolotlArtLook = { ...DEFAULT_ART_LOOK, size: 'large' };
+  const faceBox = (look: AxolotlArtLook, outfit: ArtOutfit): Bounds => {
+    const face = rigParts({ look, palette: MORPH_PALETTES.wild, outfit }).find((part) => part.id === 'face');
+    expect(face).toBeDefined();
+    return face!.box;
+  };
+  /** Whether the part box holds `inner` with RIG_PAD round it. */
+  const holds = (box: Bounds, inner: Bounds): boolean =>
+    box.minX <= inner.minX - RIG_PAD && box.minY <= inner.minY - RIG_PAD && box.maxX >= inner.maxX + RIG_PAD && box.maxY >= inner.maxY + RIG_PAD;
+  const slugsOf = (slot: 'head' | 'back'): WearableArtSlug[] => (Object.keys(WEARABLE_ART_SLOT) as WearableArtSlug[]).filter((slug) => WEARABLE_ART_SLOT[slug] === slot);
+
+  it('names the three big items: the Propeller cap and Wizard hat (Head) and the Jetpack (Back)', () => {
+    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual(['jetpack', 'propeller-cap', 'wizard-hat']);
+  });
+
+  it('grows the face part to the big Head footprint only while a big Head item is worn', () => {
+    const small = slugsOf('head').filter((slug) => !BIG_WEARABLE_ART_SLUGS.has(slug));
+    const big = slugsOf('head').filter((slug) => BIG_WEARABLE_ART_SLUGS.has(slug));
+    expect(big).toEqual(['propeller-cap', 'wizard-hat']);
+    const hat = faceBox(DEFAULT_ART_LOOK, { head: small[0] });
+    for (const slug of small) expect(faceBox(DEFAULT_ART_LOOK, { head: slug }), slug).toEqual(hat);
+    expect(holds(hat, HEAD_FOOTPRINT)).toBe(true);
+    expect(holds(hat, HEAD_BIG_FOOTPRINT)).toBe(false);
+    expect(hat.minY).toBe(HEAD_FOOTPRINT.minY - RIG_PAD);
+    for (const slug of big) {
+      const box = faceBox(DEFAULT_ART_LOOK, { head: slug });
+      expect(holds(box, HEAD_BIG_FOOTPRINT), slug).toBe(true);
+      expect(box.minY, slug).toBe(HEAD_BIG_FOOTPRINT.minY - RIG_PAD);
+      expect(box.maxX, slug).toBe(HEAD_BIG_FOOTPRINT.maxX + RIG_PAD);
+      expect(box.minY, slug).toBeLessThan(hat.minY);
+      expect(box.maxY, slug).toBe(hat.maxY);
+    }
+    // Nothing worn on the head, the face part is the bare one: no footprint grows it.
+    expect(faceBox(DEFAULT_ART_LOOK, NO_OUTFIT).minY).toBeGreaterThan(hat.minY);
+  });
+
+  it('grows the face part to the big Back footprint only while the Jetpack is worn, on every body', () => {
+    const small = slugsOf('back').filter((slug) => !BIG_WEARABLE_ART_SLUGS.has(slug));
+    expect(slugsOf('back').filter((slug) => BIG_WEARABLE_ART_SLUGS.has(slug))).toEqual(['jetpack']);
+    for (const body of ['slim', 'regular', 'chubby'] as const) {
+      for (const age of ['baby', 'young', 'grownUp'] as const) {
+        const look: AxolotlArtLook = { ...DEFAULT_ART_LOOK, body, age };
+        const id = `${body} ${age}`;
+        const tank = faceBox(look, { back: small[0] });
+        for (const slug of small) expect(faceBox(look, { back: slug }), `${id} ${slug}`).toEqual(tank);
+        expect(holds(tank, backFootprint(look).bounds), id).toBe(true);
+        expect(holds(tank, backBigFootprint(look).bounds), id).toBe(false);
+        const jet = faceBox(look, { back: 'jetpack' });
+        expect(holds(jet, backBigFootprint(look).bounds), id).toBe(true);
+        expect(jet.minY, id).toBe(backBigFootprint(look).bounds.minY - RIG_PAD);
+        expect(jet.minY, id).toBeLessThan(tank.minY);
+        expect(jet.maxY, id).toBe(tank.maxY);
+      }
+    }
+  });
+
+  it('packs the grown face part of a big outfit within the WebGL renderer max texture size', () => {
+    const sizesOf = (outfit: ArtOutfit, maxTextureSize: number): Map<string, { readonly w: number; readonly h: number }> => {
+      const textures = new FakeTextures();
+      const renderer = { type: 2, getMaxTextureSize: () => maxTextureSize };
+      const appearance = { look: LARGE, palette: axolotlPalette('leucistic', 'iridescent'), outfit };
+      const bake = createAxolotlRigBake(fakeScene(textures, new FakeGameEvents(), renderer), 'big', 3, appearance);
+      expect(bake.version).toBe(1);
+      bake.destroy();
+      return textures.sizes;
+    };
+    const small: ArtOutfit = { head: 'sun-hat', back: 'diving-tank', face: 'heart-glasses', shirt: 'tank-top', neck: 'shell-necklace' };
+    const big: ArtOutfit = { ...small, head: 'wizard-hat', back: 'jetpack' };
+    const smallFace = sizesOf(small, 2048).get('big:face');
+    const bigFace = sizesOf(big, 2048).get('big:face');
+    expect(smallFace).toBeDefined();
+    expect(bigFace).toBeDefined();
+    expect(bigFace!.h).toBeGreaterThan(smallFace!.h);
+    for (const maxTextureSize of [2048, 4096]) {
+      for (const [key, size] of sizesOf(big, maxTextureSize)) {
+        expect(size.w, `${key} at ${maxTextureSize}`).toBeLessThanOrEqual(maxTextureSize);
+        expect(size.h, `${key} at ${maxTextureSize}`).toBeLessThanOrEqual(maxTextureSize);
+      }
+    }
   });
 });

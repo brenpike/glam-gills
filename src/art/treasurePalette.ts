@@ -394,10 +394,69 @@ export const LITTLE_CORMORANT_BODY = '#d9dcf2';
 /** Little cormorant closed bill and throat patch, the cormorant's bill colour. Alias of MINERS_HELMET_FILL. 10.65:1. */
 export const LITTLE_CORMORANT_BILL = MINERS_HELMET_FILL;
 
+// ---- Deep canal Area 11 Wearable fills (issue #207; all at least 9:1 with ink) ----
+// The five big, silly Wearables: a propeller cap, star sunglasses, a robot suit, a jetpack and a wizard hat. Three
+// fills are new (a pale apple green, a pale silver and a pale starry violet); the rest reuse shipped colours by name.
+// None equals a BADGE_FILL rarity colour, and none is red. Ratios are fill against ink. Aliases of a shipped colour
+// say so.
+
+/** Propeller cap dome and peak, a pale apple green. 12.03:1. */
+export const PROPELLER_CAP_FILL = '#d6f5b0';
+/** Propeller cap's two round-ended blades, hub and stalk, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const PROPELLER_BLADE_FILL = TRAJINERA_BLOSSOM_PINK;
+/** Star sunglasses' two soft-pointed star frames and bridge, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const STAR_SUNGLASSES_FRAME = MARIACHI_JACKET_FILL;
+/** Robot suit body, shoulders and arms, a pale silver. 11.95:1. */
+export const ROBOT_SUIT_FILL = '#e6eaf4';
+/** Robot suit's round chest light and its soft glow, the dragonfly aqua. Alias of DRAGONFLY_FRAME; inside the suit, so free. */
+export const ROBOT_SUIT_LIGHT = DRAGONFLY_FRAME;
+/** Jetpack's two rounded rocket tanks, a pale apricot. Alias of STRIPED_SCARF_FILL. 10.97:1. */
+export const JETPACK_TANK_FILL = STRIPED_SCARF_FILL;
+/** Jetpack's middle plate and two nozzles, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const JETPACK_FRAME = FIREFLY_HOOK;
+/** Jetpack's puffed bubbles (bubbles, never flames: ADR 0007), the bubble stone's bubble. Alias of BUBBLE_FILL. 12.46:1. */
+export const JETPACK_BUBBLE = BUBBLE_FILL;
+/** Wizard hat cone and brim, a pale starry violet. 10.38:1. */
+export const WIZARD_HAT_FILL = '#ddd6ff';
+/** Wizard hat's soft round tip on the curled point, the pale crown gold. Alias of CHAMPION_CROWN_FILL. 12.01:1. */
+export const WIZARD_HAT_TIP = CHAMPION_CROWN_FILL;
+
+// ---- Deep canal Area 11 Decoration fills (issue #207; all at least 9:1 with ink) ----
+// The three festival Decorations: a flower raft, a festival kite and a carousel. One fill is new (a pale hyacinth
+// lilac); the rest reuse shipped colours by name. None equals a BADGE_FILL rarity colour, and none is red. Ratios are
+// fill against ink. Aliases of a shipped colour say so.
+
+/** Flower raft's round water hyacinth leaves, the reed leaf green. Alias of PLANT_LEAF. 9.25:1. */
+export const FLOWER_RAFT_LEAF = PLANT_LEAF;
+/** Flower raft's bloom spike of five-lobed florets, a pale hyacinth lilac. 9.95:1. */
+export const FLOWER_RAFT_BLOOM = '#e8ccff';
+/** Flower raft florets' round eyes, the butter yellow. Alias of MARIACHI_JACKET_FILL; inside each floret, so free. */
+export const FLOWER_RAFT_EYE = MARIACHI_JACKET_FILL;
+/** Festival kite's diamond, the lotus lantern pink. Alias of TRAJINERA_BLOSSOM_PINK. 9.90:1. */
+export const FESTIVAL_KITE_FILL = TRAJINERA_BLOSSOM_PINK;
+/** Festival kite's two teal quarters, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1; inside the kite, so free. */
+export const FESTIVAL_KITE_PANEL = TRAJINERA_ARCH;
+/** Festival kite's tail bows, in turn the butter yellow and the pale teal. 12.53:1 and 11.05:1. */
+export const FESTIVAL_KITE_BOWS: readonly string[] = [MARIACHI_JACKET_FILL, TRAJINERA_ARCH];
+/** Carousel's striped canopy, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const CAROUSEL_CANOPY = TRAJINERA_ARCH;
+/** Carousel canopy's stripes, the captain's cream. Alias of CAPTAINS_HAT_FILL. 13.34:1; inside the canopy, so free. */
+export const CAROUSEL_STRIPE = CAPTAINS_HAT_FILL;
+/** Carousel's round finial on the canopy top, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const CAROUSEL_FINIAL = MARIACHI_JACKET_FILL;
+/** Carousel's middle pole, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const CAROUSEL_POLE = FIREFLY_HOOK;
+/** Carousel's two toy axolotl riders, soft pink. Alias of UI_PANEL_PINK. 11.19:1. */
+export const CAROUSEL_RIDER = UI_PANEL_PINK;
+/** Carousel's round turning platform, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const CAROUSEL_BASE = FESTIVAL_PLINTH;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
 export const GOLD_TRIM = '#ffc12e';
+/** Wizard hat's little stars on the cone, the Legendary gold (never the white star, which is the one Legendary star). Alias of GOLD_TRIM. */
+export const WIZARD_HAT_STAR = GOLD_TRIM;
 /** Rare and Epic trim bands. */
 export const BOAT_TRIM = SUN;
 /** Diving tank strap band, the boat yellow (guide 7e). */
@@ -449,7 +508,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The twenty-eight Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-one Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -478,7 +537,10 @@ export type DreamSwatchId =
   | 'peach'
   | 'confetti-shine'
   | 'marigold'
-  | 'golden-hour-shine';
+  | 'golden-hour-shine'
+  | 'lime'
+  | 'hyacinth'
+  | 'lagoon-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -572,6 +634,15 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     body: '#bea015',
     pattern: 'stripes',
     marks: ['rgba(255,176,196,0.85)', 'rgba(255,240,170,0.85)'],
+    dark: false,
+  },
+  lime: { body: '#8ecb30', pattern: 'plain', marks: [], dark: false },
+  hyacinth: { body: '#9b7cef', pattern: 'plain', marks: [], dark: false },
+  // Sheen: a sea foam and a coral stripe, both lighter than the lagoon blue body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'lagoon-shine': {
+    body: '#5cb7e0',
+    pattern: 'stripes',
+    marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
     dark: false,
   },
 };

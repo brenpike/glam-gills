@@ -534,6 +534,7 @@ const SHEEN_DREAMS = [
   'lantern-shine',
   'confetti-shine',
   'golden-hour-shine',
+  'lagoon-shine',
 ] as const satisfies readonly DreamLookId[];
 const isSheen = (palette: MorphPalette): boolean => palette.dream !== undefined && isSheenDream(palette.dream.id);
 

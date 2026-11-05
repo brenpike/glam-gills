@@ -346,10 +346,21 @@ function captionRuleProblems(label: string, view: HudView, layout: DecorateLayou
  * caption is placed or hidden by its rule; a tray that fits no room goes in pages, with Back and Next.
  */
 function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number, page = 0): string[] {
-  const label = `decorate ${view.cssW}x${view.cssH} tray=${trayCount}/${maxTrayCount} page=${page}`;
-  const frame = tankFrame(view.cssW, view.cssH);
   const sizes = decorateSizes(view);
-  const layout = decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
+  const layout = decorateLayout(view, tankFrame(view.cssW, view.cssH), trayCount, sizes, maxTrayCount, page);
+  return decorateLayoutProblems(view, trayCount, maxTrayCount, page, layout, sizes.caption);
+}
+
+/** decorateProblems for `layout`, the layout of that canvas, tray and page with the `caption` it was measured with. */
+function decorateLayoutProblems(
+  view: HudView,
+  trayCount: number,
+  maxTrayCount: number,
+  page: number,
+  layout: DecorateLayout,
+  caption: Size | null,
+): string[] {
+  const label = `decorate ${view.cssW}x${view.cssH} tray=${trayCount}/${maxTrayCount} page=${page}`;
   const targets = decorateTargets(layout);
   const all: [string, Rect][] = layout.caption ? [...targets, ['caption', layout.caption]] : targets;
   const problems = [
@@ -362,7 +373,7 @@ function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number
     problems.push(...roomProblems(label, view, targets));
     if (layout.caption === null) problems.push(`${label}: no caption`);
   } else {
-    problems.push(...captionRuleProblems(label, view, layout, sizes.caption));
+    problems.push(...captionRuleProblems(label, view, layout, caption));
   }
   problems.push(...pageProblems(label, layout, trayCount));
   if (layout.page !== page) problems.push(`${label}: shows page ${layout.page}`);
@@ -372,11 +383,16 @@ function decorateProblems(view: HudView, trayCount: number, maxTrayCount: number
 
 /**
  * Every decorate problem on every page of one tray. pageProblems pins each page's start, square
- * count and the page count, so each tray item is on exactly one page.
+ * count and the page count, so each tray item is on exactly one page. The first page's layout, which
+ * gives the page count, is the one checked as page 0.
  */
 function trayPagesProblems(view: HudView, trayCount: number, maxTrayCount: number): string[] {
-  const first = decorateLayout(view, tankFrame(view.cssW, view.cssH), trayCount, decorateSizes(view), maxTrayCount);
-  return Array.from({ length: first.pageCount }, (_, page) => page).flatMap((page) => decorateProblems(view, trayCount, maxTrayCount, page));
+  const frame = tankFrame(view.cssW, view.cssH);
+  const sizes = decorateSizes(view);
+  const layoutOf = (page: number): DecorateLayout => decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
+  const first = layoutOf(0);
+  const layouts = Array.from({ length: first.pageCount }, (_, page) => (page === 0 ? first : layoutOf(page)));
+  return layouts.flatMap((layout, page) => decorateLayoutProblems(view, trayCount, maxTrayCount, page, layout, sizes.caption));
 }
 
 /**
@@ -824,16 +840,19 @@ describe('decorateLayout', () => {
     expect(problems).toEqual([]);
   });
 
-  it('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    expect(SHIPPED_DECORATIONS).toHaveLength(56);
-    const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
-    const problems = supportedCanvases().flatMap((view) =>
-      maxCounts.flatMap((maxTrayCount) =>
+  describe('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
+    it('sweeps the 59 shipped Decorations', () => {
+      expect(SHIPPED_DECORATIONS).toHaveLength(59);
+    });
+
+    it.each(supportedCanvases())('at $cssW x $cssH', (view) => {
+      const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
+      const problems = maxCounts.flatMap((maxTrayCount) =>
         maxCounts.filter((trayCount) => trayCount <= maxTrayCount).flatMap((trayCount) => trayPagesProblems(view, trayCount, maxTrayCount)),
-      ),
-    );
-    expect(problems).toEqual([]);
-  }, 60_000);
+      );
+      expect(problems).toEqual([]);
+    });
+  });
 
   it('uses 64 px tray squares and always reserves the Put away slot', () => {
     const view = { cssW: 800, cssH: 600 };
@@ -998,7 +1017,7 @@ function traysFrom(least: number): number[] {
   return Array.from({ length: SHIPPED_DECORATIONS.length - least + 1 }, (_, index) => least + index);
 }
 
-/** Canvases where a tray of 18 to 54 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
+/** Canvases where a tray of 18 to 58 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
 const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 440 }, traysFrom(22)],
   [{ cssW: 320, cssH: 480 }, traysFrom(22)],
@@ -1007,6 +1026,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 667 }, traysFrom(42)],
   [{ cssW: 320, cssH: 740 }, traysFrom(47)],
   [{ cssW: 320, cssH: 768 }, traysFrom(47)],
+  [{ cssW: 320, cssH: 844 }, traysFrom(57)],
   [{ cssW: 340, cssH: 440 }, traysFrom(23)],
   [{ cssW: 340, cssH: 480 }, traysFrom(23)],
   [{ cssW: 340, cssH: 568 }, traysFrom(33)],
@@ -1031,6 +1051,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 375, cssH: 740 }, traysFrom(43)],
   [{ cssW: 375, cssH: 768 }, traysFrom(48)],
   [{ cssW: 375, cssH: 844 }, traysFrom(53)],
+  [{ cssW: 375, cssH: 932 }, traysFrom(58)],
   [{ cssW: 390, cssH: 440 }, traysFrom(22)],
   [{ cssW: 390, cssH: 480 }, traysFrom(28)],
   [{ cssW: 390, cssH: 568 }, traysFrom(34)],
@@ -1043,12 +1064,15 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 414, cssH: 568 }, traysFrom(40)],
   [{ cssW: 414, cssH: 600 }, traysFrom(40)],
   [{ cssW: 414, cssH: 667 }, traysFrom(46)],
+  [{ cssW: 414, cssH: 740 }, traysFrom(58)],
+  [{ cssW: 414, cssH: 768 }, traysFrom(58)],
   [{ cssW: 430, cssH: 440 }, traysFrom(22)],
   [{ cssW: 430, cssH: 480 }, traysFrom(28)],
   [{ cssW: 430, cssH: 568 }, traysFrom(40)],
   [{ cssW: 430, cssH: 600 }, traysFrom(40)],
   [{ cssW: 430, cssH: 667 }, traysFrom(46)],
   [{ cssW: 430, cssH: 740 }, traysFrom(52)],
+  [{ cssW: 430, cssH: 768 }, traysFrom(58)],
   [{ cssW: 459, cssH: 440 }, traysFrom(26)],
   [{ cssW: 459, cssH: 480 }, traysFrom(33)],
   [{ cssW: 459, cssH: 568 }, traysFrom(40)],
@@ -1083,10 +1107,13 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 640, cssH: 414 }, traysFrom(38)],
   [{ cssW: 640, cssH: 440 }, traysFrom(38)],
   [{ cssW: 640, cssH: 480 }, traysFrom(48)],
+  [{ cssW: 640, cssH: 568 }, traysFrom(58)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 667, cssH }, traysFrom(28)]),
   [{ cssW: 667, cssH: 414 }, traysFrom(38)],
   [{ cssW: 667, cssH: 440 }, traysFrom(38)],
   [{ cssW: 667, cssH: 480 }, traysFrom(48)],
+  [{ cssW: 667, cssH: 568 }, traysFrom(58)],
+  [{ cssW: 667, cssH: 600 }, traysFrom(58)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 736, cssH }, traysFrom(31)]),
   [{ cssW: 736, cssH: 414 }, traysFrom(42)],
   [{ cssW: 736, cssH: 440 }, traysFrom(42)],
@@ -1102,7 +1129,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
 ];
 
 describe('decorate tray pages', () => {
-  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 54 or more on the other narrow and tall canvases, 25 to 52 at 568 wide, 28 or 48 at 640 and 667 wide, 31 to 53 at 736 wide, 36 or 49 at 800 wide, 37 or 50 at 844 wide and 46 at 1024 wide', () => {
+  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 58 or more on the other narrow and tall canvases, 25 to 52 at 568 wide, 28, 48 or 58 at 640 and 667 wide, 31 to 53 at 736 wide, 36 or 49 at 800 wide, 37 or 50 at 844 wide and 46 at 1024 wide', () => {
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const paged = supportedCanvases().flatMap((view) => {
       const counts = maxCounts.filter((trayCount) => sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length).pageCount > 1);

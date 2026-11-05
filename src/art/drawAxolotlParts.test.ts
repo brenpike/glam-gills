@@ -19,6 +19,7 @@ import {
   AXO_SIZE_SCALE,
   AXO_TAILS,
   BACK_ANCHOR_X,
+  BACK_BIG_BOX_MIN_V,
   BACK_BOX_MAX_V,
   BACK_BOX_MIN_LENGTH,
   BACK_BOX_MIN_V,
@@ -45,6 +46,7 @@ import {
   GLASSES_LENSES,
   GLASSES_TEMPLE_MIN_X,
   HEAD_ELLIPSE,
+  HEAD_BIG_FOOTPRINT,
   HEAD_FOOTPRINT,
   HEAD_SLOT_ANCHOR,
   LASH_REACH,
@@ -77,6 +79,7 @@ import {
   NEAR_EYE_ZONE as CODE_NEAR_EYE_ZONE,
   NEAR_LASH_REACH,
   axolotlBodyGeometry,
+  backBigFootprint,
   backFootprint,
   backFrameBox,
   backFrame,
@@ -2237,6 +2240,24 @@ describe('Head, Neck and Face slots (guide 6i): on the head, they never move', (
     expect(HEAD_FOOTPRINT.minX).toBeGreaterThan(15.5);
   });
 
+  it('has an opt-in big Head footprint (#207): x 16 to 56, y -72 to -19.5, holding the Head footprint, clear of the eyes, lashes, gill roots and cheek heart', () => {
+    expect(HEAD_BIG_FOOTPRINT).toEqual({ minX: 16, minY: -72, maxX: 56, maxY: -19.5 });
+    expect(isInside(HEAD_FOOTPRINT, HEAD_BIG_FOOTPRINT)).toBe(true);
+    // Same back edge and lowest point as the Head footprint: it grows only forward and up.
+    expect(HEAD_BIG_FOOTPRINT.minX).toBe(HEAD_FOOTPRINT.minX);
+    expect(HEAD_BIG_FOOTPRINT.maxY).toBe(HEAD_FOOTPRINT.maxY);
+    expect(HEAD_BIG_FOOTPRINT.maxY).toBe(LASH_MIN_Y);
+    expect(HEAD_BIG_FOOTPRINT.minX).toBeGreaterThan(15.5);
+    expect(clearOfEyesAndGills(HEAD_BIG_FOOTPRINT)).toBe(true);
+    expect(clearOfLashReach(HEAD_BIG_FOOTPRINT)).toBe(true);
+    expect(boxCircleGap(HEAD_BIG_FOOTPRINT, CHEEK_HEART_ZONE)).toBeGreaterThan(0);
+    // FRAME_PAD or more inside the AXO_TEX frame: the padded top is y -75.
+    expect(frameInner(FRAME_PAD).minY).toBe(-75);
+    expect(isInside(HEAD_BIG_FOOTPRINT, frameInner(FRAME_PAD))).toBe(true);
+    expect(HEAD_BIG_FOOTPRINT.minY - frameInner(FRAME_PAD).minY).toBe(3);
+    expect(frameInner(FRAME_PAD).maxX - HEAD_BIG_FOOTPRINT.maxX).toBe(4);
+  });
+
   it('keeps the Neck footprint under the chin (#88), x 2 to 42, y 13.1 to 22.75: clear of the eyes, lashes and gill roots, over the mouth-zone box', () => {
     expect(NECK_FOOTPRINT).toEqual({ minX: 2, minY: 13.1, maxX: 42, maxY: 22.75 });
     expect(clearOfEyesAndGills(NECK_FOOTPRINT)).toBe(true);
@@ -2545,6 +2566,76 @@ describe('Back slot (guide 6i)', () => {
         );
       }),
     ).toEqual([]);
+  });
+});
+
+describe('big Back slot (#207, guide 6i): opt-in, outer edge y\' -30', () => {
+  it('is the Back box with only its outer edge moved out to y\' -30: same frame, length, body-side edge and forward corner', () => {
+    expect(BACK_BIG_BOX_MIN_V).toBe(-30);
+    expect(
+      failingBodyLooks((look) => {
+        const torso = axolotlBodyGeometry(look).torso;
+        const big = backBigFootprint(look);
+        const back = backFootprint(look);
+        const forward = framePoint(big.frame, big.box.maxU, big.box.maxV);
+        return (
+          JSON.stringify(big.frame) === JSON.stringify(back.frame) &&
+          JSON.stringify(big.box) === JSON.stringify({ ...back.box, minV: BACK_BIG_BOX_MIN_V }) &&
+          JSON.stringify(backFrameBox(torso, BACK_BIG_BOX_MIN_V)) === JSON.stringify(big.box) &&
+          Math.abs(forward.x - SHIRT_BACK_FRONT_LINE_X) < 1e-9 &&
+          big.corners.every((c) => c.x <= forward.x + 1e-9) &&
+          isInside(back.bounds, big.bounds)
+        );
+      }),
+    ).toEqual([]);
+  });
+
+  it('leaves the Back box as it was: backFootprint and backFrameBox keep the outer edge at y\' -14', () => {
+    expect(BACK_BOX_MIN_V).toBe(-14);
+    expect(
+      failingBodyLooks((look) => {
+        const torso = axolotlBodyGeometry(look).torso;
+        return backFootprint(look).box.minV === -14 && backFrameBox(torso).minV === -14;
+      }),
+    ).toEqual([]);
+  });
+
+  it('keeps its forward corner at x -5.5 or less, clear of the gill-root zone, the head, the eyes, the lashes and the cheek heart', () => {
+    expect(
+      failingBodyLooks((look) => {
+        const { bounds } = backBigFootprint(look);
+        return (
+          bounds.maxX <= SHIRT_BACK_FRONT_LINE_X + BACK_FRONT_ROUNDING &&
+          GILL_ROOT_ZONE.minX - bounds.maxX >= 0.5 - BACK_FRONT_ROUNDING &&
+          bounds.maxX < HEAD_ELLIPSE.cx - HEAD_ELLIPSE.rx &&
+          clearOfEyesAndGills(bounds) &&
+          clearOfLashReach(bounds) &&
+          boxCircleGap(bounds, CHEEK_HEART_ZONE) > 0
+        );
+      }),
+    ).toEqual([]);
+  });
+
+  it('keeps every gill root and its stem ink clear, with no root inside its footprint', () => {
+    const stemInk = GILL_STEM_W / 2 + GILL_STEM_OL;
+    const roots = [...FAR_GILL_ROOTS, ...NEAR_GILL_ROOTS];
+    expect(
+      failingBodyLooks((look) => {
+        const { bounds } = backBigFootprint(look);
+        return roots.every(
+          (root) =>
+            bounds.maxX <= root.bx - stemInk + 1e-9 || boxCircleGap(bounds, { x: root.bx, y: root.by, r: stemInk }) >= 0,
+        );
+      }),
+    ).toEqual([]);
+  });
+
+  it('has its four corners at x -38.0 to -5.5 and y -53.7 to -3.4 over every look, FRAME_PAD or more inside the AXO_TEX frame', () => {
+    const inner = frameInner(FRAME_PAD);
+    expect(failingBodyLooks((look) => isInside(backBigFootprint(look).bounds, inner))).toEqual([]);
+    const all = unionBounds(EVERY_BODY_LOOK.map((look) => backBigFootprint(look).bounds));
+    expectBoxNear(all, { minX: -38.0, minY: -53.7, maxX: -5.5, maxY: -3.4 }, 0.06);
+    expect(all.minY - inner.minY).toBeGreaterThan(21);
   });
 });
 

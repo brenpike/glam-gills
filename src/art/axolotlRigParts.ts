@@ -54,6 +54,7 @@ import {
   GILL_STEM_OL,
   GILL_STEM_W,
   GLASSES_EXTENT,
+  HEAD_BIG_FOOTPRINT,
   HEAD_ELLIPSE,
   HEAD_FOOTPRINT,
   MOUTH_ZONE,
@@ -62,6 +63,7 @@ import {
   NECK_FOOTPRINT,
   TAIL_SEGMENTS,
   axolotlBodyGeometry,
+  backBigFootprint,
   backFootprint,
   boundsOfPoints,
   feetEnvelope,
@@ -90,7 +92,7 @@ import {
   type WearFrame,
   type ZoneCircle,
 } from './drawAxolotlParts';
-import { outfitKey, paintBodyWearable, paintLegWearables, wearsOnLegs, wornSlug, type ArtOutfit } from './drawWearables';
+import { outfitKey, paintBodyWearable, paintLegWearables, wearsBigItem, wearsOnLegs, wornSlug, type ArtOutfit } from './drawWearables';
 import { tailStripe, type TailStripe } from './axolotlRigStripe';
 import { isSheenDream } from './drawDreamOverlay';
 import { LW, T_STATIC, type DreamLookId, type MorphPalette } from './palette';
@@ -619,7 +621,9 @@ function tailMaxDy(look: AxolotlArtLook): number {
 /**
  * Ink box of the face part: the head (the blush sits on the cheeks inside it),
  * a Girl's cheek heart zone, the mouth zone (every mouth) and the footprint of
- * each worn Shirt, Neck, Back, Head and Face item.
+ * each worn Shirt, Neck, Back, Head and Face item. A big Head or Back item
+ * (wearsBigItem, issue #207) adds its big footprint instead, so only an
+ * axolotl wearing one bakes the taller face part.
  */
 function facePartInk(look: AxolotlArtLook, outfit: ArtOutfit): Bounds {
   const head: Bounds = {
@@ -631,8 +635,8 @@ function facePartInk(look: AxolotlArtLook, outfit: ArtOutfit): Bounds {
   const boxes: Bounds[] = [head, circleBounds(CHEEK_HEART_ZONE), MOUTH_ZONE];
   if (wornSlug(outfit, 'shirt') !== undefined) boxes.push(shirtGeometry(look).bounds);
   if (wornSlug(outfit, 'neck') !== undefined) boxes.push(NECK_FOOTPRINT);
-  if (wornSlug(outfit, 'back') !== undefined) boxes.push(backFootprint(look).bounds);
-  if (wornSlug(outfit, 'head') !== undefined) boxes.push(HEAD_FOOTPRINT);
+  if (wornSlug(outfit, 'back') !== undefined) boxes.push((wearsBigItem(outfit, 'back') ? backBigFootprint(look) : backFootprint(look)).bounds);
+  if (wornSlug(outfit, 'head') !== undefined) boxes.push(wearsBigItem(outfit, 'head') ? HEAD_BIG_FOOTPRINT : HEAD_FOOTPRINT);
   if (wornSlug(outfit, 'face') !== undefined) boxes.push(GLASSES_EXTENT);
   return unionBounds(boxes);
 }

@@ -291,23 +291,36 @@ function makeCombination(label: string, canvas: Canvas, count: number, sections:
   return { label, canvas, count, availH: canvas.cssH - 2 * CARD.margin, sections };
 }
 
-/** Tank arrival card combinations for one reason, area, treasure list and total, with and without axolotls. */
-function arrivalAreaCombinations(
-  canvas: Canvas,
+/**
+ * One card's wording on any canvas `cssW` wide. Its sections depend on the width only, so one card
+ * text serves every supported height of that width. Its label is `${prefix} ${size} ${suffix}`.
+ */
+interface CardText {
+  prefix: string;
+  suffix: string;
+  count: number;
+  sections: CardSection[];
+}
+
+/** The combination of `card` on one canvas, `card` built for that canvas's width. */
+function placeCardText(card: Readonly<CardText>, canvas: Canvas): Combination {
+  return makeCombination(`${card.prefix} ${canvas.cssW}x${canvas.cssH} ${card.suffix}`, canvas, card.count, card.sections);
+}
+
+/** Tank arrival card texts on a `cssW` wide canvas for one reason, area, treasure list and total, with and without axolotls. */
+function arrivalAreaCards(
+  cssW: number,
   reason: ArrivalReason,
   area: Readonly<AreaData>,
   names: readonly string[],
   total: number,
-): Combination[] {
-  const size = `${canvas.cssW}x${canvas.cssH}`;
-  return ARRIVAL_AXOLOTL_CASES.map((axolotls) =>
-    makeCombination(
-      `arrival ${reason} ${area.id} ${size} n=${names.length} total=${total}${axolotls.tag}`,
-      canvas,
-      names.length,
-      arrivalSections(reason, names, total, canvas.cssW, axolotls, area),
-    ),
-  );
+): CardText[] {
+  return ARRIVAL_AXOLOTL_CASES.map((axolotls) => ({
+    prefix: `arrival ${reason} ${area.id}`,
+    suffix: `n=${names.length} total=${total}${axolotls.tag}`,
+    count: names.length,
+    sections: arrivalSections(reason, names, total, cssW, axolotls, area),
+  }));
 }
 
 /**
@@ -321,53 +334,91 @@ function isTripCount(reason: ArrivalReason, area: Readonly<AreaData>, count: num
 }
 
 /**
- * Tank arrival card combinations for one treasure list and total, for each reason and its areas.
- * With `isOneTrip`, only the areas whose trip can bring home that many treasures (isTripCount).
+ * Tank arrival card texts on a `cssW` wide canvas for one treasure list and total, for each reason
+ * and its areas. With `isOneTrip`, only the areas whose trip can bring home that many treasures
+ * (isTripCount).
  */
-function arrivalCombinations(
-  canvas: Canvas,
-  names: readonly string[],
-  total: number,
-  isOneTrip: boolean,
-): Combination[] {
+function arrivalCards(cssW: number, names: readonly string[], total: number, isOneTrip: boolean): CardText[] {
   return ARRIVAL_REASONS.flatMap((reason) =>
     arrivalAreas(reason)
       .filter((area) => !isOneTrip || isTripCount(reason, area, names.length))
-      .flatMap((area) => arrivalAreaCombinations(canvas, reason, area, names, total)),
+      .flatMap((area) => arrivalAreaCards(cssW, reason, area, names, total)),
   );
 }
 
-/** Banking card combinations for one treasure list and total, with and without a rescued axolotl. */
-function bankingCombinations(canvas: Canvas, names: readonly string[], total: number): Combination[] {
-  const size = `${canvas.cssW}x${canvas.cssH}`;
-  return BANKING_AXOLOTL_CASES.map((axolotls) =>
-    makeCombination(
-      `banking ${size} n=${names.length} total=${total}${axolotls.tag}`,
-      canvas,
-      names.length,
-      bankingSections(names, total, canvas.cssW, axolotls),
-    ),
-  );
+/** Banking card texts on a `cssW` wide canvas for one treasure list and total, with and without a rescued axolotl. */
+function bankingCards(cssW: number, names: readonly string[], total: number): CardText[] {
+  return BANKING_AXOLOTL_CASES.map((axolotls) => ({
+    prefix: 'banking',
+    suffix: `n=${names.length} total=${total}${axolotls.tag}`,
+    count: names.length,
+    sections: bankingSections(names, total, cssW, axolotls),
+  }));
+}
+
+/** Treasure counts `first` to `last`, inclusive. */
+interface CountRange {
+  first: number;
+  last: number;
+}
+
+/** Every count in `range`, in order. */
+function rangeCounts(range: Readonly<CountRange>): number[] {
+  return Array.from({ length: range.last - range.first + 1 }, (_, offset) => range.first + offset);
 }
 
 /**
- * Every tank arrival card and banking card combination on one canvas, naming 0 to the whole
- * catalogue of the longest catalogue names. With `isOneTrip`, only what one trip can bring home:
- * 0 to MAX_TRIP_FINDS names, and an "Area beaten" card names at most its area's own catalogue size
- * (isTripCount).
+ * Every tank arrival card and banking card text on a `cssW` wide canvas, naming each count in
+ * `counts` of the longest catalogue names. With `isOneTrip`, an "Area beaten" card names at most its
+ * area's own catalogue size (isTripCount).
  */
-function canvasCombinations(canvas: Canvas, isOneTrip: boolean = false): Combination[] {
-  const maxCount = isOneTrip ? MAX_TRIP_FINDS : SORTED_NAMES.length;
-  const combinations: Combination[] = [];
-  for (let count = 0; count <= maxCount; count++) {
+function widthCards(cssW: number, counts: Readonly<CountRange>, isOneTrip: boolean): CardText[] {
+  const cards: CardText[] = [];
+  for (const count of rangeCounts(counts)) {
     const names = SORTED_NAMES.slice(0, count);
     for (const total of BANKED_TOTALS) {
-      combinations.push(...arrivalCombinations(canvas, names, total, isOneTrip));
+      cards.push(...arrivalCards(cssW, names, total, isOneTrip));
       if (total < count) continue;
-      combinations.push(...bankingCombinations(canvas, names, total));
+      cards.push(...bankingCards(cssW, names, total));
     }
   }
-  return combinations;
+  return cards;
+}
+
+/**
+ * Every tank arrival card and banking card combination on one canvas for what one trip can bring
+ * home: 0 to MAX_TRIP_FINDS names, and an "Area beaten" card names at most its area's own catalogue
+ * size (isTripCount).
+ */
+function oneTripCombinations(canvas: Canvas): Combination[] {
+  return widthCards(canvas.cssW, { first: 0, last: MAX_TRIP_FINDS }, true).map((card) => placeCardText(card, canvas));
+}
+
+/** Treasure counts per whole-catalogue sweep test, so each test sits far under FIT_TIMEOUT_MS on a loaded runner. */
+const SWEEP_CHUNK_COUNTS = 20;
+
+/** 0 to the whole catalogue, in ranges of SWEEP_CHUNK_COUNTS counts. */
+function catalogueCountRanges(): CountRange[] {
+  const ranges: CountRange[] = [];
+  for (let first = 0; first <= SORTED_NAMES.length; first += SWEEP_CHUNK_COUNTS) {
+    ranges.push({ first, last: Math.min(first + SWEEP_CHUNK_COUNTS - 1, SORTED_NAMES.length) });
+  }
+  return ranges;
+}
+
+/** One whole-catalogue sweep test: every supported canvas `cssW` wide, naming `first` to `last` treasures. */
+interface SweepCase extends CountRange {
+  cssW: number;
+}
+
+const CATALOGUE_SWEEP_CASES: readonly SweepCase[] = CANVAS_WIDTHS.flatMap((cssW) =>
+  catalogueCountRanges().map((range) => ({ cssW, ...range })),
+);
+
+/** Every combination of one sweep case: its card texts, built once for the width, on each supported height. */
+function sweepCombinations(sweep: Readonly<SweepCase>): Combination[] {
+  const cards = widthCards(sweep.cssW, sweep, false);
+  return supportedCanvasesOfWidth(sweep.cssW).flatMap((canvas) => cards.map((card) => placeCardText(card, canvas)));
 }
 
 /** One fact card on one canvas. */
@@ -415,23 +466,33 @@ describe('card copy fit', () => {
     expect(SORTED_AXOLOTL_NAMES[0]).toBe('Golden albino axolotl');
   });
 
-  it('brings home at most the 20 canal treasures on one trip, of the 140 in the catalogue', () => {
+  it('brings home at most the 20 canal treasures on one trip, of the 151 in the catalogue', () => {
     expect(MAX_TRIP_FINDS).toBe(20);
-    expect(SORTED_NAMES).toHaveLength(140);
+    expect(SORTED_NAMES).toHaveLength(151);
   });
 
-  it.each(CANVAS_WIDTHS)(
-    'fits every wording combination, naming up to the whole catalogue, on every supported canvas %i wide without clipping',
-    (cssW) => {
-      const combinations = supportedCanvasesOfWidth(cssW).flatMap((canvas) => canvasCombinations(canvas));
-      expect(combinations.length).toBeGreaterThan(0);
-      const problems = combinations.flatMap((combination) =>
-        fitProblems(combination, fitCard(combination.availH, combination.sections)),
-      );
-      expect(problems).toEqual([]);
-    },
-    FIT_TIMEOUT_MS,
-  );
+  describe('fits every wording combination, naming up to the whole catalogue, on every supported canvas without clipping', () => {
+    it('names 0 to the whole catalogue, each count once, at every canvas width', () => {
+      for (const cssW of CANVAS_WIDTHS) {
+        const counts = CATALOGUE_SWEEP_CASES.filter((sweep) => sweep.cssW === cssW).flatMap(rangeCounts);
+        expect(counts, `${cssW} wide`).toEqual(rangeCounts({ first: 0, last: SORTED_NAMES.length }));
+      }
+      expect(new Set(CATALOGUE_SWEEP_CASES.map((sweep) => sweep.cssW))).toEqual(new Set(CANVAS_WIDTHS));
+    });
+
+    it.each(CATALOGUE_SWEEP_CASES)(
+      'at $cssW wide, naming $first to $last',
+      (sweep) => {
+        const combinations = sweepCombinations(sweep);
+        expect(combinations.length).toBeGreaterThan(0);
+        const problems = combinations.flatMap((combination) =>
+          fitProblems(combination, fitCard(combination.availH, combination.sections)),
+        );
+        expect(problems).toEqual([]);
+      },
+      FIT_TIMEOUT_MS,
+    );
+  });
 
   it.each([
     { cssW: 800, cssH: 600 },
@@ -439,7 +500,7 @@ describe('card copy fit', () => {
   ])(
     'shows the full body and every icon of one trip at $cssW x $cssH',
     (canvas) => {
-      const problems = canvasCombinations(canvas, true).flatMap((combination) =>
+      const problems = oneTripCombinations(canvas).flatMap((combination) =>
         downgradeProblems(combination, fitCard(combination.availH, combination.sections)),
       );
       expect(problems).toEqual([]);

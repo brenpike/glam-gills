@@ -6,10 +6,12 @@ import {
   AXO_SEXES,
   AXO_TAILS,
   DEFAULT_ART_LOOK,
+  HEAD_BIG_FOOTPRINT,
   HEAD_FOOTPRINT,
   NECK_FOOTPRINT,
   WEARABLE_SLOTS,
   axolotlBodyGeometry,
+  backBigFootprint,
   backFootprint,
   feetEnvelope,
   framePoint,
@@ -52,11 +54,11 @@ function everyBodyLook(): AxolotlArtLook[] {
 const EVERY_BODY_LOOK = everyBodyLook();
 const lookId = (look: AxolotlArtLook): string => [look.sex, look.tail, look.body, look.age].join(' ');
 
-/** The footprint boxes of `slot` on `look` over the fine swim cycle and every tail amplitude. */
+/** The footprint boxes of `slot` on `look` over the fine swim cycle and every tail amplitude; Head and Back with their big footprints. */
 function footprintBoxesOf(slot: WearableSlot, look: AxolotlArtLook): Bounds[] {
   switch (slot) {
     case 'head':
-      return [HEAD_FOOTPRINT];
+      return [HEAD_FOOTPRINT, HEAD_BIG_FOOTPRINT];
     case 'neck':
       return [NECK_FOOTPRINT];
     case 'face':
@@ -64,7 +66,7 @@ function footprintBoxesOf(slot: WearableSlot, look: AxolotlArtLook): Bounds[] {
     case 'shirt':
       return [shirtGeometry(look).bounds];
     case 'back':
-      return [backFootprint(look).bounds];
+      return [backFootprint(look).bounds, backBigFootprint(look).bounds];
     case 'tail': {
       const { tail } = axolotlBodyGeometry(look);
       return SWIM_PHASES.flatMap((swim) => TAIL_AMPS.map((amp) => tailSlotBounds(tailSlotFrame(tail, swim, amp))));
@@ -139,8 +141,31 @@ describe('Outfit slot crops', () => {
     }
   });
 
+  it('grows the Head and Back crops to hold the big footprints (#207): Head x 12 to 60, y -76 to -15; Back x -43 to -1, y -58 to 1', () => {
+    expect(OUTFIT_SLOT_CROPS.head).toEqual({ minX: 12, minY: -76, maxX: 60, maxY: -15 });
+    expect(OUTFIT_SLOT_CROPS.back).toEqual({ minX: -43, minY: -58, maxX: -1, maxY: 1 });
+    // The Head crop's forward edge is the AXO_TEX frame's, less CROP_PAD.
+    expect(FRAME.maxX - OUTFIT_SLOT_CROPS.head.maxX).toBe(CROP_PAD);
+    expect(insideBy(HEAD_BIG_FOOTPRINT, OUTFIT_SLOT_CROPS.head, CROP_PAD)).toBe(true);
+    const bigBack = EVERY_BODY_LOOK.filter((look) => !insideBy(backBigFootprint(look).bounds, OUTFIT_SLOT_CROPS.back, CROP_PAD));
+    expect(bigBack.map(lookId)).toEqual([]);
+  });
+
+  it('keeps every other crop as it was', () => {
+    expect(OUTFIT_SLOT_CROPS.neck).toEqual({ minX: -2, minY: 9, maxX: 46, maxY: 27 });
+    expect(OUTFIT_SLOT_CROPS.face).toEqual({ minX: 10, minY: -22, maxX: 58, maxY: 10 });
+    expect(OUTFIT_SLOT_CROPS.shirt).toEqual({ minX: -42, minY: -26, maxX: -1, maxY: 34 });
+    expect(OUTFIT_SLOT_CROPS.tail).toEqual({ minX: -76, minY: -36, maxX: -5, maxY: 23 });
+    expect(OUTFIT_SLOT_CROPS.socks).toEqual({ minX: -67, minY: 0, maxX: 52, maxY: 63 });
+  });
+
   it('keeps the Face footprint at x 14 to 54, y -18 to 6', () => {
     expect(FACE_FOOTPRINT).toEqual({ minX: 14, minY: -18, maxX: 54, maxY: 6 });
+  });
+
+  it('keeps the Face footprint 1.5 under the Head footprint and the big Head footprint', () => {
+    expect(FACE_FOOTPRINT.minY - HEAD_FOOTPRINT.maxY).toBe(1.5);
+    expect(FACE_FOOTPRINT.minY - HEAD_BIG_FOOTPRINT.maxY).toBe(1.5);
   });
 });
 
@@ -165,6 +190,16 @@ describe('slotFootprintPaths', () => {
       }
     }
     expect(failing).toEqual([]);
+  });
+
+  it('outlines the Head footprint, not the big one, CUE_INSET inside its edges', () => {
+    const [path] = slotFootprintPaths('head', DEFAULT_ART_LOOK, CUE_INSET) as unknown as HullPath2D[];
+    expect(hullBounds(path)).toEqual({
+      minX: HEAD_FOOTPRINT.minX + CUE_INSET,
+      minY: HEAD_FOOTPRINT.minY + CUE_INSET,
+      maxX: HEAD_FOOTPRINT.maxX - CUE_INSET,
+      maxY: HEAD_FOOTPRINT.maxY - CUE_INSET,
+    });
   });
 
   it('outlines the Back box of each look (#88: it depends on the torso), CUE_INSET inside its corners', () => {

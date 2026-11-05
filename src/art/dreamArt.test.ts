@@ -63,6 +63,8 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'olive',
   'peach',
   'marigold',
+  'lime',
+  'hyacinth',
 ];
 const DARK_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -87,6 +89,8 @@ const RIM_IDS: readonly DreamLookId[] = [
   'confetti-shine',
   'marigold',
   'golden-hour-shine',
+  'lime',
+  'lagoon-shine',
 ];
 const SWIM_SAMPLES = Array.from({ length: 13 }, (_, i) => (i / 12) * TAU);
 const TAIL_AMPS = [1, 1.6] as const;
@@ -176,9 +180,9 @@ function everyPair(): [string, DreamLookId, MorphPalette][] {
 }
 
 describe('Dream colour slots (guide 3f)', () => {
-  it('has the twenty-eight Dream colours with the swatch body colours', () => {
-    expect(DREAM_IDS).toHaveLength(28);
-    expect(DREAM_IDS.slice(-16)).toEqual([
+  it('has the thirty-one Dream colours with the swatch body colours', () => {
+    expect(DREAM_IDS).toHaveLength(31);
+    expect(DREAM_IDS.slice(-19)).toEqual([
       'lily-green',
       'firefly-gold',
       'poppy-red',
@@ -195,6 +199,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine',
       'marigold',
       'golden-hour-shine',
+      'lime',
+      'hyacinth',
+      'lagoon-shine',
     ]);
     expect(DREAM_IDS).toEqual(Object.keys(DREAM_SWATCH));
     for (const id of DREAM_IDS) expect(DREAM_SLOTS[id].body, id).toBe(DREAM_SWATCH[id].body);
@@ -282,6 +289,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [7.48, 0.599],
       marigold: [1.23, 0.076],
       'golden-hour-shine': [1.8, 0.175],
+      lime: [1.38, 0.158],
+      hyacinth: [2.27, 0.398],
+      'lagoon-shine': [1.59, 0.296],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -348,6 +358,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [2.63, 0.333],
       marigold: [2.32, 0.258],
       'golden-hour-shine': [1.58, 0.217],
+      lime: [2.06, 0.339],
+      hyacinth: [1.25, 0.283],
+      'lagoon-shine': [1.79, 0.331],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -423,6 +436,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [1.7, 0.13],
       marigold: [3.58, 0.406],
       'golden-hour-shine': [2.44, 0.334],
+      lime: [3.18, 0.428],
+      hyacinth: [1.93, 0.181],
+      'lagoon-shine': [2.76, 0.303],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -497,6 +513,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [9.9, 0.613],
       marigold: [1.62, 0.222],
       'golden-hour-shine': [2.38, 0.303],
+      lime: [1.83, 0.281],
+      hyacinth: [3, 0.349],
+      'lagoon-shine': [2.11, 0.257],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -574,6 +593,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [1.13, 0.214],
       marigold: [5.39, 0.434],
       'golden-hour-shine': [3.67, 0.326],
+      lime: [4.79, 0.417],
+      hyacinth: [2.91, 0.339],
+      'lagoon-shine': [4.15, 0.385],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -649,6 +671,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [3.14, 0.346],
       marigold: [1.95, 0.295],
       'golden-hour-shine': [1.33, 0.202],
+      lime: [1.73, 0.225],
+      hyacinth: [1.05, 0.207],
+      'lagoon-shine': [1.5, 0.127],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -656,10 +681,10 @@ describe('Dream colour slots (guide 3f)', () => {
     }
     // Iridescent also glides a stripe pair, so Crystal shine is held 1.5:1 from it in value.
     expect(separation.iridescent[0]).toBeGreaterThanOrEqual(1.5);
-    // Olive and Lantern shine (Area 9, issue #107) sit either side of it in value and are told apart by hue; Lantern
-    // shine also glides the stripe pair, in its own candle cream and gold.
+    // Hyacinth (Area 11, issue #207) is now the closest in value, told apart by hue (violet against teal) and Crystal
+    // shine's stripe pair; Olive (Area 9, issue #107) is next, told apart by hue.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 2)).toEqual(['olive', 'lantern-shine']);
+    expect(closest.slice(0, 2)).toEqual(['hyacinth', 'olive']);
   });
 
   it('keeps the Crystal shine stripes lighter than the body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p, 10)', () => {
@@ -748,6 +773,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [1.51, 0.198],
       marigold: [9.22, 0.626],
       'golden-hour-shine': [6.28, 0.516],
+      lime: [8.19, 0.584],
+      hyacinth: [4.98, 0.42],
+      'lagoon-shine': [7.1, 0.489],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -827,6 +855,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [5.07, 0.469],
       marigold: [1.2, 0.226],
       'golden-hour-shine': [1.22, 0.175],
+      lime: [1.07, 0.134],
+      hyacinth: [1.54, 0.268],
+      'lagoon-shine': [1.08, 0.111],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -835,9 +866,10 @@ describe('Dream colour slots (guide 3f)', () => {
     for (const green of ['mint', 'lily-green', 'crystal-shine', 'olive'] as const) {
       expect(separation[green][0], `${green} greyscale margin`).toBeGreaterThanOrEqual(1.5);
     }
-    // Fiesta shine is the closest in value and is told apart by hue and its sheen stripes.
-    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
-    expect(closest).toBe('fiesta-shine');
+    // Lime and Lagoon shine (Area 11, issue #207) are now the closest in value, told apart by hue (lime and lagoon blue
+    // against blue-green), and Lagoon shine also glides its sheen stripes.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['lime', 'lagoon-shine']);
   });
 
   it('gives Fiesta shine the 3f mixes of its two picks, a bright pink body over the 0.2 spot line, the rim light and a sheen swatch (Area 8 Legendary, issue #78)', () => {
@@ -907,6 +939,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [4.43, 0.376],
       marigold: [1.38, 0.256],
       'golden-hour-shine': [1.07, 0.271],
+      lime: [1.22, 0.356],
+      hyacinth: [1.34, 0.179],
+      'lagoon-shine': [1.06, 0.251],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -914,10 +949,10 @@ describe('Dream colour slots (guide 3f)', () => {
     }
     expect(separation.bubblegum[0]).toBeGreaterThanOrEqual(1.5);
     expect(separation.iridescent[0]).toBeGreaterThanOrEqual(1.5);
-    // Golden hour shine (Area 11, issue #112) and Jade are the closest in value; hue tells them apart, and both sheens
-    // glide their own stripe colours.
+    // Lagoon shine (Area 11, issue #207) and Golden hour shine (issue #112) are the closest in value; hue tells them
+    // apart, and all three sheens glide their own stripe colours.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 2)).toEqual(['golden-hour-shine', 'jade']);
+    expect(closest.slice(0, 2)).toEqual(['lagoon-shine', 'golden-hour-shine']);
   });
 
   it('keeps the Fiesta shine stripes lighter than the body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p, 10)', () => {
@@ -997,6 +1032,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [2.88, 0.383],
       marigold: [2.12, 0.241],
       'golden-hour-shine': [1.44, 0.117],
+      lime: [1.88, 0.177],
+      hyacinth: [1.14, 0.297],
+      'lagoon-shine': [1.63, 0.23],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1076,6 +1114,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [3.46, 0.398],
       marigold: [1.76, 0.16],
       'golden-hour-shine': [1.2, 0.107],
+      lime: [1.57, 0.229],
+      hyacinth: [1.05, 0.291],
+      'lagoon-shine': [1.36, 0.275],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1084,10 +1125,10 @@ describe('Dream colour slots (guide 3f)', () => {
     for (const held of ['iridescent', 'sunset-orange', 'plum'] as const) {
       expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
     }
-    // It sits in the window between Crystal shine and Rainbow, the closest in value: hue tells them apart, Rainbow also
-    // has its bands, and Crystal shine its own stripe colours.
+    // Hyacinth (Area 11, issue #207) is now the closest in value, told apart by hue (violet against orange) and Lantern
+    // shine's own stripe colours; Rainbow is next, told apart by hue and its bands.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 2)).toEqual(['rainbow', 'crystal-shine']);
+    expect(closest.slice(0, 2)).toEqual(['hyacinth', 'rainbow']);
   });
 
   it('keeps the Lantern shine stripes lighter than the body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p, 10)', () => {
@@ -1174,6 +1215,9 @@ describe('Dream colour slots (guide 3f)', () => {
       'confetti-shine': [5.8, 0.461],
       marigold: [1.05, 0.133],
       'golden-hour-shine': [1.4, 0.185],
+      lime: [1.07, 0.246],
+      hyacinth: [1.76, 0.243],
+      'lagoon-shine': [1.24, 0.215],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1185,7 +1229,7 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(closestInColour.slice(0, 2)).toEqual(['bubblegum', 'sunset-orange']);
     expect(relativeLuminance(body)).toBeLessThan(relativeLuminance(DREAM_SLOTS['sunset-orange'].body));
     expect(relativeLuminance(body)).toBeLessThan(relativeLuminance(DREAM_SLOTS.bubblegum.body));
-    // Over 1.14:1 from Jade, so Jade's closest pair stays Fiesta shine.
+    // Over 1.14:1 from Jade, further from it than Fiesta shine is.
     expect(contrastRatio(body, DREAM_SLOTS.jade.body)).toBeGreaterThan(contrastRatio(DREAM_SLOTS.jade.body, DREAM_SLOTS['fiesta-shine'].body));
     // Its apricot gill is neither Sunset orange's red-orange nor Bubblegum's magenta.
     expect(DREAM_SLOTS.peach.gillNearStem).not.toBe(DREAM_SLOTS['sunset-orange'].gillNearStem);
@@ -1271,6 +1315,9 @@ describe('Dream colour slots (guide 3f)', () => {
       peach: [5.8, 0.461],
       marigold: [6.1, 0.532],
       'golden-hour-shine': [4.16, 0.449],
+      lime: [5.42, 0.538],
+      hyacinth: [3.29, 0.283],
+      'lagoon-shine': [4.7, 0.407],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1372,6 +1419,9 @@ describe('Dream colour slots (guide 3f)', () => {
       peach: [1.05, 0.133],
       'confetti-shine': [6.1, 0.532],
       'golden-hour-shine': [1.47, 0.125],
+      lime: [1.13, 0.164],
+      hyacinth: [1.85, 0.347],
+      'lagoon-shine': [1.3, 0.27],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1386,7 +1436,7 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(relativeLuminance(body)).toBeLessThan(relativeLuminance(DREAM_SLOTS['firefly-gold'].body));
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
     expect(closest[0]).toBe('peach');
-    // Over 1.14:1 from Jade, so Jade's closest pair stays Fiesta shine.
+    // Over 1.14:1 from Jade, further from it than Fiesta shine is.
     expect(contrastRatio(body, DREAM_SLOTS.jade.body)).toBeGreaterThan(contrastRatio(DREAM_SLOTS.jade.body, DREAM_SLOTS['fiesta-shine'].body));
     // Its deep marigold gill is neither Sunset orange's red-orange nor Firefly gold's amber.
     expect(DREAM_SLOTS.marigold.gillNearStem).not.toBe(DREAM_SLOTS['sunset-orange'].gillNearStem);
@@ -1469,6 +1519,9 @@ describe('Dream colour slots (guide 3f)', () => {
       peach: [1.4, 0.185],
       'confetti-shine': [4.16, 0.449],
       marigold: [1.47, 0.125],
+      lime: [1.3, 0.123],
+      hyacinth: [1.26, 0.308],
+      'lagoon-shine': [1.13, 0.23],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1502,6 +1555,302 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(contrastRatio(laidOverBody(rose, body), laidOverBody(gold, body))).toBeCloseTo(1.42, 2);
     expect(DREAM_INSET_IDS).not.toContain('golden-hour-shine');
   });
+
+  it('gives Lime the 3f mixes of its two picks, a mid-light lime body over the 0.2 spot line, the rim light and a plain swatch (Area 11, issue #207)', () => {
+    const s = DREAM_SLOTS.lime;
+    expect([s.body, s.gillNearStem]).toEqual(['#8ecb30', '#2e9c3f']);
+    expect([s.farSide, s.fin, s.belly, s.gillNearFilament, s.gillFarStem, s.gillFarFilament]).toEqual([
+      '#82b734',
+      '#bbe083',
+      '#cce8a2',
+      '#5cb269',
+      '#2e9041',
+      '#58a767',
+    ]);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // A mid-light body, as Jade: the ink reaches the 3:1 cue floor and the white edge does not; its worst case alone is under 3:1, so the rim light.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(7.36, 2);
+    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(CUE_RATIO);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(1.96, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeLessThan(CUE_RATIO);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeCloseTo(2.71, 2);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeLessThan(CUE_RATIO);
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(8.91, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(1.81, 2);
+    expect(contrastRatio(s.farSide, s.gillFarStem)).toBeCloseTo(1.69, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.487, 3);
+    expect(DREAM_SWATCH.lime).toEqual({ body: '#8ecb30', pattern: 'plain', marks: [], dark: false });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'lime').extras).toEqual({ spot: 'rgba(43,35,80,0.30)', rim: DREAM_RIM_LIGHT });
+  });
+
+  it('keeps Lime apart from every other Dream colour, Jade and Peach most closely in value, Lily green and Olive (the other yellow-greens) by 1.5:1, Plum by 1.5:1 (PRD F15)', () => {
+    const body = DREAM_SLOTS.lime.body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'lime').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [1.49, 0.18],
+      'sky-blue': [1.28, 0.243],
+      lavender: [1.24, 0.281],
+      'sunset-orange': [1.24, 0.197],
+      bubblegum: [1.24, 0.287],
+      'midnight-blue': [5.06, 0.492],
+      hearts: [1.71, 0.222],
+      'tie-dye': [1.63, 0.21],
+      iridescent: [1.3, 0.275],
+      rainbow: [1.42, 0.302],
+      galaxy: [6, 0.519],
+      'tie-dye-galaxy': [5.75, 0.511],
+      'lily-green': [1.59, 0.156],
+      'firefly-gold': [1.38, 0.158],
+      'poppy-red': [2.06, 0.339],
+      plum: [3.18, 0.428],
+      moonstone: [1.83, 0.281],
+      chocolate: [4.79, 0.417],
+      'crystal-shine': [1.73, 0.225],
+      glowworm: [8.19, 0.584],
+      jade: [1.07, 0.134],
+      'fiesta-shine': [1.22, 0.356],
+      olive: [1.88, 0.177],
+      'lantern-shine': [1.57, 0.229],
+      peach: [1.07, 0.246],
+      'confetti-shine': [5.42, 0.538],
+      marigold: [1.13, 0.164],
+      'golden-hour-shine': [1.3, 0.123],
+      hyacinth: [1.65, 0.367],
+      'lagoon-shine': [1.15, 0.234],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    for (const held of ['plum', 'lily-green', 'olive'] as const) {
+      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
+    }
+    // It sits in the window between Jade and Peach, the closest in value: hue tells them apart (lime against blue-green
+    // and peach). Golden hour shine is the closest in colour, told apart by value and its sheen stripes.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['jade', 'peach']);
+    expect(relativeLuminance(body)).toBeGreaterThan(relativeLuminance(DREAM_SLOTS.jade.body));
+    expect(relativeLuminance(body)).toBeLessThan(relativeLuminance(DREAM_SLOTS.peach.body));
+    const closestInColour = Object.entries(separation).sort(([, a], [, b]) => a[1] - b[1]).map(([id]) => id);
+    expect(closestInColour[0]).toBe('golden-hour-shine');
+  });
+
+  it('gives Hyacinth the 3f mixes of its two picks, a violet body over the 0.2 spot line, both 3:1 cue edges, no rim light and a plain swatch (Area 11, issue #207)', () => {
+    const s = DREAM_SLOTS.hyacinth;
+    expect([s.body, s.gillNearStem]).toEqual(['#9b7cef', '#ffcc33']);
+    expect([s.farSide, s.fin, s.belly, s.gillNearFilament, s.gillFarStem, s.gillFarFilament]).toEqual([
+      '#8e71dc',
+      '#c3b0f5',
+      '#d2c4f8',
+      '#ffd760',
+      '#eabb36',
+      '#eec95f',
+    ]);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // A mid body, as Olive: the ink and the white edge both reach the 3:1 cue floor, so no rim light.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(4.47, 2);
+    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(CUE_RATIO);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(3.22, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeGreaterThanOrEqual(CUE_RATIO);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeCloseTo(2.11, 2);
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(5.41, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(2.14, 2);
+    expect(contrastRatio(s.farSide, s.gillFarStem)).toBeCloseTo(2.1, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.276, 3);
+    expect(DREAM_SWATCH.hyacinth).toEqual({ body: '#9b7cef', pattern: 'plain', marks: [], dark: false });
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'hyacinth').extras).toEqual({ spot: 'rgba(43,35,80,0.30)' });
+  });
+
+  it('keeps Hyacinth apart from every other Dream colour, Plum (the other purple) by 1.5:1, Crystal shine and Lantern shine most closely in value (PRD F15)', () => {
+    const body = DREAM_SLOTS.hyacinth.body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'hyacinth').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [2.46, 0.327],
+      'sky-blue': [2.11, 0.235],
+      lavender: [2.04, 0.209],
+      'sunset-orange': [2.03, 0.304],
+      bubblegum: [2.04, 0.234],
+      'midnight-blue': [3.07, 0.281],
+      hearts: [2.82, 0.376],
+      'tie-dye': [2.68, 0.367],
+      iridescent: [2.14, 0.226],
+      rainbow: [1.16, 0.248],
+      galaxy: [3.64, 0.322],
+      'tie-dye-galaxy': [3.49, 0.308],
+      'lily-green': [2.61, 0.408],
+      'firefly-gold': [2.27, 0.398],
+      'poppy-red': [1.25, 0.283],
+      plum: [1.93, 0.181],
+      moonstone: [3, 0.349],
+      chocolate: [2.91, 0.339],
+      'crystal-shine': [1.05, 0.207],
+      glowworm: [4.98, 0.42],
+      jade: [1.54, 0.268],
+      'fiesta-shine': [1.34, 0.179],
+      olive: [1.14, 0.297],
+      'lantern-shine': [1.05, 0.291],
+      peach: [1.76, 0.243],
+      'confetti-shine': [3.29, 0.283],
+      marigold: [1.85, 0.347],
+      'golden-hour-shine': [1.26, 0.308],
+      lime: [1.65, 0.367],
+      'lagoon-shine': [1.43, 0.17],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(1.5);
+    // It sits in the narrow window between Crystal shine and Lantern shine, the closest in value: hue tells them apart
+    // (violet against teal and orange), and both sheens also glide their own stripe colours.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['crystal-shine', 'lantern-shine']);
+    expect(relativeLuminance(body)).toBeGreaterThan(relativeLuminance(DREAM_SLOTS['crystal-shine'].body));
+    expect(relativeLuminance(body)).toBeLessThan(relativeLuminance(DREAM_SLOTS['lantern-shine'].body));
+    // Its sunny gill is not Fiesta shine's yellow.
+    expect(DREAM_SLOTS.hyacinth.gillNearStem).not.toBe(DREAM_SLOTS['fiesta-shine'].gillNearStem);
+  });
+
+  it('gives Lagoon shine the 3f mixes of its two picks, a lagoon blue body over the 0.2 spot line, the rim light and a sheen swatch (Area 11 Legendary, issue #207)', () => {
+    const s = DREAM_SLOTS['lagoon-shine'];
+    expect([s.body, s.gillNearStem]).toEqual(['#5cb7e0', '#f0586a']);
+    expect([s.farSide, s.fin, s.belly, s.gillNearFilament, s.gillFarStem, s.gillFarFilament]).toEqual([
+      '#56a5cf',
+      '#9dd4ec',
+      '#b6dff1',
+      '#f37d8b',
+      '#dc5367',
+      '#e37686',
+    ]);
+    expectNear(s.farSide, mixChannels(s.body, INK, 0.12), 'far side');
+    expectNear(s.fin, mixChannels(s.body, WHITE, 0.4), 'fin');
+    expectNear(s.belly, mixChannels(s.body, WHITE, 0.55), 'belly');
+    expectNear(s.gillNearFilament, mixChannels(s.gillNearStem, WHITE, 0.22), 'near filament');
+    expectNear(s.gillFarStem, mixChannels(s.gillNearStem, INK, 0.1), 'far stem');
+    expectNear(s.gillFarFilament, mixChannels(s.gillNearFilament, INK, 0.08), 'far filament');
+    // A mid body, as Fiesta shine: the ink reaches the 3:1 cue floor and the white edge does not; its worst case alone is under 3:1, so the rim light.
+    expect(contrastRatio(s.body, INK)).toBeCloseTo(6.38, 2);
+    expect(contrastRatio(s.body, INK)).toBeGreaterThanOrEqual(CUE_RATIO);
+    expect(contrastRatio(s.body, WHITE)).toBeCloseTo(2.26, 2);
+    expect(contrastRatio(s.body, WHITE)).toBeLessThan(CUE_RATIO);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeCloseTo(2.53, 2);
+    expect(Math.sqrt(contrastRatio(s.body, INK))).toBeLessThan(CUE_RATIO);
+    expect(contrastRatio(s.body, MORPH_PALETTES.leucistic.eye)).toBeCloseTo(7.72, 2);
+    expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(1.47, 2);
+    expect(contrastRatio(s.farSide, s.gillFarStem)).toBeCloseTo(1.4, 2);
+    expect(relativeLuminance(s.body)).toBeCloseTo(0.415, 3);
+    expect(DREAM_SWATCH['lagoon-shine']).toEqual({
+      body: '#5cb7e0',
+      pattern: 'stripes',
+      marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
+      dark: false,
+    });
+    expect(isSheenDream('lagoon-shine')).toBe(true);
+    expect(dreamPalette(MORPH_PALETTES.leucistic, 'lagoon-shine').extras).toEqual({ spot: 'rgba(43,35,80,0.30)', rim: DREAM_RIM_LIGHT });
+  });
+
+  it('keeps Lagoon shine apart from every other Dream colour, Iridescent (the light sheen), Crystal shine (the teal sheen) and Plum by 1.5:1, Fiesta shine and Jade most closely in value (PRD F15)', () => {
+    const body = DREAM_SLOTS['lagoon-shine'].body;
+    const separation = Object.fromEntries(
+      DREAM_IDS.filter((id) => id !== 'lagoon-shine').map((id) => [
+        id,
+        [
+          Number(contrastRatio(body, DREAM_SLOTS[id].body).toFixed(2)),
+          Number(oklabDifference(body, DREAM_SLOTS[id].body).toFixed(3)),
+        ],
+      ]),
+    );
+    expect(separation).toEqual({
+      mint: [1.72, 0.19],
+      'sky-blue': [1.48, 0.121],
+      lavender: [1.43, 0.158],
+      'sunset-orange': [1.43, 0.232],
+      bubblegum: [1.43, 0.208],
+      'midnight-blue': [4.38, 0.36],
+      hearts: [1.97, 0.272],
+      'tie-dye': [1.88, 0.266],
+      iridescent: [1.5, 0.164],
+      rainbow: [1.23, 0.28],
+      galaxy: [5.2, 0.4],
+      'tie-dye-galaxy': [4.98, 0.392],
+      'lily-green': [1.83, 0.282],
+      'firefly-gold': [1.59, 0.296],
+      'poppy-red': [1.79, 0.331],
+      plum: [2.76, 0.303],
+      moonstone: [2.11, 0.257],
+      chocolate: [4.15, 0.385],
+      'crystal-shine': [1.5, 0.127],
+      glowworm: [7.1, 0.489],
+      jade: [1.08, 0.111],
+      'fiesta-shine': [1.06, 0.251],
+      olive: [1.63, 0.23],
+      'lantern-shine': [1.36, 0.275],
+      peach: [1.24, 0.215],
+      'confetti-shine': [4.7, 0.407],
+      marigold: [1.3, 0.27],
+      'golden-hour-shine': [1.13, 0.23],
+      lime: [1.15, 0.234],
+      hyacinth: [1.43, 0.17],
+    });
+    for (const [id, [grey, colour]] of Object.entries(separation)) {
+      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
+      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
+    }
+    for (const held of ['iridescent', 'crystal-shine', 'plum'] as const) {
+      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
+    }
+    // It sits in the window between Fiesta shine and Jade, the closest in value: hue tells them apart, and Fiesta shine
+    // also glides its own stripe colours. Jade, Sky blue and Crystal shine are the closest in colour, told apart by hue
+    // (lagoon blue between teal and sky) and its sea foam and coral stripes.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 2)).toEqual(['fiesta-shine', 'jade']);
+    const closestInColour = Object.entries(separation).sort(([, a], [, b]) => a[1] - b[1]).map(([id]) => id);
+    expect(closestInColour.slice(0, 3)).toEqual(['jade', 'sky-blue', 'crystal-shine']);
+    expect(DREAM_SWATCH['lagoon-shine'].marks).not.toEqual(DREAM_SWATCH['crystal-shine'].marks);
+  });
+
+  it('keeps the Lagoon shine stripes lighter than the body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p, 10)', () => {
+    const [foam, coral] = DREAM_SWATCH['lagoon-shine'].marks;
+    const body = DREAM_SWATCH['lagoon-shine'].body;
+    const bodyInk = contrastRatio(body, INK);
+    for (const mark of [foam, coral]) {
+      const laid = laidOverBody(mark, body);
+      expect(contrastRatio(laid, INK), mark).toBeGreaterThanOrEqual(bodyInk);
+      expect(contrastRatio(laid, INK), mark).toBeGreaterThanOrEqual(CUE_RATIO);
+    }
+    expect(laidOverBody(foam, body)).toBe('#c4f4f1');
+    expect(laidOverBody(coral, body)).toBe('#e7bdb7');
+    expect(contrastRatio(laidOverBody(foam, body), INK)).toBeCloseTo(12.03, 2);
+    expect(contrastRatio(laidOverBody(coral, body), INK)).toBeCloseTo(8.47, 2);
+    expect(contrastRatio(laidOverBody(foam, body), laidOverBody(coral, body))).toBeCloseTo(1.42, 2);
+    expect(DREAM_INSET_IDS).not.toContain('lagoon-shine');
+  });
 });
 
 describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
@@ -1524,7 +1873,7 @@ describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
     }
   });
 
-  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold and Golden hour shine', () => {
+  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold, Golden hour shine, Lime and Lagoon shine', () => {
     for (const [name, id, palette] of everyPair()) {
       if (RIM_IDS.includes(id)) expect(palette.extras?.rim, name).toEqual(DREAM_RIM_LIGHT);
       else expect(palette.extras?.rim, name).toBeUndefined();
@@ -1886,14 +2235,14 @@ describe('Dream marker (guide 4e, 6p)', () => {
 });
 
 describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
-  it('leaves exactly the sixteen solids plain', () => {
+  it('leaves exactly the eighteen solids plain', () => {
     const plain = DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'plain');
     expect(plain).toEqual(SOLID_IDS);
   });
 
-  it('gives the twelve patterned and sheen colours seven distinct cues (the six sheens share stripes), each with a pattern', () => {
+  it('gives the thirteen patterned and sheen colours seven distinct cues (the seven sheens share stripes), each with a pattern', () => {
     const patterned = DREAM_IDS.filter((id) => !SOLID_IDS.includes(id));
-    expect(patterned).toHaveLength(12);
+    expect(patterned).toHaveLength(13);
     const cues = patterned.map((id) => DREAM_SWATCH[id].pattern);
     expect(new Set(cues).size).toBe(7);
     expect(patterned.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual([
@@ -1903,6 +2252,7 @@ describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
       'lantern-shine',
       'confetti-shine',
       'golden-hour-shine',
+      'lagoon-shine',
     ]);
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
@@ -1914,7 +2264,7 @@ describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
 });
 
 describe('Sheen Dream colours (guide 6p, 9)', () => {
-  it('flag exactly the stripes swatches, Iridescent, Crystal shine, Fiesta shine, Lantern shine, Confetti shine and Golden hour shine', () => {
+  it('flag exactly the stripes swatches, Iridescent, Crystal shine, Fiesta shine, Lantern shine, Confetti shine, Golden hour shine and Lagoon shine', () => {
     expect(DREAM_IDS.filter(isSheenDream)).toEqual([
       'iridescent',
       'crystal-shine',
@@ -1922,6 +2272,7 @@ describe('Sheen Dream colours (guide 6p, 9)', () => {
       'lantern-shine',
       'confetti-shine',
       'golden-hour-shine',
+      'lagoon-shine',
     ]);
     expect(DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual(DREAM_IDS.filter(isSheenDream));
   });
@@ -1929,7 +2280,15 @@ describe('Sheen Dream colours (guide 6p, 9)', () => {
   it('glide the stripe pair of every sheen colour with the sheen phase, in the colour own marks', () => {
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
-    for (const id of ['iridescent', 'crystal-shine', 'fiesta-shine', 'lantern-shine', 'confetti-shine', 'golden-hour-shine'] as const) {
+    for (const id of [
+      'iridescent',
+      'crystal-shine',
+      'fiesta-shine',
+      'lantern-shine',
+      'confetti-shine',
+      'golden-hour-shine',
+      'lagoon-shine',
+    ] as const) {
       const still = dreamPatternShapes(id, geo.torso, tail, undefined);
       const moved = dreamPatternShapes(id, geo.torso, tail, 0.5);
       expect(still, id).toHaveLength(2);
@@ -1950,6 +2309,9 @@ describe('Sheen Dream colours (guide 6p, 9)', () => {
     );
     expect(dreamPatternShapes('lantern-shine', geo.torso, tail, 0.5)).not.toEqual(
       dreamPatternShapes('golden-hour-shine', geo.torso, tail, 0.5),
+    );
+    expect(dreamPatternShapes('golden-hour-shine', geo.torso, tail, 0.5)).not.toEqual(
+      dreamPatternShapes('lagoon-shine', geo.torso, tail, 0.5),
     );
   });
 });

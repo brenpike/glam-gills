@@ -354,6 +354,11 @@ describe('golden-hour decorations on the Area 11 layout (issue #112)', () => {
 
   it('keeps every decoration and sinking petal SURFACE_BOAT_GAP off the moored rows, the fishing trajineras, their lures and lines', () => {
     expect(SURFACE_BOATS.length).toBeGreaterThan(0);
+    expect((LAYOUT.bankOverhangs ?? []).map((rect) => [rect.x0, rect.x1])).toEqual([
+      [2280, 2720],
+      [3900, 4180],
+      [4360, 4500],
+    ]);
     expect(findCrowded(IN_WATER, SURFACE_BOATS, SURFACE_BOAT_GAP)).toEqual([]);
   });
 

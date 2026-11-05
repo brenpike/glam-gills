@@ -1461,6 +1461,13 @@ export const HEAD_SLOT_ANCHOR: LocalPoint = { x: 26, y: -23 };
  * before): the Head item may pass the head outline forward and up.
  */
 export const HEAD_FOOTPRINT: Bounds = { minX: 16, minY: -44, maxX: 46, maxY: -19.5 };
+/**
+ * Big Head footprint (issue #207), opt-in for a named Head item: HEAD_FOOTPRINT
+ * grown forward to x 56 and up to y -72, the same back edge (x 16) and lowest
+ * point (y -19.5), so it keeps every Head keep-clear rule and stays 4 or more
+ * units inside the AXO_TEX frame (top y -79).
+ */
+export const HEAD_BIG_FOOTPRINT: Bounds = { minX: 16, minY: -72, maxX: 56, maxY: -19.5 };
 
 /** Neck item anchor: the throat. */
 export const NECK_SLOT_ANCHOR: LocalPoint = { x: 17, y: 16 };
@@ -1591,6 +1598,8 @@ export const BACK_BOX_MIN_V = -14;
 export const BACK_BOX_MAX_V = 3;
 /** The Back box is this long along the edge, or half the torso length (2 rx - 30) when that is more (#88). */
 export const BACK_BOX_MIN_LENGTH = 22;
+/** The big Back box's outer edge, ink included (issue #207): y' -30, opt-in for a named Back item; every other edge as the Back box. */
+export const BACK_BIG_BOX_MIN_V = -30;
 
 /**
  * Back frame on a torso: the origin is the point on the top edge at
@@ -1620,13 +1629,14 @@ export interface BackFrameBox {
  * sits on SHIRT_BACK_FRONT_LINE_X, the forward-most point of the box as the
  * frame rises toward the snout, and it runs back from there along the edge by
  * BACK_BOX_MIN_LENGTH or half the torso length (2 rx - 30), whichever is more.
+ * `minV` is its outer edge: BACK_BOX_MIN_V, or BACK_BIG_BOX_MIN_V for the big box.
  */
-export function backFrameBox(torso: BodyEllipse): BackFrameBox {
+export function backFrameBox(torso: BodyEllipse, minV: number = BACK_BOX_MIN_V): BackFrameBox {
   const frame = backFrame(torso);
   const maxU =
     (SHIRT_BACK_FRONT_LINE_X - frame.x + BACK_BOX_MAX_V * Math.sin(frame.angle)) / Math.cos(frame.angle);
   const length = Math.max(BACK_BOX_MIN_LENGTH, (2 * torso.rx - 30) / 2);
-  return { minU: maxU - length, maxU, minV: BACK_BOX_MIN_V, maxV: BACK_BOX_MAX_V };
+  return { minU: maxU - length, maxU, minV, maxV: BACK_BOX_MAX_V };
 }
 
 /** Back footprint for a look: its frame, its box in the frame, the four corners and the local box. */
@@ -1638,10 +1648,11 @@ export interface BackFootprint {
   readonly bounds: Bounds;
 }
 
-export function backFootprint(look: AxolotlArtLook): BackFootprint {
+/** The Back footprint of `look` with its outer edge at `outerV`. */
+function buildBackFootprint(look: AxolotlArtLook, outerV: number): BackFootprint {
   const { torso } = axolotlBodyGeometry(look);
   const frame = backFrame(torso);
-  const box = backFrameBox(torso);
+  const box = backFrameBox(torso, outerV);
   const { minU, maxU, minV, maxV } = box;
   const corners = [
     framePoint(frame, minU, minV),
@@ -1650,6 +1661,16 @@ export function backFootprint(look: AxolotlArtLook): BackFootprint {
     framePoint(frame, minU, maxV),
   ];
   return { frame, box, corners, bounds: boundsOfPoints(corners.map((p): [number, number] => [p.x, p.y]), 0) };
+}
+
+/** The Back footprint of `look`: the Back box, outer edge BACK_BOX_MIN_V. */
+export function backFootprint(look: AxolotlArtLook): BackFootprint {
+  return buildBackFootprint(look, BACK_BOX_MIN_V);
+}
+
+/** The big Back footprint of `look` (issue #207), opt-in for a named Back item: outer edge BACK_BIG_BOX_MIN_V. */
+export function backBigFootprint(look: AxolotlArtLook): BackFootprint {
+  return buildBackFootprint(look, BACK_BIG_BOX_MIN_V);
 }
 
 // -- Tail: the core top at tail point 4 (guide 6i) --

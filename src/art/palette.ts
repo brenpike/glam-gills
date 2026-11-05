@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the twenty-eight Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the thirty-one Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -487,7 +487,10 @@ export type DreamLookId =
   | 'peach'
   | 'confetti-shine'
   | 'marigold'
-  | 'golden-hour-shine';
+  | 'golden-hour-shine'
+  | 'lime'
+  | 'hyacinth'
+  | 'lagoon-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -609,6 +612,20 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // the light sheen, and 0.107 from Lantern shine in OKLab. 5.64:1 with ink and 2.55:1 with white, so ink spots and, as
   // Fiesta shine, the rim light. The dusky rose gill #c4386a is 2.00:1 against it.
   'golden-hour-shine': dreamSlots('#bea015', '#ac911c', '#d8c673', '#e2d496', ['#c4386a', '#d1648b'], ['#b53667', '#c45f86']),
+  // Deep canal Area 11 Dream colour (Lime, issue #207). Body #8ecb30 is a zesty lime green (relative luminance 0.487), in
+  // the window between Jade (1.07:1) and Peach (1.07:1), and 0.123 from Golden hour shine in OKLab. 7.36:1 with ink and
+  // 1.96:1 with white, so ink spots and, as Jade, the rim light. The leaf green gill #2e9c3f is 1.81:1 against it.
+  lime: dreamSlots('#8ecb30', '#82b734', '#bbe083', '#cce8a2', ['#2e9c3f', '#5cb269'], ['#2e9041', '#58a767']),
+  // Deep canal Area 11 Dream colour (Hyacinth, issue #207). Body #9b7cef is a water hyacinth violet (relative luminance
+  // 0.276), in the narrow window between Crystal shine (1.05:1) and Lantern shine (1.05:1), 1.93:1 from Plum and 0.179
+  // from Fiesta shine in OKLab. 4.47:1 with ink and 3.22:1 with white, so ink spots and, as Olive, no rim light. The
+  // flower-spot yellow gill #ffcc33 is 2.14:1 against it.
+  hyacinth: dreamSlots('#9b7cef', '#8e71dc', '#c3b0f5', '#d2c4f8', ['#ffcc33', '#ffd760'], ['#eabb36', '#eec95f']),
+  // Deep canal Area 11 Legendary Dream colour (Lagoon shine, a sheen). Body #5cb7e0 is a lagoon blue (relative luminance
+  // 0.415), in the window between Fiesta shine (1.06:1) and Jade (1.08:1), 1.50:1 from Iridescent, the light sheen, and
+  // 0.111 from Jade in OKLab. 6.38:1 with ink and 2.26:1 with white, so ink spots and, as Fiesta shine, the rim light.
+  // The coral gill #f0586a is 1.48:1 against it.
+  'lagoon-shine': dreamSlots('#5cb7e0', '#56a5cf', '#9dd4ec', '#b6dff1', ['#f0586a', '#f37d8b'], ['#dc5367', '#e37686']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -650,6 +667,8 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'confetti-shine',
   'marigold',
   'golden-hour-shine',
+  'lime',
+  'lagoon-shine',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

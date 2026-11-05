@@ -1,5 +1,5 @@
 /**
- * Worn looks of the fifty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the sixty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -12,7 +12,8 @@
  * Climbing helmet, Pebble necklace, Cave goggles, Glow tail lantern and Gemstone cape, and the deep canal Area 8's
  * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, and the deep canal Area 9's
  * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, and the deep canal Area 10's Party hat,
- * Confetti scarf, Festival shirt, Hero medal and Champion crown, painted on the anchors
+ * Confetti scarf, Festival shirt, Hero medal and Champion crown, and the deep canal Area 11's Propeller cap, Star
+ * sunglasses, Robot suit, Jetpack and Wizard hat, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -93,6 +94,19 @@
  * better with ink, none red), so a worn look and its icon cannot drift. Their other colours are internal details: ink
  * at the stripe alpha (the hat's dots, the scarf's confetti, the ribbon's fold), the shirt's ink-petalled flowers
  * with their pink centres, and the gold, boat-yellow or aqua trim and gem. No look has net-like lines.
+ *
+ * The Area 11 looks (issue #207) are the big, silly ones, and the same rules hold. Three are big items
+ * (BIG_WEARABLE_ART_SLUGS): the Propeller cap and the Wizard hat draw within HEAD_BIG_FOOTPRINT and the Jetpack within
+ * backBigFootprint, footprints that keep every keep-clear rule of their slot and only grow away from the body; the Star
+ * sunglasses and the Robot suit keep the Face and Shirt footprints. A big item's visible paint stays under the
+ * axolotl's own, so the axolotl stays the hero. Their outer fills are the icons' own colours, imported by name from
+ * treasurePalette.ts (PROPELLER_CAP_FILL with PROPELLER_BLADE_FILL, STAR_SUNGLASSES_FRAME, ROBOT_SUIT_FILL,
+ * JETPACK_TANK_FILL with JETPACK_FRAME and JETPACK_BUBBLE, WIZARD_HAT_FILL with WIZARD_HAT_TIP; each 9:1 or better with
+ * ink, none red). Their other colours are internal details: ink at the stripe alpha (the propeller's hub), the robot's
+ * aqua chest light (ROBOT_SUIT_LIGHT) and the wizard's gold stars (WIZARD_HAT_STAR), and the boat-yellow, aqua or gold
+ * trim and gem. Kid-safe (ADR 0007): no letters, numbers, dials or grids; the jetpack puffs bubbles, never flames;
+ * every blade, ray and tip is rounded; the lenses are the clear tint. The propeller is still: like every worn look it
+ * never moves on its own. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -106,8 +120,10 @@ import {
   HEAD_ELLIPSE,
   SOCK_SLEEVE_OL,
   SOCK_SLEEVE_W,
+  HEAD_BIG_FOOTPRINT,
   WEARABLE_SLOTS,
   axolotlBodyGeometry,
+  backBigFootprint,
   backFootprint,
   glassesNotches,
   shirtGeometry,
@@ -216,6 +232,17 @@ import {
   HERO_MEDAL_RIBBON,
   PARTY_HAT_FILL,
   TRAJINERA_BLOSSOM_PINK,
+  JETPACK_BUBBLE,
+  JETPACK_FRAME,
+  JETPACK_TANK_FILL,
+  PROPELLER_BLADE_FILL,
+  PROPELLER_CAP_FILL,
+  ROBOT_SUIT_FILL,
+  ROBOT_SUIT_LIGHT,
+  STAR_SUNGLASSES_FRAME,
+  WIZARD_HAT_FILL,
+  WIZARD_HAT_STAR,
+  WIZARD_HAT_TIP,
   WORN_FAR_INK_MIX,
 } from './treasurePalette';
 
@@ -294,13 +321,18 @@ export type WearableArtSlug =
   | 'confetti-scarf'
   | 'festival-shirt'
   | 'hero-medal'
-  | 'champion-crown';
+  | 'champion-crown'
+  | 'propeller-cap'
+  | 'star-sunglasses'
+  | 'robot-suit'
+  | 'jetpack'
+  | 'wizard-hat';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
- * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five, the deep canal Area 8's five and the deep canal Area 9's five last, so WEARABLE_ART_SLUGS
- * finds each slot's canal slug first.
+ * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five, then the deep canal Area 8's,
+ * Area 9's, Area 10's and Area 11's five each, the last, so WEARABLE_ART_SLUGS finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
   'sun-hat': 'head',
@@ -359,6 +391,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'festival-shirt': 'shirt',
   'hero-medal': 'neck',
   'champion-crown': 'head',
+  'propeller-cap': 'head',
+  'star-sunglasses': 'face',
+  'robot-suit': 'shirt',
+  jetpack: 'back',
+  'wizard-hat': 'head',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -379,6 +416,19 @@ export const NO_OUTFIT: ArtOutfit = Object.freeze({});
 export function wornSlug(outfit: ArtOutfit, slot: WearableSlot): WearableArtSlug | undefined {
   const slug = outfit[slot];
   return slug != null && WEARABLE_ART_SLOT[slug] === slot ? slug : undefined;
+}
+
+/**
+ * The big items (issue #207): the Head items drawn within HEAD_BIG_FOOTPRINT and the Back item drawn within
+ * backBigFootprint. Every other item keeps its slot's footprint, so only an outfit with one of these grows the
+ * picture it is baked into.
+ */
+export const BIG_WEARABLE_ART_SLUGS: ReadonlySet<WearableArtSlug> = new Set<WearableArtSlug>(['propeller-cap', 'jetpack', 'wizard-hat']);
+
+/** Whether the item `outfit` wears in `slot` is a big item (BIG_WEARABLE_ART_SLUGS). */
+export function wearsBigItem(outfit: ArtOutfit, slot: WearableSlot): boolean {
+  const slug = wornSlug(outfit, slot);
+  return slug !== undefined && BIG_WEARABLE_ART_SLUGS.has(slug);
 }
 
 /**
@@ -4043,6 +4093,373 @@ function paintFestivalShirt(ctx: CanvasRenderingContext2D, look: AxolotlArtLook)
 }
 
 // ---------------------------------------------------------------------------
+// Area 11 shared helpers (issue #207)
+// ---------------------------------------------------------------------------
+
+/** The 2 n corners of an n-point star round (cx, cy): tips `outer` out and notches `inner` out, the first tip at angle `a0`. */
+function starCorners(cx: number, cy: number, outer: number, inner: number, n: number, a0 = -Math.PI / 2): Pt[] {
+  return Array.from({ length: 2 * n }, (_, k) => {
+    const r = k % 2 === 0 ? outer : inner;
+    const a = a0 + (k * Math.PI) / n;
+    return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
+  });
+}
+
+/**
+ * A soft star: every tip and notch rounded (radius `tipR` at the tips, half that at the notches), never sharp (ADR
+ * 0007). `tipR` must leave each tip's arc on the first half of its edges, or the outline doubles back on itself.
+ */
+function softStarPath(cx: number, cy: number, outer: number, inner: number, n: number, tipR: number, a0 = -Math.PI / 2): Path2D {
+  return roundedPolygon(
+    starCorners(cx, cy, outer, inner, n, a0),
+    Array.from({ length: 2 * n }, (_, k) => (k % 2 === 0 ? tipR : tipR / 2)),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Head: Propeller cap (Common), big
+// ---------------------------------------------------------------------------
+
+/** The cap's dome: its foot from x0 to x1 sunk to the Head footprint's floor (as the Party hat's foot), and its top. */
+const PROPELLER_DOME = { x0: 21, x1: 45, foot: -21.5, top: -39.6 } as const;
+/** The peak jutting forward from the dome's front, over the snout: its back, its front and its top edge at each end. */
+const PROPELLER_PEAK = { back: 40, front: 52.6, backTop: -26, frontTop: -24.2 } as const;
+/** The stalk: its half width and the hub's height; the hub sits over the big footprint's middle, so the blades fill it end to end. */
+const PROPELLER_STALK_HALF = 1.3;
+const PROPELLER_HUB: Pt = { x: (HEAD_BIG_FOOTPRINT.minX + HEAD_BIG_FOOTPRINT.maxX) / 2, y: -52 };
+const PROPELLER_HUB_R = 2.8;
+/** The two blades: each centre this far either side of the hub, their radii (round at both ends) and the propeller's tilt, rising toward the snout as the brims do. */
+const PROPELLER_BLADE_OUT = 9.3;
+const PROPELLER_BLADE_RX = 8.5;
+const PROPELLER_BLADE_RY = 3.3;
+const PROPELLER_TILT = -0.06;
+/** The hub cap: ink at the stripe alpha (the blade colour darkened, not a third colour). */
+const PROPELLER_HUB_CAP_R = 1.4;
+
+/**
+ * Common (issue #207), big: a PROPELLER_CAP_FILL pale apple green round dome with a short peak jutting forward over the
+ * snout, and on top a stalk holding a big, still PROPELLER_BLADE_FILL lotus pink propeller: two long blades, round at
+ * both ends, either side of a round hub, all one `blob` silhouette (ink 2.0 all outside) in two fills, as the Party
+ * hat's cone and pompom. A hub cap of ink at the stripe alpha (the same colour darkened) and one shine on the dome; no
+ * trim. The propeller is still: it never turns on its own (a worn look never animates), so it is still under reduced
+ * motion too. The dome's foot sinks to the Head footprint's floor, and ink included it stays inside HEAD_BIG_FOOTPRINT:
+ * the blades span it end to end, x about 16.2 to 55.8, their top about y -57.9.
+ */
+function paintPropellerCap(ctx: CanvasRenderingContext2D): void {
+  const { x0, x1, foot, top } = PROPELLER_DOME;
+  const mid = (x0 + x1) / 2;
+  const dome = new Path2D();
+  dome.moveTo(x0, foot);
+  dome.bezierCurveTo(x0, foot - 11, mid - 7, top, mid, top);
+  dome.bezierCurveTo(mid + 7, top, x1, foot - 11, x1, foot);
+  dome.closePath();
+  const peak = roundedPolygon(
+    [
+      { x: PROPELLER_PEAK.back, y: PROPELLER_PEAK.backTop },
+      { x: PROPELLER_PEAK.front, y: PROPELLER_PEAK.frontTop },
+      { x: PROPELLER_PEAK.front, y: foot },
+      { x: PROPELLER_PEAK.back, y: foot },
+    ],
+    [0.6, 1.1, 1.1, 0.6],
+  );
+  const stalk = roundRectPath(PROPELLER_HUB.x - PROPELLER_STALK_HALF, PROPELLER_HUB.y, PROPELLER_HUB.x + PROPELLER_STALK_HALF, top + 3, 0.6);
+  const c = Math.cos(PROPELLER_TILT);
+  const s = Math.sin(PROPELLER_TILT);
+  const blades = [-1, 1].map((side) =>
+    ellipsePath(PROPELLER_HUB.x + side * PROPELLER_BLADE_OUT * c, PROPELLER_HUB.y + side * PROPELLER_BLADE_OUT * s, PROPELLER_BLADE_RX, PROPELLER_BLADE_RY, PROPELLER_TILT),
+  );
+  silhouette(ctx, [
+    { path: stalk, fill: PROPELLER_BLADE_FILL },
+    ...blades.map((path) => ({ path, fill: PROPELLER_BLADE_FILL })),
+    { path: ellipsePath(PROPELLER_HUB.x, PROPELLER_HUB.y, PROPELLER_HUB_R, PROPELLER_HUB_R), fill: PROPELLER_BLADE_FILL },
+    { path: peak, fill: PROPELLER_CAP_FILL },
+    { path: dome, fill: PROPELLER_CAP_FILL },
+  ]);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.fill(ellipsePath(PROPELLER_HUB.x, PROPELLER_HUB.y, PROPELLER_HUB_CAP_R, PROPELLER_HUB_CAP_R));
+  ctx.restore();
+  shine(ctx, x0 + 4.8, top + 8, 1.1, 3, 0.35);
+}
+
+// ---------------------------------------------------------------------------
+// Face: Star sunglasses (Rare)
+// ---------------------------------------------------------------------------
+
+/**
+ * The frames' corner stars: which lens (0 near, 1 far) and the star's direction from that lens's centre, up and out at
+ * the frame's outer top corner (back past the near lens, forward past the far one), the one place where the Face
+ * footprint has room for a big star. Each sits on the band's outer edge with a notch facing the lens, so it keeps off
+ * the eye zone; none reaches the cheek heart zone or the mouth.
+ */
+const STAR_CORNERS: readonly { readonly lens: 0 | 1; readonly angle: number }[] = [
+  { lens: 0, angle: (-145 * Math.PI) / 180 },
+  { lens: 1, angle: (-40 * Math.PI) / 180 },
+];
+/** A corner star: five soft points, tips this far out and notches this far, the tips rounded (never sharp: ADR 0007). */
+const STAR_CORNER_OUTER = 4;
+const STAR_CORNER_INNER = 2.1;
+const STAR_CORNER_TIP_R = 0.65;
+/** The bridge star (the Rare trim, in the boat yellow): the Heart glasses' gem place, a five-point soft star, ink 0.6 outside. */
+const STAR_BRIDGE: Pt = { x: 35.25, y: -14.85 };
+const STAR_BRIDGE_OUTER = 2.6;
+const STAR_BRIDGE_INNER = 1.35;
+const STAR_BRIDGE_TIP_R = 0.4;
+
+/** A corner star on the band's outer edge, turned so a notch faces the lens centre and a tip points away from it. */
+function starCornerPath(corner: (typeof STAR_CORNERS)[number]): Path2D {
+  const lens = GLASSES_LENSES[corner.lens];
+  const out = lens.r + GLASSES_BAND / 2;
+  const cx = lens.x + Math.cos(corner.angle) * out;
+  const cy = lens.y + Math.sin(corner.angle) * out;
+  return softStarPath(cx, cy, STAR_CORNER_OUTER, STAR_CORNER_INNER, 5, STAR_CORNER_TIP_R, corner.angle);
+}
+
+/**
+ * Rare (issue #207): the glasses construction (guide 6i) in STAR_SUNGLASSES_FRAME butter yellow: the merged two-lens
+ * frame with a band of 3.5 (colour 2.1, ink 0.7 each side), a clear lens tint (white at 0.25, never dark) and the eyes
+ * painting above it, so the eyes always show. The icon's star frames would leave the Face footprint (it is 24 tall and
+ * an eye zone 16.4 across), so each frame takes a big soft five-point star at its outer top corner instead, merged with
+ * the band into one frame silhouette (every ink first, then every colour, ink 0.7 outside), tips rounded, never sharp.
+ * Its one trim is a small soft star in the boat yellow on the bridge, above the top notch, in the one place that clears
+ * both eye zones (the Heart glasses' gem place), ink 0.6 outside. No gem and no shine.
+ */
+function paintStarSunglasses(ctx: CanvasRenderingContext2D): void {
+  const frame = glassesPath();
+  const corners = STAR_CORNERS.map(starCornerPath);
+  ctx.fillStyle = GLASSES_LENS;
+  ctx.fill(frame);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = GLASSES_BAND;
+  ctx.stroke(frame);
+  ctx.lineWidth = 2 * GLASSES_BAND_OL;
+  for (const corner of corners) ctx.stroke(corner);
+  ctx.strokeStyle = STAR_SUNGLASSES_FRAME;
+  ctx.lineWidth = GLASSES_BAND_W;
+  ctx.stroke(frame);
+  ctx.fillStyle = STAR_SUNGLASSES_FRAME;
+  for (const corner of corners) ctx.fill(corner);
+  const star = softStarPath(STAR_BRIDGE.x, STAR_BRIDGE.y, STAR_BRIDGE_OUTER, STAR_BRIDGE_INNER, 5, STAR_BRIDGE_TIP_R);
+  silhouette(ctx, [{ path: star, fill: BOAT_TRIM }], BAND_LW / 2);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Robot suit (Rare)
+// ---------------------------------------------------------------------------
+
+/** The belt (the one trim band): how far down the torso half it starts (share of the inset ry), its height and its lines. */
+const ROBOT_BELT_AT = 0.5;
+const ROBOT_BELT_H = 3;
+const ROBOT_BELT_LW = 0.6;
+/** The chest light: its soft glow ring and the inked light inside it, and how far above the centre line it sits (share of the inset ry). */
+const ROBOT_GLOW_R = 2.7;
+const ROBOT_GLOW_ALPHA = 0.45;
+const ROBOT_LIGHT_R = 1.8;
+const ROBOT_LIGHT_LW = 0.6;
+const ROBOT_LIGHT_RISE = 0.2;
+/** The gap kept between the glow and the neckline's ink. */
+const ROBOT_LIGHT_GAP = 0.4;
+
+/**
+ * Rare (issue #207): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) in a
+ * ROBOT_SUIT_FILL pale silver, with one #ffe14a belt across the lower torso (the one trim band, between two 0.6 ink
+ * lines, clipped inside the silhouette) and a round chest light behind the neckline: a soft ROBOT_SUIT_LIGHT aqua glow
+ * ring (alpha 0.45) round an inked aqua light, as the icon's. One shine placed as on the Tank top. No letters,
+ * numbers, dials or panel grid (ADR 0007). The icon's arms would leave the Shirt footprint, so there are none. It sits
+ * inside the silhouette, so it never reaches the torso edge band, the front line, the tail root or a leg.
+ */
+function paintRobotSuit(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, ROBOT_SUIT_FILL, () => {
+    const y0 = e.cy + e.ry * ROBOT_BELT_AT;
+    trimBand(ctx, { x0: outline.xr - 1, x1: outline.xf + 1, y0, y1: y0 + ROBOT_BELT_H }, BOAT_TRIM, true, ROBOT_BELT_LW);
+    const cx = shirt.neckline.apexX - 2 * outline.half - ROBOT_GLOW_R - ROBOT_LIGHT_GAP;
+    const cy = e.cy - e.ry * ROBOT_LIGHT_RISE;
+    ctx.save();
+    ctx.globalAlpha = ROBOT_GLOW_ALPHA;
+    ctx.fillStyle = ROBOT_SUIT_LIGHT;
+    ctx.fill(ellipsePath(cx, cy, ROBOT_GLOW_R, ROBOT_GLOW_R));
+    ctx.restore();
+    shape(ctx, ellipsePath(cx, cy, ROBOT_LIGHT_R, ROBOT_LIGHT_R), ROBOT_SUIT_LIGHT, ROBOT_LIGHT_LW);
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Jetpack (Epic), big
+// ---------------------------------------------------------------------------
+
+/**
+ * The jetpack across the big Back box (fill edges, ink inside the box): each tank's half width and its centre's
+ * distance from the box's middle, as shares of the fill length, so the two tanks run the box end to end. The other
+ * lengths are how far in each part reaches from the box's outer fill edge.
+ */
+const JETPACK_TANK_HALF = 0.22;
+const JETPACK_TANK_OUT = 0.28;
+/** The tanks stand up from the back: nose top at the outer fill edge, base this far in. */
+const JETPACK_TANK_BASE = 17.4;
+/** The nose seam: this far in from the nose top, sagging this much at the middle. */
+const JETPACK_SEAM_AT = 5.6;
+const JETPACK_SEAM_SAG = 1.2;
+/** The nozzle under each tank: its top (inside the tank's base), its foot, and its half widths there (shares of the tank's half width). */
+const JETPACK_NOZZLE_TOP = 16.8;
+const JETPACK_NOZZLE_FOOT = 21.2;
+const JETPACK_NOZZLE_TOP_HALF = 0.6;
+const JETPACK_NOZZLE_FOOT_HALF = 0.8;
+/** The plate between the tanks: its half width (share of the fill length), its top and its foot, level with the nozzles' feet so it shows between them. */
+const JETPACK_PLATE_HALF = 0.17;
+const JETPACK_PLATE_TOP = 5;
+const JETPACK_PLATE_FOOT = 21.2;
+/**
+ * The two bubbles each nozzle puffs (bubbles, never flames: ADR 0007): the big one under the nozzle, the small one
+ * beyond it toward the middle, this far in and down from the big one's centre.
+ */
+const JETPACK_BUBBLE_R = 2.6;
+const JETPACK_SMALL_BUBBLE_R = 1.7;
+const JETPACK_SMALL_BUBBLE_IN = 2.4;
+const JETPACK_SMALL_BUBBLE_DOWN = 2.4;
+
+/**
+ * Epic (issue #207), big: the icon's jetpack stood up on the back in the big Back box (backBigFootprint): two rounded
+ * JETPACK_TANK_FILL pale apricot rocket tanks side by side along the back, round-nosed and reaching out to the box's
+ * outer edge, on a JETPACK_FRAME pebble plate between them, each with an ink nose seam (1.2) and a pebble nozzle at its
+ * foot puffing two round JETPACK_BUBBLE bubbles toward the back (bubbles only, never flames, ADR 0007). Plate,
+ * nozzles and bubbles are one `blob` silhouette, the tanks are painted over them with their own ink 2.0 outside, so
+ * each reads on its own. One aqua gem (outline 1.2) on the plate between the tanks, the Epic detail; one shine on the
+ * rear tank; no trim band, gold or star. Painted in the Back frame (x' along the torso edge toward the snout, y' + into
+ * the body); the box is ink included, so the fills are ITEM_LW inside it.
+ */
+function paintJetpack(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const outer = box.minV + ITEM_LW;
+  const rear = box.minU + ITEM_LW;
+  const front = box.maxU - ITEM_LW;
+  const length = front - rear;
+  const mid = (rear + front) / 2;
+  const half = length * JETPACK_TANK_HALF;
+  const centres = [mid - length * JETPACK_TANK_OUT, mid + length * JETPACK_TANK_OUT];
+  const plateHalf = length * JETPACK_PLATE_HALF;
+  const plate = roundRectPath(mid - plateHalf, outer + JETPACK_PLATE_TOP, mid + plateHalf, outer + JETPACK_PLATE_FOOT, 1.4);
+  const nozzles = centres.map((u) =>
+    roundedPolygon(
+      [
+        { x: u - half * JETPACK_NOZZLE_TOP_HALF, y: outer + JETPACK_NOZZLE_TOP },
+        { x: u + half * JETPACK_NOZZLE_TOP_HALF, y: outer + JETPACK_NOZZLE_TOP },
+        { x: u + half * JETPACK_NOZZLE_FOOT_HALF, y: outer + JETPACK_NOZZLE_FOOT },
+        { x: u - half * JETPACK_NOZZLE_FOOT_HALF, y: outer + JETPACK_NOZZLE_FOOT },
+      ],
+      0.6,
+    ),
+  );
+  const bubbleY = outer + JETPACK_NOZZLE_FOOT + JETPACK_BUBBLE_R - 0.2;
+  const bubbles = centres.flatMap((u) => {
+    const inward = Math.sign(mid - u);
+    return [
+      ellipsePath(u, bubbleY, JETPACK_BUBBLE_R, JETPACK_BUBBLE_R),
+      ellipsePath(u + inward * JETPACK_SMALL_BUBBLE_IN, bubbleY + JETPACK_SMALL_BUBBLE_DOWN, JETPACK_SMALL_BUBBLE_R, JETPACK_SMALL_BUBBLE_R),
+    ];
+  });
+  silhouette(ctx, [
+    { path: plate, fill: JETPACK_FRAME },
+    ...nozzles.map((path) => ({ path, fill: JETPACK_FRAME })),
+    ...bubbles.map((path) => ({ path, fill: JETPACK_BUBBLE })),
+  ]);
+  for (const u of centres) {
+    const tank = roundedPolygon(
+      [
+        { x: u - half, y: outer },
+        { x: u + half, y: outer },
+        { x: u + half, y: outer + JETPACK_TANK_BASE },
+        { x: u - half, y: outer + JETPACK_TANK_BASE },
+      ],
+      [half, half, 1.6, 1.6],
+    );
+    silhouette(ctx, [{ path: tank, fill: JETPACK_TANK_FILL }]);
+    ctx.save();
+    ctx.clip(tank);
+    const seam = new Path2D();
+    seam.moveTo(u - half - 1, outer + JETPACK_SEAM_AT);
+    seam.quadraticCurveTo(u, outer + JETPACK_SEAM_AT + 2 * JETPACK_SEAM_SAG, u + half + 1, outer + JETPACK_SEAM_AT);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(seam);
+    ctx.restore();
+  }
+  gem(ctx, mid, outer + (JETPACK_PLATE_TOP + JETPACK_PLATE_FOOT) / 2, CASTLE_GEM, BAND_LW);
+  shine(ctx, centres[0] - half * 0.45, outer + JETPACK_SEAM_AT + 5, 0.8, 2.6, 0.05);
+}
+
+// ---------------------------------------------------------------------------
+// Head: Wizard hat (Legendary), big
+// ---------------------------------------------------------------------------
+
+/** The wide brim: its centre, radii and tilt (rising toward the snout, as the Sun hat's); its lowest ink at the Head footprint's floor. */
+const WIZARD_BRIM = { cx: 35, cy: -25.045, rx: 17, ry: 3.4, rot: -0.06 } as const;
+/** The soft round tip on the curled point: centre and radius. */
+const WIZARD_TIP: Pt = { x: 50.8, y: -62.6 };
+const WIZARD_TIP_R = 2.8;
+/** The gold band above the brim: its top and foot. */
+const WIZARD_BAND = { top: -31.6, foot: -28.4 } as const;
+/** The pink gem on the band's middle. */
+const WIZARD_GEM: Pt = { x: 34.6, y: -30 };
+const WIZARD_GEM_R = 2.2;
+/** The two little gold stars on the cone: centre and tip radius of each, inked 1.2. */
+const WIZARD_STARS: readonly (readonly [number, number, number])[] = [
+  [33.2, -40.6, 3.2],
+  [38.6, -51.4, 2.4],
+];
+/** The one Legendary star, outside the silhouette, behind the cone and inside the big Head footprint. */
+const WIZARD_LEGEND_STAR: Pt = { x: 23.4, y: -52 };
+
+/** The cone: from the brim it rises and its point curls over toward the snout, ending under the round tip. */
+function wizardConePath(): Path2D {
+  const cone = new Path2D();
+  cone.moveTo(26, -26);
+  cone.bezierCurveTo(27.4, -38, 31, -52, 37.6, -61.2);
+  cone.bezierCurveTo(41.2, -66.4, 46.6, -67.4, WIZARD_TIP.x - 0.4, WIZARD_TIP.y - 1.6);
+  cone.bezierCurveTo(46.6, -63.6, 43.2, -60, 41.8, -53.6);
+  cone.bezierCurveTo(41.2, -44, 42.4, -34, 44, -26);
+  cone.quadraticCurveTo(35, -24.6, 26, -26);
+  cone.closePath();
+  return cone;
+}
+
+/**
+ * Legendary (issue #207), big: a tall WIZARD_HAT_FILL pale starry violet wizard hat on a wide brim: the cone rises from
+ * the brim and its point curls over toward the snout, ending in a soft round WIZARD_HAT_TIP pale crown gold tip, never a
+ * sharp point. Brim, cone and tip are `blob`s (ink 2.0 all outside), the cone over the brim and the tip over the cone,
+ * so each keeps its own ink. The Legendary trim is one #ffc12e gold band above the brim (between two 1.2 ink lines,
+ * clipped inside the cone) with one pink gem on it, two little WIZARD_HAT_STAR gold stars on the cone (soft five-point
+ * stars, inked 1.2) and one static 4-point star (R 3, outline 1.2) outside the silhouette, behind the cone. One shine
+ * on the brim. Ink included it stays inside HEAD_BIG_FOOTPRINT: x about 16 to 55.6, the brim's lowest ink at y -19.5,
+ * the curl's top about y -68.
+ */
+function paintWizardHat(ctx: CanvasRenderingContext2D): void {
+  const { cx, cy, rx, ry, rot } = WIZARD_BRIM;
+  const cone = wizardConePath();
+  silhouette(ctx, [{ path: ellipsePath(cx, cy, rx, ry, rot), fill: WIZARD_HAT_FILL }]);
+  silhouette(ctx, [{ path: cone, fill: WIZARD_HAT_FILL }]);
+  ctx.save();
+  ctx.clip(cone);
+  trimBand(ctx, { x0: 20, x1: 50, y0: WIZARD_BAND.top, y1: WIZARD_BAND.foot }, GOLD_TRIM, true);
+  ctx.lineWidth = BAND_LW;
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = WIZARD_HAT_STAR;
+  for (const [x, y, r] of WIZARD_STARS) {
+    const star = softStarPath(x, y, r, r * 0.48, 5, 0.35);
+    ctx.fill(star);
+    ctx.stroke(star);
+  }
+  ctx.restore();
+  silhouette(ctx, [{ path: ellipsePath(WIZARD_TIP.x, WIZARD_TIP.y, WIZARD_TIP_R, WIZARD_TIP_R), fill: WIZARD_HAT_TIP }]);
+  gem(ctx, WIZARD_GEM.x, WIZARD_GEM.y, BOW_GEM, BAND_LW, WIZARD_GEM_R);
+  shine(ctx, cx - rx + 4.6, cy - 0.6, 2.2, 0.7, rot);
+  legendStar(ctx, WIZARD_LEGEND_STAR.x, WIZARD_LEGEND_STAR.y, BAND_LW);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -4242,6 +4659,23 @@ export function paintBodyWearable(
       break;
     case 'champion-crown':
       paintChampionCrown(ctx);
+      break;
+    case 'propeller-cap':
+      paintPropellerCap(ctx);
+      break;
+    case 'star-sunglasses':
+      paintStarSunglasses(ctx);
+      break;
+    case 'robot-suit':
+      paintRobotSuit(ctx, look);
+      break;
+    case 'jetpack': {
+      const back = backBigFootprint(look);
+      inFrame(ctx, back.frame, () => paintJetpack(ctx, back.box));
+      break;
+    }
+    case 'wizard-hat':
+      paintWizardHat(ctx);
       break;
     default:
       break;
