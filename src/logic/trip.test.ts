@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DrawnBody } from './collectibles';
 import { BAILING_BUCKETS, bailingBoatSpawn, tossPose } from './bailingBuckets';
 import { createEncounter, createEncounterContext, predatorSpecies, stepEncounterOutOfWater } from './encounter';
-import { HERON_MEET_RANGE, meetsTilapia, type FactCard } from './factCards';
+import { HERON_MEET_RANGE, PELICAN_MEET_RANGE, meetsTilapia, type FactCard } from './factCards';
 import { GHOST_NET, createGhostNets, isSnagged, netDrift } from './ghostNets';
 import { GLOW_PLANTS, glowPlantSpawn, type DarkWater } from './glowPlants';
 import type { ElementSpawn, ElementType, HazardSpawn, HazardType } from './hazards';
@@ -18,12 +18,14 @@ import { createLegs, isProtected, presentCount, tryHit, type LegsState } from '.
 import { DRAG_NETS, dragNetPhase, dragNetSpawn, sweepFront } from './dragNets';
 import { LURES, createLureState, fishingBoatHull, fishingBoatSpawn, lureAt, lureStill, type FishingBoatSpawn } from './lures';
 import { PUNTING_POLE, movingHazardSpawn } from './movingHazards';
+import { PELICAN_LINE, pelicanBirdPositions, pelicanLineSpawn, pelicanScoopNumber } from './pelicanLine';
 import { MURKY_WATER_TIMING, createMurkyTimer, murkyPatchSpawn } from './murkyWater';
 import { CANAL_AREA } from './areas';
 import { treasureById } from './catalogue';
 import { TRAJINERAS, trajineraSpawn } from './trajineras';
 import {
   LEG_PROGRESS_STEPS,
+  PELICAN_PUSH_SPEED,
   beatArea,
   createTrip,
   createTripContext,
@@ -208,6 +210,13 @@ function regrowingLegs(progress: number): LegsState {
   const hit = tryHit(createLegs());
   const slots = hit.state.slots.map((slot, i) => (i === 0 ? { ...slot, progress } : slot));
   return { ...hit.state, slots };
+}
+
+/** The trip with only its last leg left and no protected time. */
+function lastLeg(state: TripState): TripState {
+  let legs = createLegs();
+  for (let lost = 0; lost < LEGS.count - 1; lost++) legs = { ...tryHit(legs).state, protectedLeft: 0 };
+  return { ...state, encounter: { ...state.encounter, legs } };
 }
 
 afterEach(() => {
@@ -3308,13 +3317,6 @@ describe('trajinera lures and drag nets in the trip (issue #108)', () => {
     return { state: current, events, last, seconds: steps * DT };
   }
 
-  /** The trip with only its last leg left and no protected time. */
-  function lastLeg(state: TripState): TripState {
-    let legs = createLegs();
-    for (let lost = 0; lost < LEGS.count - 1; lost++) legs = { ...tryHit(legs).state, protectedLeft: 0 };
-    return { ...state, encounter: { ...state.encounter, legs } };
-  }
-
   function hitEvents(events: readonly TripEvent[]): TripEvent[] {
     return events.filter((event) => ['lureTug', 'netCatch', 'hit', 'shellBlock'].includes(event.type));
   }
@@ -3562,5 +3564,174 @@ describe('trajinera lures and drag nets in the trip (issue #108)', () => {
     const fresh = tripFishingSnapshot(createTrip(bothZone), false);
     expect(fresh.boats[0].lures[0]).toMatchObject({ at: lureAt(boat, 0, 0, false), up: false, lift: 0 });
     expect(tripFishingSnapshot(createTrip(zone), false)).toEqual({ boats: [], nets: [] });
+  });
+});
+
+describe('pelican lines in the trip (issue #211, ND-6)', () => {
+  const bounds = swimBounds(zone);
+  /** The canal's swim water ends 216 px under SURF, so the dip is 150 px: the bills reach y 230. */
+  const tuning = { ...PELICAN_LINE, dipDepth: 150 };
+  /**
+   * Offset -4.5 puts the line 4.5 s into its 5.5 s cycle at element time 0: holding at the dip until
+   * element time 0.4, rising until 1.0. Birds at x 1100, 1300 and 1500; scoop boxes x 1050 to 1150,
+   * 1250 to 1350 and 1450 to 1550, y 80 to 230.
+   */
+  const line = pelicanLineSpawn('canal/pelicans-1', -4.5, { x0: 1000, x1: 1600 }, bounds, tuning);
+  /** Offset 0 starts the glide at element time 0: no scoop box until element time 4. */
+  const glidingLine = pelicanLineSpawn('canal/pelicans-2', 0, { x0: 1000, x1: 1600 }, bounds, tuning);
+  const lineZone: TripSource = { ...findZone, pelicanLines: [line] };
+  const bill: Point = { x: 1100, y: SURF + 150 };
+  const inBox: Point = { x: 1130, y: 150 };
+  const shellCtx = createTripContext({ encounter: createEncounterContext({ legs: { ...LEGS, regrowTime: 1e9 }, shell: true }) });
+
+  /** Steps for `seconds` at `pos`, collecting the events. */
+  function hold(state: TripState, pos: Point, seconds: number): Drive {
+    return walk(state, Array.from({ length: Math.round(seconds / DT) }, () => pos));
+  }
+
+  function hitEvents(events: readonly TripEvent[]): TripEvent[] {
+    return events.filter((event) => event.type === 'hit' || event.type === 'shellBlock');
+  }
+
+  it('copies the lines with no scoop landed, and has none in an area with none', () => {
+    const trip = createTrip(lineZone);
+    expect(trip.pelicanLines).toEqual([line]);
+    expect(trip.pelicanLines[0]).not.toBe(line);
+    expect(trip.pelicanScoops).toEqual([null]);
+    const plain = createTrip(zone);
+    expect(plain.pelicanLines).toEqual([]);
+    expect(plain.pelicanScoops).toEqual([]);
+    expect(createTrip({ ...zone, pelicanLines: [] })).toEqual(createTrip(zone));
+  });
+
+  it('leaves a trip with no lines untouched: the scoops are the same object', () => {
+    const plain = createTrip(findZone);
+    expect(stepAt(plain, inBox).state.pelicanScoops).toBe(plain.pelicanScoops);
+  });
+
+  it('lands one hit from the bill when a scoop touches the axolotl centre: one leg and protected time', () => {
+    const { state, events, ...result } = stepAt(createTrip(lineZone), inBox);
+    expect(hitEvents(events)).toEqual([{ type: 'hit', sourceId: 'pelican', leg: 0, from: bill }]);
+    expect(events.map((event) => event.type)).toEqual(['hit', 'regrowStart']);
+    expect(state.legsLost).toBe(1);
+    expect(presentCount(state.encounter.legs)).toBe(LEGS.count - 1);
+    expect(isProtected(state.encounter.legs)).toBe(true);
+    expect(state.pelicanScoops).toEqual([0]);
+    expect(state.phase).toBe('swimming');
+    expect(result).not.toHaveProperty('outOfHull');
+    expect(result).not.toHaveProperty('landed');
+    expect(result).not.toHaveProperty('pushed');
+    expect(tripAxolotlPos(state)).toBeNull();
+  });
+
+  it('pushes gently away from the bill, never up: sideways above it, down and away below it, straight down on it', () => {
+    expect(stepAt(createTrip(lineZone), inBox).impulse).toEqual({ x: PELICAN_PUSH_SPEED, y: 0 });
+    expect(stepAt(createTrip(lineZone), { x: 1070, y: 150 }).impulse).toEqual({ x: -PELICAN_PUSH_SPEED, y: 0 });
+    const below = stepAt(createTrip(lineZone), { x: bill.x + 10, y: bill.y + 10 }).impulse;
+    expect(below?.x).toBeCloseTo(PELICAN_PUSH_SPEED / Math.SQRT2, 9);
+    expect(below?.y).toBeCloseTo(PELICAN_PUSH_SPEED / Math.SQRT2, 9);
+    expect(stepAt(createTrip(lineZone), { x: bill.x, y: 150 }).impulse).toEqual({ x: 0, y: PELICAN_PUSH_SPEED });
+    expect(stepAt(createTrip(lineZone), bill).impulse).toEqual({ x: 0, y: PELICAN_PUSH_SPEED });
+  });
+
+  it('misses the axolotl under the dip, in a gap between two boxes, and through the glide and the warning', () => {
+    expect(stepAt(createTrip(lineZone), { x: bill.x, y: bill.y + PELICAN_LINE.touchReach + 1 }).events).toEqual([]);
+    expect(stepAt(createTrip(lineZone), { x: 1200, y: 150 }).events).toEqual([]);
+    const gliding = createTrip({ ...findZone, pelicanLines: [glidingLine] });
+    const birdBox: Point = { x: pelicanBirdPositions(glidingLine, DT)[0].x, y: 150 };
+    const quiet = hold(gliding, birdBox, 3.9);
+    expect(hitEvents(quiet.events)).toEqual([]);
+    expect(quiet.last).not.toHaveProperty('impulse');
+    expect(quiet.state.pelicanScoops).toEqual([null]);
+  });
+
+  it('bumps at most once per scoop, then once in the next scoop', () => {
+    const first = stepAt(createTrip(lineZone), inBox).state;
+    const rest = hold(first, inBox, 0.9);
+    expect(hitEvents(rest.events)).toEqual([]);
+    expect(rest.state.pelicanScoops).toEqual([0]);
+    expect(rest.last).not.toHaveProperty('impulse');
+    const next = hold(rest.state, inBox, 5.5);
+    expect(hitEvents(next.events)).toHaveLength(1);
+    expect(hitEvents(next.events)[0]).toMatchObject({ type: 'hit', sourceId: 'pelican' });
+    expect(next.state.pelicanScoops).toEqual([pelicanScoopNumber(line, next.state.elementTime)]);
+    expect(next.state.pelicanScoops).toEqual([1]);
+    expect(next.state.legsLost).toBe(2);
+  });
+
+  it('costs no leg while protected, but the scoop still counts as landed and still pushes', () => {
+    const start = createTrip(lineZone);
+    const guarded: TripState = { ...start, encounter: { ...start.encounter, legs: tryHit(createLegs()).state } };
+    const result = stepAt(guarded, inBox);
+    expect(hitEvents(result.events)).toEqual([]);
+    expect(result.state.legsLost).toBe(0);
+    expect(result.state.pelicanScoops).toEqual([0]);
+    expect(result.impulse).toEqual({ x: PELICAN_PUSH_SPEED, y: 0 });
+  });
+
+  it('lets the Shell block the scoop hit, and counts a scoop hit against Star 3', () => {
+    const blocked = stepTrip(createTrip(lineZone), { axolotlPos: inBox, reduced: false, dashing: false }, DT, shellCtx);
+    expect(hitEvents(blocked.events)).toEqual([{ type: 'shellBlock', sourceId: 'pelican', from: bill }]);
+    expect(blocked.state.legsLost).toBe(0);
+    const hit = stepAt(createTrip(lineZone), inBox).state;
+    expect(beatArea(hit, { specialTreasureId: PLANT }).state.ending?.stars?.legsOrRescue).toBe(false);
+  });
+
+  it('gives Tail Dash no immunity', () => {
+    expect(stepAt(createTrip(lineZone), inBox, true).state.legsLost).toBe(1);
+  });
+
+  it('carries the axolotl home on a last-leg scoop, with no scoop landed and no push, and scoops nothing while carrying', () => {
+    const { state, events, ...result } = stepAt(lastLeg(createTrip(lineZone)), inBox);
+    expect(events.map((event) => event.type)).toEqual(['hit', 'carryStart']);
+    expect(state.phase).toBe('carrying');
+    expect(state.pelicanScoops).toEqual([null]);
+    expect(result).not.toHaveProperty('impulse');
+    const carried = stepAt(state, inBox);
+    expect(hitEvents(carried.events)).toEqual([]);
+    expect(carried.state.pelicanScoops).toBe(state.pelicanScoops);
+    expect(carried.state.elementTime).toBe(state.elementTime);
+  });
+
+  it('scoops nothing on the banked card and freezes the cycle while paused', () => {
+    const start = createTrip(lineZone);
+    const bankedTrip: TripState = { ...start, phase: 'banked', heldAt: home };
+    expect(stepAt(bankedTrip, inBox).state).toBe(bankedTrip);
+    for (const dt of PAUSE_DTS) {
+      expect(stepTrip(start, { axolotlPos: inBox, reduced: false, dashing: false }, dt, ctx).state).toBe(start);
+    }
+  });
+
+  it('lets no scoop act during a bailing bucket toss', () => {
+    const landing: Point = { x: 700, y: 260 };
+    const bucket = bailingBoatSpawn('canal/bailing-1', -6, { x0: 600, x1: 800, bucketX: 700, landing }, bounds);
+    const caught = stepAt(createTrip({ ...lineZone, bailingBoats: [bucket] }), { x: 700, y: 120 }).state;
+    expect(caught.toss).not.toBeNull();
+    const tossed = stepAt(caught, inBox);
+    expect(hitEvents(tossed.events)).toEqual([]);
+    expect(tossed).not.toHaveProperty('impulse');
+    expect(tossed.state.pelicanScoops).toBe(caught.pelicanScoops);
+    expect(tossed.state.legsLost).toBe(0);
+  });
+
+  it('meets the pelican card within PELICAN_MEET_RANGE of a bird, outside the safe area', () => {
+    const start = createTrip({ ...findZone, pelicanLines: [glidingLine] });
+    const bird = pelicanBirdPositions(glidingLine, DT)[0];
+    expect(stepAt(start, { x: bird.x, y: bird.y + PELICAN_MEET_RANGE }).state.met).toEqual(['pelican']);
+    expect(stepAt(start, { x: bird.x, y: bird.y + PELICAN_MEET_RANGE + 1 }).state.met).toEqual([]);
+    const met = stepAt(start, { x: bird.x, y: bird.y + 100 }).state;
+    expect(stepAt(met, { x: bird.x, y: bird.y + 100 }).state.met).toBe(met.met);
+    const homeLine = pelicanLineSpawn('canal/pelicans-3', 0, { x0: 100, x1: 700 }, bounds, tuning);
+    const homeStart = createTrip({ ...findZone, pelicanLines: [homeLine] });
+    const homeBird = pelicanBirdPositions(homeLine, DT)[0];
+    const inSafe: Point = { x: homeBird.x, y: homeBird.y + 100 };
+    expect(inSafe.x).toBeLessThan(zone.safeArea.x1);
+    expect(stepAt(homeStart, inSafe).state.met).toEqual([]);
+  });
+
+  it('starts fresh on newTrip: the same lines, no scoop landed and the clock at 0', () => {
+    const hit = stepAt(createTrip(lineZone), inBox).state;
+    const done = goHome({ ...hit, inHomeSpot: true }).state;
+    expect(newTrip(done, 42)).toEqual(createTrip(lineZone, LEGS, [], 42));
   });
 });

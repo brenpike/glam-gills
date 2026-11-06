@@ -13,7 +13,9 @@ import { beginDraw, type TexSize } from './canvasKit';
 import { drawAxolotl, type AxolotlPose } from './drawAxolotl';
 import type { AxolotlArtLook, Bounds } from './drawAxolotlParts';
 import { NO_OUTFIT, type ArtOutfit } from './drawWearables';
-import type { AreaLookId } from './habitatLook';
+import { habitatLook, type AreaLookId } from './habitatLook';
+import type { LakeBand } from './drawLake';
+import type { RockWall } from '../logic/pebble';
 import {
   CAVE_TEX,
   CURRENT_MARKER_TEX,
@@ -46,6 +48,7 @@ import {
 } from './drawProps';
 import {
   BG_CHUNK,
+  clipRectsToChunk,
   padTextureSize,
   paintBackgroundChunk,
   paintLilyPad,
@@ -450,11 +453,21 @@ export interface AreaSceneryOptions {
    * with `stream`. Throws a RangeError when it is not a column of the area.
    */
   readonly streamColumn?: number;
+  /**
+   * The area's solid rock walls and side rooms, in world coordinates (issue #211, ND-4). Only a look
+   * that paints the lakebed (`lakebed`: 'open-lake', 'open-lake-windy') uses them: each chunk gets
+   * the parts of the walls that lie inside it (clipRectsToChunk) and paints its lakebed there, in the
+   * on-demand scenery bake, never as a big boot sprite. A look that draws its water by depth band
+   * (`depthBands`) paints row r in band r + 1 (4 at most). Every other look ignores both. Default none.
+   */
+  readonly rockWalls?: readonly Readonly<RockWall>[];
 }
 
 export const areaBgKey = (prefix: string, row: number, column: number): string => `${prefix}bg-${row}-${column}`;
 /** Middle rows are one flat colour, so every middle chunk of an area shares this one texture. */
 export const areaDeepBgKey = (prefix: string): string => `${prefix}bg-deep`;
+/** A banded look's rect-free middle chunks of row `row` are flat, so they share this one texture per row. */
+export const areaDeepRowBgKey = (prefix: string, row: number): string => `${prefix}bg-deep-row-${row}`;
 export const areaReedKey = (prefix: string, i: number): string => `${prefix}reed-${i}`;
 export const areaPadKey = (prefix: string, i: number): string => `${prefix}pad-${i}`;
 
@@ -470,6 +483,10 @@ export const areaPadKey = (prefix: string, i: number): string => `${prefix}pad-$
  * is the canal, unchanged.
  * `streamColumn` places the stream's mouth (issue #98); the default, the last column,
  * is unchanged.
+ * A look that paints the lakebed gets `rockWalls` clipped to each chunk, and a look that draws water
+ * by depth band gets each row's band (issue #211). A banded middle row with no rock in a chunk shares
+ * one texture per row (areaDeepRowBgKey); a middle chunk with rock bakes on its own. No new texture
+ * kinds: it is the same grid of chunks, baked on demand.
  */
 export function bakeAreaScenery(scene: Phaser.Scene, opts: AreaSceneryOptions): SceneryTextures {
   const { keyPrefix, bakeScale, bgScale, rand, screensWide, screensTall, look } = opts;
@@ -482,17 +499,31 @@ export function bakeAreaScenery(scene: Phaser.Scene, opts: AreaSceneryOptions): 
   const streamClosed = streamColumn < screensWide - 1;
   const bgSize: TexSize = { w: BG_CHUNK.w, h: BG_CHUNK.h, originX: 0, originY: 0 };
 
+  const areaLook = habitatLook(look ?? 'canal');
+  const walls = opts.rockWalls ?? [];
+  const paintsRock = areaLook.lakebed && walls.length > 0;
   let deep: TexInfo | undefined;
   const bg: TexInfo[][] = [];
   for (let r = 0; r < screensTall; r++) {
     const row: ChunkRow = areaRowKind(r, screensTall);
     const cells: TexInfo[] = [];
+    const band: LakeBand | undefined = areaLook.depthBands ? (Math.min(r + 1, 4) as LakeBand) : undefined;
+    let deepRow: TexInfo | undefined;
     for (let c = 0; c < screensWide; c++) {
-      if (row === 'middle') {
-        deep ??= bake(scene, areaDeepBgKey(keyPrefix), bgSize, bgScale, (ctx) =>
-          paintBackgroundChunk(ctx, { row, index: c, hasSun: false, hasBank: false, look, rand }),
-        );
-        cells.push(deep);
+      const solids = paintsRock ? clipRectsToChunk(walls, c, r) : undefined;
+      if (row === 'middle' && (solids === undefined || solids.length === 0)) {
+        if (band === undefined) {
+          deep ??= bake(scene, areaDeepBgKey(keyPrefix), bgSize, bgScale, (ctx) =>
+            paintBackgroundChunk(ctx, { row, index: c, hasSun: false, hasBank: false, look, rand }),
+          );
+          cells.push(deep);
+        } else {
+          // A banded middle row is flat deep water of its band: one texture per row, not per chunk.
+          deepRow ??= bake(scene, areaDeepRowBgKey(keyPrefix, r), bgSize, bgScale, (ctx) =>
+            paintBackgroundChunk(ctx, { row, index: c, hasSun: false, hasBank: false, look, band, rand }),
+          );
+          cells.push(deepRow);
+        }
         continue;
       }
       const onTop = row === 'single' || row === 'top';
@@ -512,6 +543,8 @@ export function bakeAreaScenery(scene: Phaser.Scene, opts: AreaSceneryOptions): 
             streamSpill: onTop && hasStream && streamClosed && c === streamColumn + 1,
             edgeLeft: c === 0,
             edgeRight: c === screensWide - 1,
+            ...(solids === undefined ? {} : { solids }),
+            ...(band === undefined ? {} : { band }),
             rand,
           }),
         ),

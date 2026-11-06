@@ -3,9 +3,14 @@
  * (issue #130): an area's moving threats, their kinds, and the longest quiet swim in its water.
  * Only this measure counts a chaser's leash (PRD open question 252, ND-5). `longestQuietStretch`,
  * the longest stretch of the main path with none in reach, stays as a measure (issue #136, ND-3).
+ * Stepped, depth-banded areas (issue #211, ND-8, ND-9) count only screens of water, run the floor
+ * lane over the stepped floor, count each pelican line's birds as moving threats and read the
+ * depth rule by band.
  */
-import { shapeDistance, type HazardShape } from './hazards';
+import { shapeDistance, type HazardRect, type HazardShape } from './hazards';
 import { movingHazardSweep } from './movingHazards';
+import type { RockWall } from './pebble';
+import { pelicanBirdCount, pelicanLineSweep } from './pelicanLine';
 import { BLACK_BASS_SPECIES, CARP_SPECIES, TILAPIA_SPECIES, routeLoopDistance, type PredatorRules } from './predators';
 import { TILAPIA, type TilapiaTuning } from './tuning';
 import { SCREEN_W, WORLD_H, inSafeArea, swimBounds, type Point, type SafeArea, type TilapiaRoute, type ZoneLayout } from './zone';
@@ -43,16 +48,20 @@ const DEPTH_RULE_SPECIES: readonly string[] = [TILAPIA_SPECIES.id, CARP_SPECIES.
 /** Screens of water per carp the carp rule asks for (issue #130, ND-7). */
 const SCREENS_PER_CARP = 3;
 
-/** The zone's moving threats: tilapia routes with the area's tuning, other predator routes and moving hazards. */
-type ThreatGeometry = Pick<ZoneLayout, 'tilapiaRoutes' | 'tilapia' | 'predatorRoutes' | 'movingHazards'>;
+/**
+ * The zone's moving threats: tilapia routes with the area's tuning, other predator routes, moving
+ * hazards and pelican lines (issue #211, ND-8; absent means none).
+ */
+type ThreatGeometry = Pick<ZoneLayout, 'tilapiaRoutes' | 'tilapia' | 'predatorRoutes' | 'movingHazards'> & Partial<Pick<ZoneLayout, 'pelicanLines'>>;
 
 /** The moving threats and the main path they cover. */
 type PathGeometry = ThreatGeometry & Pick<ZoneLayout, 'mainPath'>;
 
-/** One moving threat's reach: px from a patrol loop or from a moving hazard sweep. */
+/** One moving threat's reach: px from a patrol loop, from a moving hazard sweep or from a pelican line's sweep. */
 type Reach =
   | { kind: 'route'; waypoints: readonly Point[]; reach: number }
-  | { kind: 'shape'; shape: HazardShape; reach: number };
+  | { kind: 'shape'; shape: HazardShape; reach: number }
+  | { kind: 'scoop'; shape: HazardRect; reach: number };
 
 /** One main path sample and its distance in px along the path from its start. */
 interface PathSample {
@@ -69,8 +78,15 @@ type WaterGeometry = ThreatGeometry & Pick<ZoneLayout, 'width' | 'bedTop' | 'saf
 /** Everything a whole-water bar reads: the threats, the water and the area's size. */
 type WholeWaterGeometry = WaterGeometry & Pick<ZoneLayout, 'height'>;
 
-/** The predator routes and the water's size, which the depth rule reads. */
-type RouteGeometry = Pick<ZoneLayout, 'tilapiaRoutes' | 'predatorRoutes' | 'width' | 'bedTop'>;
+/** The water's size and its solid rock walls (absent means none), which the screens and bands of water read. */
+type RockGeometry = Pick<ZoneLayout, 'width' | 'bedTop'> & Partial<Pick<ZoneLayout, 'rockWalls'>>;
+
+/**
+ * The predator routes and the water's size, which the depth rule reads; in a depth-banded area
+ * (issue #211, ND-9) also its rock walls, moving hazards and pelican lines (absent means none).
+ */
+type RouteGeometry = Pick<ZoneLayout, 'tilapiaRoutes' | 'predatorRoutes' | 'width' | 'bedTop'> &
+  Partial<Pick<ZoneLayout, 'depthBanded' | 'rockWalls' | 'movingHazards' | 'pelicanLines'>>;
 
 /** The threats and the water's size, which the surface danger check reads. */
 type SurfaceGeometry = RouteGeometry & Pick<ZoneLayout, 'movingHazards'>;
@@ -79,6 +95,13 @@ type SurfaceGeometry = RouteGeometry & Pick<ZoneLayout, 'movingHazards'>;
 interface YSpan {
   top: number;
   bottom: number;
+}
+
+/** One screen the whole-water grid touches: its row and column, and whether any of its grid points is water, not rock. */
+interface ScreenWater {
+  row: number;
+  column: number;
+  water: boolean;
 }
 
 /** One quiet swim: its length in px along the grid, where it starts and where it ends. */
@@ -131,9 +154,15 @@ interface QueueEntry {
   distance: number;
 }
 
-/** Moving threats: one per tilapia route, one per other predator route and one per moving hazard spawn. */
-export function movingThreatCount(layout: Pick<ZoneLayout, 'tilapiaRoutes' | 'predatorRoutes' | 'movingHazards'>): number {
-  return layout.tilapiaRoutes.length + layout.predatorRoutes.length + (layout.movingHazards ?? []).length;
+/**
+ * Moving threats: one per tilapia route, one per other predator route, one per moving hazard spawn
+ * and one per bird of each pelican line (issue #211, ND-8).
+ */
+export function movingThreatCount(
+  layout: Pick<ZoneLayout, 'tilapiaRoutes' | 'predatorRoutes' | 'movingHazards'> & Partial<Pick<ZoneLayout, 'pelicanLines'>>,
+): number {
+  const birds = (layout.pelicanLines ?? []).reduce((count, line) => count + pelicanBirdCount(line), 0);
+  return layout.tilapiaRoutes.length + layout.predatorRoutes.length + (layout.movingHazards ?? []).length + birds;
 }
 
 /** Distinct predator species by id, the tilapia included when the area has a tilapia route. */
@@ -148,10 +177,44 @@ export function movingHazardTypeCount(layout: Pick<ZoneLayout, 'movingHazards'>)
 }
 
 /**
+ * The moving hazard types the full bar's slot counts (issue #211, Q2): the distinct moving hazard
+ * types, plus one when the area has a pelican line, which fills the leg-costing moving hazard slot.
+ */
+export function legCostingMovingHazardTypeCount(layout: Pick<ZoneLayout, 'movingHazards'> & Partial<Pick<ZoneLayout, 'pelicanLines'>>): number {
+  return movingHazardTypeCount(layout) + ((layout.pelicanLines ?? []).length > 0 ? 1 : 0);
+}
+
+/**
+ * Screens of water the area covers (issue #211, ND-8): its width over SCREEN_W times its height
+ * over WORLD_H, less each screen whose whole-water grid points all lie in rock walls. With no rock
+ * walls it is the area's whole size in screens.
+ */
+export function waterScreenCount(layout: RockGeometry & Pick<ZoneLayout, 'height'>): number {
+  const screens = (layout.width / SCREEN_W) * (layout.height / WORLD_H);
+  if ((layout.rockWalls ?? []).length === 0) return screens;
+  return screens - gridScreens(layout).filter((screen) => !screen.water).length;
+}
+
+/**
+ * The depth bands that hold water in a depth-banded area (issue #211, ND-1, ND-9), top down: one per
+ * screen row with at least one whole-water grid point outside the rock walls, as that row's part of
+ * the swim water's height (swimBounds), so band 1 runs from the swim water's top.
+ */
+export function waterDepthBands(layout: RockGeometry): YSpan[] {
+  const { minY, maxY } = swimBounds(layout);
+  const rows = new Set(
+    gridScreens(layout)
+      .filter((screen) => screen.water)
+      .map((screen) => screen.row),
+  );
+  return [...rows].sort((first, second) => first - second).map((row) => ({ top: Math.max(row * WORLD_H, minY), bottom: Math.min((row + 1) * WORLD_H, maxY) }));
+}
+
+/**
  * Longest stretch in px of the main path with no moving threat in reach, sampled every SAMPLE_STEP
  * px. In reach means within lungeRange plus leash of a predator's patrol loop (a tilapia by the
  * area's own tuning; leash 0 without a chase or with the `warnOnRoute` rule), or within touch reach
- * of a moving hazard sweep, inclusive. A stretch runs from the last in-reach sample before it, or
+ * of a moving hazard sweep or of a pelican line's whole sweep (issue #211, ND-8), inclusive. A stretch runs from the last in-reach sample before it, or
  * the path start, to the first in-reach sample after it, or the path end. Throws when the main
  * path has no points.
  */
@@ -204,9 +267,11 @@ export function depthBands(layout: Pick<ZoneLayout, 'width' | 'bedTop'>): YSpan[
  * ND-6). It covers tilapia routes and predator routes whose species id is the tilapia's, the carp's
  * or the black bass's, grouped by species id: (a) each loop's height overlaps at least two depth
  * bands by at least BAND_REACH px each, and (b) each species' loops together overlap every band by at
- * least BAND_REACH px. True when the area has no such loop.
+ * least BAND_REACH px. True when the area has no such loop. A depth-banded area reads the band rule
+ * (meetsBandDepthRule) instead of these thirds (issue #211, ND-9, Q3).
  */
 export function meetsDepthRule(layout: RouteGeometry): boolean {
+  if (layout.depthBanded === true) return meetsBandDepthRule(layout);
   const bands = depthBands(layout);
   const loops = depthRuleLoops(layout);
   const eachLoopSpansTwo = [...loops.values()].flat().every((loop) => bandsReached(loop, bands) >= MIN_LOOP_BANDS);
@@ -215,33 +280,54 @@ export function meetsDepthRule(layout: RouteGeometry): boolean {
 }
 
 /**
- * Whether the area has danger from the surface (issue #130, ND-6): any moving hazard, or any
- * predator route, tilapia routes included, lying wholly in the surface band. A route lies wholly
- * there when none of its waypoints is below the band's bottom edge, the edge included.
+ * Whether a depth-banded area's threats cover every band (issue #211, ND-9, Q3), in place of the
+ * thirds rule. The bands are waterDepthBands. (a) Every band has its own moving threat: a tilapia
+ * or predator route whose waypoints' y span, or a moving hazard or pelican line whose sweep's y
+ * span, lies wholly in the band once cut to the swim water's height, edges included. (b) For each
+ * species the depth rule covers, in each band its loops reach into (overlap by more than 0 px),
+ * its loops there together reach within BAND_REACH px of the band's top and of its bottom.
+ */
+export function meetsBandDepthRule(layout: RouteGeometry): boolean {
+  const bands = waterDepthBands(layout);
+  const { minY, maxY } = swimBounds(layout);
+  const threats = threatSpans(layout)
+    .map((span) => ({ top: Math.max(span.top, minY), bottom: Math.min(span.bottom, maxY) }))
+    .filter((span) => span.top <= span.bottom);
+  const everyBandHasThreat = bands.every((band) => threats.some((span) => span.top >= band.top && span.bottom <= band.bottom));
+  const eachSpeciesSpansItsBands = [...depthRuleLoops(layout).values()].every((loops) => bands.every((band) => reachesBandEdges(loops, band)));
+  return everyBandHasThreat && eachSpeciesSpansItsBands;
+}
+
+/**
+ * Whether the area has danger from the surface (issue #130, ND-6): any moving hazard, any pelican
+ * line (issue #211, ND-8), or any predator route, tilapia routes included, lying wholly in the
+ * surface band. A route lies wholly there when none of its waypoints is below the band's bottom
+ * edge, the edge included.
  */
 export function hasSurfaceDanger(layout: SurfaceGeometry): boolean {
   const surfaceBottom = depthBands(layout)[0].bottom;
   const routes: readonly TilapiaRoute[] = [...layout.tilapiaRoutes, ...layout.predatorRoutes];
   const surfaceRoute = routes.some((route) => route.waypoints.length > 0 && route.waypoints.every((point) => point.y <= surfaceBottom));
-  return (layout.movingHazards ?? []).length > 0 || surfaceRoute;
+  return (layout.movingHazards ?? []).length > 0 || (layout.pelicanLines ?? []).length > 0 || surfaceRoute;
 }
 
 /**
  * Longest stretch in px of the floor lane with no predator in reach (issue #130, ND-6). The lane
- * runs along y = bedTop − 22 from the swim water's left edge to its right edge, sampled every
- * SAMPLE_STEP px. A sample is a threat point when it is in the safe area or within a predator's
- * reach as longestQuietStretch measures it; moving hazards do not count. A stretch runs from the
- * last threat point before it, or the lane start, to the first threat point after it, or the lane end.
+ * runs bedTop − 22 above the floor, from the swim water's left edge to its right edge, sampled every
+ * SAMPLE_STEP px of x. The floor is stepped (issue #211, ND-8): under each x it is the top of the
+ * rock walls stacked on the bed there, else the bed. Samples inside a rock wall or above the swim
+ * water are skipped. A sample is a threat point when it is in the safe area, within a predator's
+ * reach as longestQuietStretch measures it, or within the touch reach of a pelican line's whole
+ * sweep (where its scoop reaches the floor); moving hazards do not count. A stretch runs from the
+ * last threat point before it, or the first lane sample, to the first threat point after it, or the
+ * last lane sample, measured in px of x. Gives 0 when every sample is skipped.
  */
 export function floorQuietStretch(layout: WaterGeometry): number {
-  const { minX, maxX, maxY } = swimBounds(layout);
-  const samples = pathSamples([
-    { x: minX, y: maxY },
-    { x: maxX, y: maxY },
-  ]);
-  const predators = reachesOf(layout).filter((reach) => reach.kind === 'route');
+  const samples = floorLane(layout);
+  if (samples.length === 0) return 0;
+  const predators = reachesOf(layout).filter((reach) => reach.kind !== 'shape');
   let longest = 0;
-  let fence = 0;
+  let fence = samples[0].along;
   let quietSinceFence = false;
   for (const sample of samples) {
     if (inSafeArea(sample.point, layout.safeArea) || predators.some((reach) => inReach(sample.point, reach))) {
@@ -254,6 +340,38 @@ export function floorQuietStretch(layout: WaterGeometry): number {
   }
   if (quietSinceFence) longest = Math.max(longest, samples[samples.length - 1].along - fence);
   return longest;
+}
+
+/**
+ * The floor lane's samples (issue #211, ND-8): every SAMPLE_STEP px of x across the swim water, at
+ * bedTop − 22 above the stepped floor under that x, each with its px of x from the swim water's left
+ * edge. Samples inside a rock wall or above the swim water are left out.
+ */
+function floorLane(layout: WaterGeometry): PathSample[] {
+  const { minX, maxX, minY, maxY } = swimBounds(layout);
+  const lift = layout.bedTop - maxY;
+  const walls = layout.rockWalls ?? [];
+  return pathSamples([
+    { x: minX, y: maxY },
+    { x: maxX, y: maxY },
+  ]).flatMap((sample): PathSample[] => {
+    const point = { x: sample.point.x, y: floorTopAt(sample.point.x, layout.bedTop, walls) - lift };
+    return point.y < minY || inRock(point, walls) ? [] : [{ point, along: sample.along }];
+  });
+}
+
+/**
+ * The stepped floor's top at `x` (issue #211, ND-8): from the bed up, the top of each rock wall
+ * stacked on the floor so far there (its x span holds `x`, its top above the floor and its bottom at
+ * or below it), else the bed.
+ */
+function floorTopAt(x: number, bedTop: number, walls: readonly Readonly<RockWall>[]): number {
+  let top = bedTop;
+  for (;;) {
+    const resting = walls.filter((wall) => wall.x0 <= x && x <= wall.x1 && wall.y0 < top && wall.y1 >= top);
+    if (resting.length === 0) return top;
+    top = Math.min(...resting.map((wall) => wall.y0));
+  }
 }
 
 /** Whether the floor rule holds (issue #130, ND-6): no surface danger, or a floor quiet stretch of at most one screen across. */
@@ -273,16 +391,16 @@ export function carpCount(layout: Pick<ZoneLayout, 'predatorRoutes'>): number {
 
 /**
  * Whether the area meets the full danger bar with the whole-water test (PRD N2; issue #130, ND-1
- * to ND-7): at least ⌈0.75 × screens⌉ moving threats, at least 2 predator species, at least 1
- * moving hazard type, every predator chases except one built never to chase (the wading heron,
- * amended by ADR 0038), no quiet swim longer than one screen across, and the depth, floor and carp
- * rules hold.
+ * to ND-7): at least ⌈0.75 × screens of water⌉ moving threats, at least 2 predator species, at
+ * least 1 moving hazard type (a pelican line fills the slot, issue #211, Q2), every predator chases
+ * except one built never to chase (the wading heron, amended by ADR 0038), no quiet swim longer
+ * than one screen across, and the depth, floor and carp rules hold.
  */
 export function meetsWholeWaterDangerBar(layout: WholeWaterGeometry): boolean {
   return (
-    movingThreatCount(layout) >= Math.ceil(THREATS_PER_SCREEN * screenCount(layout)) &&
+    movingThreatCount(layout) >= Math.ceil(THREATS_PER_SCREEN * waterScreenCount(layout)) &&
     predatorTypeCount(layout) >= MIN_PREDATOR_TYPES &&
-    movingHazardTypeCount(layout) >= MIN_MOVING_HAZARD_TYPES &&
+    legCostingMovingHazardTypeCount(layout) >= MIN_MOVING_HAZARD_TYPES &&
     everyPredatorChases(layout) &&
     meetsWholeWaterRules(layout)
   );
@@ -313,7 +431,7 @@ function meetsWholeWaterRules(layout: WholeWaterGeometry): boolean {
     (swim === null || swim.length <= QUIET_STRETCH_LIMIT) &&
     meetsDepthRule(layout) &&
     meetsFloorRule(layout) &&
-    carpCount(layout) >= carpTarget(screenCount(layout))
+    carpCount(layout) >= carpTarget(waterScreenCount(layout))
   );
 }
 
@@ -329,9 +447,25 @@ function rampMovingHazardTypeLimit(areaNumber: number): number {
   }
 }
 
-/** Screens the area covers: its width over SCREEN_W times its height over WORLD_H. */
-function screenCount(layout: Pick<ZoneLayout, 'width' | 'height'>): number {
-  return (layout.width / SCREEN_W) * (layout.height / WORLD_H);
+/**
+ * Each screen the whole-water grid touches (issue #211, ND-8), by the screen row and column of its
+ * grid points, and whether any of them lies outside every rock wall.
+ */
+function gridScreens(layout: RockGeometry): ScreenWater[] {
+  const bounds = swimBounds(layout);
+  const walls = layout.rockWalls ?? [];
+  const xs = gridLine(bounds.minX, bounds.maxX);
+  const screens = new Map<string, ScreenWater>();
+  for (const y of gridLine(bounds.minY, bounds.maxY)) {
+    for (const x of xs) {
+      const [row, column] = [Math.floor(y / WORLD_H), Math.floor(x / SCREEN_W)];
+      const key = `${row},${column}`;
+      const screen = screens.get(key) ?? { row, column, water: false };
+      screen.water = screen.water || !inRock({ x, y }, walls);
+      screens.set(key, screen);
+    }
+  }
+  return [...screens.values()];
 }
 
 /**
@@ -366,7 +500,8 @@ function reachesOf(layout: ThreatGeometry): Reach[] {
   const moving = (layout.movingHazards ?? []).map(
     (spawn): Reach => ({ kind: 'shape', shape: movingHazardSweep(spawn), reach: spawn.type.touchReach }),
   );
-  return [...tilapia, ...others, ...moving];
+  const scoops = (layout.pelicanLines ?? []).map((line): Reach => ({ kind: 'scoop', shape: pelicanLineSweep(line), reach: line.tuning.touchReach }));
+  return [...tilapia, ...others, ...moving, ...scoops];
 }
 
 function inReach(point: Point, reach: Reach): boolean {
@@ -405,6 +540,33 @@ function depthRuleLoops(layout: RouteGeometry): Map<string, YSpan[]> {
     loops.set(species, [...(loops.get(species) ?? []), { top: Math.min(...ys), bottom: Math.max(...ys) }]);
   }
   return loops;
+}
+
+/**
+ * The y span of each moving threat (issue #211, ND-9): each tilapia and predator route's waypoints,
+ * each moving hazard's sweep and each pelican line's sweep. A route with no waypoints has none.
+ */
+function threatSpans(layout: RouteGeometry): YSpan[] {
+  const routes = [...layout.tilapiaRoutes, ...layout.predatorRoutes].filter((route) => route.waypoints.length > 0);
+  const routeSpans = routes.map((route): YSpan => {
+    const ys = route.waypoints.map((point) => point.y);
+    return { top: Math.min(...ys), bottom: Math.max(...ys) };
+  });
+  const sweeps = [...(layout.movingHazards ?? []).map(movingHazardSweep), ...(layout.pelicanLines ?? []).map(pelicanLineSweep)];
+  return [...routeSpans, ...sweeps.map((sweep): YSpan => ({ top: sweep.y0, bottom: sweep.y1 }))];
+}
+
+/**
+ * Whether one species' loops reach a band's edges (issue #211, ND-9): true when none of them reaches
+ * into the band (overlaps it by more than 0 px), else when those that do together reach within
+ * BAND_REACH px of its top and of its bottom.
+ */
+function reachesBandEdges(loops: readonly YSpan[], band: YSpan): boolean {
+  const inside = loops.filter((loop) => Math.min(loop.bottom, band.bottom) - Math.max(loop.top, band.top) > 0);
+  if (inside.length === 0) return true;
+  const top = Math.min(...inside.map((loop) => loop.top));
+  const bottom = Math.max(...inside.map((loop) => loop.bottom));
+  return top <= band.top + BAND_REACH && bottom >= band.bottom - BAND_REACH;
 }
 
 /** How many depth bands a loop's span overlaps by at least BAND_REACH px. */
@@ -520,7 +682,7 @@ function buildWaterGrid(layout: WaterGeometry): WaterGrid {
  * Whether a point is inside a rock wall, edges included (issue #105, ND-8). Rock is not water, so a
  * grid point in it is never quiet: a quiet swim ends at the rock as it ends at a threat.
  */
-function inRock(point: Point, walls: readonly Readonly<{ x0: number; x1: number; y0: number; y1: number }>[]): boolean {
+function inRock(point: Point, walls: readonly Readonly<RockWall>[]): boolean {
   return walls.some((wall) => point.x >= wall.x0 && point.x <= wall.x1 && point.y >= wall.y0 && point.y <= wall.y1);
 }
 

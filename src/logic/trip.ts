@@ -22,7 +22,14 @@ import {
   type EncounterState,
 } from './encounter';
 import { DRAG_NET, dragNetCatch, dragNetPhase, sweepFront, type DragNetSpawn } from './dragNets';
-import { DRAG_NET_MEET_RANGE, LURE_MEET_RANGE, metThreatIds, type ThreatSighting } from './factCards';
+import {
+  DRAG_NET_MEET_RANGE,
+  LURE_MEET_RANGE,
+  PELICAN_FACT,
+  PELICAN_MEET_RANGE,
+  metThreatIds,
+  type ThreatSighting,
+} from './factCards';
 import { createGhostNets, endSnag, isSnagged, stepGhostNets, type GhostNetState } from './ghostNets';
 import {
   darkHintPlant,
@@ -59,6 +66,13 @@ import {
   stepMurkyTimer,
   type MurkyTimer,
 } from './murkyWater';
+import {
+  pelicanBirdPositions,
+  pelicanScoopBoxes,
+  pelicanScoopHit,
+  pelicanScoopNumber,
+  type PelicanLineSpawn,
+} from './pelicanLine';
 import { DEFAULT_TRIP_SEED, nextTripSeed, placeTreasures, type PlacedFind } from './placement';
 import {
   createPlasticWorms,
@@ -120,7 +134,7 @@ import {
   type LegTuning,
   type PlasticWormTuning,
 } from './tuning';
-import type { Vec2 } from './vec';
+import { normalize, scale, type Vec2 } from './vec';
 import {
   inHomeSpot as isInHomeSpot,
   swimBounds,
@@ -141,11 +155,11 @@ export const LEG_PROGRESS_STEPS = 10;
  * read the area's width, bed top and rock walls (none when absent) for where a push may go. The
  * bailing boats (issue #107, ND-2) are none when absent. The murky patches (issue #107, ND-1) are
  * the encounter hazards of type murky water. The fishing boats (issue #108, ND-1) and drag nets
- * (issue #108, ND-2) are none when absent.
+ * (issue #108, ND-2) are none when absent, and so are the pelican lines (issue #211, ND-6).
  */
 export type TripSource = EncounterSource &
   Pick<ZoneLayout, 'areaId' | 'start' | 'homeSpot' | 'finds' | 'spots' | 'mainPath' | 'darkWater'> &
-  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras' | 'bailingBoats' | 'fishingBoats' | 'dragNets'>> & {
+  Partial<Pick<ZoneLayout, 'width' | 'bedTop' | 'rockWalls' | 'trajineras' | 'bailingBoats' | 'fishingBoats' | 'dragNets' | 'pelicanLines'>> & {
     elements?: readonly Readonly<ElementSpawn>[];
   };
 
@@ -222,7 +236,10 @@ export interface MurkyGauge {
  * ND-1). `dragNets` is the trip's drag-net stretches, none when the area has none, each on its cycle
  * at `elementTime`, and `netCatches` the number of the last sweep that caught for each stretch, in
  * stretch order, or null when none has (issue #108, ND-2). Both start fresh at a new trip and when
- * the carry starts.
+ * the carry starts. `pelicanLines` is the trip's pelican lines, none when the area has none, each on
+ * its cycle at `elementTime`, and `pelicanScoops` the number (pelicanScoopNumber) of the last scoop
+ * that bumped the axolotl for each line, in line order, or null when none has (issue #211, ND-6);
+ * they start fresh at a new trip and when the carry starts.
  */
 export interface TripState {
   phase: TripPhase;
@@ -264,6 +281,8 @@ export interface TripState {
   lures: LureState;
   dragNets: DragNetSpawn[];
   netCatches: (number | null)[];
+  pelicanLines: PelicanLineSpawn[];
+  pelicanScoops: (number | null)[];
 }
 
 /**
@@ -342,8 +361,9 @@ export type TripEvent =
   | NetCatchEvent;
 
 /**
- * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump or a
- * trajinera push that did not bank: the velocity in px/s to give the axolotl. `pushed` is set only
+ * Result of a trip step or a trip action. `impulse` is set only on a swimming step with a bump, a
+ * pelican scoop's push (issue #211, ND-6) or a trajinera push that did not bank: the velocity in px/s
+ * to give the axolotl. `pushed` is set only
  * on a swimming step where a gliding trajinera's hull pushed the axolotl aside (issue #78, ND-8),
  * and `impulse` is then that push's. `outOfHull` is set only on a swimming step that neither banks
  * nor starts the carry and where a gliding trajinera's hull held the axolotl out (issue #78, ND-8,
@@ -368,6 +388,12 @@ type FishingEvent = EncounterEvent | LureTugEvent | NetCatchEvent;
 const NO_EVENTS = Object.freeze<TripEvent[]>([]) as TripEvent[];
 // INVARIANT: frozen and shared; a step with no murky hit allocates no events.
 const NO_ENCOUNTER_EVENTS: readonly EncounterEvent[] = Object.freeze([]);
+
+/**
+ * Speed in px/s of the gentle push a pelican scoop gives the axolotl away from the bill (issue #211,
+ * ND-6): the tilapia's bump speed, so it reads as the same gentle bump. Provisional; tune in play.
+ */
+export const PELICAN_PUSH_SPEED = TILAPIA.bumpSpeed;
 
 /** Default context: the default encounter context and the shared carry and find tuning. */
 export function createTripContext(overrides: Partial<TripContext> = {}): TripContext {
@@ -407,7 +433,8 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * or meets rock, or two boats' spans are less than twice the body reach apart. The murky timer starts
  * fresh, and the source's bailing boats are the trip's, copied, with no toss (issue #107). The
  * source's fishing boats and drag nets are the trip's, copied, with every lure down and no sweep
- * caught (issue #108).
+ * caught (issue #108). The source's pelican lines are the trip's, copied, with no scoop landed
+ * (issue #211, ND-6).
  */
 export function createTrip(
   source: TripSource,
@@ -467,7 +494,19 @@ export function createTrip(
     lures: createLureState(source.fishingBoats ?? []),
     dragNets: (source.dragNets ?? []).map(copyDragNet),
     netCatches: noNetCatches(source.dragNets ?? []),
+    pelicanLines: (source.pelicanLines ?? []).map(copyPelicanLine),
+    pelicanScoops: noPelicanScoops(source.pelicanLines ?? []),
   };
+}
+
+/** A copy of the pelican line sharing its frozen tuning. */
+function copyPelicanLine(line: Readonly<PelicanLineSpawn>): PelicanLineSpawn {
+  return { ...line };
+}
+
+/** No scoop landed yet for each of `lines`: the start of a trip and of the carry home. */
+function noPelicanScoops(lines: readonly Readonly<PelicanLineSpawn>[]): (number | null)[] {
+  return lines.map(() => null);
 }
 
 /** A copy of the fishing boat; its lures are copied. */
@@ -531,7 +570,8 @@ function tripTrajineras(source: TripSource): TrajineraLane | null {
  * elements, moving hazards and gliding trajineras are the same, and the element clock and the
  * moving hazard clock are back at 0, with every push cooldown at 0. The bailing boats are the same,
  * with no toss, and the murky timer is fresh. The fishing boats and drag nets are the same, with
- * every lure down and no sweep caught (issue #108). It
+ * every lure down and no sweep caught (issue #108). The pelican lines are the same, with no
+ * scoop landed (issue #211, ND-6). It
  * passes no other trip options, so the new trip has no stranded axolotl and every fact card counts
  * as unseen. Any other phase returns the input state unchanged.
  */
@@ -550,6 +590,7 @@ export function newTrip(state: TripState, tripSeed: number = nextTripSeed(state.
       bailingBoats: state.bailingBoats,
       fishingBoats: state.fishingBoats,
       dragNets: state.dragNets,
+      pelicanLines: state.pelicanLines,
       ...(state.darkWater ? { darkWater: state.darkWater } : {}),
     },
     { count: state.encounter.legs.slots.length },
@@ -769,6 +810,18 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * bucket toss. The lure and drag net card is met when the axolotl centre comes within
  * LURE_MEET_RANGE of a lure that is down, or within DRAG_NET_MEET_RANGE of a stretch, outside the
  * safe area.
+ * Pelican lines (issue #211, ND-6), after the drag nets, unless the trip ended: each line whose
+ * scoop box touches the axolotl centre at the new element time (pelicanScoopHit), at most once per
+ * scoop (pelicanScoopNumber), lands one hit through the shared hit path with sourceId 'pelican', from
+ * its bill, the bottom middle of that bird's scoop box. The first such scoop of the step also gives a
+ * gentle push of PELICAN_PUSH_SPEED away from the bill, never up (pelicanPush), as `impulse`; a
+ * scoop while protected still counts as landed and still pushes. A predator bump on the same step
+ * wins over the push, and the push wins over a trajinera push. A scoop never holds or lifts the
+ * axolotl (ADR 0007), sets no `outOfHull` or `landed`, and emits no event of its own: the hit's
+ * events play the shared hit. `input.dashing` gives no immunity. When the carry starts no scoop counts
+ * as landed. The scoops never act during a bailing bucket toss. The pelican card is met when the
+ * axolotl centre comes within PELICAN_MEET_RANGE of a bird, where it floats at the new element
+ * time, outside the safe area.
  * Carrying: the encounter is not stepped, so legs stay frozen, and nothing is picked up. The
  * carry follows `input.reduced` on every step (`followReducedMotion`); on arrival `arrivedHome` is
  * emitted and the phase becomes 'ended'.
@@ -1107,9 +1160,29 @@ function dragNetSighting(nets: readonly DragNetSpawn[], pos: Point, met: readonl
 }
 
 /**
+ * The pelican as the axolotl at `pos` sees it (issue #211, ND-6): the centre distance to the nearest
+ * bird of `lines`, where it floats at `elementTime` (pelicanBirdPositions), and PELICAN_MEET_RANGE.
+ * Null when the trip has no pelican lines or the pelican is in `met`.
+ */
+function pelicanSighting(
+  lines: readonly PelicanLineSpawn[],
+  pos: Point,
+  met: readonly string[],
+  elementTime: number,
+): ThreatSighting | null {
+  if (lines.length === 0 || met.includes(PELICAN_FACT.id)) return null;
+  let distance = Infinity;
+  for (const line of lines) {
+    for (const bird of pelicanBirdPositions(line, elementTime)) distance = Math.min(distance, distanceTo(bird, pos));
+  }
+  return { id: PELICAN_FACT.id, distance, meetRange: PELICAN_MEET_RANGE };
+}
+
+/**
  * `state.met` with the ids of the hazards, moving hazards, predators and elements the axolotl at
  * `input.axolotlPos` meets now at `elementTime` appended, in sighting order, then the trajinera lure
- * (lureSighting, with the lures `lures`) and the drag net (dragNetSighting). Runs every swimming
+ * (lureSighting, with the lures `lures`), the drag net (dragNetSighting) and the pelican
+ * (pelicanSighting). Runs every swimming
  * frame, so it returns `state.met` itself when nothing new is met.
  */
 function meetThreats(
@@ -1127,6 +1200,8 @@ function meetThreats(
   if (lure !== null) sightings.push(lure);
   const net = dragNetSighting(state.dragNets, pos, met);
   if (net !== null) sightings.push(net);
+  const pelican = pelicanSighting(state.pelicanLines, pos, met, elementTime);
+  if (pelican !== null) sightings.push(pelican);
   if (sightings.length === 0) return met;
   const metNow = metThreatIds(pos, encounter.safeArea, sightings);
   return metNow.length === 0 ? met : [...met, ...metNow];
@@ -1149,8 +1224,9 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const encountered = stepEncounter(state.encounter, input.axolotlPos, step, ctx.encounter);
   const murky = stepMurky(state.murkyTimer, encountered.state, input.axolotlPos, step, ctx.encounter);
   const fishing = stepFishing(state, murky.encounter, input, step, elementTime, ctx.encounter);
-  const { encounter } = fishing;
-  const allEvents = joinEvents(encountered.events, joinEvents(murky.events, fishing.events));
+  const scooped = stepPelicans(state, fishing.encounter, input.axolotlPos, elementTime, ctx.encounter);
+  const { encounter } = scooped;
+  const allEvents = joinEvents(encountered.events, joinEvents(murky.events, joinEvents(fishing.events, scooped.events)));
   const events: TripEvent[] = allEvents.filter(isPassedEvent);
   const legsLost = state.legsLost + countHits(allEvents);
   const murkyTimer = murky.timer;
@@ -1174,6 +1250,7 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
         murkyTimer,
         lures: createLureState(state.fishingBoats),
         netCatches: noNetCatches(state.dragNets),
+        pelicanScoops: noPelicanScoops(state.pelicanLines),
       },
       events,
     };
@@ -1187,7 +1264,7 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
   const boats =
     state.trajineras === null
       ? NO_TRAJINERA_LANE_STEP
-      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, encountered.impulse !== undefined);
+      : stepTrajineraLane(state.trajineras, input.axolotlPos, step, elementTime, encountered.impulse !== undefined || scooped.push !== null);
   const inside = isInHomeSpot(input.axolotlPos, state.homeSpot);
   const next: TripState = {
     ...state,
@@ -1205,11 +1282,14 @@ function stepSwimming(state: TripState, input: TripInput, step: number, ctx: Tri
     murkyTimer,
     lures: fishing.lures,
     netCatches: fishing.netCatches,
+    pelicanScoops: scooped.scoops,
   };
   if (inside && next.holdings.bag.length > 0) return bankAtHomeSpot(next, input.axolotlPos, events);
   const stepped: TripStepResult = { state: next, events };
   if (encountered.impulse) {
     stepped.impulse = encountered.impulse;
+  } else if (scooped.push) {
+    stepped.impulse = scooped.push;
   } else if (boats.push) {
     stepped.impulse = { ...boats.push.impulse };
     stepped.pushed = boats.push;
@@ -1352,6 +1432,71 @@ function stepDragNets(
     current = hit.state;
   }
   return { netCatches, encounter: current };
+}
+
+/** The scoops landed after a step, the encounter and events after their hits, and the push of the first, or null. */
+interface PelicanPass {
+  scoops: (number | null)[];
+  encounter: EncounterState;
+  events: readonly EncounterEvent[];
+  push: Vec2 | null;
+}
+
+/**
+ * Checks each pelican line, in line order, for a scoop touching the axolotl centre `pos` at
+ * `elementTime` (pelicanScoopHit, issue #211, ND-6), stopping once the trip is over: a scoop not
+ * landed yet keeps its number (pelicanScoopNumber) in the line's slot of the scoops and lands one hit
+ * with sourceId 'pelican' from its bill (pelicanBill), then the hit's events; the first gives the
+ * push (pelicanPush). A trip with no pelican lines, or an encounter whose trip is over, returns the
+ * state's own scoops and `encounter` itself with no events and no push.
+ */
+function stepPelicans(
+  state: TripState,
+  encounter: EncounterState,
+  pos: Point,
+  elementTime: number,
+  ctx: EncounterContext,
+): PelicanPass {
+  let scoops = state.pelicanScoops;
+  if (encounter.tripOver || state.pelicanLines.length === 0) {
+    return { scoops, encounter, events: NO_ENCOUNTER_EVENTS, push: null };
+  }
+  const events: EncounterEvent[] = [];
+  let current = encounter;
+  let push: Vec2 | null = null;
+  for (const [index, line] of state.pelicanLines.entries()) {
+    if (current.tripOver) break;
+    const bird = pelicanScoopHit(line, pos, elementTime);
+    if (bird === null) continue;
+    const scoop = pelicanScoopNumber(line, elementTime);
+    if (scoops[index] === scoop) continue;
+    if (scoops === state.pelicanScoops) scoops = [...state.pelicanScoops];
+    scoops[index] = scoop;
+    const bill = pelicanBill(line, bird, elementTime);
+    const hit = hitEncounter(current, PELICAN_FACT.id, bill, ctx);
+    events.push(...hit.events);
+    current = hit.state;
+    push ??= pelicanPush(bill, pos);
+  }
+  return { scoops, encounter: current, events, push };
+}
+
+/** The bill of bird `bird` of `line` at `elementTime`: the bottom middle of its scoop box (pelicanScoopBoxes). Throws when it has no box then. */
+function pelicanBill(line: PelicanLineSpawn, bird: number, elementTime: number): Point {
+  const box = pelicanScoopBoxes(line, elementTime)[bird];
+  if (box === undefined) throw new Error(`trip: pelican line ${line.id} has no scoop box for bird ${bird}`);
+  return { x: (box.x0 + box.x1) / 2, y: box.y1 };
+}
+
+/**
+ * The gentle push a scoop gives the axolotl centre `pos` (issue #211, ND-6): PELICAN_PUSH_SPEED
+ * away from `bill`, never up, so it is a bump and never a lift (ADR 0007). Above the bill, the push is
+ * sideways away from it; straight above or on it, the push is straight down.
+ */
+function pelicanPush(bill: Point, pos: Point): Vec2 {
+  const away = normalize({ x: pos.x - bill.x, y: Math.max(0, pos.y - bill.y) });
+  if (away.x === 0 && away.y === 0) return { x: 0, y: PELICAN_PUSH_SPEED };
+  return scale(away, PELICAN_PUSH_SPEED);
 }
 
 /**
