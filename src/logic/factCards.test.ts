@@ -536,7 +536,7 @@ describe('pelican fact card copy (issue #211, ND-20)', () => {
       id: 'pelican',
       name: 'White pelican',
       title: 'Meet the pelican',
-      body: 'Hundreds of white pelicans fly to Xochimilco for the winter. They float in a line and dip their big bills together to scoop up fish. Axolotls stay safe down deep.',
+      body: 'Hundreds of white pelicans fly to Xochimilco in winter. They float in a line and dip their bills together to scoop up fish. Axolotls stay safe by swimming down deep.',
     });
     expect(PELICAN_FACT.unfoundHint).toBeUndefined();
     expect(Object.isFrozen(PELICAN_FACT)).toBe(true);

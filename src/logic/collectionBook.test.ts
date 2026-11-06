@@ -1073,7 +1073,6 @@ describe('collection book fit', () => {
       '340x440 murky-water found=true',
       '340x440 trajinera-lure found=true',
       '340x440 cormorant found=true',
-      '340x440 pelican found=true',
       '460x320 plastic-worm found=true',
       '460x320 shrimp found=true',
       '460x320 heron found=true',
@@ -1100,12 +1099,14 @@ describe('collection book fit', () => {
       '480x320 crayfish found=true',
       '480x320 murky-water found=true',
       '480x320 trajinera-lure found=true',
+      '480x320 pelican found=true',
       '480x340 shrimp found=true',
       '480x340 heron found=true',
       '480x340 water-hyacinth found=true',
       '480x340 crayfish found=true',
       '480x340 murky-water found=true',
       '480x340 trajinera-lure found=true',
+      '480x340 pelican found=true',
     ]);
   });
 

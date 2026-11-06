@@ -18,7 +18,7 @@ Real basis, checked 2026-11-05 (web research only; the game fetches nothing):
 - National Audubon Society, Guide to North American Birds, American White Pelican: it forages by swimming on the surface and dipping its bill to scoop fish into its pouch, may forage in a line, and does not dive from the air for fish.
 - Findholt and Anderson 1995, Colonial Waterbirds 18(1):58-68: the diet of American white pelicans nesting at Pathfinder Reservoir, Wyoming, which included tiger salamanders (Ambystoma tigrinum). The fact card never says a pelican eats an axolotl.
 
-"Axolotls stay safe down deep" is the game's rule (the scoop goes only so deep), read from the surface feeding, not a source claim.
+"Axolotls stay safe by swimming down deep" is the game's rule (the scoop goes only so deep), read from the surface feeding, not a source claim.
 
 ## Decision
 

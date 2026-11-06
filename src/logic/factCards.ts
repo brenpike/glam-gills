@@ -244,8 +244,8 @@ export const CORMORANT_FACT: Readonly<FactCard> = Object.freeze({
  * (Pelecanus erythrorhynchos, the American white pelican, from the Great Lakes region between Canada
  * and the United States, October to March; more than 700 in the Ejidos de Xochimilco y San Gregorio
  * Atlapulco protected area, about 200 of them at the Parque Ecológico de Xochimilco wetland; "Algunas
- * aves forman grupos y al unísono clavan sus picos al agua") for "Hundreds", "for the winter" and
- * "dip their big bills together";
+ * aves forman grupos y al unísono clavan sus picos al agua") for "Hundreds", "in winter" and
+ * "dip their bills together";
  * National Audubon Society, Guide to North American Birds, American White Pelican,
  * https://www.audubon.org/bird-guide-api/1469 ("Forages by swimming on surface, dipping bill into
  * water and scooping up fish in pouch"; "May forage cooperatively, lining up and driving fish toward
@@ -253,14 +253,14 @@ export const CORMORANT_FACT: Readonly<FactCard> = Object.freeze({
  * Findholt and Anderson 1995, Colonial Waterbirds 18(1):58-68 (the diet of American white pelicans
  * nesting at Pathfinder Reservoir, Wyoming; tiger salamanders, Ambystoma tigrinum, with carp and white
  * suckers among the top prey), why the line is a danger to an axolotl; the card never says a
- * pelican eats an axolotl. "Axolotls stay safe down deep" is the game's rule (the scoop goes only so
- * deep), read from Audubon's surface feeding, not a source claim.
+ * pelican eats an axolotl. "Axolotls stay safe by swimming down deep" is the game's rule (the scoop
+ * goes only so deep), read from Audubon's surface feeding, not a source claim.
  */
 export const PELICAN_FACT: Readonly<FactCard> = Object.freeze({
   id: 'pelican',
   name: 'White pelican',
   title: 'Meet the pelican',
-  body: 'Hundreds of white pelicans fly to Xochimilco for the winter. They float in a line and dip their big bills together to scoop up fish. Axolotls stay safe down deep.',
+  body: 'Hundreds of white pelicans fly to Xochimilco in winter. They float in a line and dip their bills together to scoop up fish. Axolotls stay safe by swimming down deep.',
 });
 
 /**

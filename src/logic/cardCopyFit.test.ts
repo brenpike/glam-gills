@@ -587,7 +587,7 @@ describe('area fact card copy fit', () => {
     },
   );
 
-  it('wraps every fact card body at the body width, except the shrimp, the heron, the water hyacinth and the pelican at 320 x 440 and the trajinera lure at 320 x 440 and 460 x 320, which use the tight width', () => {
+  it('wraps every fact card body at the body width, except the shrimp, the heron and the water hyacinth at 320 x 440, the trajinera lure at 320 x 440 and 460 x 320 and the pelican at 320 x 440, 340 x 440 and 460 x 320, which use the tight width', () => {
     const tightBodies = supportedCanvases().flatMap((canvas) =>
       AREA_FACT_CARDS.flatMap((card) => {
         const combination = factCardCombination(card, canvas);
@@ -600,7 +600,9 @@ describe('area fact card copy fit', () => {
       'water-hyacinth fact 320x440',
       'trajinera-lure fact 320x440',
       'pelican fact 320x440',
+      'pelican fact 340x440',
       'trajinera-lure fact 460x320',
+      'pelican fact 460x320',
     ]);
   });
 
