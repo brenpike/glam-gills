@@ -7,16 +7,19 @@ import { HABITATS } from '../logic/areas';
 import { REFUGE_PICTURE, REFUGE_PICTURE_TOP_BAND_H } from '../logic/refugeUi';
 import {
   REFUGE_ART_STATES,
+  REFUGE_AXOLOTL_BODY,
   REFUGE_CAVE_ROCK,
   REFUGE_CAVE_ROCK_LIGHT,
   REFUGE_COB,
   REFUGE_CORN,
   REFUGE_CRYSTAL,
+  REFUGE_DEAD_STALK,
   REFUGE_CRYSTAL_DULL,
   REFUGE_CRYSTAL_LIT,
   REFUGE_GLOW_BULB,
   REFUGE_GLOW_STALK,
   REFUGE_HIDDEN_FILL,
+  REFUGE_HORIZONS,
   REFUGE_LETTUCE,
   REFUGE_MARIGOLD,
   REFUGE_MURK,
@@ -65,6 +68,16 @@ import { HABITAT_LOOK_IDS, habitatLook, isHabitatLookId, type HabitatLookId } fr
 import { CANAL_STONE, CANAL_STONE_LIGHT, CANAL_STONE_MOSS, HULL_CAVE_ALGAE, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK } from './drawDeepCanal';
 import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_YELLOW } from './drawPuntingPole';
 import { ROOT_TANGLE_BARK } from './drawChinampa';
+import {
+  LAKE_ROOT,
+  LAKE_SNOW,
+  LAKE_SNOW_SHADE,
+  LAKE_STONE,
+  LAKE_STONE_DARK,
+  LAKE_STONE_LIGHT,
+  LAKE_VOLCANO_BODY,
+  LAKE_VOLCANO_SHADE,
+} from './drawLake';
 import { EYE, INK, LW, UI_ACCENT, WHITE, WILLOW_FOLIAGE, WILLOW_STRAND, WILLOW_TRUNK } from './palette';
 import texturesSource from './textures.ts?raw';
 
@@ -965,5 +978,101 @@ describe('deep canal refuge section (issue #78; guide 3g, 7, 10)', () => {
         signature(record((ctx) => paintRefugeSection(ctx, 'deep-canal', state))),
       );
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Open lake section (issue #211, ND-16)
+// ---------------------------------------------------------------------------
+
+describe('open lake refuge section (issue #211, ND-16; guide 3g, 7, 10)', () => {
+  const section = (state: RefugeArtState): Painted[] => record((ctx) => paintRefugeSection(ctx, 'open-lake', state));
+  const count = (painted: Painted[], style: string): number => fills(painted).filter((f) => f.style === style).length;
+
+  it('has a section and a plants painter, and a horizon painter of its own that no other look has', () => {
+    expect(REFUGE_SECTION_PAINTERS['open-lake']).toBeDefined();
+    expect(REFUGE_PLANTS_PAINTERS['open-lake']).toBeDefined();
+    expect(Object.keys(REFUGE_HORIZONS)).toEqual(['open-lake']);
+  });
+
+  it('shows the volcanoes far off in both states: a snowy ridge and a snowy cone, painted before the water', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const painted = section(state);
+      expect(count(painted, LAKE_VOLCANO_BODY), state).toBe(2);
+      expect(count(painted, LAKE_VOLCANO_SHADE), state).toBe(1);
+      expect(count(painted, LAKE_SNOW), state).toBe(2);
+      expect(count(painted, LAKE_SNOW_SHADE), state).toBe(1);
+      // The first fill after the sky is a volcano: the water comes later, so it covers their feet.
+      const order = fills(painted).map((f) => f.style);
+      expect(order.indexOf(LAKE_VOLCANO_BODY)).toBeLessThan(order.findIndex((c) => c === habitatLook('open-lake').bed.top));
+    }
+  });
+
+  it('paints the volcanoes in no other look', () => {
+    for (const look of HABITAT_LOOK_IDS.filter((id) => id !== 'open-lake')) {
+      for (const state of REFUGE_ART_STATES) {
+        const all = record((ctx) => paintRefugeSection(ctx, look, state)).map((p) => p.style);
+        expect(all, `${look} ${state}`).not.toContain(LAKE_VOLCANO_BODY);
+      }
+    }
+  });
+
+  it('shows a tule reed islet and four smooth stones in both states, and no banks, hulls, pads or crystals', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const painted = section(state);
+      expect(count(painted, LAKE_ROOT), state).toBe(1);
+      expect(count(painted, LAKE_STONE) + count(painted, LAKE_STONE_DARK) + count(painted, LAKE_STONE_LIGHT), state).toBe(4);
+      for (const c of [BOAT_HULL, HULL_CAVE_WOOD, REFUGE_CRYSTAL, REFUGE_CAVE_ROCK, REFUGE_PLOT_SOIL]) expect(count(painted, c), `${state} ${c}`).toBe(0);
+    }
+  });
+
+  it('tells dirty from clean without colour: murk and short stubs against clear water, tall tules and two resting axolotls', () => {
+    const dirty = section('dirty');
+    const clean = section('clean');
+    expect(signature(dirty)).not.toBe(signature(clean));
+    expect(strokes(clean).length).toBeGreaterThan(strokes(dirty).length + 8);
+    expect(fills(dirty).filter((f) => f.style === REFUGE_MURK)).toHaveLength(4);
+    expect(fills(clean).filter((f) => f.style === REFUGE_MURK)).toHaveLength(0);
+    expect(strokes(dirty).filter((s) => s.style === REFUGE_DEAD_STALK)).toHaveLength(3);
+    expect(strokes(clean).filter((s) => s.style === REFUGE_DEAD_STALK)).toHaveLength(0);
+    expect(fills(clean).filter((f) => f.style === REFUGE_AXOLOTL_BODY).length).toBeGreaterThan(0);
+  });
+
+  it('lists the lake frame colours, each 3:1 or more with ink in both states', () => {
+    for (const state of REFUGE_ART_STATES) {
+      const colours = refugeBackdropColours('open-lake', state);
+      for (const c of [LAKE_ROOT, LAKE_STONE, LAKE_STONE_DARK, LAKE_STONE_LIGHT, LAKE_VOLCANO_BODY, LAKE_VOLCANO_SHADE, LAKE_SNOW, LAKE_SNOW_SHADE]) {
+        expect(colours).toContain(c);
+        expect(contrast(INK, c), c).toBeGreaterThanOrEqual(3);
+      }
+      for (const c of colours) expect(contrast(INK, c), `${state} ${c}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('keeps every colour a lake picture paints at 3:1 or more with ink, the murk blotches apart', () => {
+    for (const state of REFUGE_ART_STATES) {
+      for (const f of fills(section(state)).filter((p) => isHex(p.style) && p.style !== REFUGE_MURK && p.style !== EYE)) {
+        expect(contrast(INK, f.style), `${state} ${f.style}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('draws the lake\'s own band 1 water, clean and under the grey-brown tint when dirty', () => {
+    const band1 = habitatLook('open-lake').water;
+    expect(refugeCleanWater('open-lake')).toEqual({ top: band1.shallow, bottom: band1.mid });
+    for (const c of Object.values(refugeDirtyWater('open-lake'))) expect(contrast(INK, c), c).toBeGreaterThanOrEqual(3);
+  });
+
+  it('paints its plants as a smooth stone and a pebble with three tule reeds, all above the base', () => {
+    const painted = record((ctx) => paintRefugePlants(ctx, 'open-lake'));
+    expect(fills(painted).filter((f) => f.style === LAKE_STONE)).toHaveLength(1);
+    expect(fills(painted).filter((f) => f.style === LAKE_STONE_LIGHT)).toHaveLength(1);
+    expect(strokes(painted).some((s) => s.style === INK)).toBe(true);
+    for (const f of fills(painted).filter((p) => isHex(p.style))) expect(contrast(INK, f.style), f.style).toBeGreaterThanOrEqual(3);
+    expect(paintedTop((ctx) => paintRefugePlants(ctx, 'open-lake'))).toBeGreaterThanOrEqual(-60);
+  });
+
+  it('is still: painting twice gives the same shapes, so it is also the reduced-motion version', () => {
+    for (const state of REFUGE_ART_STATES) expect(signature(section(state))).toBe(signature(section(state)));
   });
 });

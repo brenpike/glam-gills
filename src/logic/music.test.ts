@@ -17,6 +17,7 @@ import {
   DRUM_VOICES,
   GARDEN_BOATS,
   HABITAT_CUES,
+  LAGOON_BREEZE,
   LILY_PAD_HOP,
   MUSIC_CUES,
   MUSIC_LEVELS,
@@ -52,8 +53,8 @@ const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_
 const E_DORIAN_PITCHES: readonly number[] = ['E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'].map((name) => noteMidi(name) % 12);
 const DUSK_HABITAT_CUES: readonly Readonly<MusicCue>[] = DAY_HABITAT_CUES.map((cue) => tripCueFor({ habitatId: habitatOf(cue), look: 'pond-dusk' }));
 const ALL_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES, ...DUSK_HABITAT_CUES];
-/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: none today. */
-const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [];
+/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: Lagoon Breeze, the open lake's. */
+const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [LAGOON_BREEZE];
 const UNREGISTERED_CUES: readonly Readonly<MusicCue>[] = [...UNREGISTERED_DAY_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
 /** Every day habitat cue the shared habitat cue checks cover, registered or not. */
 const CHECKED_DAY_CUES: readonly Readonly<MusicCue>[] = [...DAY_HABITAT_CUES, ...UNREGISTERED_DAY_CUES];
@@ -449,6 +450,126 @@ describe("Trajinera Waltz, the deep canal's cue (M3; docs/music-guide.md, sectio
     expect(TRAJINERA_WALTZ.tonic).toBe('D');
     expect(soundKeyFor(duskVersion(TRAJINERA_WALTZ))).toBe('D');
     const key = soundKeyFor(TRAJINERA_WALTZ);
+    for (const id of Object.keys(SOUNDS) as SoundId[]) {
+      for (const version of Object.keys(SOUNDS[id].versions)) {
+        for (const midi of soundNotes(id, version, key).flatMap((n) => n.midis)) {
+          expect(inSoundKey(key, midi)).toBe(true);
+          expect(D_MAJOR_PITCHES).toContain(midi % 12);
+        }
+      }
+    }
+  });
+});
+
+describe("Lagoon Breeze, the open lake's cue (M3; provisional; docs/music-guide.md, section 4)", () => {
+  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES];
+  const LAGOON_DUSK = duskVersion(LAGOON_BREEZE);
+
+  it('is defined but not yet mapped to a habitat, so it is in neither HABITAT_CUES nor MUSIC_CUES', () => {
+    expect(Object.values(HABITAT_CUES)).not.toContain(LAGOON_BREEZE);
+    expect(MUSIC_CUES[LAGOON_BREEZE.id]).toBeUndefined();
+  });
+
+  it('matches the music guide: G lydian, a slow 4/4 at 76 bpm, its chords, no echo, and a dusk pace of 58', () => {
+    const chordNames = LAGOON_BREEZE.bars.map((chords) => chords.map((c) => c.name).join(' '));
+    expect([LAGOON_BREEZE.id, LAGOON_BREEZE.name, LAGOON_BREEZE.version]).toEqual(['lagoon-breeze', 'Lagoon Breeze', 'day']);
+    expect([LAGOON_BREEZE.key, LAGOON_BREEZE.bpm, LAGOON_BREEZE.beatsPerBar, LAGOON_BREEZE.stepsPerBeat, LAGOON_BREEZE.swing]).toEqual(['G lydian', 76, 4, 2, 0.08]);
+    expect(chordNames).toEqual(['Gmaj7', 'D', 'Gmaj7', 'A', 'Gmaj7', 'Bm', 'Em A', 'Gmaj7']);
+    expect(LAGOON_BREEZE.tune).toHaveLength(8);
+    expect(LAGOON_BREEZE.dusk).toEqual({ bpm: 58, swing: 0 });
+    expect(LAGOON_BREEZE.echo).toBeUndefined();
+  });
+
+  it('has its own key, day tempo and dusk tempo, unlike every other cue', () => {
+    const keys = OTHER_CUES.map((cue) => cue.key);
+    const tempos = OTHER_CUES.flatMap((cue) => [cue.bpm, ...(cue.dusk === undefined ? [] : [cue.dusk.bpm])]);
+    expect(keys).not.toContain(LAGOON_BREEZE.key);
+    expect(tempos).not.toContain(LAGOON_BREEZE.bpm);
+    expect(tempos).not.toContain(LAGOON_BREEZE.dusk?.bpm);
+    expect(OTHER_CUES.map((cue) => cue.id)).not.toContain(LAGOON_BREEZE.id);
+    expect(OTHER_CUES.map((cue) => cue.name)).not.toContain(LAGOON_BREEZE.name);
+  });
+
+  it('is in sound key D, the home note of G lydian, in its dusk version too, so sounds keep their existing keys', () => {
+    expect(['G', 'F', 'D']).toContain(LAGOON_BREEZE.tonic);
+    expect(LAGOON_BREEZE.soundKey).toBe('D');
+    expect(LAGOON_BREEZE.tonic).toBe('D');
+    expect(soundKeyFor(LAGOON_BREEZE)).toBe('D');
+    expect(soundKeyFor(LAGOON_DUSK)).toBe('D');
+  });
+
+  it('builds its dusk version from the shared dusk rule', () => {
+    expect(LAGOON_DUSK).toMatchObject({ id: 'lagoon-breeze-dusk', name: 'Lagoon Breeze (dusk)', bpm: 58, swing: 0, version: 'dusk', dayId: LAGOON_BREEZE.id });
+    expect(LAGOON_DUSK.tune).toBe(LAGOON_BREEZE.tune);
+    expect(LAGOON_DUSK.bars).toBe(LAGOON_BREEZE.bars);
+    expect(LAGOON_DUSK.dusk).toBeUndefined();
+    expect(() => duskVersion(LAGOON_DUSK)).toThrow();
+  });
+
+  it('plays a whistle tune on a pad, with only existing voices and no echo-only parts', () => {
+    const flat = notesOf(LAGOON_BREEZE, SEED).flat();
+    const lead = new Set(flat.filter((n) => n.part === 'tune').map((n) => n.voice));
+    expect(lead.has('whistle')).toBe(true);
+    expect(flat.some((n) => n.voice === 'pad')).toBe(true);
+    expect(flat.some((n) => n.voice === 'strings')).toBe(true);
+  });
+
+  it('holds each chord on a soft pad and a bass note from its first step, with a soft kick on each bar', () => {
+    notesOf(LAGOON_BREEZE, SEED, 1).forEach((notes, index) => {
+      const place = stepPlace(LAGOON_BREEZE, index);
+      const pads = notes.filter((n) => n.voice === 'pad');
+      const roots = notes.filter((n) => n.voice === 'bass' && n.midi === place.chord.root);
+      expect(pads.map((n) => n.midi)).toEqual(place.chordStarts ? [...place.chord.notes] : []);
+      expect(roots).toHaveLength(place.chordStarts ? 1 : 0);
+      expect(notes.filter((n) => n.voice === 'kick')).toHaveLength(place.step === 0 ? 1 : 0);
+      for (const n of pads) expect(n.velocity).toBeLessThanOrEqual(0.1);
+    });
+  });
+
+  it('plays the whistle tune, a glass bell an octave up on the second pass, and a whistle a third below in D major on the third', () => {
+    const steps = notesOf(LAGOON_BREEZE, SEED);
+    const perBar = stepsPerBar(LAGOON_BREEZE);
+    for (let pass = 0; pass < 3; pass++) {
+      LAGOON_BREEZE.tune.forEach((tuneBar, barIndex) => {
+        for (const tuneNote of tuneBar) {
+          const played = steps[pass * stepsPerLoop(LAGOON_BREEZE) + barIndex * perBar + tuneNote.step].filter((n) => n.part === 'tune');
+          const lead = played.filter((n) => n.voice === 'whistle' && n.midi === tuneNote.midi);
+          expect(lead).toHaveLength(1);
+          const others = played.filter((n) => n !== lead[0]);
+          if (pass === 0) expect(others).toHaveLength(0);
+          if (pass === 1) expect(others.map((n) => [n.voice, n.midi])).toEqual([['glass', tuneNote.midi + 12]]);
+          if (pass === 2) {
+            expect(others).toHaveLength(1);
+            expect(others[0].voice).toBe('whistle');
+            expect([3, 4]).toContain(tuneNote.midi - (others[0].midi ?? 0));
+          }
+        }
+      });
+    }
+  });
+
+  it('keeps the tune in the first half of the fourth pass and makes up a whistle phrase from the G major pentatonic in the second', () => {
+    const steps = notesOf(LAGOON_BREEZE, SEED);
+    const perLoop = stepsPerLoop(LAGOON_BREEZE);
+    const tuneOf = (pass: number): MusicNote[][] => steps.slice(pass * perLoop, (pass + 1) * perLoop).map((notes) => notes.filter((n) => n.part === 'tune'));
+    const half = perLoop / 2;
+    expect(tuneOf(3).slice(0, half)).toEqual(tuneOf(0).slice(0, half));
+    const madeUp = tuneOf(3).slice(half).flat();
+    expect(madeUp.length).toBeGreaterThan(0);
+    for (const n of madeUp) {
+      expect(n.voice).toBe('whistle');
+      expect([0, 2, 4, 7, 9, 12]).toContain((n.midi ?? 0) - noteMidi('G5'));
+    }
+  });
+
+  it('keeps every tune, chord and bass note in D major, which G lydian shares', () => {
+    for (const n of notesOf(LAGOON_BREEZE, SEED).flat().filter((each) => each.part !== 'sparkles' && each.midi !== null)) {
+      expect(D_MAJOR_PITCHES).toContain((n.midi ?? 0) % 12);
+    }
+  });
+
+  it('plays every pitched sound from the D major pentatonic over its sound key', () => {
+    const key = soundKeyFor(LAGOON_BREEZE);
     for (const id of Object.keys(SOUNDS) as SoundId[]) {
       for (const version of Object.keys(SOUNDS[id].versions)) {
         for (const midi of soundNotes(id, version, key).flatMap((n) => n.midis)) {

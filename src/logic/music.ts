@@ -397,6 +397,52 @@ export const TRAJINERA_WALTZ: Readonly<MusicCue> = Object.freeze({
   dusk: Object.freeze({ bpm: 84, swing: 0 }),
 });
 
+/** Id of the open lake's cue. */
+export const LAGOON_BREEZE_ID = 'lagoon-breeze';
+
+const GMAJ7 = chord('Gmaj7', 'G3 B3 D4 F#4', 'G2');
+const EM = chord('Em', 'G3 B3 E4', 'E2');
+
+/**
+ * Lagoon Breeze, the open lake's cue (M3; provisional name, and not yet in HABITAT_CUES until the
+ * lake habitat exists): airy and open, G lydian at 76 bpm in a slow 4/4 with a gentle sway, a soft
+ * whistle tune over a pad, a bass note and a rolled string arpeggio, a faint shaker like wind, and a
+ * soft kick, with no echo. G lydian uses D major's notes, so the sounds play in D.
+ */
+export const LAGOON_BREEZE: Readonly<MusicCue> = Object.freeze({
+  id: LAGOON_BREEZE_ID,
+  name: 'Lagoon Breeze',
+  key: 'G lydian',
+  tonic: 'D',
+  soundKey: 'D',
+  bpm: 76,
+  beatsPerBar: 4,
+  stepsPerBeat: 2,
+  swing: 0.08,
+  bars: Object.freeze([
+    bar(GMAJ7),
+    bar(D),
+    bar(GMAJ7),
+    bar(A_OPEN),
+    bar(GMAJ7),
+    bar(BM),
+    bar(EM, A_OPEN),
+    bar(GMAJ7),
+  ]),
+  tune: Object.freeze([
+    tuneBar([0, 'D5', 2], [2, 'G5', 2], [4, 'B5', 4]),
+    tuneBar([0, 'A5', 3], [3, 'F#5', 1], [4, 'D5', 4]),
+    tuneBar([0, 'B4', 2], [2, 'D5', 2], [4, 'F#5', 4]),
+    tuneBar([0, 'E5', 2], [2, 'C#5', 2], [4, 'A4', 4]),
+    tuneBar([0, 'D5', 2], [2, 'G5', 2], [4, 'B5', 2], [6, 'A5', 2]),
+    tuneBar([0, 'B5', 3], [3, 'A5', 1], [4, 'F#5', 4]),
+    tuneBar([0, 'G5', 2], [2, 'E5', 2], [4, 'E5', 2], [6, 'C#5', 2]),
+    tuneBar([0, 'D5', 2], [2, 'F#5', 2], [4, 'G5', 4]),
+  ]),
+  version: 'day',
+  dusk: Object.freeze({ bpm: 58, swing: 0 }),
+});
+
 /**
  * The dusk version of habitat cue `cue` (the dusk rule, M4): the same tune and chords at the cue's
  * dusk pace, played by the shared dusk arrangement. Throws for a cue with no dusk pace (the Home cue)
@@ -783,6 +829,42 @@ function arrangeTrajineraWaltz(cue: Readonly<MusicCue>, place: StepPlace, random
 }
 
 /**
+ * Lagoon Breeze's arrangement for one step. A soft pad, a bass note and a soft kick on each bar's
+ * first step, a rolled string arpeggio an octave up on beat 3 with one light string note on beat 2
+ * and 4, and a faint shaker on odd steps like wind. The whistle tune; then a glass bell joins an
+ * octave up; then a second whistle a third below in D major; then a made-up whistle phrase from the
+ * G major pentatonic in the second half. Bubbles end bars 4 and 8.
+ */
+function arrangeLagoonBreeze(cue: Readonly<MusicCue>, place: StepPlace, random: () => number, at: number): MusicNote[] {
+  const notes: MusicNote[] = [];
+  const stepS = stepSeconds(cue);
+  const { bar: barIndex, step, chord: sounding } = place;
+  if (place.chordStarts) {
+    const chordSteps = cue.bars[barIndex].length === 2 ? stepsPerBar(cue) / 2 : stepsPerBar(cue);
+    for (const midi of sounding.notes) notes.push(note('pad', 'chords', midi, 0.05, stepS * chordSteps * 1.02, at));
+    notes.push(note('bass', 'bass', sounding.root, 0.28, stepS * 5, at));
+  }
+  if (step === 0) notes.push(note('kick', 'percussion', null, 0.12, 0.18, at));
+  if (step === 4) notes.push(...strum('strings', sounding.notes.map((midi) => midi + 12), 0.07, RING_S.strings, at, 0.08, 0.05));
+  else if (step === 2 || step === 6) notes.push(note('strings', 'chords', sounding.notes[2] + 12, 0.04, RING_S.strings, at));
+  if (step % 2 === 1) notes.push(note('shaker', 'percussion', null, 0.015, 0.05, at));
+  const pass = place.pass % 4;
+  const hit = cue.tune[barIndex].find((tuneNote) => tuneNote.step === step);
+  const improvise = pass === 3 && barIndex >= 4;
+  if (hit !== undefined && !improvise) {
+    notes.push(note('whistle', 'tune', hit.midi, 0.09, hit.len * stepS, at));
+    if (pass === 1) notes.push(note('glass', 'tune', hit.midi + 12, 0.04, RING_S.glass, at));
+    if (pass === 2) notes.push(note('whistle', 'tune', lowerByThirdInD(hit.midi), 0.05, hit.len * stepS, at));
+  }
+  if (improvise && step % 2 === 0 && random() < 0.5) {
+    notes.push(note('whistle', 'tune', noteMidi('G5') + pick(random, PENTATONIC), 0.08, 2 * stepS, at));
+  }
+  if ((barIndex === 3 || barIndex === 7) && step === 6) notes.push(bubble(random, 0.07, at));
+  else if (random() < 0.03) notes.push(bubble(random, 0.05, at));
+  return notes;
+}
+
+/**
  * The shared dusk rule (M4; docs/music-guide.md, section 5), for any habitat cue's dusk version: soft
  * held chords with the root under each chord change and a light kalimba on the other beats; a faint
  * shaker and no drums; the tune on a music box every pass (raised an octave when below C5), softer on
@@ -839,6 +921,8 @@ export function arrangeStep(cue: Readonly<MusicCue>, index: number, seed: number
       return arrangeCenoteGlow(cue, place, random, at);
     case TRAJINERA_WALTZ_ID:
       return arrangeTrajineraWaltz(cue, place, random, at);
+    case LAGOON_BREEZE_ID:
+      return arrangeLagoonBreeze(cue, place, random, at);
     default:
       throw new Error(`music: no arrangement for cue ${cue.id}`);
   }

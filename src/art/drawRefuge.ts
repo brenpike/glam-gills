@@ -20,7 +20,11 @@
  * plants layer. Deep canal (issue #78): darker blue-green water, a moored trajinera silhouette at each
  * bank and old paving slabs on the bed; plain faded hulls when dirty, cream hulls with a painted band
  * and a flower arch when clean, and a mossy stone block with waterweed and a drifting flower in the
- * plants layer. Later habitats add their own entries.
+ * plants layer. Open lake (issue #211, ND-16): open water with no banks, Iztaccihuatl and Popocatepetl
+ * small and far off on the horizon (drawn before the water, see {@link REFUGE_HORIZONS}), a tule reed
+ * islet at the left (tall green tules when clean, short bent dull stubs when dirty), smooth stones on
+ * the silt bed, and a tule clump on a stone in the plants layer. No predator is shown. Later habitats
+ * add their own entries.
  *
  * Contrast (guide 10): the picture is UI, not a cue object. Its ink frame (3.5) must read
  * on everything that meets it, so every colour that can touch the frame is held to 3:1
@@ -49,6 +53,17 @@ import {
   HULL_CAVE_WOOD_DARK,
 } from './drawDeepCanal';
 import { BOAT_FLOWER_CENTRE, BOAT_HULL, BOAT_ORANGE, BOAT_PINK, BOAT_YELLOW } from './drawPuntingPole';
+import {
+  LAKE_ROOT,
+  LAKE_SNOW,
+  LAKE_SNOW_SHADE,
+  LAKE_STONE,
+  LAKE_STONE_DARK,
+  LAKE_STONE_LIGHT,
+  LAKE_STONE_SHINE,
+  LAKE_VOLCANO_BODY,
+  LAKE_VOLCANO_SHADE,
+} from './drawLake';
 import { habitatLook, type HabitatLook, type HabitatLookId } from './habitatLook';
 import {
   EYE,
@@ -269,7 +284,7 @@ const CANAL_STONES: readonly string[] = [PEBBLE_A, PEBBLE_B, PEBBLE_C];
  * The structure colours of each look that can meet the ink frame: the canal's stones, nothing for
  * the pond (its pads and cattails stand inside the picture), and the chinampa's plot soil, plot top,
  * willow trunk, roots and crops, the spring cave's wall rock, stalactite rock and crystals, and the deep
- * canal's moored hulls. A new
+ * canal's moored hulls, and the open lake's islet, stones and volcanoes. A new
  * look fails to compile until it lists its own.
  */
 const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>> = {
@@ -290,6 +305,18 @@ const STRUCTURE_FRAME_COLOURS: Readonly<Record<HabitatLookId, readonly string[]>
   'spring-cave': [REFUGE_CAVE_ROCK, REFUGE_CAVE_ROCK_LIGHT, REFUGE_CRYSTAL, REFUGE_CRYSTAL_LIT, REFUGE_CRYSTAL_DULL],
   // the moored hulls reach the frame at the picture's sides: cream hull, painted band, arch and faded dirty wood
   'deep-canal': [BOAT_HULL, BOAT_PINK, BOAT_ORANGE, BOAT_YELLOW, HULL_CAVE_WOOD, HULL_CAVE_WOOD_DARK],
+  // the islet, the smooth stones and the far volcanoes stand inside the picture; they are listed so the frame is checked against them
+  'open-lake': [
+    LAKE_ROOT,
+    LAKE_STONE,
+    LAKE_STONE_DARK,
+    LAKE_STONE_LIGHT,
+    LAKE_VOLCANO_BODY,
+    LAKE_VOLCANO_SHADE,
+    LAKE_SNOW,
+    LAKE_SNOW_SHADE,
+    REFUGE_DEAD_STALK,
+  ],
 };
 
 /**
@@ -888,12 +915,162 @@ function paintDeepCanalStructure(ctx: CanvasRenderingContext2D, state: RefugeArt
   }
 }
 
+// -- Open lake: the far volcanoes, a tule reed islet and smooth stones ---------
+
+/** Ink of the far volcanoes: thin, they are distant (guide 4b). */
+const LAKE_FAR_LW = 1.4;
+/** Ink of the islet and the stones (the pebble width, guide 4b); the small stones keep a thinner line. */
+const LAKE_ISLET_LW = STONE_LW;
+const LAKE_STONE_LW = 1.8;
+
+/** y of the volcanoes' feet: under the water's top, which covers them. */
+const LAKE_FAR_BASE_Y = SURF_Y + 2;
+
+/** A scalloped snow band over a far peak (made to be clipped to it): from `yTop` down to a wavy edge at `yLine`. */
+function farSnowBand(x0: number, x1: number, yTop: number, yLine: number, bumps: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x0, yTop);
+  p.lineTo(x1, yTop);
+  p.lineTo(x1, yLine);
+  const step = (x1 - x0) / bumps;
+  for (let i = bumps; i > 0; i--) p.quadraticCurveTo(x0 + (i - 0.5) * step, yLine + 1.8, x0 + (i - 1) * step, yLine);
+  p.closePath();
+  return p;
+}
+
+/** Popocatepetl, small and far off: a snow-capped cone with a rounded top, centred on `cx`. */
+function paintFarCone(ctx: CanvasRenderingContext2D, cx: number, w: number, h: number): void {
+  const top = SURF_Y - h;
+  const cone = new Path2D();
+  cone.moveTo(cx - w / 2, LAKE_FAR_BASE_Y);
+  cone.quadraticCurveTo(cx - w * 0.18, LAKE_FAR_BASE_Y - h * 0.55, cx - w * 0.07, top + 1);
+  cone.quadraticCurveTo(cx, top - 0.5, cx + w * 0.07, top + 1);
+  cone.quadraticCurveTo(cx + w * 0.18, LAKE_FAR_BASE_Y - h * 0.55, cx + w / 2, LAKE_FAR_BASE_Y);
+  cone.closePath();
+  ctx.fillStyle = LAKE_VOLCANO_BODY;
+  ctx.fill(cone);
+  ctx.save();
+  ctx.clip(cone);
+  ctx.fillStyle = LAKE_VOLCANO_SHADE;
+  ctx.fill(rectPath(cx, top - 2, w / 2 + 2, h + 4));
+  ctx.fillStyle = LAKE_SNOW;
+  ctx.fill(farSnowBand(cx - w / 2, cx, top - 2, top + h * 0.45, 2));
+  ctx.fillStyle = LAKE_SNOW_SHADE;
+  ctx.fill(farSnowBand(cx, cx + w / 2, top - 2, top + h * 0.45, 2));
+  ctx.restore();
+  ctx.lineWidth = LAKE_FAR_LW;
+  ctx.strokeStyle = INK;
+  ctx.stroke(cone);
+}
+
+/** Iztaccihuatl, small and far off: a long low ridge of rounded snowy humps, centred on `cx`. */
+function paintFarRidge(ctx: CanvasRenderingContext2D, cx: number, w: number, h: number): void {
+  const humps = [0.6, 0.85, 0.7, 1, 0.75];
+  const step = w / humps.length;
+  const x0 = cx - w / 2;
+  const ridge = new Path2D();
+  ridge.moveTo(x0, LAKE_FAR_BASE_Y);
+  humps.forEach((u, i) => {
+    const peak = SURF_Y - h * u;
+    ridge.quadraticCurveTo(x0 + (i + 0.5) * step, 2 * peak - LAKE_FAR_BASE_Y + h * 0.3, x0 + (i + 1) * step, SURF_Y - h * 0.3);
+  });
+  ridge.lineTo(x0 + w, LAKE_FAR_BASE_Y);
+  ridge.closePath();
+  ctx.fillStyle = LAKE_VOLCANO_BODY;
+  ctx.fill(ridge);
+  ctx.save();
+  ctx.clip(ridge);
+  ctx.fillStyle = LAKE_SNOW;
+  ctx.fill(farSnowBand(x0, x0 + w, SURF_Y - h - 2, SURF_Y - h * 0.5, humps.length * 2));
+  ctx.restore();
+  ctx.lineWidth = LAKE_FAR_LW;
+  ctx.strokeStyle = INK;
+  ctx.stroke(ridge);
+}
+
+/** The lake's horizon, painted over the sky and before the water: the long ridge, and the cone to its right. */
+function paintLakeHorizon(ctx: CanvasRenderingContext2D): void {
+  paintFarRidge(ctx, 100, 62, 7);
+  paintFarCone(ctx, 148, 30, 13);
+}
+
+/** The tule islet's dome and where it stands: centre x, centre y, half width, half height. */
+const LAKE_ISLET = { x: 20, y: 25, rx: 17, ry: 7 } as const;
+/** Tules on a clean islet: x, height, lean, light stalk. All 14 or less, so their tips stay clear of the frame. */
+const LAKE_TULES: readonly (readonly [number, number, number, boolean])[] = [
+  [11, 12, -2, false],
+  [20, 14, 1, true],
+  [29, 11, 3, false],
+];
+/** Dull stubs on a dirty islet: x, lean. */
+const LAKE_STUBS: readonly (readonly [number, number])[] = [
+  [12, -3],
+  [21, 2],
+  [29, 3],
+];
+/** Smooth stones lying on the silt bed: x, y, rx, ry, fill. Inside the picture, clear of the frame and the resting axolotls. */
+const LAKE_BED_STONES: readonly (readonly [number, number, number, number, string])[] = [
+  [26, 87, 9, 4.4, LAKE_STONE],
+  [64, 88, 6.5, 3.4, LAKE_STONE_LIGHT],
+  [138, 88, 8, 4, LAKE_STONE_DARK],
+  [172, 86, 10, 4.8, LAKE_STONE],
+];
+
+function paintOpenLakeStructure(ctx: CanvasRenderingContext2D, state: RefugeArtState): void {
+  const { x, y, rx, ry } = LAKE_ISLET;
+  // roots hang from the islet into the water
+  inkMany(ctx, [
+    curveTube(x - 8, y + 3, x - 12, y + 12, x - 9, y + 20, 2.2, LAKE_ROOT, 1.2),
+    curveTube(x + 1, y + 4, x + 4, y + 13, x + 1, y + 23, 2.2, LAKE_ROOT, 1.2),
+    curveTube(x + 9, y + 3, x + 12, y + 11, x + 11, y + 17, 2.2, LAKE_ROOT, 1.2),
+  ]);
+  if (state === 'clean') {
+    for (const [tx, height, lean, light] of LAKE_TULES) {
+      ctx.save();
+      ctx.translate(tx, y - 4);
+      paintReed(ctx, { height, lean, bend: lean > 0 ? -1 : 1, cat: false, leafU: 0.5, leafDir: lean > 0 ? 1 : -1, light });
+      ctx.restore();
+    }
+  } else {
+    // short, bent, dull stubs: no leaf and no head
+    const stalks: Seg[] = [];
+    for (const [sx, lean] of LAKE_STUBS) {
+      const p = new Path2D();
+      p.moveTo(sx, y - 4);
+      p.quadraticCurveTo(sx + lean * 0.4, y - 8, sx + lean, y - 12);
+      stalks.push(seg(p, 3.2, REFUGE_DEAD_STALK, 2.2));
+    }
+    inkMany(ctx, stalks);
+  }
+  const dome = new Path2D();
+  ell(dome, x, y, rx, ry);
+  shape(ctx, dome, LAKE_ROOT, LAKE_ISLET_LW);
+  for (const [sx, sy, srx, sry, fill] of LAKE_BED_STONES) {
+    const stone = new Path2D();
+    ell(stone, sx, sy, srx, sry);
+    shape(ctx, stone, fill, LAKE_STONE_LW);
+    const shine = new Path2D();
+    ell(shine, sx - srx * 0.35, sy - sry * 0.45, srx * 0.22, sry * 0.14, -0.4);
+    ctx.fillStyle = LAKE_STONE_SHINE;
+    ctx.fill(shine);
+  }
+}
+
+/**
+ * What a look paints over the sky before its water, in the section picture (the far volcanoes of the
+ * open lake). A look not listed paints nothing there, so the other pictures are unchanged.
+ */
+export const REFUGE_HORIZONS: Readonly<Partial<Record<HabitatLookId, (ctx: CanvasRenderingContext2D) => void>>> = {
+  'open-lake': paintLakeHorizon,
+};
+
 const STRUCTURES: Readonly<Record<HabitatLookId, Structure>> = {
   canal: paintCanalStructure,
   pond: paintPondStructure,
   chinampa: paintChinampaStructure,
   'spring-cave': paintSpringCaveStructure,
   'deep-canal': paintDeepCanalStructure,
+  'open-lake': paintOpenLakeStructure,
 };
 
 /** Where the small axolotls rest in a clean picture, on the bed between the banks. */
@@ -919,6 +1096,11 @@ const RESTERS: Readonly<Record<HabitatLookId, readonly { readonly x: number; rea
   'deep-canal': [
     { x: 72, y: 71, flip: false },
     { x: 128, y: 70, flip: true },
+  ],
+  // between the islet (it ends at x 37) and the plants at the centre, and to the right of them
+  'open-lake': [
+    { x: 70, y: 70, flip: false },
+    { x: 132, y: 71, flip: true },
   ],
 };
 
@@ -962,6 +1144,8 @@ export function paintRefugeSection(ctx: CanvasRenderingContext2D, look: HabitatL
 
   // sky
   fillVertical(ctx, rectPath(0, 0, PIC_W, BED_Y), 0, SURF_Y, l.sky.top, l.sky.horizon);
+  // what stands on the horizon, before the water covers its feet
+  REFUGE_HORIZONS[look]?.(ctx);
 
   // water, wavy at the top
   const waterShape = new Path2D();
@@ -1051,6 +1235,10 @@ export const REFUGE_SECTION_PAINTERS: Readonly<
   'deep-canal': {
     dirty: (ctx) => paintRefugeSection(ctx, 'deep-canal', 'dirty'),
     clean: (ctx) => paintRefugeSection(ctx, 'deep-canal', 'clean'),
+  },
+  'open-lake': {
+    dirty: (ctx) => paintRefugeSection(ctx, 'open-lake', 'dirty'),
+    clean: (ctx) => paintRefugeSection(ctx, 'open-lake', 'clean'),
   },
 };
 
@@ -1170,6 +1358,35 @@ function paintDeepCanalPlants(ctx: CanvasRenderingContext2D): void {
   ctx.fill(heart);
 }
 
+/**
+ * The open lake's plants: a smooth stone on the bed with a clump of tule reeds and a pale round
+ * pebble beside it, growing up from the base. About 40 wide and 48 tall, narrow enough to stand between
+ * the two resting axolotls ({@link REFUGE_PLANTS_TEX} is 80 x 60). Rounded stones and reeds only.
+ */
+function paintOpenLakePlants(ctx: CanvasRenderingContext2D): void {
+  const tules: readonly { readonly x: number; readonly reed: ReedLook }[] = [
+    { x: -10, reed: { height: 30, lean: -4, bend: 2, cat: false, leafU: 0.5, leafDir: -1, light: false } },
+    { x: 2, reed: { height: 42, lean: 3, bend: -2, cat: false, leafU: 0.55, leafDir: 1, light: true } },
+    { x: 11, reed: { height: 26, lean: 4, bend: 1, cat: false, leafU: 0.45, leafDir: 1, light: false } },
+  ];
+  for (const t of tules) {
+    ctx.save();
+    ctx.translate(t.x, -4);
+    paintReed(ctx, t.reed);
+    ctx.restore();
+  }
+  const stone = new Path2D();
+  ell(stone, -2, -3.5, 15, 5.5);
+  shape(ctx, stone, LAKE_STONE, 2.4);
+  const pebble = new Path2D();
+  ell(pebble, 16, -2.5, 6, 3.6);
+  shape(ctx, pebble, LAKE_STONE_LIGHT, 2);
+  const shine = new Path2D();
+  ell(shine, -7, -6, 4, 1.2, -0.3);
+  ctx.fillStyle = LAKE_STONE_SHINE;
+  ctx.fill(shine);
+}
+
 /** Every look's plants painter. Local (0, 0) is the base of the plants, bottom-centre ({@link REFUGE_PLANTS_TEX}). */
 export const REFUGE_PLANTS_PAINTERS: Readonly<Record<HabitatLookId, PlantsPainter>> = {
   canal: paintCanalPlants,
@@ -1177,6 +1394,7 @@ export const REFUGE_PLANTS_PAINTERS: Readonly<Record<HabitatLookId, PlantsPainte
   chinampa: paintChinampaPlants,
   'spring-cave': paintSpringCavePlants,
   'deep-canal': paintDeepCanalPlants,
+  'open-lake': paintOpenLakePlants,
 };
 
 /** Paint the plants layer of `look` with its base at local (0, 0), growing up. */

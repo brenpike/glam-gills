@@ -16,6 +16,7 @@ import { lureLinePath, lurePath, type FishingBoatSpawn } from './lures';
 import type { MobileSnackMix } from './mobileSnacks';
 import type { RockWall } from './pebble';
 import { movingHazardSweep, type MovingHazardSpawn } from './movingHazards';
+import type { PelicanLineSpawn } from './pelicanLine';
 import type { PredatorRoute } from './predators';
 import { mulberry32 } from './rng';
 import { trajineraHullBand, type TrajineraSpawn } from './trajineras';
@@ -67,6 +68,12 @@ export interface ReedSpotRow {
 export interface ReedBed {
   columns: readonly number[];
   rows: readonly ReedSpotRow[];
+  /**
+   * World y of the floor the bed stands on (issue #211, ND-18), such as a tule bed on a shelf: its
+   * reed bases and reed patch end at this floor in place of the area's bed top, with the same rand()
+   * draws. Absent means the bed top. Must be finite, below SURF and at or above the bed top.
+   */
+  baseY?: number;
 }
 
 /** A fixed hiding spot as area data: x, y, rarity and whether a Dash pot sits there. */
@@ -276,6 +283,15 @@ export interface ZoneLayout {
   fishingBoats?: FishingBoatSpawn[];
   /** Drag-net stretches (issue #108, ND-2); absent means none. Never in `hazards` or `elements`. */
   dragNets?: DragNetSpawn[];
+  /** True when the area's water is coloured by depth band (issue #211, ND-1); absent when the data leaves it unset. */
+  depthBanded?: boolean;
+  /** Pelican lines (issue #211, ND-5); absent means none. Never in `hazards` or `elements`. */
+  pelicanLines?: PelicanLineSpawn[];
+  /**
+   * Ids of the treasures an earlier area owns that this area also hides (issue #211, ND-12), in
+   * data order; their finds follow the area's own in `finds`. Absent means none.
+   */
+  sharedTreasures?: string[];
 }
 
 /** An area's size in world px. */
@@ -377,6 +393,19 @@ export interface AreaLayoutData {
    * (dragNetSweep). Absent means none.
    */
   readonly dragNets?: readonly Readonly<DragNetSpawn>[];
+  /** True when the area's water is coloured by depth band (issue #211, ND-1): fixed area data, never seeded. Absent means unset. */
+  readonly depthBanded?: boolean;
+  /**
+   * Pelican lines, built with pelicanLineSpawn() (issue #211, ND-5): fixed area data, never seeded
+   * and never in `hazards` or `elements`. They never keep snacks away (ND-7). Absent means none.
+   */
+  readonly pelicanLines?: readonly Readonly<PelicanLineSpawn>[];
+  /**
+   * Treasures an earlier area owns that this area also hides (issue #211, ND-12): fixed area data,
+   * never seeded. Their finds come after the area's own treasures', so an area with none keeps its
+   * placement by seed. Absent means none.
+   */
+  readonly sharedTreasures?: readonly Treasure[];
 }
 
 /** The canal cave. */
@@ -558,6 +587,19 @@ function reedBaseX(rand: () => number, bed: ReedBed, index: number): number {
   return left + draw * (right - left);
 }
 
+/**
+ * Px the bed's reed bases sit below the canal's: from the bed's own floor (issue #211, ND-18) when
+ * set, else from the area's bed top. Throws RangeError for a floor that is not finite, not below SURF
+ * or below the bed top.
+ */
+function reedBaseOffset(bed: ReedBed, bedIndex: number, size: Readonly<AreaSize>): number {
+  if (bed.baseY === undefined) return size.height - WORLD_H;
+  if (!Number.isFinite(bed.baseY) || !(bed.baseY > SURF) || bed.baseY > size.bedTop) {
+    throw new RangeError(`buildZone: reed bed ${bedIndex} baseY must be finite, below ${SURF} and at most ${size.bedTop}, got ${bed.baseY}`);
+  }
+  return bed.baseY - BED_TOP;
+}
+
 function buildReedCluster(rand: () => number, bed: ReedBed, firstIndex: number, baseOffset: number): ReedSpec[] {
   // INVARIANT: each bed makes the same rand() draws in the same order as the old jittered clusters
   // (one spare draw where the jitter was, the count, then 11 per reed), so snacks and pads stay
@@ -584,13 +626,13 @@ function buildReedCluster(rand: () => number, bed: ReedBed, firstIndex: number, 
   return reeds;
 }
 
-function patchAroundReeds(reeds: ReedSpec[], bedTop: number): ReedPatch {
+function patchAroundReeds(reeds: ReedSpec[], floorY: number): ReedPatch {
   const xs = reeds.flatMap((reed) => [reed.bx, reed.bx + reed.lean]);
   return {
     x0: Math.min(...xs) - REED_PATCH_PAD,
     x1: Math.max(...xs) + REED_PATCH_PAD,
     y0: SURF,
-    y1: bedTop,
+    y1: floorY,
     dragMul: REED_DRAG_MUL,
   };
 }
@@ -688,7 +730,8 @@ function lureKeepOuts(boats: readonly Readonly<FishingBoatSpawn>[]): HazardRect[
  * The sweep of every element that has geometry, then of every moving hazard, then every rock wall
  * and side room (issue #105, ND-8), then every gliding trajinera's hull band (issue #78, ND-8), then
  * every bailing boat's catch box (issue #107, ND-2), then every lure's whole path and line and every
- * drag-net stretch (issue #108, ND-1, ND-2), in data order.
+ * drag-net stretch (issue #108, ND-1, ND-2), in data order. Pelican lines are never here: they never
+ * keep snacks away (issue #211, ND-7).
  */
 function snackSweeps(data: Readonly<AreaLayoutData>): HazardRect[] {
   const elementSweeps = data.elements.flatMap((element) => {
@@ -893,12 +936,31 @@ function buildSpots(
   return spots;
 }
 
-/** One find per area treasure, in catalogue order; its pool is every spot of the same rarity. */
+/**
+ * One find per area treasure: the area's own in catalogue order, then the shared ones in data order
+ * (issue #211, ND-12). Each pool is every spot of the same rarity.
+ */
 function buildFinds(treasures: readonly Treasure[], spots: HidingSpot[]): FindSpawn[] {
   return treasures.map((treasure) => ({
     id: treasure.id,
     pool: spots.filter((spot) => spot.rarity === treasure.rarity).map((spot) => spot.id),
   }));
+}
+
+/**
+ * The area's own treasures, then its shared ones (issue #211, ND-12). Throws RangeError when a
+ * shared treasure is one of the area's own or is shared twice.
+ */
+function findTreasures(data: Readonly<AreaLayoutData>): readonly Treasure[] {
+  const shared = data.sharedTreasures ?? [];
+  const seen = new Set(data.treasures.map((treasure) => treasure.id));
+  for (const treasure of shared) {
+    if (seen.has(treasure.id)) {
+      throw new RangeError(`buildZone: ${data.id} shares treasure ${treasure.id} it already hides`);
+    }
+    seen.add(treasure.id);
+  }
+  return [...data.treasures, ...shared];
 }
 
 function copyElementType(type: Readonly<ElementType>): ElementType {
@@ -914,6 +976,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
     ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
+    ...(element.wind ? { wind: { ...element.wind } } : {}),
   };
 }
 
@@ -967,6 +1030,11 @@ function copyDragNet(net: Readonly<DragNetSpawn>): DragNetSpawn {
   return { ...copyElement(net), dragNet: copyDragNetStretch(net.dragNet) };
 }
 
+/** A copy of the pelican line sharing no object with the data. */
+function copyPelicanLine(line: Readonly<PelicanLineSpawn>): PelicanLineSpawn {
+  return { ...line, tuning: Object.freeze({ ...line.tuning }) };
+}
+
 /** The layout's optional fields, each copied only when its data is set. */
 function optionalLayoutParts(
   data: Readonly<AreaLayoutData>,
@@ -983,6 +1051,9 @@ function optionalLayoutParts(
   | 'bailingBoats'
   | 'fishingBoats'
   | 'dragNets'
+  | 'depthBanded'
+  | 'pelicanLines'
+  | 'sharedTreasures'
 > {
   return {
     ...(data.tilapia ? { tilapia: { ...data.tilapia } } : {}),
@@ -996,6 +1067,9 @@ function optionalLayoutParts(
     ...(data.bailingBoats ? { bailingBoats: data.bailingBoats.map(copyBailingBoat) } : {}),
     ...(data.fishingBoats ? { fishingBoats: data.fishingBoats.map(copyFishingBoat) } : {}),
     ...(data.dragNets ? { dragNets: data.dragNets.map(copyDragNet) } : {}),
+    ...(data.depthBanded !== undefined ? { depthBanded: data.depthBanded } : {}),
+    ...(data.pelicanLines ? { pelicanLines: data.pelicanLines.map(copyPelicanLine) } : {}),
+    ...(data.sharedTreasures ? { sharedTreasures: data.sharedTreasures.map((treasure) => treasure.id) } : {}),
   };
 }
 
@@ -1003,7 +1077,8 @@ function optionalLayoutParts(
  * Deterministically builds an area's zone layout from its data and a mulberry32 seed. The rules
  * read the layout's width, height and bedTop, never the canal constants. The optional tilapia
  * tuning, bank overhangs, bank spots, moving hazards, mobile snacks, dark water, rock walls, side
- * rooms, gliding trajineras, bailing boats, fishing boats and drag nets make no rand() draws; only
+ * rooms, gliding trajineras, bailing boats, fishing boats, drag nets, depth banding, pelican lines,
+ * shared treasures and reed bed floors make no rand() draws; only
  * snack starts near a drifting net's path, a moving hazard's sweep, a rock wall, a side room, a
  * trajinera's hull band, a bailing boat's catch box, a lure's path or line or a drag-net stretch are
  * redrawn.
@@ -1016,11 +1091,11 @@ export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLay
 
   const reeds: ReedSpec[] = [];
   const reedPatches: ReedPatch[] = [];
-  for (const bed of data.reedBeds) {
-    const cluster = buildReedCluster(rand, bed, reeds.length, size.height - WORLD_H);
+  data.reedBeds.forEach((bed, bedIndex) => {
+    const cluster = buildReedCluster(rand, bed, reeds.length, reedBaseOffset(bed, bedIndex, size));
     reeds.push(...cluster);
-    reedPatches.push(patchAroundReeds(cluster, size.bedTop));
-  }
+    reedPatches.push(patchAroundReeds(cluster, bed.baseY ?? size.bedTop));
+  });
 
   const currents: CurrentZone[] = data.currents.map((current) => ({ ...current, force: { ...current.force } }));
 
@@ -1054,7 +1129,7 @@ export function buildZone(data: Readonly<AreaLayoutData>, seed: number): ZoneLay
     hazards: data.hazards.map(copyHazard),
     elements: data.elements.map(copyElement),
     homeSpot,
-    finds: buildFinds(data.treasures, spots),
+    finds: buildFinds(findTreasures(data), spots),
     spots,
     cave: { ...data.cave },
     mainPath: data.mainPath.map((point) => ({ ...point })),

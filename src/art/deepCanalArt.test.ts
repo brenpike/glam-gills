@@ -1489,8 +1489,8 @@ function hueOf(hex: string): number {
 describe('the deep canal look (issue #78)', () => {
   const look = habitatLook('deep-canal');
 
-  it('is the last habitat look and an area look, and resolves to the frozen look table entry', () => {
-    expect(HABITAT_LOOK_IDS[HABITAT_LOOK_IDS.length - 1]).toBe('deep-canal');
+  it('is a habitat look listed before the open lake, an area look, and resolves to the frozen look table entry', () => {
+    expect(HABITAT_LOOK_IDS.slice(-2)).toEqual(['deep-canal', 'open-lake']);
     expect(AREA_LOOK_IDS).toContain('deep-canal');
     expect(look).toBe(DEEP_CANAL_LOOK);
     expect(look.id).toBe('deep-canal');

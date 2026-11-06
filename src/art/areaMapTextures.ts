@@ -59,6 +59,8 @@ export const areaMapChinampaMarkerKey = (locked: boolean): string => `area-map-m
 export const areaMapSpringCaveMarkerKey = (locked: boolean): string => `area-map-marker-spring-cave-${locked ? 'locked' : 'unlocked'}`;
 /** Key of a deep-canal-look marker texture. */
 export const areaMapDeepCanalMarkerKey = (locked: boolean): string => `area-map-marker-deep-canal-${locked ? 'locked' : 'unlocked'}`;
+/** Key of an open-lake-look marker texture. */
+export const areaMapOpenLakeMarkerKey = (locked: boolean): string => `area-map-marker-open-lake-${locked ? 'locked' : 'unlocked'}`;
 export const AREA_MAP_FOCUS_KEY = 'area-map-focus-ring';
 export const AREA_MAP_BADGE_KEY = 'area-map-padlock-badge';
 export const AREA_MAP_PILL_KEY = 'area-map-new-pill';
@@ -93,7 +95,8 @@ export interface AreaMapTextures {
    * `chinampa` is the garden plot with hanging roots (orange unlocked, white locked);
    * `spring-cave` is the grey-blue stone with a crystal cluster (teal crystals unlocked, white locked);
    * `deep-canal` is the trajinera, a salmon hull under a yellow flower arch (white hull and arch locked).
-   * All ten share one frame and anchor (the marker centre), so they swap freely.
+   * `open-lake` is the wide lake with two snowy peaks behind it (blue lake and pale peaks unlocked, white locked).
+   * All twelve share one frame and anchor (the marker centre), so they swap freely.
    */
   readonly markersByLook: Readonly<Record<HabitatLookId, AreaMapMarkerPair>>;
   /** Double focus ring (white r 35.25, ink r 38.25). Anchor is the ring centre: put it on the marker centre. */
@@ -142,6 +145,12 @@ export function bakeAreaMapTextures(scene: Phaser.Scene, bakeScale: number): Are
   const deepCanalLocked = bake(scene, areaMapDeepCanalMarkerKey(true), MAP_MARKER_TEX, bakeScale, (ctx) =>
     paintMapMarker(ctx, true, 'deep-canal'),
   );
+  const openLakeUnlocked = bake(scene, areaMapOpenLakeMarkerKey(false), MAP_MARKER_TEX, bakeScale, (ctx) =>
+    paintMapMarker(ctx, false, 'open-lake'),
+  );
+  const openLakeLocked = bake(scene, areaMapOpenLakeMarkerKey(true), MAP_MARKER_TEX, bakeScale, (ctx) =>
+    paintMapMarker(ctx, true, 'open-lake'),
+  );
   return {
     markerUnlocked,
     markerLocked,
@@ -151,6 +160,7 @@ export function bakeAreaMapTextures(scene: Phaser.Scene, bakeScale: number): Are
       chinampa: { unlocked: chinampaUnlocked, locked: chinampaLocked },
       'spring-cave': { unlocked: springCaveUnlocked, locked: springCaveLocked },
       'deep-canal': { unlocked: deepCanalUnlocked, locked: deepCanalLocked },
+      'open-lake': { unlocked: openLakeUnlocked, locked: openLakeLocked },
     },
     focusRing: bake(scene, AREA_MAP_FOCUS_KEY, MAP_FOCUS_TEX, bakeScale, paintMapFocusRing),
     padlockBadge: bake(scene, AREA_MAP_BADGE_KEY, MAP_BADGE_TEX, bakeScale, paintMapPadlockBadge),
