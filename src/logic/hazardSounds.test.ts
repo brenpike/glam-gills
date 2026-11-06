@@ -10,6 +10,7 @@ import {
 } from './hazardSounds';
 import type { ElementSpawn, MatPair } from './hazards';
 import { hyacinthMatSpawn } from './hyacinthMats';
+import { pelicanLineSpawn, type PelicanLineSpawn } from './pelicanLine';
 import {
   ANCHOR_DROP,
   GEYSER_VENT,
@@ -19,8 +20,10 @@ import {
   movingHazardSpawn,
   type MovingHazardSpawn,
 } from './movingHazards';
-import type { TripState } from './trip';
+import type { TripEvent, TripState } from './trip';
 import type { TripPhase } from './tripEvents';
+import { NEW_TRIP_SOUNDS, tripFrameSounds } from './tripSounds';
+import { SURF, type SwimBounds } from './zone';
 
 /** Punting pole cycle from offset 0: rest [0, 1.6), warn [1.6, 2.6), jab [2.6, 2.9), hold [2.9, 3.4), lift [3.4, 4). */
 const POLE = movingHazardSpawn('pole-a', PUNTING_POLE, 500, 0);
@@ -30,6 +33,14 @@ const POLE_LATER = movingHazardSpawn('pole-b', PUNTING_POLE, 700, 0);
 const PAIR: MatPair = { x0: 300, x1: 420, rowTop: 100, rowBottom: 300, channelY: 200, openHeight: 72 };
 const MATS = hyacinthMatSpawn('mats-a', 0, PAIR);
 const MATS_FAR = hyacinthMatSpawn('mats-b', 0, { ...PAIR, x0: 2300, x1: 2420 });
+
+/**
+ * Pelican line cycle from offset 0 (default tuning): glide [0, 3), warn [3, 4), plunge [4, 4.4), hold [4.4, 4.9),
+ * rise [4.9, 5.5). The line has glided 150 px by the warn, 50 px back from the span's far turn, so the birds are at x 100, 300, 500, each box 100 wide from SURF down 220 px.
+ */
+const LAKE_BOUNDS: SwimBounds = { minX: 0, maxX: 3000, minY: 0, maxY: 800 };
+const PELICANS = pelicanLineSpawn('pelican-a', 0, { x0: 0, x1: 600 }, LAKE_BOUNDS);
+const PELICANS_FAR = pelicanLineSpawn('pelican-b', 0, { x0: 2000, x1: 2600 }, LAKE_BOUNDS);
 
 /** A view holding the pole's shaft (x 495..505, y 80..260) and the mat box (x 300..420, y 100..300). */
 const ON_SCREEN: ViewRect = { x: 0, y: 0, width: 960, height: 540 };
@@ -42,6 +53,7 @@ interface TripFixture {
   hazardTime?: number;
   elements?: ElementSpawn[];
   elementTime?: number;
+  pelicanLines?: PelicanLineSpawn[];
 }
 
 function createNets(snagLeft: number): GhostNetState {
@@ -49,9 +61,10 @@ function createNets(snagLeft: number): GhostNetState {
 }
 
 function createTrip(fixture: TripFixture = {}): HazardSoundTrip {
-  const { phase = 'swimming', snagLeft = 0, poles, hazardTime, elements = [], elementTime = 0 } = fixture;
+  const { phase = 'swimming', snagLeft = 0, poles, hazardTime, elements = [], elementTime = 0, pelicanLines } = fixture;
   const encounter = poles === undefined ? {} : { movingHazards: poles, hazardTime: hazardTime ?? 0 };
-  return { phase, ghostNets: createNets(snagLeft), encounter, elements, elementTime };
+  const trip = { phase, ghostNets: createNets(snagLeft), encounter, elements, elementTime };
+  return pelicanLines === undefined ? trip : { ...trip, pelicanLines };
 }
 
 function createSnapshot(overrides: Partial<HazardSnapshot> = {}): HazardSnapshot {
@@ -267,6 +280,96 @@ describe('hazardSoundEdges: mats open (issue #166, ND-6)', () => {
   it('skips an element with no mat pair', () => {
     const bare: ElementSpawn = { id: MATS.id, type: MATS.type, offset: MATS.offset };
     expect(matEdges(7.95, 8.05, ON_SCREEN, [bare])).toBe(NO_HAZARD_EDGES);
+  });
+});
+
+function pelicanEdges(before: number, now: number, view: ViewRect = ON_SCREEN, lines: PelicanLineSpawn[] = [PELICANS]) {
+  return hazardSoundEdges(createSnapshot({ elementTime: before }), createTrip({ pelicanLines: lines, elementTime: now }), view);
+}
+
+describe('hazardSoundEdges: a pelican line warns (issue #211, ND-14)', () => {
+  it('gives the ripple edge on the frame the on-screen line goes from glide to warn', () => {
+    expect(pelicanEdges(2.95, 3.05)).toEqual({ snagEnded: false, poleWarned: true, matsOpened: false });
+  });
+
+  it('gives it once, not on later warn frames', () => {
+    expect(pelicanEdges(3.05, 3.15)).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(3.85, 3.95)).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('gives none for the plunge, hold and rise starts or in the glide', () => {
+    expect(pelicanEdges(3.95, 4.05)).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(4.35, 4.45)).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(4.85, 4.95)).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(1, 1.1)).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('gives it again on the next cycle', () => {
+    expect(pelicanEdges(8.45, 8.55).poleWarned).toBe(true);
+  });
+
+  it('gives none when no bird is in the view', () => {
+    expect(pelicanEdges(2.95, 3.05, OFF_SCREEN)).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(2.95, 3.05, ON_SCREEN, [PELICANS_FAR])).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('gives it when only one bird of the line is in the view', () => {
+    const onlyLastBird: ViewRect = { x: 500, y: 0, width: 100, height: 540 };
+    expect(pelicanEdges(2.95, 3.05, onlyLastBird).poleWarned).toBe(true);
+  });
+
+  it('gives none when the view is below the dip depth or touches only an edge', () => {
+    expect(pelicanEdges(2.95, 3.05, { x: 0, y: SURF + 220, width: 960, height: 100 })).toBe(NO_HAZARD_EDGES);
+    expect(pelicanEdges(2.95, 3.05, { x: 550, y: 0, width: 100, height: 540 })).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('is one edge when a pole warns on the same frame', () => {
+    const prev = createSnapshot({ hazardTime: 1.55, elementTime: 2.95 });
+    const trip = createTrip({ poles: [POLE], hazardTime: 1.65, pelicanLines: [PELICANS], elementTime: 3.05 });
+    expect(hazardSoundEdges(prev, trip, ON_SCREEN)).toEqual({ snagEnded: false, poleWarned: true, matsOpened: false });
+  });
+
+  it('is one edge when two lines warn on the same frame', () => {
+    const second = pelicanLineSpawn('pelican-c', 0, { x0: 0, x1: 600 }, LAKE_BOUNDS);
+    expect(pelicanEdges(2.95, 3.05, ON_SCREEN, [PELICANS, second])).toEqual({ snagEnded: false, poleWarned: true, matsOpened: false });
+  });
+
+  it('asks for the shared ripple once on the warning start, and on no later warn frame', () => {
+    const rippleIds = (before: number, now: number, events: readonly TripEvent[] = []) => {
+      const state = { ...NEW_TRIP_SOUNDS, hazards: createSnapshot({ elementTime: before }) };
+      return tripFrameSounds(state, createTrip({ pelicanLines: [PELICANS], elementTime: now }), ON_SCREEN, events).requests.map((r) => r.id);
+    };
+    expect(rippleIds(2.95, 3.05)).toEqual(['ripple']);
+    expect(rippleIds(3.05, 3.15)).toEqual([]);
+  });
+
+  it('asks for no second ripple on a frame where a predator warning already asked', () => {
+    const state = { ...NEW_TRIP_SOUNDS, hazards: createSnapshot({ elementTime: 2.95 }) };
+    const telegraph: TripEvent = { type: 'telegraph', sourceId: 'tilapia-1' };
+    const step = tripFrameSounds(state, createTrip({ pelicanLines: [PELICANS], elementTime: 3.05 }), ON_SCREEN, [telegraph]);
+    expect(step.requests).toEqual([]);
+  });
+
+  it('asks for no sound off-screen', () => {
+    const state = { ...NEW_TRIP_SOUNDS, hazards: createSnapshot({ elementTime: 2.95 }) };
+    const step = tripFrameSounds(state, createTrip({ pelicanLines: [PELICANS], elementTime: 3.05 }), OFF_SCREEN, []);
+    expect(step.requests).toEqual([]);
+  });
+
+  it('gives none on the first frame or when not swimming', () => {
+    const trip = createTrip({ pelicanLines: [PELICANS], elementTime: 3.05 });
+    expect(hazardSoundEdges(undefined, trip, ON_SCREEN)).toBe(NO_HAZARD_EDGES);
+    const carrying = createTrip({ phase: 'carrying', pelicanLines: [PELICANS], elementTime: 3.05 });
+    expect(hazardSoundEdges(createSnapshot({ elementTime: 2.95 }), carrying, ON_SCREEN)).toBe(NO_HAZARD_EDGES);
+  });
+
+  it('adds no edge field for wind or waves: the edges stay the three hazard fields', () => {
+    expect(Object.keys(pelicanEdges(2.95, 3.05)).sort()).toEqual(['matsOpened', 'poleWarned', 'snagEnded']);
+  });
+
+  it('leaves a trip without pelican lines as before', () => {
+    expect(matEdges(7.95, 8.05).matsOpened).toBe(true);
+    expect(hazardSoundEdges(createSnapshot({ elementTime: 2.95 }), createTrip({ elementTime: 3.05 }), ON_SCREEN)).toBe(NO_HAZARD_EDGES);
   });
 });
 

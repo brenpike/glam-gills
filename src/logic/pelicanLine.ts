@@ -9,8 +9,8 @@
  * dip or slips through a gap between two boxes. A scoop never catches, holds or lifts the axolotl
  * (ADR 0007): these rules only say when a bump lands.
  */
+import { SAFE_PASSING_WIDTH } from './ghostNets';
 import type { HazardRect } from './hazards';
-import { SAFE_PASSING_WIDTH } from './layoutGaps';
 import { TILAPIA } from './tuning';
 import { SURF, type Point, type SwimBounds } from './zone';
 
