@@ -17,7 +17,8 @@ import {
   type LakeBand,
   type LakeRect,
 } from './drawLake';
-import { BG_CHUNK, clipRectsToChunk, paintBackgroundChunk, type ChunkOptions } from './drawScenery';
+import { BG_CHUNK, LAKE_FLOOR, clipRectsToChunk, paintBackgroundChunk, type ChunkOptions } from './drawScenery';
+import { BED_TOP } from '../logic/zone';
 import type { AreaLookId } from './habitatLook';
 import { VIEW_H, VIEW_W } from './palette';
 import { areaBgKey, areaDeepRowBgKey, bakeAreaScenery, type AreaSceneryOptions } from './textures';
@@ -324,20 +325,9 @@ describe('lakebed in the chunks', () => {
   const withRects = (rects: readonly LakeRect[], extra: Partial<Base> = {}, seed = 5): Painted[] =>
     chunkOf(base('open-lake', { row: 'bottom', index: 1, solids: rects, band: 3, ...extra }), seed);
 
-  it('paints nothing of the bed where a chunk has no solid parts, and no canal bed', () => {
-    const none = withRects([]);
-    expect(hasStyle(none, LAKE_LIP)).toBe(false);
-    expect(none).toHaveLength(1);
-    const omitted = chunkOf(base('open-lake', { row: 'bottom', index: 1, band: 3 }));
-    expect(signature(omitted)).toBe(signature(none));
-  });
-
-  it('paints the lakebed on top of the water, and only inside the solid rects', () => {
-    const none = withRects([]);
-    const some = withRects([rect]);
-    expect(some.length).toBeGreaterThan(none.length);
-    expect(signature(some.slice(0, none.length))).toBe(signature(none));
-    for (const p of some.slice(none.length)) {
+  /** Every point of every mark lies inside `r` (strokes may reach half their width past it). */
+  const expectInside = (marks: readonly Painted[], r: LakeRect): void => {
+    for (const p of marks) {
       const pts = p.cmds.flatMap((c) => {
         const a = c.slice(1) as number[];
         if (c[0] === 'moveTo' || c[0] === 'lineTo') return [{ x: a[0], y: a[1] }];
@@ -348,12 +338,42 @@ describe('lakebed in the chunks', () => {
       });
       const half = p.op === 'stroke' ? p.lineWidth / 2 : 0;
       for (const q of pts) {
-        expect(q.x).toBeGreaterThanOrEqual(rect.x - half - 1e-6);
-        expect(q.x).toBeLessThanOrEqual(rect.x + rect.w + half + 1e-6);
-        expect(q.y).toBeGreaterThanOrEqual(rect.y - half - 1e-6);
-        expect(q.y).toBeLessThanOrEqual(rect.y + rect.h + half + 1e-6);
+        expect(q.x).toBeGreaterThanOrEqual(r.x - half - 1e-6);
+        expect(q.x).toBeLessThanOrEqual(r.x + r.w + half + 1e-6);
+        expect(q.y).toBeGreaterThanOrEqual(r.y - half - 1e-6);
+        expect(q.y).toBeLessThanOrEqual(r.y + r.h + half + 1e-6);
       }
     }
+  };
+
+  it('paints nothing of the bed where a middle chunk has no solid parts', () => {
+    const none = withRects([], { row: 'middle' });
+    expect(hasStyle(none, LAKE_LIP)).toBe(false);
+    expect(none).toHaveLength(1);
+    const omitted = chunkOf(base('open-lake', { row: 'middle', index: 1, band: 3 }));
+    expect(signature(omitted)).toBe(signature(none));
+  });
+
+  it('paints the bowl floor under the bed top of a row with the bed, with no solid parts, and no canal bed', () => {
+    expect(LAKE_FLOOR).toEqual({ x: 0, y: BED_TOP, w: VIEW_W, h: VIEW_H - BED_TOP });
+    for (const row of ['bottom', 'single'] as const) {
+      const floor = withRects([], { row });
+      expect(hasStyle(floor, LAKE_LIP), row).toBe(true);
+      const omitted = chunkOf(base('open-lake', { row, index: 1, band: 3 }));
+      expect(signature(omitted), row).toBe(signature(floor));
+    }
+    // A bottom chunk is the band water (one fill), then only the floor's lakebed, inside the floor.
+    const bottom = withRects([]);
+    expect(bottom.length).toBeGreaterThan(1);
+    expectInside(bottom.slice(1), LAKE_FLOOR);
+  });
+
+  it('paints the lakebed on top of the water, and only inside the solid rects', () => {
+    const none = withRects([]);
+    const some = withRects([rect]);
+    expect(some.length).toBeGreaterThan(none.length);
+    expect(signature(some.slice(0, none.length))).toBe(signature(none));
+    expectInside(some.slice(none.length), rect);
   });
 
   it('paints a lip on the top edge of a rect in a middle row too', () => {
@@ -457,7 +477,12 @@ describe('bakeAreaScenery for the lake', () => {
     expect(lipIn(1, 0)).toBe(false);
     expect(lipIn(1, 3)).toBe(false);
     expect(lipIn(0, 0)).toBe(false);
-    expect(lipIn(3, 4)).toBe(false);
+    expect(lipIn(2, 4)).toBe(false);
+  });
+
+  it('paints the bowl floor in every bottom-row chunk, walls or none', () => {
+    const { made, scenery } = bakeIn({ rockWalls: WALLS });
+    for (let c = 0; c < 5; c++) expect(hasStyle(made.get(scenery.bg[3][c].key)!.painted, LAKE_LIP), `column ${c}`).toBe(true);
   });
 
   it('shares one texture per banded middle row for chunks with no rock, and bakes rock chunks on their own', () => {

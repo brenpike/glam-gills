@@ -56,9 +56,16 @@ import {
   type LakeBand,
   type LakeRect,
 } from './drawLake';
+import { BED_TOP as ZONE_BED_TOP } from '../logic/zone';
 
 /** Background chunk size in logical units (the 480 x 360 reference viewport). */
 export const BG_CHUNK = { w: VIEW_W, h: VIEW_H } as const;
+
+/**
+ * The floor under the bed top of a row with the bed, in chunk coordinates: a lakebed look paints it
+ * (the bowl floor), since the floor is solid ground but no rock wall.
+ */
+export const LAKE_FLOOR: Readonly<LakeRect> = Object.freeze({ x: 0, y: ZONE_BED_TOP, w: VIEW_W, h: VIEW_H - ZONE_BED_TOP });
 
 /** Water surface height at x and time t (guide section 9). For scene use. */
 export function waveY(x: number, t: number): number {
@@ -752,7 +759,9 @@ function paintSpringCaveRow(ctx: CanvasRenderingContext2D, row: ChunkRow, opts: 
  * with sky (no randomness), and `streamingClouds` paints streaming clouds in place of the clouds
  * (two draws per cloud row). `depthBands` draws the water of the chunk's `band` (paintBandWater), no
  * randomness. `lakebed` paints no canal bed; it paints the lakebed into `solids` last of the water
- * steps, on every row, drawing randomness only for what it paints.
+ * steps, on every row, drawing randomness only for what it paints. On a row with the bed ('single'
+ * or 'bottom') it first paints the lakebed into the floor under the bed top (LAKE_FLOOR), so the
+ * bowl floor shows where no solid stands.
  */
 export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkOptions): void {
   const { rand } = opts;
@@ -796,7 +805,9 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
     }
   }
   // The lakebed goes in the solid parts of any row (a wall can stand in a middle row), over the water.
-  if (look.lakebed) paintLakebed(ctx, opts.solids ?? [], rand);
+  // A row with the bed also has the floor under the bed top (the bowl floor), painted first, so the
+  // solids go over it where they stand on it.
+  if (look.lakebed) paintLakebed(ctx, hasBed ? [LAKE_FLOOR, ...(opts.solids ?? [])] : (opts.solids ?? []), rand);
   if (rockRoof) paintSpringCaveRow(ctx, row, opts);
   if (look.goldenDecor) paintGoldenDecor(ctx, goldenChunkOf(row, opts));
   if (look.lowerRowLight && row === 'bottom') paintLitLowerRow(ctx, opts.index, look.raySlant);
