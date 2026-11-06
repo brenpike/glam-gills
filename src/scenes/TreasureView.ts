@@ -322,7 +322,7 @@ function rarityOf(id: FindId): Rarity {
  * front), the overhang under each of the zone's overhanging banks (a rock ledge in the spring cave,
  * moored hulls in the deep canal), the chinampa
  * edges either side of a current of a look with a gap (`HabitatLook.currentGap`), the
- * past-the-current marker, one treasure icon per catalogue find (hidden under cover, or revealed by
+ * past-the-current marker (only in an area with a current; the open lake has none), one treasure icon per catalogue find (hidden under cover, or revealed by
  * a crumble), the Dash pots, the hint stars, the dash-needed bubble and pot wobble, the crumble and
  * the pickup pop. Visual only: every timer here is driven by the frame `dt` and the scene clock, so
  * it freezes with the scene, and nothing here changes game state. Every effect reads the current
@@ -367,10 +367,7 @@ export class TreasureView {
     placeBankOverhangs(scene, assets, zone, look);
     if (look.currentGap) for (const gap of zone.currents) placeGapEdges(scene, assets, gap);
     const current = zone.currents[0];
-    if (!current) {
-      throw new Error('TreasureView: the zone has no current for the past-the-current marker');
-    }
-    bakedImage(scene, hiding.currentMarker, pastCurrentMarkerX(current), baseY, DEPTH.currentMarker);
+    if (current) bakedImage(scene, hiding.currentMarker, pastCurrentMarkerX(current), baseY, DEPTH.currentMarker);
     this.finds = zone.finds.map((find, i) => this.createFindSprites(scene, find.id, i));
     this.spritesById = new Map(this.finds.map((sprites) => [sprites.id, sprites]));
     this.crumbles = Array.from({ length: CRUMBLE_POOL }, () => this.createCrumble(scene));

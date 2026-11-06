@@ -9,6 +9,7 @@ import type { GhostNetSize } from '../art/drawChinampa';
 import { CAVE_H, CAVE_W } from '../art/drawFinds';
 import { streamColumnFor, type ReedLook } from '../art/drawScenery';
 import { habitatLook, type HabitatLook } from '../art/habitatLook';
+import { bakeLakeTextures, type LakeTextures } from '../art/lakeTextures';
 import { bakeMobileSnackTextures, type MobileSnackTextures } from '../art/mobileSnackTextures';
 import { bakeMorphTextures, type MorphTextures } from '../art/morphTextures';
 import { bakeMovingHazardTextures, type MovingHazardTextures } from '../art/movingHazardTextures';
@@ -43,6 +44,7 @@ import { createPlasticWorms } from '../logic/plasticWorms';
 import { mulberry32 } from '../logic/rng';
 import { TANK } from '../logic/tank';
 import { VIEW } from '../logic/tuning';
+import { winds } from '../logic/wind';
 import { fitView, type ViewFit } from '../logic/viewport';
 import { SceneryCache } from './sceneryCache';
 import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, WORLD_H, buildZone, type ReedSpec, type ZoneLayout } from '../logic/zone';
@@ -113,7 +115,10 @@ export interface BakedDecorationPack {
  * trajineras or drag nets, else null. Its fishing trajinera and drag net art are baked only when
  * some area has fishing trajineras or drag nets, else each is null. `goldenCanal` holds the one
  * sinking marigold petal (issue #112, ND-13), baked only when some area's look lets petals sink,
- * else null.
+ * else null. `lake` holds the open lake's small sprites (the pelican body frames, bill, neck and
+ * splash, and the wind's ripple arcs and gust streak), baked only when some area has pelican lines or
+ * wind and waves, else null (issue #211). A look that paints the lakebed paints its rock walls into
+ * its on-demand scenery chunks, so its walls are never baked as spring cave rock wall sprites.
  * "Some area" counts the dev area when one was loaded. A dev area that
  * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
  * of `predator`.
@@ -140,6 +145,7 @@ export interface GameAssets {
   springCave: SpringCaveTextures | null;
   deepCanal: DeepCanalTextures | null;
   goldenCanal: GoldenCanalTextures | null;
+  lake: LakeTextures | null;
 }
 
 /** What the swim scene and its HUD start from: the game assets and the id of the area to swim in. */
@@ -513,6 +519,7 @@ function bakeAreaSceneryOf(
     look: look.id,
     stream: look.stream,
     streamColumn: look.stream ? streamColumnOf(zone, id) : undefined,
+    rockWalls: [...(zone.rockWalls ?? []), ...(zone.sideRooms ?? [])],
   });
 }
 
@@ -619,14 +626,18 @@ function hasMobileSnacks(area: Readonly<AreaData>): boolean {
 /**
  * The spring cave props, baked once for every area: when some area's look has the grotto cave or
  * says it needs the spring cave props, some area has dark water (its glow-plants and soft light), or
- * some area has rock walls, each wall size baked once (issue #105, ND-8). Null when no area needs them.
+ * some area has rock walls, each wall size baked once (issue #105, ND-8). The rock walls of an area
+ * whose look paints the lakebed are left out: its chunks paint them (issue #211, ND-4). Null when no
+ * area needs them.
  */
 function bakeSpringCaveProps(
   scene: Phaser.Scene,
   areas: readonly Readonly<AreaData>[],
   bakeScale: number,
 ): SpringCaveTextures | null {
-  const rockWallSizes = areas.flatMap((area) => (area.layout.rockWalls ?? []).map((wall) => [wall.x1 - wall.x0, wall.y1 - wall.y0] as const));
+  const rockWallSizes = areas
+    .filter((area) => !areaLook(area).lakebed)
+    .flatMap((area) => (area.layout.rockWalls ?? []).map((wall) => [wall.x1 - wall.x0, wall.y1 - wall.y0] as const));
   const needed =
     areas.map(areaLook).some((look) => look.cave.kind === 'grotto' || look.springCaveProps) ||
     areas.some((area) => area.layout.darkWater !== undefined) ||
@@ -661,6 +672,11 @@ function bakeDeepCanalProps(
     hasFishingBoats(areas) ||
     areas.some(hasDragNets);
   return needed ? bakeDeepCanalTextures(scene, bakeScale, murkyPatchSizes(AREAS), areas) : null;
+}
+
+/** Whether area `area` has any pelican line or wind and waves (issue #211, ND-5, ND-10). */
+function hasLakeHazards(area: Readonly<AreaData>): boolean {
+  return (area.layout.pelicanLines ?? []).length > 0 || winds(area.layout.elements).length > 0;
 }
 
 /** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */
@@ -721,6 +737,7 @@ export class BootScene extends Phaser.Scene {
     const springCave = bakeSpringCaveProps(this, areas, bakeScale);
     const deepCanal = bakeDeepCanalProps(this, areas, bakeScale);
     const goldenCanal = bakeGoldenCanalTextures(this, bakeScale, areas.map(areaLook));
+    const lake = areas.some(hasLakeHazards) ? bakeLakeTextures(this, bakeScale) : null;
     const assets: GameAssets = {
       areas,
       zones,
@@ -743,6 +760,7 @@ export class BootScene extends Phaser.Scene {
       springCave,
       deepCanal,
       goldenCanal,
+      lake,
     };
     this.scene.start(SCENE_KEYS.title, assets);
   }
