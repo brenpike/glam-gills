@@ -172,6 +172,23 @@ export interface TrajineraCrossing {
   direction: GlideDirection;
 }
 
+/** Which way a wind gust blows along x (issue #211, ND-10). */
+export type GustDirection = 'left' | 'right';
+
+/**
+ * Where wind and waves blow (issue #211, ND-10): across `x0..x1`, from the surface (SURF), where the
+ * push is full, down to `fadeY`, where it has faded to nothing. `direction` is the way of the gust in
+ * the cycle that starts at the element's offset; each gust after it blows the other way. Not a sweep:
+ * the wind never hits, never costs a leg and only pushes the axolotl along x (wind.ts). Inclusive
+ * edges; `x0 < x1` and SURF < `fadeY`.
+ */
+export interface WindSpan {
+  x0: number;
+  x1: number;
+  fadeY: number;
+  direction: GustDirection;
+}
+
 export interface ElementSpawn {
   id: string;
   type: ElementType;
@@ -185,6 +202,8 @@ export interface ElementSpawn {
   pebble?: PebbleGroove;
   /** Gliding trajinera crossing (issue #78, ND-8); absent on every element that is not a boat. */
   trajinera?: TrajineraCrossing;
+  /** Wind and waves span (issue #211, ND-10); absent on every element that is not wind. */
+  wind?: WindSpan;
 }
 
 /**
@@ -252,8 +271,9 @@ export function elementActive(element: ElementSpawn, timeS: number): boolean {
 /**
  * The rectangle the element's moving parts can ever occupy: for a mat pair, its whole
  * `x0..x1` by `rowTop..rowBottom`, since closed mats meet at the channel. Null when the element
- * has no mat pair, a glow-plant (issue #77, ND-8) and a gliding trajinera (issue #78, ND-8)
- * included: a boat's hull band is trajineraHullBand's (trajineras.ts), so it is never a mat.
+ * has no mat pair, a glow-plant (issue #77, ND-8), a gliding trajinera (issue #78, ND-8) and wind
+ * and waves (issue #211, ND-10) included: a boat's hull band is trajineraHullBand's (trajineras.ts),
+ * so it is never a mat, and the wind has no sweep at all, so the snacks never keep away from it.
  */
 export function elementSweep(element: Readonly<ElementSpawn>): HazardRect | null {
   const pair = element.matPair;

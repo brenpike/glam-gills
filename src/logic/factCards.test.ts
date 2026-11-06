@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { areaFactCards } from './areas';
 import {
   ANCHOR_DROP_FACT,
   AXOLOTL_REFUGES_FACT,
@@ -27,6 +28,8 @@ import {
   MUD_SEEP_FACT,
   MURKY_WATER_FACT,
   MURKY_WATER_MEET_RANGE,
+  PELICAN_FACT,
+  PELICAN_MEET_RANGE,
   PLASTIC_WORM_FACT,
   PUNTING_POLE_FACT,
   REFUGE_FACT_CARDS,
@@ -45,6 +48,7 @@ import {
   unfoundFactCardHint,
   type ThreatSighting,
 } from './factCards';
+import { PELICAN_LINE } from './pelicanLine';
 import { BLACK_BASS, CARP, CORMORANT, CRAYFISH, GARTER_SNAKE, GHOST_NETS, HERON, HYACINTH_MATS, PUNTING_POLES, TILAPIA } from './tuning';
 import type { SafeArea } from './zone';
 
@@ -523,6 +527,63 @@ describe('cormorant fact card copy (issue #112)', () => {
   it('uses a meet range of 180 px, no less than the lunge range', () => {
     expect(CORMORANT_MEET_RANGE).toBe(180);
     expect(CORMORANT_MEET_RANGE).toBeGreaterThanOrEqual(CORMORANT.lungeRange);
+  });
+});
+
+describe('pelican fact card copy (issue #211, ND-20)', () => {
+  it('has the pelican id, name, title and body, and no hint of its own', () => {
+    expect(PELICAN_FACT).toEqual({
+      id: 'pelican',
+      name: 'White pelican',
+      title: 'Meet the pelican',
+      body: 'Hundreds of white pelicans fly to Xochimilco for the winter. They float in a line and dip their big bills together to scoop up fish. Axolotls stay safe down deep.',
+    });
+    expect(PELICAN_FACT.unfoundHint).toBeUndefined();
+    expect(Object.isFrozen(PELICAN_FACT)).toBe(true);
+  });
+
+  it('has an id apart from the other cards', () => {
+    const others = [
+      ...EARLIER_CARD_IDS,
+      CARP_FACT.id,
+      PUNTING_POLE_FACT.id,
+      TADPOLE_FACT.id,
+      SHRIMP_FACT.id,
+      CRAYFISH_FACT.id,
+      STALACTITE_FACT.id,
+      GEYSER_FACT.id,
+      BLACK_BASS_FACT.id,
+      CORMORANT_FACT.id,
+      ANCHOR_DROP_FACT.id,
+      MUD_SEEP_FACT.id,
+      UNDERWATER_SPRINGS_FACT.id,
+      MURKY_WATER_FACT.id,
+      LURE_FACT.id,
+      DRAG_NET_FACT.id,
+    ];
+    expect(others).not.toContain(PELICAN_FACT.id);
+  });
+
+  it.each([PELICAN_FACT.name, PELICAN_FACT.title, PELICAN_FACT.body])('"%s" avoids banned words', (text) => {
+    expect(findBannedWords(text)).toEqual([]);
+  });
+
+  it('never says a pelican eats, catches or hunts anything but fish', () => {
+    expect(PELICAN_FACT.body).not.toMatch(/\b(eat\w*|catch\w*|hunt\w*|prey|grab\w*|swallow\w*)\b/i);
+    expect(PELICAN_FACT.body).toMatch(/scoop up fish/);
+  });
+
+  it('keeps the name, title and body no longer than the longest other area card', () => {
+    const others = areaFactCards().filter((card) => card.id !== PELICAN_FACT.id);
+    const longest = (field: 'name' | 'title' | 'body') => Math.max(...others.map((card) => card[field].length));
+    expect(PELICAN_FACT.name.length).toBeLessThanOrEqual(longest('name'));
+    expect(PELICAN_FACT.title.length).toBeLessThanOrEqual(longest('title'));
+    expect(PELICAN_FACT.body.length).toBeLessThanOrEqual(longest('body'));
+  });
+
+  it('uses a meet range of 180 px, larger than the scoop touch reach', () => {
+    expect(PELICAN_MEET_RANGE).toBe(180);
+    expect(PELICAN_MEET_RANGE).toBeGreaterThan(PELICAN_LINE.touchReach);
   });
 });
 
