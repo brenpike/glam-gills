@@ -6,6 +6,8 @@ import {
   CHINAMPA_2_AREA,
   CHINAMPA_AREA,
   HABITATS,
+  OPEN_LAKE_AREA,
+  OPEN_LAKE_HABITAT,
   POND_2_AREA,
   POND_AREA,
   SPRING_CAVE_HABITAT,
@@ -48,20 +50,11 @@ import { SOUNDS, inSoundKey, soundKeyFor, soundNotes, type SoundId } from './sou
 
 const HOME_SCREENS: readonly MusicScreen[] = ['title', 'homeTank', 'creator', 'areaMap', 'refuge'];
 const SEED = 7;
-const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW, TRAJINERA_WALTZ];
+const DAY_HABITAT_CUES: readonly Readonly<MusicCue>[] = [CANAL_PADDLE, LILY_PAD_HOP, GARDEN_BOATS, CENOTE_GLOW, TRAJINERA_WALTZ, LAGOON_BREEZE];
 /** Pitch classes of E dorian, which uses D major's notes, above C. */
 const E_DORIAN_PITCHES: readonly number[] = ['E4', 'F#4', 'G4', 'A4', 'B4', 'C#5', 'D5'].map((name) => noteMidi(name) % 12);
 const DUSK_HABITAT_CUES: readonly Readonly<MusicCue>[] = DAY_HABITAT_CUES.map((cue) => tripCueFor({ habitatId: habitatOf(cue), look: 'pond-dusk' }));
 const ALL_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES, ...DUSK_HABITAT_CUES];
-/** Habitat cues written before their habitat exists, so not yet in HABITAT_CUES: Lagoon Breeze, the open lake's. */
-const UNREGISTERED_DAY_CUES: readonly Readonly<MusicCue>[] = [LAGOON_BREEZE];
-const UNREGISTERED_CUES: readonly Readonly<MusicCue>[] = [...UNREGISTERED_DAY_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
-/** Every day habitat cue the shared habitat cue checks cover, registered or not. */
-const CHECKED_DAY_CUES: readonly Readonly<MusicCue>[] = [...DAY_HABITAT_CUES, ...UNREGISTERED_DAY_CUES];
-/** Every dusk version the shared dusk rule checks cover, registered or not. */
-const CHECKED_DUSK_CUES: readonly Readonly<MusicCue>[] = [...DUSK_HABITAT_CUES, ...UNREGISTERED_DAY_CUES.map(duskVersion)];
-/** Every cue the shared arrangement checks cover. */
-const CHECKED_CUES: readonly Readonly<MusicCue>[] = [...ALL_CUES, ...UNREGISTERED_CUES];
 /** Pitch classes of D major above C. */
 const D_MAJOR_PITCHES: readonly number[] = ['D4', 'E4', 'F#4', 'G4', 'A4', 'B4', 'C#5'].map((name) => noteMidi(name) % 12);
 
@@ -175,14 +168,14 @@ describe('habitat cues (M3)', () => {
 describe('the dusk rule (M4)', () => {
   it('has no dusk version of the Home cue, or of a dusk version', () => {
     expect(() => duskVersion(SUNNY_TANK)).toThrow();
-    for (const dusk of CHECKED_DUSK_CUES) expect(() => duskVersion(dusk)).toThrow();
+    for (const dusk of DUSK_HABITAT_CUES) expect(() => duskVersion(dusk)).toThrow();
   });
 
-  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52, Trajinera Waltz 84', () => {
-    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52, 84]);
+  it('keeps the tune and chords, and is slower: Canal Paddle 54, Lily Pad Hop 80, Garden Boats 86, Cenote Glow 52, Trajinera Waltz 84, Lagoon Breeze 58', () => {
+    expect(DUSK_HABITAT_CUES.map((cue) => cue.bpm)).toEqual([54, 80, 86, 52, 84, 58]);
     expect(CENOTE_GLOW.dusk).toEqual({ bpm: 52, swing: 0 });
-    CHECKED_DAY_CUES.forEach((day, i) => {
-      const dusk = CHECKED_DUSK_CUES[i];
+    DAY_HABITAT_CUES.forEach((day, i) => {
+      const dusk = DUSK_HABITAT_CUES[i];
       expect(dusk.tune).toBe(day.tune);
       expect(dusk.bars).toBe(day.bars);
       expect(dusk.bpm).toBeLessThan(day.bpm);
@@ -191,7 +184,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('plays every tune note on its step on a music box, every pass, raised an octave when below C5', () => {
-    for (const dusk of CHECKED_DUSK_CUES) {
+    for (const dusk of DUSK_HABITAT_CUES) {
       const steps = notesOf(dusk, SEED);
       const perBar = stepsPerBar(dusk);
       for (let pass = 0; pass < 4; pass++) {
@@ -207,7 +200,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it("holds each chord's notes softly on a pad from the chord's first step", () => {
-    for (const dusk of CHECKED_DUSK_CUES) {
+    for (const dusk of DUSK_HABITAT_CUES) {
       notesOf(dusk, SEED, 1).forEach((notes, index) => {
         const place = stepPlace(dusk, index);
         const pads = notes.filter((n) => n.voice === 'pad');
@@ -222,7 +215,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('plays no drums, only a faint shaker, and fireflies', () => {
-    for (const dusk of CHECKED_DUSK_CUES) {
+    for (const dusk of DUSK_HABITAT_CUES) {
       const notes = notesOf(dusk, SEED).flat();
       for (const n of notes) {
         expect(DRUM_VOICES).not.toContain(n.voice);
@@ -237,7 +230,7 @@ describe('the dusk rule (M4)', () => {
   });
 
   it('gives every day habitat cue but Cenote Glow drums, so the dusk version is what takes them away', () => {
-    for (const day of CHECKED_DAY_CUES.filter((cue) => cue !== CENOTE_GLOW)) {
+    for (const day of DAY_HABITAT_CUES.filter((cue) => cue !== CENOTE_GLOW)) {
       expect(notesOf(day, SEED, 1).flat().some((n) => DRUM_VOICES.includes(n.voice))).toBe(true);
     }
   });
@@ -254,7 +247,7 @@ describe('music voices', () => {
 
 describe('the music echo', () => {
   it('is 0.4 for Cenote Glow and its dusk version, and off for every other cue, which plays only the shared room reverb', () => {
-    for (const cue of CHECKED_CUES) {
+    for (const cue of ALL_CUES) {
       const cenote = (cue.dayId ?? cue.id) === CENOTE_GLOW.id;
       expect(cue.echo, cue.id).toBe(cenote ? 0.4 : undefined);
     }
@@ -462,12 +455,16 @@ describe("Trajinera Waltz, the deep canal's cue (M3; docs/music-guide.md, sectio
 });
 
 describe("Lagoon Breeze, the open lake's cue (M3; provisional; docs/music-guide.md, section 4)", () => {
-  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES];
+  const OTHER_CUES: readonly Readonly<MusicCue>[] = [SUNNY_TANK, ...DAY_HABITAT_CUES.filter((cue) => cue !== LAGOON_BREEZE)];
   const LAGOON_DUSK = duskVersion(LAGOON_BREEZE);
 
-  it('is defined but not yet mapped to a habitat, so it is in neither HABITAT_CUES nor MUSIC_CUES', () => {
-    expect(Object.values(HABITAT_CUES)).not.toContain(LAGOON_BREEZE);
-    expect(MUSIC_CUES[LAGOON_BREEZE.id]).toBeUndefined();
+  it('plays in the open lake, in its day version in Area 12, and is in MUSIC_CUES with its dusk version', () => {
+    expect(HABITAT_CUES[OPEN_LAKE_HABITAT.id]).toBe(LAGOON_BREEZE);
+    expect(tripCueFor({ habitatId: OPEN_LAKE_HABITAT.id })).toBe(LAGOON_BREEZE);
+    expect(tripCueFor(OPEN_LAKE_AREA)).toBe(LAGOON_BREEZE);
+    expect(musicCueFor('trip', OPEN_LAKE_AREA)).toBe(LAGOON_BREEZE);
+    expect(MUSIC_CUES[LAGOON_BREEZE.id]).toBe(LAGOON_BREEZE);
+    expect(MUSIC_CUES[LAGOON_DUSK.id]).toEqual(LAGOON_DUSK);
   });
 
   it('matches the music guide: G lydian, a slow 4/4 at 76 bpm, its chords, no echo, and a dusk pace of 58', () => {
@@ -623,22 +620,22 @@ describe('stepPlace', () => {
 });
 
 describe('arrangeStep (M10)', () => {
-  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('plays the same notes for the same seed: %s', (_, cue) => {
+  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('plays the same notes for the same seed: %s', (_, cue) => {
     expect(notesOf(cue, SEED)).toEqual(notesOf(cue, SEED));
   });
 
-  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('changes some notes from one pass to the next: %s', (_, cue) => {
+  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('changes some notes from one pass to the next: %s', (_, cue) => {
     const steps = notesOf(cue, SEED);
     const perLoop = stepsPerLoop(cue);
     const passes = [0, 1, 2, 3].map((pass) => JSON.stringify(steps.slice(pass * perLoop, (pass + 1) * perLoop)));
     expect(new Set(passes).size).toBe(4);
   });
 
-  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('changes some notes for another seed: %s', (_, cue) => {
+  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('changes some notes for another seed: %s', (_, cue) => {
     expect(notesOf(cue, SEED)).not.toEqual(notesOf(cue, SEED + 1));
   });
 
-  it.each([SUNNY_TANK, ...CHECKED_DAY_CUES].map((cue) => [cue.name, cue] as const))(
+  it.each([SUNNY_TANK, ...DAY_HABITAT_CUES].map((cue) => [cue.name, cue] as const))(
     'plays the tune on its steps in the first pass: %s',
     (_, cue) => {
       const steps = notesOf(cue, SEED, 1);
@@ -661,7 +658,7 @@ describe('arrangeStep (M10)', () => {
     for (const n of fourth) expect([0, 2, 4, 7, 9, 12]).toContain((n.midi ?? 0) - g5);
   });
 
-  it.each(CHECKED_CUES.map((cue) => [cue.name, cue] as const))('keeps every note in range, gentle, and on time: %s', (_, cue) => {
+  it.each(ALL_CUES.map((cue) => [cue.name, cue] as const))('keeps every note in range, gentle, and on time: %s', (_, cue) => {
     // A dusk echo or firefly may land up to a step late; every other note starts within its step.
     const latest = stepSeconds(cue) * (cue.version === 'dusk' ? 2 : 1);
     for (const n of notesOf(cue, SEED).flat()) {

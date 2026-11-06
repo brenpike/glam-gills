@@ -4,7 +4,7 @@
  * the music switch's stored value and labels, and the music levels. The synth that plays the notes is
  * browser glue in src/platform/musicPlayer.ts. Nothing here reads danger, legs or trip state (M5).
  */
-import { CANAL_HABITAT, CHINAMPA_HABITAT, DEEP_CANAL_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
+import { CANAL_HABITAT, CHINAMPA_HABITAT, DEEP_CANAL_HABITAT, OPEN_LAKE_HABITAT, POND_HABITAT, SPRING_CAVE_HABITAT, areaTimeOfDay, type AreaData } from './areas';
 import { mulberry32 } from './rng';
 
 /** A part of a cue, which the synth can mix on its own. */
@@ -404,8 +404,7 @@ const GMAJ7 = chord('Gmaj7', 'G3 B3 D4 F#4', 'G2');
 const EM = chord('Em', 'G3 B3 E4', 'E2');
 
 /**
- * Lagoon Breeze, the open lake's cue (M3; provisional name, and not yet in HABITAT_CUES until the
- * lake habitat exists): airy and open, G lydian at 76 bpm in a slow 4/4 with a gentle sway, a soft
+ * Lagoon Breeze, the open lake's cue (M3; provisional name): airy and open, G lydian at 76 bpm in a slow 4/4 with a gentle sway, a soft
  * whistle tune over a pad, a bass note and a rolled string arpeggio, a faint shaker like wind, and a
  * soft kick, with no echo. G lydian uses D major's notes, so the sounds play in D.
  */
@@ -469,6 +468,7 @@ export const HABITAT_CUES: Readonly<Record<string, Readonly<MusicCue>>> = Object
   [CHINAMPA_HABITAT.id]: GARDEN_BOATS,
   [SPRING_CAVE_HABITAT.id]: CENOTE_GLOW,
   [DEEP_CANAL_HABITAT.id]: TRAJINERA_WALTZ,
+  [OPEN_LAKE_HABITAT.id]: LAGOON_BREEZE,
 });
 
 /** Each habitat cue's dusk version, by the day cue's id, made once so the same version is reused. */

@@ -6,11 +6,13 @@ import { DEEP_CANAL_3_AREA_ID, DEEP_CANAL_3_LAYOUT } from './deepCanal3Layout';
 import { DEEP_CANAL_4_AREA_ID, DEEP_CANAL_4_LAYOUT } from './deepCanal4Layout';
 import { DEEP_CANAL_AREA_ID, DEEP_CANAL_LAYOUT } from './deepCanalLayout';
 import type { DragNetSpawn } from './dragNets';
-import { REFUGE_FACT_CARDS, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT, type FactCard } from './factCards';
+import { PELICAN_FACT, REFUGE_FACT_CARDS, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT, type FactCard } from './factCards';
 import type { ElementSpawn, HazardSpawn } from './hazards';
 import { TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
 import type { MobileSnackMix } from './mobileSnacks';
 import type { MovingHazardSpawn } from './movingHazards';
+import { OPEN_LAKE_AREA_ID, OPEN_LAKE_EXIT, OPEN_LAKE_LAYOUT } from './openLakeLayout';
+import type { PelicanLineSpawn } from './pelicanLine';
 import type { PredatorRoute } from './predators';
 import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
 import { POND_AREA_ID, POND_LAYOUT } from './pondLayout';
@@ -43,6 +45,9 @@ export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'sprin
 /** The deep canal habitat, home of Areas 8 to 11 (issues #78, #107, #108 and #112). */
 export const DEEP_CANAL_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
 
+/** The open lake habitat, home of Area 12 (issue #211). */
+export const OPEN_LAKE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'open-lake', name: 'Open lake', look: 'open-lake' });
+
 /** Every habitat. */
 export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([
   CANAL_HABITAT,
@@ -50,6 +55,7 @@ export const HABITATS: readonly Readonly<Habitat>[] = Object.freeze([
   CHINAMPA_HABITAT,
   SPRING_CAVE_HABITAT,
   DEEP_CANAL_HABITAT,
+  OPEN_LAKE_HABITAT,
 ]);
 
 /** The habitat with this id, or undefined when there is none. */
@@ -58,19 +64,23 @@ export function habitatById(id: string): Readonly<Habitat> | undefined {
 }
 
 /**
- * Id of an area's own look, a variant of its habitat's look: the pond at dusk for Area 3 and the deep
- * canal at golden hour for Area 11 (issue #112). The art layer maps it to colours; this layer only
- * names it.
+ * Id of an area's own look, a variant of its habitat's look: the pond at dusk for Area 3, the deep
+ * canal at golden hour for Area 11 (issue #112) and the windy open lake for Area 12 (issue #211). The
+ * art layer maps it to colours; this layer only names it.
  */
-export type AreaLookVariant = 'pond-dusk' | 'deep-canal-golden';
+export type AreaLookVariant = 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy';
 
 /** The time of day an area's look shows; the music rule reads it (M2, M4). */
 export type TimeOfDay = 'day' | 'dusk' | 'night';
 
-/** The time of day each area look variant shows: golden hour is the deep canal at dusk (issue #112). */
+/**
+ * The time of day each area look variant shows: golden hour is the deep canal at dusk (issue #112),
+ * and the windy open lake is a day look (issue #211).
+ */
 export const AREA_LOOK_TIMES: Readonly<Record<AreaLookVariant, TimeOfDay>> = Object.freeze({
   'pond-dusk': 'dusk',
   'deep-canal-golden': 'dusk',
+  'open-lake-windy': 'day',
 });
 
 /** The time of day `area`'s look shows: its variant's, or day for the habitat's own look. */
@@ -380,6 +390,28 @@ export const DEEP_CANAL_4_AREA: Readonly<AreaData> = Object.freeze({
   look: 'deep-canal-golden',
 });
 
+/**
+ * Area 12, the open lake, a bowl where the pelican lines scoop and the wind and waves blow (issue
+ * #211). Until its own treasures come (issue #214), it hides Area 11's Common and Rare treasures, the
+ * Little cormorant among them, as its special treasure.
+ */
+export const OPEN_LAKE_AREA: Readonly<AreaData> = Object.freeze({
+  id: OPEN_LAKE_AREA_ID,
+  number: 12,
+  habitatId: OPEN_LAKE_HABITAT.id,
+  layout: OPEN_LAKE_LAYOUT,
+  exit: OPEN_LAKE_EXIT,
+  specialTreasureId: 'deep-canal/little-cormorant',
+  /**
+   * Provisional drift, a little faster than Area 11 (PRD H4): the same amplitudes with shorter
+   * periods. That is below the one-leg headway against the wind's surface gust, Area 12's strongest
+   * push, and at most half the 40 px/s Snack magnet pull. No snacks dart once: the shrimp replace the
+   * one-time darters. No stranding chance of its own, so the default applies.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.5, periodY: 5.2 }),
+  look: 'open-lake-windy',
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -393,6 +425,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   DEEP_CANAL_2_AREA,
   DEEP_CANAL_3_AREA,
   DEEP_CANAL_4_AREA,
+  OPEN_LAKE_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */
@@ -433,6 +466,8 @@ export interface ThreatSource {
   readonly movingHazards?: readonly Readonly<MovingHazardSpawn>[];
   /** Fishing trajineras, whose lures are the trajinera lure threat (issue #108, ND-1); absent means none. */
   readonly fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
+  /** Pelican lines, the pelican threat (issue #211, ND-5); absent means none. */
+  readonly pelicanLines?: readonly Readonly<PelicanLineSpawn>[];
 }
 
 /**
@@ -458,7 +493,7 @@ function uniqueThreats(threats: readonly Threat[]): Threat[] {
 /**
  * The tilapia when there are tilapia routes, then each predator species, then each hazard type,
  * then each moving hazard type (ND-8), then the trajinera lure when there is a fishing boat (issue
- * #108, ND-1), each id once.
+ * #108, ND-1), then the pelican when there is a pelican line (issue #211, ND-5), each id once.
  */
 function listThreats(source: ThreatSource): Threat[] {
   const tilapia: Threat[] = source.tilapiaRoutes.length > 0 ? [{ id: 'tilapia', fact: TILAPIA_FACT }] : [];
@@ -470,7 +505,8 @@ function listThreats(source: ThreatSource): Threat[] {
     (spawn): Threat => ({ id: spawn.type.id, fact: spawn.type.fact, dangerPart: spawn.type.dangerPart }),
   );
   const lures: Threat[] = (source.fishingBoats ?? []).length > 0 ? [{ id: TRAJINERA_LURE.id, fact: TRAJINERA_LURE.fact }] : [];
-  return uniqueThreats([...tilapia, ...predators, ...hazards, ...movingHazards, ...lures]);
+  const pelicans: Threat[] = (source.pelicanLines ?? []).length > 0 ? [{ id: PELICAN_FACT.id, fact: PELICAN_FACT }] : [];
+  return uniqueThreats([...tilapia, ...predators, ...hazards, ...movingHazards, ...lures, ...pelicans]);
 }
 
 /**
@@ -533,8 +569,8 @@ export function sourceFactCards(source: FactCardSource): SourceFactCards {
 /**
  * Ids of every hazard and predator in an area, each once: 'tilapia' when it has tilapia routes,
  * then predator species ids, then hazard type ids (leg-costing and slow-only alike), then moving
- * hazard type ids, then 'trajinera-lure' when it has a fishing boat (issue #108, ND-1). Danger parts
- * are included (ND-13).
+ * hazard type ids, then 'trajinera-lure' when it has a fishing boat (issue #108, ND-1), then 'pelican'
+ * when it has a pelican line (issue #211, ND-5). Danger parts are included (ND-13).
  */
 export function threatIds(source: ThreatSource): string[] {
   return listThreats(source).map((threat) => threat.id);

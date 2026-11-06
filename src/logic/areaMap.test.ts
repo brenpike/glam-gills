@@ -113,7 +113,7 @@ function todaysEntry(area: Readonly<AreaData>, unlocked: number): AreaMapEntry {
   return { ...entry(area.number, habitat.id, habitat.name, unlocked), id: area.id };
 }
 
-/** Today's areas from the area table, in their four habitats, Areas 1 to 3 unlocked. */
+/** Today's areas from the area table, in their six habitats, Areas 1 to 3 unlocked. */
 const TODAYS_AREAS: readonly AreaMapEntry[] = AREAS.map((area) => todaysEntry(area, 3));
 
 const ENTRY_SETS: readonly (readonly AreaMapEntry[])[] = [ONE_AREA, TODAYS_AREAS, tenAreas(), PRD_AREAS];
@@ -393,16 +393,17 @@ describe('areaMapLayout', () => {
     ]);
   });
 
-  it.each(VIEWS)("labels today's five habitat runs once each, in area order, on $cssW x $cssH", (view) => {
+  it.each(VIEWS)("labels today's six habitat runs once each, in area order, on $cssW x $cssH", (view) => {
     const layout = areaMapLayout(view, TODAYS_AREAS, MEASURE);
     expect(layout.fits).toBe(true);
-    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2', 'spring-cave-1', 'spring-cave-2', 'deep-canal-1', 'deep-canal-2', 'deep-canal-3', 'deep-canal-4']);
+    expect(layout.nodes.map((node) => node.id)).toEqual(['canal', 'pond-1', 'pond-2', 'chinampa-1', 'chinampa-2', 'spring-cave-1', 'spring-cave-2', 'deep-canal-1', 'deep-canal-2', 'deep-canal-3', 'deep-canal-4', 'open-lake-1']);
     expect(layout.habitats.map((habitat) => [habitat.id, habitat.name])).toEqual([
       ['canal', 'Canal'],
       ['pond', 'Lily pad pond'],
       ['chinampa', 'Chinampa gardens'],
       ['spring-cave', 'Spring cave'],
       ['deep-canal', 'Deep canal'],
+      ['open-lake', 'Open lake'],
     ]);
   });
 

@@ -652,7 +652,7 @@ export const BLACK_BASS_MEET_RANGE = 180;
 export const CORMORANT_MEET_RANGE = 180;
 
 /**
- * Centre distance in px from a pelican line's sweep within which the axolotl meets the pelicans
+ * Centre distance in px to a bird of a pelican line within which the axolotl meets the pelicans
  * (issue #211, ND-20). Provisional; tune in play. The same as the cormorant's, so the card can show
  * before the first warning.
  */

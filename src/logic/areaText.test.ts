@@ -97,11 +97,11 @@ describe('area text', () => {
   });
 
   it('keeps every helper output free of harsh words and "level"', () => {
-    for (const output of collectHelperOutputs()) {
-      const lower = output.toLowerCase();
-      for (const word of BANNED) expect(lower).not.toContain(word);
-    }
-  }, 30_000);
+    const harsh = collectHelperOutputs().flatMap((output) =>
+      BANNED.filter((word) => output.toLowerCase().includes(word)).map((word) => `${output} (${word})`),
+    );
+    expect(harsh).toEqual([]);
+  });
 
   it('names areas "Area N"', () => {
     expect(areaLabel(1)).toBe('Area 1');
@@ -292,6 +292,7 @@ describe('habitat area labels (issue #113, ND-6)', () => {
       'Chinampa gardens: Areas 4 and 5',
       'Spring cave: Areas 6 and 7',
       'Deep canal: Areas 8 to 11',
+      'Open lake: Area 12',
     ]);
   });
 

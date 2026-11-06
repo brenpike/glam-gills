@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { DEEP_CANAL_4_AREA } from './areas';
+import {
+  AREAS,
+  DEEP_CANAL_4_AREA,
+  HABITATS,
+  OPEN_LAKE_AREA,
+  OPEN_LAKE_HABITAT,
+  areaById,
+  areaFactCards,
+  areaTimeOfDay,
+  newThingsByArea,
+  sourceFactCards,
+  threatFactCards,
+  threatIds,
+  unlockedAreaIds,
+} from './areas';
 import { DEEP_CANAL_4_TREASURES, RARITIES, type Rarity } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY, type SnackDrift } from './collectibles';
 import {
@@ -22,6 +36,7 @@ import { DEEP_CANAL_4_CARP, DEEP_CANAL_4_LAYOUT, DEEP_CANAL_4_TILAPIA } from './
 import { deepestWaterBand, depthBandAt, raritySpotsInDeepestBand, spotFitsBand } from './depthBand';
 import { reedDragAt } from './environment';
 import { exitGateBase } from './exitGate';
+import { CARP_FACT, PELICAN_FACT, SHRIMP_FACT, TADPOLE_FACT, TILAPIA_FACT } from './factCards';
 import { MAIN_PATH_REACH, distanceToPath, spotMatchesLabels, turnDistance, zoneThreats } from './hiding';
 import { SAFE_PASSING_WIDTH, loopSamples } from './layoutGaps';
 import { legSwimTuning } from './legs';
@@ -49,6 +64,9 @@ import { placeTreasures } from './placement';
 import { CARP_SPECIES, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies } from './predators';
 import { stepSwim, type SwimState } from './swimPhysics';
 import { FINDS, LEGS, RISK, SWIM, tripTreasureTuning } from './tuning';
+import { LAGOON_BREEZE, tripCueFor } from './music';
+import { STRANDING_CHANCE, areaStrandingChance } from './rescue';
+import { NO_STARS, type AreaStarsRecord } from './stars';
 import { normalize } from './vec';
 import { WINDS, addWindForce, oneLegHeadway, windForceAt, winds } from './wind';
 import {
@@ -84,11 +102,8 @@ const STEP_PROBE_Y = 600;
 const FLOOD_STEP = 8;
 /** The special treasure Area 12 gives until its own come (auto-taken Q4). */
 const SPECIAL_TREASURE_ID = 'deep-canal/little-cormorant';
-/**
- * Area 12's snack drift: a little faster than Area 11's. TODO(STEP-014): read OPEN_LAKE_AREA.snackDrift
- * once areas.ts registers Area 12, with these values.
- */
-const DRIFT: Readonly<SnackDrift> = Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.5, periodY: 5.2 });
+/** Area 12's snack drift, from its area data: a little faster than Area 11's. */
+const DRIFT: Readonly<SnackDrift> = OPEN_LAKE_AREA.snackDrift;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends. */
 const LONGEST_QUIET_SWIM = { length: 460.8, from: { x: 3912, y: 318 }, to: { x: 4280, y: 94 } };
 /** Longest quiet stretch of the floor lane in px, as measured. */
@@ -782,6 +797,7 @@ describe('Area 12 snacks and stranding places', () => {
     expect(DRIFT).toEqual({ ...area11Drift, periodX: 6.5, periodY: 5.2 });
     expect(snackDriftMaxSpeed(DRIFT)).toBeGreaterThan(snackDriftMaxSpeed(area11Drift));
     expect(snackDriftMaxSpeed(DRIFT)).toBeLessThan(SWIM.maxSpeed * LEGS.speedByLegs[0]);
+    expect(snackDriftMaxSpeed(DRIFT)).toBeLessThan(oneLegHeadway());
     expect(snackDriftMaxSpeed(DRIFT)).toBeLessThanOrEqual(SNACK_MAGNET_PULL_SPEED / 2);
   });
 
@@ -835,5 +851,73 @@ describe('Area 12 always finishable', () => {
       expect(layout.strandingPlaces).toEqual(zone.strandingPlaces);
       expect(layout.homeSpot).toEqual(zone.homeSpot);
     }
+  });
+});
+
+describe('Area 12 registration (issue #211)', () => {
+  /** A stars record with the exit star saved for each area id. */
+  function beaten(areaIds: readonly string[]): AreaStarsRecord {
+    return Object.fromEntries(areaIds.map((id) => [id, { ...NO_STARS, exit: true }]));
+  }
+
+  it('is Area 12, last in AREAS, in the open lake, with its layout, exit, special treasure and windy look', () => {
+    expect(OPEN_LAKE_AREA).toMatchObject({
+      id: OPEN_LAKE_AREA_ID,
+      number: 12,
+      habitatId: OPEN_LAKE_HABITAT.id,
+      specialTreasureId: SPECIAL_TREASURE_ID,
+      look: 'open-lake-windy',
+    });
+    expect(OPEN_LAKE_AREA.layout).toBe(OPEN_LAKE_LAYOUT);
+    expect(OPEN_LAKE_AREA.exit).toBe(OPEN_LAKE_EXIT);
+    expect(AREAS.at(-1)).toBe(OPEN_LAKE_AREA);
+    expect(areaById(OPEN_LAKE_AREA_ID)).toBe(OPEN_LAKE_AREA);
+    expect(areaTimeOfDay(OPEN_LAKE_AREA)).toBe('day');
+    expect(Object.isFrozen(OPEN_LAKE_AREA)).toBe(true);
+    expect(Object.isFrozen(OPEN_LAKE_AREA.exit)).toBe(true);
+    expect(Object.isFrozen(OPEN_LAKE_AREA.snackDrift)).toBe(true);
+  });
+
+  it('puts the open lake habitat, with its own look, last in HABITATS', () => {
+    expect(OPEN_LAKE_HABITAT).toEqual({ id: 'open-lake', name: 'Open lake', look: 'open-lake' });
+    expect(HABITATS.at(-1)).toBe(OPEN_LAKE_HABITAT);
+  });
+
+  it('keeps the default stranding chance and no one-time darters', () => {
+    expect(OPEN_LAKE_AREA.strandingChance).toBeUndefined();
+    expect(areaStrandingChance(OPEN_LAKE_AREA)).toBe(STRANDING_CHANCE);
+    expect(OPEN_LAKE_AREA.snackDart).toBeUndefined();
+  });
+
+  it('unlocks once Area 11 is beaten, and not before', () => {
+    const throughArea10 = AREAS.slice(0, 10).map((area) => area.id);
+    expect(unlockedAreaIds(beaten(throughArea10))).not.toContain(OPEN_LAKE_AREA_ID);
+    expect(unlockedAreaIds(beaten([...throughArea10, DEEP_CANAL_4_AREA.id])).at(-1)).toBe(OPEN_LAKE_AREA_ID);
+  });
+
+  it('adds exactly one new threat, the pelican line, and one new timing element, the wind and waves', () => {
+    expect(newThingsByArea().find((things) => things.areaId === OPEN_LAKE_AREA_ID)).toEqual({
+      areaId: OPEN_LAKE_AREA_ID,
+      threats: ['pelican'],
+      elements: ['wind'],
+    });
+  });
+
+  it('names the tilapia, the carp and the pelican as its threats, from its data or its zone', () => {
+    expect(threatIds(OPEN_LAKE_LAYOUT)).toEqual(['tilapia', 'carp', 'pelican']);
+    expect(threatIds(zone)).toEqual(['tilapia', 'carp', 'pelican']);
+    expect(threatFactCards(OPEN_LAKE_LAYOUT)).toEqual([TILAPIA_FACT, CARP_FACT, PELICAN_FACT]);
+  });
+
+  it('gives its threat cards, then the tadpole and shrimp cards, and puts the pelican card last in the area cards', () => {
+    expect(sourceFactCards(OPEN_LAKE_LAYOUT)).toEqual({
+      ids: ['tilapia', 'carp', 'pelican', 'tadpole', 'shrimp'],
+      cards: [TILAPIA_FACT, CARP_FACT, PELICAN_FACT, TADPOLE_FACT, SHRIMP_FACT],
+    });
+    expect(areaFactCards().at(-1)).toBe(PELICAN_FACT);
+  });
+
+  it("plays the open lake's cue, Lagoon Breeze, in its day version", () => {
+    expect(tripCueFor(OPEN_LAKE_AREA)).toBe(LAGOON_BREEZE);
   });
 });

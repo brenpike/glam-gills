@@ -13,6 +13,8 @@ import {
   DEEP_CANAL_AREA,
   DEEP_CANAL_HABITAT,
   HABITATS,
+  OPEN_LAKE_AREA,
+  OPEN_LAKE_HABITAT,
   POND_2_AREA,
   POND_AREA,
   POND_HABITAT,
@@ -71,6 +73,7 @@ import {
   LURE_FACT,
   MUD_SEEP_FACT,
   MURKY_WATER_FACT,
+  PELICAN_FACT,
   PLASTIC_WORM_FACT,
   PUNTING_POLE_FACT,
   SHRIMP_FACT,
@@ -84,6 +87,7 @@ import {
 import type { ElementType, HazardType } from './hazards';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardType } from './movingHazards';
+import { OPEN_LAKE_AREA_ID } from './openLakeLayout';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { CARP_SPECIES, TILAPIA_SPECIES, type PredatorSpecies } from './predators';
 import { POND_2_AREA_ID, POND_2_LAYOUT } from './pond2Layout';
@@ -96,6 +100,7 @@ import { NO_STARS, type AreaStars, type AreaStarsRecord } from './stars';
 import { inSafeArea } from './tilapia';
 import { trajineraSpawn } from './trajineras';
 import { FINDS, LEGS, SWIM } from './tuning';
+import { WINDS, winds } from './wind';
 import {
   CANAL_AREA_ID,
   CANAL_LAYOUT,
@@ -186,9 +191,15 @@ function elementOf(id: string, type: ElementType) {
 /** Fastest snack drift any area may have, in px/s: half the Snack magnet pull, 20 (PRD H4, Tuning values). */
 const MAX_SNACK_DRIFT = SNACK_MAGNET_PULL_SPEED / 2;
 
-/** Strength in px/s of the strongest current in an area's default zone. */
+/**
+ * Strength in px/s of the strongest push in an area's default zone: its strongest current, or the
+ * surface gust of its wind and waves (issue #211), whichever is stronger.
+ */
 function strongestCurrentIn(area: AreaData): number {
-  return Math.max(...buildZone(area.layout, DEFAULT_ZONE_SEED).currents.map((current) => Math.hypot(current.force.x, current.force.y)));
+  const zone = buildZone(area.layout, DEFAULT_ZONE_SEED);
+  const currents = zone.currents.map((current) => Math.hypot(current.force.x, current.force.y));
+  const gusts = winds(zone.elements).map(() => WINDS.surfaceSpeed);
+  return Math.max(...currents, ...gusts);
 }
 
 /** Areas that add more than one new threat or element (PRD N2). */
@@ -215,7 +226,7 @@ describe('CANAL_AREA', () => {
     (_id, area) => {
       const special = treasureById(area.specialTreasureId);
       expect(special).toBeDefined();
-      expect(area.layout.treasures).toContain(special);
+      expect([...area.layout.treasures, ...(area.layout.sharedTreasures ?? [])]).toContain(special);
       expect(['common', 'rare']).toContain(special?.rarity);
     },
   );
@@ -273,6 +284,7 @@ describe('POND_2_AREA', () => {
 
   it("is a dusk area with Area 11: their looks' time of day is dusk, and every other area's look is day", () => {
     const duskAreas: readonly Readonly<AreaData>[] = [POND_2_AREA, DEEP_CANAL_4_AREA];
+    expect(areaTimeOfDay(OPEN_LAKE_AREA)).toBe('day');
     for (const area of AREAS) expect(areaTimeOfDay(area)).toBe(duskAreas.includes(area) ? 'dusk' : 'day');
   });
 
@@ -410,7 +422,7 @@ describe('habitats', () => {
     expect(CANAL_HABITAT).toEqual({ id: 'canal', name: 'Canal', look: 'canal' });
     expect(POND_HABITAT).toEqual({ id: 'pond', name: 'Lily pad pond', look: 'pond' });
     expect(CHINAMPA_HABITAT).toEqual({ id: 'chinampa', name: 'Chinampa gardens', look: 'chinampa' });
-    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT, DEEP_CANAL_HABITAT]);
+    expect(HABITATS).toEqual([CANAL_HABITAT, POND_HABITAT, CHINAMPA_HABITAT, SPRING_CAVE_HABITAT, DEEP_CANAL_HABITAT, OPEN_LAKE_HABITAT]);
     expect(Object.isFrozen(CANAL_HABITAT)).toBe(true);
     expect(Object.isFrozen(POND_HABITAT)).toBe(true);
     expect(Object.isFrozen(CHINAMPA_HABITAT)).toBe(true);
@@ -425,7 +437,7 @@ describe('habitats', () => {
   it('has the spring cave habitat, with its own look, after the chinampa gardens', () => {
     expect(SPRING_CAVE_HABITAT).toEqual({ id: 'spring-cave', name: 'Spring cave', look: 'spring-cave' });
     expect(Object.isFrozen(SPRING_CAVE_HABITAT)).toBe(true);
-    expect(HABITATS.at(-2)).toBe(SPRING_CAVE_HABITAT);
+    expect(HABITATS.at(-3)).toBe(SPRING_CAVE_HABITAT);
     expect(SPRING_CAVE_AREA.habitatId).toBe(SPRING_CAVE_HABITAT.id);
     expect(new Set(HABITATS.map((habitat) => habitat.id)).size).toBe(HABITATS.length);
     expect(new Set(HABITATS.map((habitat) => habitat.look)).size).toBe(HABITATS.length);
@@ -434,12 +446,20 @@ describe('habitats', () => {
   it('has the deep canal habitat, with its own look, after the spring cave, holding Areas 8 to 11 (issues #78, #107, #108 and #112)', () => {
     expect(DEEP_CANAL_HABITAT).toEqual({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
     expect(Object.isFrozen(DEEP_CANAL_HABITAT)).toBe(true);
-    expect(HABITATS.at(-1)).toBe(DEEP_CANAL_HABITAT);
+    expect(HABITATS.at(-2)).toBe(DEEP_CANAL_HABITAT);
     expect(DEEP_CANAL_AREA.habitatId).toBe(DEEP_CANAL_HABITAT.id);
     expect(DEEP_CANAL_2_AREA.habitatId).toBe(DEEP_CANAL_HABITAT.id);
     expect(DEEP_CANAL_3_AREA.habitatId).toBe(DEEP_CANAL_HABITAT.id);
     expect(DEEP_CANAL_4_AREA.habitatId).toBe(DEEP_CANAL_HABITAT.id);
     expect(habitatById('deep-canal')).toBe(DEEP_CANAL_HABITAT);
+  });
+
+  it('has the open lake habitat, with its own look, after the deep canal, holding Area 12 (issue #211)', () => {
+    expect(OPEN_LAKE_HABITAT).toEqual({ id: 'open-lake', name: 'Open lake', look: 'open-lake' });
+    expect(Object.isFrozen(OPEN_LAKE_HABITAT)).toBe(true);
+    expect(HABITATS.at(-1)).toBe(OPEN_LAKE_HABITAT);
+    expect(OPEN_LAKE_AREA.habitatId).toBe(OPEN_LAKE_HABITAT.id);
+    expect(habitatById('open-lake')).toBe(OPEN_LAKE_HABITAT);
   });
 
   it('finds a habitat by id', () => {
@@ -531,7 +551,7 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite, geyser, underwater springs, black bass, murky water, anchor, mud seep, fishing lines, fishing nets and cormorant cards, for the shipped areas', () => {
+  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite, geyser, underwater springs, black bass, murky water, anchor, mud seep, fishing lines, fishing nets, cormorant and pelican cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       CARP_FACT,
@@ -554,6 +574,7 @@ describe('threats', () => {
       LURE_FACT,
       DRAG_NET_FACT,
       CORMORANT_FACT,
+      PELICAN_FACT,
     ]);
   });
 
@@ -722,6 +743,7 @@ describe('bookFactCards', () => {
       LURE_FACT,
       DRAG_NET_FACT,
       CORMORANT_FACT,
+      PELICAN_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
     ]);
@@ -740,7 +762,7 @@ describe('newThingsByArea', () => {
     expect(areasOverNewLimit(AREAS)).toEqual([]);
   });
 
-  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, the crayfish and the glow-plant in Area 6, the pulsing current and the pebble in Area 7, the black bass and the gliding trajinera in Area 8, the murky water and the bailing bucket in Area 9, the trajinera lure and the drag net in Area 10, and the cormorant in Area 11', () => {
+  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, the crayfish and the glow-plant in Area 6, the pulsing current and the pebble in Area 7, the black bass and the gliding trajinera in Area 8, the murky water and the bailing bucket in Area 9, the trajinera lure and the drag net in Area 10, the cormorant in Area 11, and the pelican and the wind and waves in Area 12', () => {
     expect(newThingsByArea()).toEqual([
       { areaId: 'canal', threats: ['tilapia'], elements: [] },
       { areaId: 'pond-1', threats: ['plastic-worm'], elements: [] },
@@ -753,6 +775,7 @@ describe('newThingsByArea', () => {
       { areaId: 'deep-canal-2', threats: ['murky-water'], elements: ['bailing-bucket'] },
       { areaId: 'deep-canal-3', threats: ['trajinera-lure'], elements: ['drag-net'] },
       { areaId: 'deep-canal-4', threats: ['cormorant'], elements: [] },
+      { areaId: 'open-lake-1', threats: ['pelican'], elements: ['wind'] },
     ]);
   });
 
@@ -1059,7 +1082,7 @@ describe('areaById', () => {
   });
 
   it('lists every area in number order', () => {
-    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(AREAS).toEqual([
       CANAL_AREA,
       POND_AREA,
@@ -1072,7 +1095,9 @@ describe('areaById', () => {
       DEEP_CANAL_2_AREA,
       DEEP_CANAL_3_AREA,
       DEEP_CANAL_4_AREA,
+      OPEN_LAKE_AREA,
     ]);
+    expect(areaById(OPEN_LAKE_AREA_ID)).toBe(OPEN_LAKE_AREA);
   });
 });
 
@@ -1145,7 +1170,7 @@ describe.each(AREA_CASES)('%s exit geometry', (_id, area) => {
 describe('snack drift', () => {
   const surfacePeak = SURF + 1.6 + 0.8;
 
-  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s, the Area 6 drift at about 16.0 px/s, the Area 7 drift at about 16.2 px/s, the Area 8 drift at about 16.9 px/s, the Area 9 drift at about 17.4 px/s, the Area 10 drift at about 17.7 px/s and the Area 11 drift at about 18.0 px/s', () => {
+  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s, the Area 6 drift at about 16.0 px/s, the Area 7 drift at about 16.2 px/s, the Area 8 drift at about 16.9 px/s, the Area 9 drift at about 17.4 px/s, the Area 10 drift at about 17.7 px/s, the Area 11 drift at about 18.0 px/s and the Area 12 drift at about 18.2 px/s', () => {
     expect(snackDriftMaxSpeed(CANAL_AREA.snackDrift)).toBeCloseTo(11.9, 1);
     expect(snackDriftMaxSpeed(POND_AREA.snackDrift)).toBeCloseTo(14.8, 1);
     expect(snackDriftMaxSpeed(POND_2_AREA.snackDrift)).toBeCloseTo(15.2, 1);
@@ -1157,11 +1182,12 @@ describe('snack drift', () => {
     expect(snackDriftMaxSpeed(DEEP_CANAL_2_AREA.snackDrift)).toBeCloseTo(17.4, 1);
     expect(snackDriftMaxSpeed(DEEP_CANAL_3_AREA.snackDrift)).toBeCloseTo(17.7, 1);
     expect(snackDriftMaxSpeed(DEEP_CANAL_4_AREA.snackDrift)).toBeCloseTo(18.0, 1);
+    expect(snackDriftMaxSpeed(OPEN_LAKE_AREA.snackDrift)).toBeCloseTo(18.2, 1);
   });
 
-  it('pins the one-leg headway against the strongest steady current: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 to 8 and 18 in Areas 9 to 11', () => {
+  it("pins the one-leg headway against the strongest push: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 to 8, 18 in Areas 9 to 11 and 30 in Area 12, against the wind's surface gust", () => {
     const headways = AREAS.map((area) => SWIM.maxSpeed * LEGS.speedByLegs[0] - strongestCurrentIn(area));
-    expect(headways).toEqual([20, 20, 16, 18, 17, 17, 17, 17, 18, 18, 18]);
+    expect(headways).toEqual([20, 20, 16, 18, 17, 17, 17, 17, 18, 18, 18, 30]);
   });
 
   it.each(AREA_CASES)('drifts slower than a one-leg axolotl swims against the strongest current, and at most 20 px/s, in %s', (_id, area) => {
@@ -1225,9 +1251,10 @@ describe('Legendary treasures by area (issue #146)', () => {
     ]);
   });
 
-  it('gives every area from Area 6 on at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour', () => {
-    const laterAreas = AREAS.filter((area) => area.number >= 6);
+  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour; only Area 12 hides none of its own yet (issue #214)', () => {
+    const laterAreas = AREAS.filter((area) => area.number >= 6 && area.layout.treasures.length > 0);
     expect(laterAreas.length).toBeGreaterThan(0);
+    expect(AREAS.filter((area) => area.layout.treasures.length === 0)).toEqual([OPEN_LAKE_AREA]);
     for (const area of laterAreas) {
       const shells = area.layout.treasures.filter((treasure) => treasure.category === 'paintShell');
       expect(shells.length, area.id).toBeGreaterThanOrEqual(2);
