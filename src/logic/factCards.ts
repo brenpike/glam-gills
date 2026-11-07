@@ -60,6 +60,8 @@ export const PLASTIC_WORM_FACT: Readonly<FactCard> = Object.freeze({
  * of the Audubon Great Egret source above; the card's text does not change.
  * "Axolotls are safer down deep, away from the surface" is the game's rule (the heron's stab
  * reaches only so deep, ADR 0019), not checked against a source.
+ * Owner's decision for issue #217: this study replaces the earlier check against a Xochimilco bird
+ * list (for example CONABIO or the Parque Ecologico de Xochimilco); that bird list was not checked.
  * Owner to verify: the quotes' exact wording on the page (read through a page summarizer), and
  * "live around", since the study calls great egrets migratory.
  */
