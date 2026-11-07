@@ -18,7 +18,7 @@ The danger bar asks each area for at least one moving hazard type that costs a l
 
 - The anchor drop (`'anchor-drop'` in code, `ANCHOR_DROP` in `src/logic/movingHazards.ts`): a boat's anchor lowered on its chain from the surface to the canal bed, then pulled back up.
 - The mud seep (`'mud-seep'` in code, `MUD_SEEP`): a seep in the canal floor that sends a column of bubbles up out of the mud.
-- Each has its own fact card in `src/logic/factCards.ts`. The anchor card is titled "Anchors". The mud seep card is titled "Mud bubbles", and its card id stays `'mud-seep'`. The owner approved both cards' copy (PRD open questions 592 and 593), with its sources and the points the owner checked in the code comments.
+- Each has its own fact card in `src/logic/factCards.ts`. The anchor card is titled "Anchors". The mud seep card is titled "Mud bubbles", and its card id stays `'mud-seep'`. The owner approved both cards' copy (PRD open questions 592 and 593), with its sources and the points the owner checked in the code comments. Amended by [ADR 0045](0045-fact-card-sources-live-in-the-prd.md) (2026-11-06): the card's sources and the points the owner checked now live in its PRD paragraph only, and the JSDoc in `src/logic/factCards.ts` points to it.
 
 **The existing shaft rule, with no new movement shape (owner Q2).** Both types are plain moving hazard types on the shared rule of [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md): a straight shaft that goes out from its base on a fixed cycle of rest, warning, out, hold and back. The whole drawn shaft costs a leg on touch, so for the anchor drop the chain costs a leg as well as the anchor. There is no end-only touch and no swing or arc. Their values:
 
