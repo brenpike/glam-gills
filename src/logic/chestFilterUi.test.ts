@@ -290,8 +290,8 @@ describe('chestFilterLayout', () => {
   });
 
   it('pins the page counts on the two smallest canvases', () => {
-    expect(chestFilterLayout({ cssW: 460, cssH: 320 }, MEASURE).pages).toHaveLength(6);
-    expect(chestFilterLayout({ cssW: 320, cssH: 440 }, MEASURE).pages).toHaveLength(5);
+    expect(chestFilterLayout({ cssW: 460, cssH: 320 }, MEASURE).pages).toHaveLength(7);
+    expect(chestFilterLayout({ cssW: 320, cssH: 440 }, MEASURE).pages).toHaveLength(6);
   });
 
   it('splits the Area group on the two smallest canvases, and keeps every group on one page on a large one', () => {

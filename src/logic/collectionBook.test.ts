@@ -102,8 +102,8 @@ const ALL_MORPHS: readonly RealMorphId[] = REAL_MORPHS.map((morph) => morph.id);
  * tilapia, the pond's carp, plastic worm, tadpole and shrimp, Area 3's heron, Area 4's ghost net
  * and punting pole, Area 5's garter snake and water hyacinth, Area 6's crayfish, stalactite drip
  * and geyser vent, Area 7's pulsing current, Area 8's black bass, Area 9's murky water, anchor
- * drop and mud seep, Area 10's trajinera lure and drag net, Area 11's cormorant, and Area 12's
- * pelican.
+ * drop and mud seep, Area 10's trajinera lure and drag net, Area 11's cormorant, Area 12's
+ * pelican, and Area 13's mud turtle (issue #212).
  */
 const ALL_AREA_MET: readonly string[] = [
   'tilapia',
@@ -128,6 +128,7 @@ const ALL_AREA_MET: readonly string[] = [
   'drag-net',
   'cormorant',
   'pelican',
+  'mud-turtle',
 ];
 
 /** Every fact card found by playing: the area cards, then the two refuge cards. */
@@ -336,17 +337,17 @@ describe('bookListing', () => {
     expect(sections.map((section) => section.heading)).toEqual([
       'Morphs: 0 of 8 found',
       'Dream colours',
-      'Facts: 1 of 25 found',
+      'Facts: 1 of 26 found',
     ]);
   });
 
   it('counts found morphs and fact cards in the headings', () => {
     const [morphs, , factCards] = bookListing(['wild', 'melanoid', 'wild'], ['tilapia']);
     expect(morphs.heading).toBe('Morphs: 2 of 8 found');
-    expect(factCards.heading).toBe('Facts: 2 of 25 found');
-    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 23 of 25 found');
-    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 25 found');
-    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 25 of 25 found');
+    expect(factCards.heading).toBe('Facts: 2 of 26 found');
+    expect(bookListing([], ALL_AREA_MET)[2].heading).toBe('Facts: 24 of 26 found');
+    expect(bookListing([], ['axolotl-refuges'])[2].heading).toBe('Facts: 2 of 26 found');
+    expect(bookListing([], ALL_MET)[2].heading).toBe('Facts: 26 of 26 found');
     expect(bookListing(ALL_MORPHS, ['tilapia'])[0].heading).toBe('Morphs: 8 of 8 found');
   });
 
@@ -635,6 +636,7 @@ describe('bookListing', () => {
       ['drag-net', 'Explore the deep canal to find this card.'],
       ['cormorant', 'Explore the deep canal to find this card.'],
       ['pelican', 'Explore the open lake to find this card.'],
+      ['mud-turtle', 'Explore the open lake to find this card.'],
       ['axolotl-refuges', 'Visit the refuge to find this card.'],
       ['canal-clean-ups', 'Beat an area, then visit the refuge to find this card.'],
     ]);
@@ -643,13 +645,13 @@ describe('bookListing', () => {
 
   it('holds the refuge cards after the area cards, found once found, with their own hint and never a picture (C14)', () => {
     const [, , found] = bookListing([], ALL_MET);
-    expect(found.entries.slice(22, 24)).toEqual([
+    expect(found.entries.slice(23, 25)).toEqual([
       { id: 'axolotl-refuges', found: true, name: 'Axolotl refuges', text: AXOLOTL_REFUGES_FACT.body, hasPicture: false },
       { id: 'canal-clean-ups', found: true, name: 'Canal clean-ups', text: CANAL_CLEAN_UPS_FACT.body, hasPicture: false },
     ]);
     const [, , refugeOnly] = bookListing([], ['axolotl-refuges']);
-    expect(refugeOnly.entries[22].found).toBe(true);
-    expect(refugeOnly.entries[23]).toEqual({
+    expect(refugeOnly.entries[23].found).toBe(true);
+    expect(refugeOnly.entries[24]).toEqual({
       id: 'canal-clean-ups',
       found: false,
       name: '???',
@@ -702,11 +704,12 @@ describe('bookListing', () => {
         'drag-net',
         'cormorant',
         'pelican',
+        'mud-turtle',
         'axolotl-refuges',
         'canal-clean-ups',
         'boyOrGirl',
       ]);
-      expect(factCards.entries[24]).toEqual(boyOrGirl);
+      expect(factCards.entries[25]).toEqual(boyOrGirl);
     }
   });
 
@@ -761,6 +764,7 @@ describe('bookPages', () => {
       ['factCard', 1],
       ['factCard', 1],
       ['factCard', 1],
+      ['factCard', 1],
     ]);
     const pageEntries: readonly BookEntry[] = pages.flatMap((page): readonly BookEntry[] => page.entries);
     const sectionEntries: readonly BookEntry[] = sections.flatMap((section): readonly BookEntry[] => section.entries);
@@ -769,7 +773,7 @@ describe('bookPages', () => {
 
   it('puts every Dream colour on its own page at one row per page', () => {
     expect(DREAM_COLOURS).toHaveLength(31);
-    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + DREAM_COLOURS.length + 25);
+    expect(bookPages(bookListing([], []), 1)).toHaveLength(REAL_MORPHS.length + DREAM_COLOURS.length + 26);
   });
 
   it('gives an empty section one page', () => {
@@ -1049,7 +1053,7 @@ describe('collection book fit', () => {
     },
   );
 
-  it('hides the title only for the found plastic worm, shrimp, heron, punting pole, water hyacinth, crayfish, geyser, black bass, murky water, fishing lines, cormorant and pelican pages, and only below 520 x 360', () => {
+  it('hides the title only for the found plastic worm, shrimp, heron, punting pole, water hyacinth, crayfish, geyser, black bass, murky water, fishing lines, cormorant, pelican and mud turtle pages, and only below 520 x 360', () => {
     const hidden = supportedCanvases().flatMap((view) =>
       featuredEntries()
         .filter((entry) => !featurePageOf(view, entry).page.showsTitle)
@@ -1068,11 +1072,13 @@ describe('collection book fit', () => {
       '320x440 trajinera-lure found=true',
       '320x440 cormorant found=true',
       '320x440 pelican found=true',
+      '320x440 mud-turtle found=true',
       '340x440 shrimp found=true',
       '340x440 heron found=true',
       '340x440 murky-water found=true',
       '340x440 trajinera-lure found=true',
       '340x440 cormorant found=true',
+      '340x440 mud-turtle found=true',
       '460x320 plastic-worm found=true',
       '460x320 shrimp found=true',
       '460x320 heron found=true',
@@ -1083,6 +1089,7 @@ describe('collection book fit', () => {
       '460x320 murky-water found=true',
       '460x320 trajinera-lure found=true',
       '460x320 pelican found=true',
+      '460x320 mud-turtle found=true',
       '460x340 plastic-worm found=true',
       '460x340 shrimp found=true',
       '460x340 heron found=true',
@@ -1093,6 +1100,7 @@ describe('collection book fit', () => {
       '460x340 murky-water found=true',
       '460x340 trajinera-lure found=true',
       '460x340 pelican found=true',
+      '460x340 mud-turtle found=true',
       '480x320 shrimp found=true',
       '480x320 heron found=true',
       '480x320 water-hyacinth found=true',
