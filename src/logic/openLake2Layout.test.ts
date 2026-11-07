@@ -627,7 +627,7 @@ describe('Area 13 hiding spots by depth band (B5, B6, B10, ND-18)', () => {
       expect(meetsThreatRiskRule(spot, spot.rarity, threats), spot.id).toBe(true);
       expect(turnDistance(spot, [...layout.tilapiaRoutes, ...layout.predatorRoutes]), spot.id).toBeGreaterThanOrEqual(60);
     }
-    for (const spot of layout.spots.filter((each) => each.rarity === 'common' || each.rarity === 'rare')) expect(spotMatchesLabels(spot, layout), spot.id).toBe(true);
+    for (const spot of layout.spots) expect(spotMatchesLabels(spot, layout), spot.id).toBe(true);
   });
 
   it('has 5 Common, 10 Rare, 3 Epic and 4 Legendary spots, every pool at least its floor and larger than its treasures', () => {
@@ -729,6 +729,8 @@ describe('Area 13 treasure (B4; issue #212, Q1, ND-17)', () => {
     expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).not.toBe(OPEN_LAKE_LAYOUT.sharedTreasures);
     expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).not.toEqual(OPEN_LAKE_LAYOUT.sharedTreasures);
     for (const id of all) expect(id.startsWith('deep-canal/'), id).toBe(true);
+    const lakeIds = OPEN_LAKE_LAYOUT.treasures.map((treasure) => treasure.id);
+    for (const id of all) expect(lakeIds, id).not.toContain(id);
   });
 
   it('places 200 trips without throwing: the 18 slots, the lost treasures and the Lagoon shine Paint shell', () => {

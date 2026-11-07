@@ -11,6 +11,7 @@ import {
   idleTripSnapshot,
   keepExploring,
   newTrip,
+  sameTripSnapshot,
   stepTrip,
   tripSnapshot,
   type TripEvent,
@@ -220,5 +221,35 @@ describe('fading lights in the trip (issue #212, ND-7)', () => {
       }
     }
     for (const key of FADING_KEYS) expect(Object.keys(idleTripSnapshot())).not.toContain(key);
+  });
+  it('puts the fading light hint in the snapshot only in a zone with lights, and only while swimming', () => {
+    const waited = swimSteps(createTrip(fadingZone), deep, HINT_STEPS + 1);
+    expect(waited.fadingLightHint).toBe('light-a');
+    expect(tripSnapshot(waited)).toHaveProperty('fadingLightHint', 'light-a');
+    expect(tripSnapshot(createTrip(fadingZone))).toHaveProperty('fadingLightHint', null);
+    for (const phase of ['banked', 'carrying', 'ended'] as const) {
+      expect(tripSnapshot({ ...waited, phase })).toHaveProperty('fadingLightHint', null);
+    }
+    expect(Object.keys(tripSnapshot(waited))).toContain('fadingLightHint');
+    expect(Object.keys(tripSnapshot(waited))).not.toContain('fadingLightTimers');
+  });
+
+  it('tells two snapshots apart when only the fading light hint differs', () => {
+    const waited = swimSteps(createTrip(fadingZone), deep, HINT_STEPS + 1);
+    const hinted = tripSnapshot(waited);
+    const unhinted = tripSnapshot({ ...waited, fadingLightHint: null });
+    expect(sameTripSnapshot(hinted, hinted)).toBe(true);
+    expect(sameTripSnapshot(hinted, { ...hinted })).toBe(true);
+    expect(sameTripSnapshot(hinted, unhinted)).toBe(false);
+    expect(sameTripSnapshot(unhinted, hinted)).toBe(false);
+  });
+
+  it('has no fading light hint key in a zone with no lights', () => {
+    for (const source of [zone, glowZone]) {
+      const trip = createTrip(source);
+      expect(tripSnapshot(trip)).not.toHaveProperty('fadingLightHint');
+      expect(tripSnapshot(swimSteps(trip, deep, HINT_STEPS + 1))).not.toHaveProperty('fadingLightHint');
+    }
+    expect(idleTripSnapshot()).not.toHaveProperty('fadingLightHint');
   });
 });

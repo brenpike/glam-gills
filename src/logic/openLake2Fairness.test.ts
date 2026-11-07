@@ -32,7 +32,10 @@ const FLOOD_STEP = 8;
  * The one-leg run, as measured: it leaves the Home Spot at element time `start` and reaches the exit
  * `seconds` after it left. `cormorant-0` warns twice, as the axolotl leaves the safe area and as it
  * leaves the left step's tule going west, and each warning ends with the axolotl hidden in the tule
- * or out of reach, so it never dives. `cormorant-1` and the mud turtles never warn.
+ * or out of reach, so it never dives. `cormorant-1` and the mud turtles never warn. As measured,
+ * every start from 3.05 s to 3.20 s passes, so `start` is pinned at 3.15 s, mid-window. A later
+ * shared tuning change re-measures the window and pins `start` inside it again; it never loosens
+ * the run to fit.
  */
 const ONE_LEG_RUN = { start: 3.15, seconds: 82.52, warnings: ['cormorant-0', 'cormorant-0'], strikes: [] as string[] };
 

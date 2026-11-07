@@ -85,7 +85,9 @@ export interface RescueSnapshot {
  * the first hazard or predator met this trip whose fact card is not seen yet, or null when none is.
  * `litGlowPlants` is the glow-plant ids lit this trip, in lighting order; every plant is unlit at a
  * new trip (issue #77, ND-8). `glowPlantHint` is the unlit glow-plant the hint points at, set only
- * while swimming after the hint clock reaches its time, else null.
+ * while swimming after the hint clock reaches its time, else null. `fadingLightHint` is the fading
+ * light the hint points at, set only while swimming, else null; the key is absent in an area with
+ * no fading lights (issue #212, ND-7).
  */
 export interface TripSnapshot {
   phase: TripPhase;
@@ -100,6 +102,7 @@ export interface TripSnapshot {
   factCardDue: string | null;
   litGlowPlants: string[];
   glowPlantHint: string | null;
+  fadingLightHint?: string | null;
 }
 
 /**

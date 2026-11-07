@@ -1000,6 +1000,9 @@ export function tripSnapshot(state: TripState): TripSnapshot {
     factCardDue: factCardDue(state),
     litGlowPlants: [...state.litGlowPlants],
     glowPlantHint: state.phase === 'swimming' ? state.darkHint : null,
+    ...(state.fadingLightHint !== undefined
+      ? { fadingLightHint: state.phase === 'swimming' ? state.fadingLightHint : null }
+      : {}),
   };
 }
 
@@ -1038,7 +1041,8 @@ export function sameTripSnapshot(a: TripSnapshot, b: TripSnapshot): boolean {
     sameRescue(a.rescue, b.rescue) &&
     a.factCardDue === b.factCardDue &&
     sameIds(a.litGlowPlants, b.litGlowPlants) &&
-    a.glowPlantHint === b.glowPlantHint
+    a.glowPlantHint === b.glowPlantHint &&
+    a.fadingLightHint === b.fadingLightHint
   );
 }
 
