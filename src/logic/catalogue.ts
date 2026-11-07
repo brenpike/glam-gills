@@ -102,7 +102,9 @@ export type DreamColourId =
   | 'golden-hour-shine'
   | 'lime'
   | 'hyacinth'
-  | 'lagoon-shine';
+  | 'lagoon-shine'
+  | 'tule-green'
+  | 'obsidian';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -304,12 +306,28 @@ export const LAGOON_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The open lake's Area 12 Common Dream colour, a deep tule green held by that area's Tule green Paint shell (issue #214, ND-2). */
+export const TULE_GREEN: DreamColour = Object.freeze({
+  id: 'tule-green',
+  name: 'Tule green',
+  rarity: 'common',
+  kind: 'solid',
+});
+
+/** The open lake's Area 12 Rare Dream colour, a green-black volcanic glass held by that area's Obsidian Paint shell (issue #214, ND-2). */
+export const OBSIDIAN: DreamColour = Object.freeze({
+  id: 'obsidian',
+  name: 'Obsidian',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
- * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold, Golden shine, Lime,
- * Hyacinth and Lagoon shine (Area 11).
+ * Lantern shine (Area 9), Peach and Confetti shine (Area 10), Marigold, Golden shine, Lime,
+ * Hyacinth and Lagoon shine (Area 11), then Tule green and Obsidian (Area 12).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -335,6 +353,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   LIME,
   HYACINTH,
   LAGOON_SHINE,
+  TULE_GREEN,
+  OBSIDIAN,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -1238,10 +1258,87 @@ export const DEEP_CANAL_4_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The open lake Area 12 treasures, all new, in rarity order (issue #214, ND-3): the 4 Commons (the
+ * Windsock, Pinwheel, Wave socks and Tule green Paint shell), then the 8 Rares (the Little pelican,
+ * a Floating Decoration and the area's special treasure, the Twin volcanoes, Little sailboat, Cloud
+ * scarf, Pelican swim ring, Surfboard, Pelican slippers and Obsidian Paint shell). Every perk comes
+ * from PERK_VALUES for its type and rarity, no two Area 12 Wearables share a perk type, and every
+ * Decoration has the standard width.
+ */
+export const OPEN_LAKE_TREASURES: readonly Treasure[] = Object.freeze([
+  {
+    id: 'open-lake/windsock',
+    name: 'Windsock',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  { id: 'open-lake/pinwheel', name: 'Pinwheel', rarity: 'common', category: 'decoration' },
+  {
+    id: 'open-lake/wave-socks',
+    name: 'Wave socks',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'socks',
+    perk: createPerk('speed', 'common'),
+  },
+  createPaintShell(TULE_GREEN, 'open-lake'),
+  {
+    id: 'open-lake/little-pelican',
+    name: 'Little pelican',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  { id: 'open-lake/twin-volcanoes', name: 'Twin volcanoes', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'open-lake/little-sailboat',
+    name: 'Little sailboat',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'open-lake/cloud-scarf',
+    name: 'Cloud scarf',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'neck',
+    perk: createPerk('treasureSense', 'rare'),
+  },
+  {
+    id: 'open-lake/pelican-swim-ring',
+    name: 'Pelican swim ring',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('regrowth', 'rare'),
+  },
+  {
+    id: 'open-lake/surfboard',
+    name: 'Surfboard',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('dash', 'rare'),
+  },
+  {
+    id: 'open-lake/pelican-slippers',
+    name: 'Pelican slippers',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'feet',
+    perk: createPerk('snackMagnet', 'rare'),
+  },
+  createPaintShell(OBSIDIAN, 'open-lake'),
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
  * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
  * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's, then
- * the deep canal Area 10's, then the deep canal Area 11's.
+ * the deep canal Area 10's, then the deep canal Area 11's, then the open lake Area 12's last
+ * (issue #214, ND-3), so placement by seed stays the same for every earlier treasure.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -1255,6 +1352,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...DEEP_CANAL_2_TREASURES,
   ...DEEP_CANAL_3_TREASURES,
   ...DEEP_CANAL_4_TREASURES,
+  ...OPEN_LAKE_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

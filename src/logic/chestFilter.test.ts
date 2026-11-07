@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, CANAL_AREA, OPEN_LAKE_2_AREA, OPEN_LAKE_AREA, POND_AREA, type AreaData } from './areas';
+import { AREAS, CANAL_AREA, OPEN_LAKE_AREA, POND_AREA, type AreaData } from './areas';
 import { ALL_TREASURES, DREAM_COLOURS, RARITIES, type Treasure } from './catalogue';
 import * as chestFilter from './chestFilter';
 import {
@@ -80,6 +80,13 @@ function allEntries(sections: readonly ChestSection[]): ChestEntry[] {
 
 function entryKeys(sections: readonly ChestSection[]): string[] {
   return allEntries(sections).map((entry) => `${entry.category}:${entry.id}`);
+}
+
+/** True when the area with `areaId` hides no treasures of its own (issue #214). Throws for an unknown id. */
+function holdsNoneOfItsOwn(areaId: string): boolean {
+  const area = AREAS.find((candidate) => candidate.id === areaId);
+  if (area === undefined) throw new Error(`no area with id ${areaId}`);
+  return area.layout.treasures.length === 0;
 }
 
 /** Ids of the treasures and Paint shell colours a layout holds. */
@@ -294,20 +301,27 @@ describe('areaProgress', () => {
     for (const key of entryKeys(NONE_FOUND)) expect(holders.get(key), key).toBe(1);
   });
 
-  it('counts found treasures per area; Areas 12 and 13 hold none of their own until issues #214 and #215, so each counts 0 of 0', () => {
+  it('counts found treasures per area; an area holding none of its own counts 0 of 0, and Area 12 counts 0 of 12 with none found (issue #214)', () => {
     for (const item of areaProgress(HALF_FOUND)) {
       const held = allEntries(HALF_FOUND).filter((entry) => entry.areaId === item.areaId);
       expect(item.total).toBe(held.length);
       expect(item.found).toBe(held.filter((entry) => entry.found).length);
-      if (item.areaId === OPEN_LAKE_AREA.id || item.areaId === OPEN_LAKE_2_AREA.id) expect(item).toMatchObject({ found: 0, total: 0, countText: '0 of 0' });
+      if (holdsNoneOfItsOwn(item.areaId)) expect(item).toMatchObject({ found: 0, total: 0, countText: '0 of 0' });
       else expect(item.total, item.areaId).toBeGreaterThan(0);
     }
+    expect(areaProgress(NONE_FOUND).find((item) => item.areaId === OPEN_LAKE_AREA.id)).toMatchObject({
+      found: 0,
+      total: 12,
+      countText: '0 of 12',
+    });
   });
 
-  it('marks an area complete only when every treasure there is found, and never Areas 12 and 13, which hold none of their own until issues #214 and #215', () => {
+  it('marks an area complete only when every treasure there is found, and never an area holding none of its own (issue #214)', () => {
     expect(areaProgress(NONE_FOUND).every((item) => !item.complete)).toBe(true);
     const allFound = areaProgress(ALL_FOUND);
-    expect(allFound.filter((item) => !item.complete).map((item) => item.areaId)).toEqual([OPEN_LAKE_AREA.id, OPEN_LAKE_2_AREA.id]);
+    expect(allFound.filter((item) => !item.complete).map((item) => item.areaId)).toEqual(
+      AREAS.filter((area) => holdsNoneOfItsOwn(area.id)).map((area) => area.id),
+    );
     const canalIds = layoutEntryKeys(CANAL_AREA).length;
     const canalOnly = chestListing(CANAL_AREA.layout.treasures.map((treasure) => treasure.id));
     const progress = areaProgress(canalOnly);

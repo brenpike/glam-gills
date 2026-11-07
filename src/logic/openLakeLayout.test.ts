@@ -14,7 +14,7 @@ import {
   threatIds,
   unlockedAreaIds,
 } from './areas';
-import { DEEP_CANAL_4_TREASURES, RARITIES, type Rarity } from './catalogue';
+import { OPEN_LAKE_TREASURES, RARITIES, type Rarity } from './catalogue';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY, type SnackDrift } from './collectibles';
 import {
   carpCount,
@@ -54,7 +54,6 @@ import {
   OPEN_LAKE_CARP,
   OPEN_LAKE_EXIT,
   OPEN_LAKE_LAYOUT,
-  OPEN_LAKE_SHARED_TREASURES,
   OPEN_LAKE_TILAPIA,
 } from './openLakeLayout';
 import { PEBBLES, blockAtRock, bodyInAnyRock, type RockWall } from './pebble';
@@ -100,8 +99,8 @@ const QUIET_SWIM_LIMIT = SCREEN_W;
 const STEP_PROBE_Y = 600;
 /** Spacing in px of the water grid the finishable proof floods. */
 const FLOOD_STEP = 8;
-/** The special treasure Area 12 gives until its own come (auto-taken Q4). */
-const SPECIAL_TREASURE_ID = 'deep-canal/little-cormorant';
+/** Area 12's special treasure, its own Rare Little pelican (issue #214, ND-1). */
+const SPECIAL_TREASURE_ID = 'open-lake/little-pelican';
 /** Area 12's snack drift, from its area data: a little faster than Area 11's. */
 const DRIFT: Readonly<SnackDrift> = OPEN_LAKE_AREA.snackDrift;
 /** Longest quiet swim in the whole water in px, as measured, and where it starts and ends. */
@@ -113,8 +112,8 @@ const FLOOR_QUIET_STRETCH = 362;
  * bottom of the bowl, and reaches the exit `seconds` after it left.
  */
 const ONE_LEG_RUN = { start: 73.35, hold: 3.65, seconds: 62.57 };
-/** Empty treasure slots over the 200 fresh trips, as measured: 17 slots for 9 treasures. */
-const EMPTY_SLOTS = { most: 9, mean: 9 };
+/** Empty treasure slots over the 200 fresh trips, as measured: 17 slots and the special treasure's for 12 treasures, every one placed on every trip (issue #214, ND-7). */
+const EMPTY_SLOTS = { most: 6, mean: 6 };
 /** The main path's waypoints, named by the part of the swim each starts or ends. */
 const TURN = { home: 0, shelfFarEnd: 3, bowlBottom: 8, rightShelf: 9, exit: 10 };
 const TILAPIA_IDS = ['tilapia-0', 'tilapia-1'];
@@ -319,7 +318,7 @@ describe('OPEN_LAKE_LAYOUT', () => {
     expect(Object.isFrozen(OPEN_LAKE_CARP)).toBe(true);
     expect(Object.isFrozen(OPEN_LAKE_CARP.tuning)).toBe(true);
     expect(Object.isFrozen(OPEN_LAKE_EXIT)).toBe(true);
-    expect(Object.isFrozen(OPEN_LAKE_SHARED_TREASURES)).toBe(true);
+    expect(Object.isFrozen(OPEN_LAKE_TREASURES)).toBe(true);
     const { rockWalls, pelicanLines, reedBeds, tilapiaRoutes, predatorRoutes, mobileSnacks } = OPEN_LAKE_LAYOUT;
     for (const part of [
       rockWalls,
@@ -378,6 +377,8 @@ describe('OPEN_LAKE_LAYOUT', () => {
     expect(OPEN_LAKE_LAYOUT.tilapia).toBe(OPEN_LAKE_TILAPIA);
     expect(tripTreasureTuning(OPEN_LAKE_AREA_ID).slots).toBe(17);
     expect(tripTreasureTuning(OPEN_LAKE_AREA_ID).slots).toBe(tripTreasureTuning(DEEP_CANAL_4_LAYOUT.id).slots + 1);
+    expect(OPEN_LAKE_LAYOUT.treasures).toBe(OPEN_LAKE_TREASURES);
+    expect(OPEN_LAKE_LAYOUT).not.toHaveProperty('sharedTreasures');
   });
 
   it("plays its tilapia one step up the ladder from Area 11's (ND-19): a 520 px/s strike reaching 175 px, a 1.4 s cooldown and an 80 px/s patrol, Area 11's warning and chase", () => {
@@ -637,9 +638,9 @@ describe('Area 12 hiding spots (B5, B6, B10, ND-2)', () => {
 
   it('has 5 Common and 9 Rare spots, every pool larger than its treasures, and every Rare spot in the deepest band', () => {
     expect(rarityCounts(zone.spots)).toEqual([5, 9, 0, 0]);
-    expect(rarityCounts(OPEN_LAKE_SHARED_TREASURES)).toEqual([3, 6, 0, 0]);
+    expect(rarityCounts(OPEN_LAKE_TREASURES)).toEqual([4, 8, 0, 0]);
     for (const rarity of ['common', 'rare'] as const) {
-      const treasures = OPEN_LAKE_SHARED_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
+      const treasures = OPEN_LAKE_TREASURES.filter((treasure) => treasure.rarity === rarity).length;
       expect(zone.spots.filter((spot) => spot.rarity === rarity).length, rarity).toBeGreaterThan(treasures);
     }
     expect(raritySpotsInDeepestBand(zone.spots, 'rare', deepestWaterBand(OPEN_LAKE_LAYOUT))).toBe(true);
@@ -697,22 +698,35 @@ describe('Area 12 hiding spots (B5, B6, B10, ND-2)', () => {
   });
 });
 
-describe('Area 12 treasure (B4; auto-taken Q4)', () => {
+describe('Area 12 treasure (B4; issue #214, ND-7)', () => {
   const tuning = tripTreasureTuning(OPEN_LAKE_AREA_ID);
   const options = { extras: [SPECIAL_TREASURE_ID], tuning, mainPath: zone.mainPath, threats: zoneThreats(zone) };
-  const all = OPEN_LAKE_SHARED_TREASURES.map((treasure) => treasure.id);
+  const all = OPEN_LAKE_TREASURES.map((treasure) => treasure.id);
 
-  it("shares Area 11's 3 Common and 6 Rare treasures, the Little cormorant among them, and hides none of its own yet", () => {
-    expect(OPEN_LAKE_SHARED_TREASURES).toEqual(DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === 'common' || treasure.rarity === 'rare'));
-    expect(OPEN_LAKE_LAYOUT.treasures).toEqual([]);
-    expect(OPEN_LAKE_LAYOUT.sharedTreasures).toBe(OPEN_LAKE_SHARED_TREASURES);
-    expect(zone.sharedTreasures).toEqual(all);
+  it('hides its own 4 Common and 8 Rare treasures in catalogue order, the Little pelican among them, and shares none', () => {
+    expect(zone).not.toHaveProperty('sharedTreasures');
     expect(zone.finds.map((find) => find.id)).toEqual(all);
     expect(all).toContain(SPECIAL_TREASURE_ID);
-    expect(OPEN_LAKE_SHARED_TREASURES.find((treasure) => treasure.id === SPECIAL_TREASURE_ID)?.rarity).toBe('rare');
+    expect(OPEN_LAKE_TREASURES.find((treasure) => treasure.id === SPECIAL_TREASURE_ID)?.rarity).toBe('rare');
   });
 
-  it('places 200 trips without throwing: the 17 slots, the lost treasures and the Little cormorant', () => {
+  it("gives every treasure its rarity's whole pool: the 5 Common spots or the 9 Rare spots", () => {
+    for (const treasure of OPEN_LAKE_TREASURES) {
+      const pool = zone.spots.filter((spot) => spot.rarity === treasure.rarity).map((spot) => spot.id);
+      expect(pool, treasure.id).toHaveLength(treasure.rarity === 'common' ? 5 : 9);
+      expect(zone.finds.find((find) => find.id === treasure.id)?.pool, treasure.id).toEqual(pool);
+    }
+  });
+
+  it("hides the Little pelican in band 2, Area 12's deepest band", () => {
+    const pool = zone.finds.find((find) => find.id === SPECIAL_TREASURE_ID)?.pool;
+    const spots = zone.spots.filter((spot) => pool?.includes(spot.id));
+    expect(spots).toHaveLength(9);
+    expect(deepestWaterBand(OPEN_LAKE_LAYOUT)).toBe(2);
+    for (const spot of spots) expect(depthBandAt(spot.y), spot.id).toBe(2);
+  });
+
+  it('places 200 trips without throwing: the 17 slots, the lost treasures and the Little pelican', () => {
     for (const tripSeed of TRIP_SEEDS) {
       const fresh = placeTreasures(zone.finds, zone.spots, [], tripSeed, options);
       expect(fresh.map((find) => find.id)).toContain(SPECIAL_TREASURE_ID);
@@ -722,7 +736,7 @@ describe('Area 12 treasure (B4; auto-taken Q4)', () => {
     }
   });
 
-  it('leaves the slots its 9 treasures cannot fill empty over 200 fresh trips, as measured', () => {
+  it('leaves the slots its 12 treasures cannot fill empty over 200 fresh trips, as measured', () => {
     const empty = TRIP_SEEDS.map((tripSeed) => tuning.slots + 1 - placeTreasures(zone.finds, zone.spots, [], tripSeed, options).length);
     const mean = empty.reduce((sum, count) => sum + count, 0) / empty.length;
     expect(Math.max(...empty)).toBe(EMPTY_SLOTS.most);

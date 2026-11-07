@@ -217,6 +217,11 @@ function deepSpecialBand(area: Readonly<AreaData>): number | undefined {
   return deepest >= DEEP_BAND ? deepest : undefined;
 }
 
+/** Whether the area takes the Band-2 exception to the new-area Dream colour rule (PRD B3). */
+function takesBand2Exception(area: Readonly<AreaData>): boolean {
+  return area.layout.depthBanded === true && deepestWaterBand(area.layout) === DEEP_BAND - 1;
+}
+
 /** Areas that add more than one new threat or element (PRD N2). */
 function areasOverNewLimit(areas: readonly AreaData[]): NewThings[] {
   return newThingsByArea(areas).filter(
@@ -1278,19 +1283,28 @@ describe('Legendary treasures by area (issue #146)', () => {
     ]);
   });
 
-  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour; only Areas 12 and 13 hide none of their own yet (issues #214 and #215)', () => {
+  it('gives every area from Area 6 on that hides treasures of its own the new-area Dream colour rule, or its Band-2 exception (B3, issue #214)', () => {
     const laterAreas = AREAS.filter((area) => area.number >= 6 && area.layout.treasures.length > 0);
     expect(laterAreas.length).toBeGreaterThan(0);
-    expect(AREAS.filter((area) => area.layout.treasures.length === 0)).toEqual([OPEN_LAKE_AREA, OPEN_LAKE_2_AREA]);
+    let band2ExceptionAreas = 0;
     for (const area of laterAreas) {
       const shells = area.layout.treasures.filter((treasure) => treasure.category === 'paintShell');
       expect(shells.length, area.id).toBeGreaterThanOrEqual(2);
+      if (takesBand2Exception(area)) {
+        band2ExceptionAreas += 1;
+        for (const shell of shells) {
+          expect(['common', 'rare'], area.id).toContain(shell.rarity);
+          expect(dreamColourById(shell.dreamColour)?.kind, area.id).toBe('solid');
+        }
+        continue;
+      }
       const legendaryFancy = shells.filter((shell) => {
         const kind = dreamColourById(shell.dreamColour)?.kind;
         return shell.rarity === 'legendary' && (kind === 'patterned' || kind === 'sheen');
       });
       expect(legendaryFancy.length, area.id).toBeGreaterThanOrEqual(1);
     }
+    expect(band2ExceptionAreas).toBeGreaterThan(0);
   });
 
   it('puts each catalogue treasure in exactly one area', () => {

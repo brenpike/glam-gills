@@ -9,7 +9,7 @@ import {
   type LookField,
 } from './axolotlLook';
 import { isValidName, nameFits, suggestedNamesFor } from './axolotlNames';
-import { ALL_TREASURES, DREAM_COLOURS, WEARABLE_SLOTS, treasureById, type DreamColourId } from './catalogue';
+import { ALL_TREASURES, DREAM_COLOURS, WEARABLE_SLOTS, treasureById, type DreamColourId, type WearableSlot } from './catalogue';
 import { REAL_COLOUR_OPTION_ID } from './dreamPaint';
 import { REAL_MORPHS, STARTER_MORPH, type RealMorphId } from './morphs';
 import { emptyOutfit, type Outfit } from './outfit';
@@ -888,9 +888,9 @@ describe('Dream colour step', () => {
     expect(reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state.dreamPage).toBe(0);
   });
 
-  it('pages 32 options as 8, 8, 8 then 8 with More colours, wrapping, Real colour first on page 1', () => {
+  it('pages 34 options as 8, 8, 8, 8 then 2 with More colours, wrapping, Real colour first on page 1', () => {
     let state = dreamOn(ALL_DREAMS);
-    expect(dreamPageCount(state)).toBe(4);
+    expect(dreamPageCount(state)).toBe(5);
     expect(optionIds(state)).toHaveLength(8);
     expect(optionIds(state)[0]).toBe(REAL_COLOUR_OPTION_ID);
     expect(allPageIds(state)).toEqual([REAL_COLOUR_OPTION_ID, ...ALL_DREAMS]);
@@ -920,6 +920,9 @@ describe('Dream colour step', () => {
       'hyacinth',
       'lagoon-shine',
     ]);
+    expect(state.focus).toEqual({ kind: 'moreColours' });
+    state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
+    expect(optionIds(state)).toEqual(['tule-green', 'obsidian']);
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
     expect(state.dreamPage).toBe(0);
@@ -1077,12 +1080,19 @@ describe('Outfit step', () => {
     WEARABLE_SLOTS.map((slot) => [slot, slotWearables(slot)]),
   );
 
+  /** The slots in sorted order, built once for expectBankedOutfit. */
+  const SORTED_SLOTS: readonly string[] = [...WEARABLE_SLOTS].sort();
+
+  /** True when `slot` of `outfit` is empty or holds one of that slot's Wearables. */
+  function isBankedInSlot(outfit: Outfit, slot: WearableSlot): boolean {
+    const id = outfit[slot];
+    return id === null || (SLOT_WEARABLES.get(slot)?.includes(id) ?? false);
+  }
+
   function expectBankedOutfit(outfit: Outfit): void {
-    expect(Object.keys(outfit).sort()).toEqual([...WEARABLE_SLOTS].sort());
-    for (const slot of WEARABLE_SLOTS) {
-      const id = outfit[slot];
-      if (id !== null) expect(SLOT_WEARABLES.get(slot)).toContain(id);
-    }
+    expect(Object.keys(outfit).sort()).toEqual(SORTED_SLOTS);
+    const misplaced = WEARABLE_SLOTS.filter((slot) => !isBankedInSlot(outfit, slot)).map((slot) => `${slot}: ${outfit[slot]}`);
+    expect(misplaced).toEqual([]);
   }
 
   it('is a restyle tab right after Dream colour that the creator never shows', () => {
@@ -1161,7 +1171,7 @@ describe('Outfit step', () => {
     expect(chosenIndex(head)).toBe(0);
     expect(head.focus).toEqual({ kind: 'option', index: 0 });
     const feet = openSlot('feet');
-    expect(optionIds(feet)).toEqual([NO_WEARABLE_OPTION_ID, 'canal/flippers', 'pond/froggy-boots']);
+    expect(optionIds(feet)).toEqual([NO_WEARABLE_OPTION_ID, 'canal/flippers', 'pond/froggy-boots', 'open-lake/pelican-slippers']);
     expect(feet.focus).toEqual({ kind: 'option', index: 1 });
     expect(chosenIndex(feet)).toBe(1);
   });
@@ -1297,13 +1307,16 @@ describe('Outfit step', () => {
 
   it('More wearables pages the choices from the page holding the worn one, wrapping', () => {
     const feet = withOutfitPerPage(openSlot('feet'), 1);
-    expect(outfitPageCount(feet)).toBe(3);
+    expect(outfitPageCount(feet)).toBe(4);
     expect(optionIds(feet)).toEqual(['canal/flippers']);
     expect(feet.focus).toEqual({ kind: 'option', index: 0 });
     const later = reduceStyler(feet, { type: 'moreOutfit', perPage: 1 }, noRandom).state;
     expect(optionIds(later)).toEqual(['pond/froggy-boots']);
     expect(chosenIndex(later)).toBe(-1);
-    const next = reduceStyler(later, { type: 'moreOutfit', perPage: 1 }, noRandom).state;
+    const last = reduceStyler(later, { type: 'moreOutfit', perPage: 1 }, noRandom).state;
+    expect(optionIds(last)).toEqual(['open-lake/pelican-slippers']);
+    expect(chosenIndex(last)).toBe(-1);
+    const next = reduceStyler(last, { type: 'moreOutfit', perPage: 1 }, noRandom).state;
     expect(optionIds(next)).toEqual([NO_WEARABLE_OPTION_ID]);
     expect(chosenIndex(next)).toBe(-1);
     const off = pickId(next, NO_WEARABLE_OPTION_ID);

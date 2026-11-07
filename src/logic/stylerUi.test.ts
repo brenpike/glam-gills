@@ -576,13 +576,15 @@ describe('styler sizes', () => {
 });
 
 describe('stylerLayout', () => {
-  it.each(SMALLEST)('fits every step with 2, 3, 4, 5 and 8 options, Dream colour with 1 to 32 and the Name step in both modes on %j', (view) => {
+  it.each(SMALLEST)('fits every step with 2, 3, 4, 5 and 8 options, Dream colour with 1 to 34 and the Name step in both modes on %j', (view) => {
     expect(problemsOn([view])).toEqual([]);
   });
 
-  it('fits every step in both modes on every supported canvas', () => {
-    expect(problemsOn(supportedCanvases())).toEqual([]);
-  }, MATRIX_TIMEOUT_MS);
+  describe('fits every step in both modes on every supported canvas', () => {
+    it.each(supportedCanvases())('at $cssW x $cssH', (view) => {
+      expect(problemsOn([view])).toEqual([]);
+    });
+  });
 
   it('shows everything with room to spare', () => {
     for (const mode of MODES) {
@@ -596,8 +598,8 @@ describe('stylerLayout', () => {
     }
   });
 
-  it('takes the fit steps in the PRD F1 order', () => {
-    for (const view of [...SMALLEST, ...supportedCanvases()]) {
+  describe('takes the fit steps in the PRD F1 order', () => {
+    it.each([...SMALLEST, ...supportedCanvases()])('at $cssW x $cssH', (view) => {
       for (const mode of MODES) {
         for (const [step, count, outfitView] of screensOf(mode)) {
           const layout = layoutFor(view, mode, step, count, outfitView);
@@ -612,8 +614,8 @@ describe('stylerLayout', () => {
           expect(layout.heading === null).toBe(fitStep >= 6);
         }
       }
-    }
-  }, MATRIX_TIMEOUT_MS);
+    });
+  });
 
   it('hides the heading at fit step 6 in restyle only, and never in the creator', () => {
     const views = [...SMALLEST, ...supportedCanvases()];
@@ -757,12 +759,12 @@ describe('stylerLayout', () => {
     expect(() => stylerLayout(view, { mode: 'restyle', step: 'eyes', optionCount: 3, tabPage: 0.5 }, measure)).toThrow(RangeError);
   });
 
-  it('rejects a Dream colour option count outside 1 to 32, and the Dream colour step in the creator', () => {
+  it('rejects a Dream colour option count outside 1 to 34, and the Dream colour step in the creator', () => {
     const view = { cssW: 844, cssH: 390 };
     const measure = measureFor('restyle', 'dream');
     const at = (mode: StylerMode, optionCount: number): StylerLayout =>
       stylerLayout(view, { mode, step: 'dream', optionCount, tabPage: null }, measure);
-    expect(MAX_DREAM_OPTIONS).toBe(32);
+    expect(MAX_DREAM_OPTIONS).toBe(34);
     expect(() => at('restyle', 0)).toThrow(RangeError);
     expect(() => at('restyle', MAX_DREAM_OPTIONS + 1)).toThrow(RangeError);
     expect(() => at('restyle', 2.5)).toThrow(RangeError);
@@ -789,7 +791,7 @@ describe('stylerLayout Dream colour step', () => {
   }
 
   it('fits 1 to 18 options with labels always shown and no caption on every supported canvas', () => {
-    expect(problemsOn(DREAM_VIEWS).filter((problem) => problem.includes(' dream '))).toEqual([]);
+    expect(DREAM_VIEWS.flatMap((view) => casesOf('dream').flatMap((screenCase) => layoutProblems(view, 'restyle', screenCase)))).toEqual([]);
     for (const view of DREAM_VIEWS) {
       for (const count of DREAM_COUNTS) {
         const layout = dreamOn(view, count);
@@ -804,11 +806,12 @@ describe('stylerLayout Dream colour step', () => {
   it('shows at most 8 options per page, with More colours exactly when they do not all show', () => {
     for (const view of DREAM_VIEWS) {
       for (const count of DREAM_COUNTS) {
-        const dream = dreamOn(view, count).dream;
+        const layout = dreamOn(view, count);
+        const dream = layout.dream;
         if (dream === null) throw new Error('the Dream colour step has dream controls');
         expect(dream.perPage).toBeGreaterThanOrEqual(1);
         expect(dream.perPage).toBeLessThanOrEqual(Math.min(MAX_STEP_OPTIONS, count));
-        expect(dreamOn(view, count).options).toHaveLength(dream.perPage);
+        expect(layout.options).toHaveLength(dream.perPage);
         expect(dream.moreColours !== null).toBe(count > dream.perPage);
         if (dream.moreColours !== null) {
           expect(dream.moreColours).toMatchObject(MORE_COLOURS_BUTTON);
@@ -824,11 +827,9 @@ describe('stylerLayout Dream colour step', () => {
         const layout = dreamOn(view, count);
         const more = layout.dream?.moreColours;
         if (!more) continue;
-        for (const [name, rect] of targetsOf(layout)) {
-          if (name === 'moreColours') continue;
-          expect(clearance(more, rect)).toBeGreaterThanOrEqual(UI.gap - 1e-9);
-        }
-        for (const option of layout.options) expect(more.y).toBeGreaterThan(option.y + option.h);
+        const tooClose = targetsOf(layout).filter(([name, rect]) => name !== 'moreColours' && !(clearance(more, rect) >= UI.gap - 1e-9));
+        expect(tooClose.map(([name]) => name)).toEqual([]);
+        expect(layout.options.filter((option) => !(more.y > option.y + option.h))).toEqual([]);
       }
     }
   }, MATRIX_TIMEOUT_MS);
@@ -846,10 +847,10 @@ describe('stylerLayout Dream colour step', () => {
     }
   }, MATRIX_TIMEOUT_MS);
 
-  it('pages every Dream colour as 16 pages of 2 on the smallest canvases', () => {
+  it('pages every Dream colour as 17 pages of 2 on the smallest canvases', () => {
     for (const view of SMALLEST) {
       expect(perPageOn(view, MAX_DREAM_OPTIONS), JSON.stringify(view)).toBe(2);
-      expect(Math.ceil(MAX_DREAM_OPTIONS / perPageOn(view, MAX_DREAM_OPTIONS)), JSON.stringify(view)).toBe(16);
+      expect(Math.ceil(MAX_DREAM_OPTIONS / perPageOn(view, MAX_DREAM_OPTIONS)), JSON.stringify(view)).toBe(17);
     }
   });
 
@@ -920,7 +921,7 @@ describe('stylerLayout Outfit step', () => {
     const perSlot = WEARABLE_SLOTS.map((slot) => WEARABLES.filter((wearable) => wearable.slot === slot).length);
     expect(MAX_OUTFIT_CHOICES).toBe(1 + Math.max(...perSlot));
     expect(WEARABLES.filter((wearable) => wearable.slot === 'head')).toHaveLength(16);
-    expect(WEARABLES.filter((wearable) => wearable.slot === 'back')).toHaveLength(9);
+    expect(WEARABLES.filter((wearable) => wearable.slot === 'back')).toHaveLength(10);
     expect(MAX_OUTFIT_CHOICES).toBe(17);
   });
 

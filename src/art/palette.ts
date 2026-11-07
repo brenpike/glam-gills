@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the thirty-one Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the thirty-three Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -490,7 +490,9 @@ export type DreamLookId =
   | 'golden-hour-shine'
   | 'lime'
   | 'hyacinth'
-  | 'lagoon-shine';
+  | 'lagoon-shine'
+  | 'tule-green'
+  | 'obsidian';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -626,6 +628,17 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // 0.111 from Jade in OKLab. 6.38:1 with ink and 2.26:1 with white, so ink spots and, as Fiesta shine, the rim light.
   // The coral gill #f0586a is 1.48:1 against it.
   'lagoon-shine': dreamSlots('#5cb7e0', '#56a5cf', '#9dd4ec', '#b6dff1', ['#f0586a', '#f37d8b'], ['#dc5367', '#e37686']),
+  // Open lake Area 12 Dream colour (Tule green, issue #214, ND-2). Body #043d00 is a deep tule green (relative luminance
+  // 0.0336, owner decision 2026-11-07): no reed green near the ND-2 start #50aa50 keeps the girl cheek heart, so it sits
+  // in the near-black window between Obsidian (1.19:1) and Galaxy (1.07:1), 0.101 from Obsidian in OKLab. 12.55:1 with
+  // white and 1.15:1 with ink, so it follows the dark-body rules (white spots, eye ring, rim light). The reed-head gold
+  // gill #f0c860 is 7.85:1 against it.
+  'tule-green': dreamSlots('#043d00', '#093a0a', '#688b66', '#8ea88c', ['#f0c860', '#f3d483'], ['#dcb85e', '#e3c67f']),
+  // Open lake Area 12 Dream colour (Obsidian, issue #214, ND-2). Body #1f2925 is a green-black volcanic glass (relative
+  // luminance 0.0201), a step darker than the ND-2 start #24302d, so it sits between Glowworm (1.07:1) and Tule green
+  // (1.19:1), 0.104 from Glowworm and 0.101 from Tule green in OKLab. 14.98:1 with white and 1.04:1 with ink, so it
+  // follows the dark-body rules (white spots, eye ring, rim light). The mint gill #8fe8b4 is 10.25:1 against it.
+  obsidian: dreamSlots('#1f2925', '#20282a', '#797f7c', '#9a9f9d', ['#8fe8b4', '#a8edc5'], ['#85d4aa', '#9eddbc']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -651,6 +664,8 @@ const DREAM_DARK_IDS: readonly DreamLookId[] = [
   'chocolate',
   'glowworm',
   'confetti-shine',
+  'tule-green',
+  'obsidian',
 ];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
 const DREAM_RIM_IDS: readonly DreamLookId[] = [
@@ -669,6 +684,8 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'golden-hour-shine',
   'lime',
   'lagoon-shine',
+  'tule-green',
+  'obsidian',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

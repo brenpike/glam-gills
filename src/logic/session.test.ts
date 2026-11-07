@@ -10,7 +10,7 @@ import { createEncounterContext } from './encounter';
 import { REGISTRY_KEYS } from './gameEvents';
 import { REAL_MORPHS, STARTER_MORPH, axolotlFindId, isAxolotlFindId, type RealMorphId } from './morphs';
 import { dueFirstFindCards } from './firstFind';
-import { OPEN_LAKE_LAYOUT, OPEN_LAKE_SHARED_TREASURES } from './openLakeLayout';
+import { OPEN_LAKE_LAYOUT } from './openLakeLayout';
 import { emptyOutfit, type Outfit } from './outfit';
 import { nextTripSeed, type PlacedFind } from './placement';
 import { pickStranding } from './rescue';
@@ -64,7 +64,7 @@ import {
 } from './trip';
 import { TRIP_REGISTRY_KEYS } from './tripEvents';
 import { LEGS } from './tuning';
-import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, buildCanalZone, buildZone, type Point } from './zone';
+import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, buildCanalZone, buildZone, type AreaLayoutData, type Point } from './zone';
 
 const DT = 1 / 60;
 const FIRST_SEED = 0x1234abcd;
@@ -622,10 +622,19 @@ describe('lost treasures next trip (A12, B9)', () => {
   });
 });
 
-describe('a treasure Area 12 shares with Area 11 (issue #211, ND-12; auto-taken Q4)', () => {
-  const lakeZone = buildZone(OPEN_LAKE_LAYOUT, DEFAULT_ZONE_SEED);
+describe('a treasure a copy of Area 12 shares with Area 11 (issue #211, ND-12; issue #214)', () => {
+  /**
+   * A test-only copy of Area 12's layout that hides none of its own treasures and shares Area 11's
+   * Common and Rare ones, as Area 12 did before its own came (issue #214, ND-3).
+   */
+  const sharingLakeLayout: Readonly<AreaLayoutData> = {
+    ...OPEN_LAKE_LAYOUT,
+    treasures: [],
+    sharedTreasures: DEEP_CANAL_4_LAYOUT.treasures.filter((treasure) => treasure.rarity === 'common' || treasure.rarity === 'rare'),
+  };
+  const lakeZone = buildZone(sharingLakeLayout, DEFAULT_ZONE_SEED);
   const area11Zone = buildZone(DEEP_CANAL_4_LAYOUT, DEFAULT_ZONE_SEED);
-  const shared = OPEN_LAKE_SHARED_TREASURES.find((treasure) => treasure.id !== OPEN_LAKE_AREA.specialTreasureId);
+  const shared = sharingLakeLayout.sharedTreasures?.find((treasure) => treasure.id !== OPEN_LAKE_AREA.specialTreasureId);
   if (shared === undefined) throw new Error('Area 12 shares no treasure but its special');
   const sharedId = shared.id;
   const TRIP_SEEDS = [0, 1, 2, 3, 42];
@@ -662,6 +671,17 @@ describe('a treasure Area 12 shares with Area 11 (issue #211, ND-12; auto-taken 
     for (const seed of TRIP_SEEDS) {
       expect(placedIds(banked, lakeZone, seed), `Area 12, seed ${seed}`).not.toContain(sharedId);
       expect(placedIds(banked, area11Zone, seed), `Area 11, seed ${seed}`).not.toContain(sharedId);
+    }
+  });
+
+  it("ignores, never throws on, an Area 11 id an older save left in Area 12's lost-treasure memory", () => {
+    const openLakeZone = buildZone(OPEN_LAKE_LAYOUT, DEFAULT_ZONE_SEED);
+    const session = lostInLake();
+    expect(openLakeZone.finds.map((find) => find.id)).not.toContain(sharedId);
+    expect(tripStart(session, 0, OPEN_LAKE_ID).returnedFinds).toEqual([sharedId]);
+    for (const seed of TRIP_SEEDS) {
+      expect(() => placedIds(session, openLakeZone, seed), `seed ${seed}`).not.toThrow();
+      expect(placedIds(session, openLakeZone, seed), `seed ${seed}`).not.toContain(sharedId);
     }
   });
 });

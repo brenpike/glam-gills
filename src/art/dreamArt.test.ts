@@ -65,6 +65,8 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'marigold',
   'lime',
   'hyacinth',
+  'tule-green',
+  'obsidian',
 ];
 const DARK_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -74,6 +76,8 @@ const DARK_IDS: readonly DreamLookId[] = [
   'chocolate',
   'glowworm',
   'confetti-shine',
+  'tule-green',
+  'obsidian',
 ];
 const RIM_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -91,6 +95,8 @@ const RIM_IDS: readonly DreamLookId[] = [
   'golden-hour-shine',
   'lime',
   'lagoon-shine',
+  'tule-green',
+  'obsidian',
 ];
 const SWIM_SAMPLES = Array.from({ length: 13 }, (_, i) => (i / 12) * TAU);
 const TAIL_AMPS = [1, 1.6] as const;
@@ -180,9 +186,9 @@ function everyPair(): [string, DreamLookId, MorphPalette][] {
 }
 
 describe('Dream colour slots (guide 3f)', () => {
-  it('has the thirty-one Dream colours with the swatch body colours', () => {
-    expect(DREAM_IDS).toHaveLength(31);
-    expect(DREAM_IDS.slice(-19)).toEqual([
+  it('has the thirty-three Dream colours with the swatch body colours', () => {
+    expect(DREAM_IDS).toHaveLength(33);
+    expect(DREAM_IDS.slice(-21)).toEqual([
       'lily-green',
       'firefly-gold',
       'poppy-red',
@@ -202,6 +208,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'lime',
       'hyacinth',
       'lagoon-shine',
+      'tule-green',
+      'obsidian',
     ]);
     expect(DREAM_IDS).toEqual(Object.keys(DREAM_SWATCH));
     for (const id of DREAM_IDS) expect(DREAM_SLOTS[id].body, id).toBe(DREAM_SWATCH[id].body);
@@ -292,6 +300,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.38, 0.158],
       hyacinth: [2.27, 0.398],
       'lagoon-shine': [1.59, 0.296],
+      'tule-green': [8.85, 0.585],
+      obsidian: [10.56, 0.637],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -361,6 +371,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [2.06, 0.339],
       hyacinth: [1.25, 0.283],
       'lagoon-shine': [1.79, 0.331],
+      'tule-green': [3.11, 0.405],
+      obsidian: [3.71, 0.412],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -439,6 +451,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [3.18, 0.428],
       hyacinth: [1.93, 0.181],
       'lagoon-shine': [2.76, 0.303],
+      'tule-green': [2.02, 0.326],
+      obsidian: [2.41, 0.295],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -516,6 +530,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.83, 0.281],
       hyacinth: [3, 0.349],
       'lagoon-shine': [2.11, 0.257],
+      'tule-green': [11.71, 0.672],
+      obsidian: [13.97, 0.706],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -596,6 +612,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [4.79, 0.417],
       hyacinth: [2.91, 0.339],
       'lagoon-shine': [4.15, 0.385],
+      'tule-green': [1.34, 0.165],
+      obsidian: [1.6, 0.162],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -674,6 +692,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.73, 0.225],
       hyacinth: [1.05, 0.207],
       'lagoon-shine': [1.5, 0.127],
+      'tule-green': [3.71, 0.327],
+      obsidian: [4.43, 0.367],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -734,7 +754,7 @@ describe('Dream colour slots (guide 3f)', () => {
     });
   });
 
-  it('keeps Glowworm apart from every other Dream colour in greyscale and in colour, Galaxy most closely (PRD F15)', () => {
+  it('keeps Glowworm apart from every other Dream colour in greyscale and in colour, Obsidian most closely (PRD F15)', () => {
     const body = DREAM_SLOTS.glowworm.body;
     const separation = Object.fromEntries(
       DREAM_IDS.filter((id) => id !== 'glowworm').map((id) => [
@@ -776,14 +796,17 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [8.19, 0.584],
       hyacinth: [4.98, 0.42],
       'lagoon-shine': [7.1, 0.489],
+      'tule-green': [1.28, 0.191],
+      obsidian: [1.07, 0.104],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
       expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
     }
-    // Galaxy is the closest body; Glowworm's own cue is round glow dots, Galaxy's is stars.
-    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
-    expect(closest).toBe('galaxy');
+    // Obsidian (Area 12, issue #214, ND-2) is now the closest body, told apart by hue (green-black against night blue)
+    // and Glowworm's own cue, round glow dots, on a plain solid. Galaxy, next after Tule green, has stars.
+    const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
+    expect(closest.slice(0, 3)).toEqual(['obsidian', 'tule-green', 'galaxy']);
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
     const kinds = (id: DreamLookId): string[] => [
@@ -858,6 +881,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.07, 0.134],
       hyacinth: [1.54, 0.268],
       'lagoon-shine': [1.08, 0.111],
+      'tule-green': [6, 0.443],
+      obsidian: [7.15, 0.494],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -942,6 +967,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.22, 0.356],
       hyacinth: [1.34, 0.179],
       'lagoon-shine': [1.06, 0.251],
+      'tule-green': [5.24, 0.525],
+      obsidian: [6.26, 0.524],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1035,6 +1062,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.88, 0.177],
       hyacinth: [1.14, 0.297],
       'lagoon-shine': [1.63, 0.23],
+      'tule-green': [3.41, 0.301],
+      obsidian: [4.06, 0.359],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1117,6 +1146,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.57, 0.229],
       hyacinth: [1.05, 0.291],
       'lagoon-shine': [1.36, 0.275],
+      'tule-green': [4.1, 0.408],
+      obsidian: [4.89, 0.441],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1218,6 +1249,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.07, 0.246],
       hyacinth: [1.76, 0.243],
       'lagoon-shine': [1.24, 0.215],
+      'tule-green': [6.87, 0.537],
+      obsidian: [8.2, 0.561],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1318,6 +1351,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [5.42, 0.538],
       hyacinth: [3.29, 0.283],
       'lagoon-shine': [4.7, 0.407],
+      'tule-green': [1.18, 0.308],
+      obsidian: [1.41, 0.24],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1422,6 +1457,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.13, 0.164],
       hyacinth: [1.85, 0.347],
       'lagoon-shine': [1.3, 0.27],
+      'tule-green': [7.22, 0.535],
+      obsidian: [8.61, 0.579],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1522,6 +1559,8 @@ describe('Dream colour slots (guide 3f)', () => {
       lime: [1.3, 0.123],
       hyacinth: [1.26, 0.308],
       'lagoon-shine': [1.13, 0.23],
+      'tule-green': [4.92, 0.412],
+      obsidian: [5.87, 0.463],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1630,6 +1669,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'golden-hour-shine': [1.3, 0.123],
       hyacinth: [1.65, 0.367],
       'lagoon-shine': [1.15, 0.234],
+      'tule-green': [6.42, 0.468],
+      obsidian: [7.66, 0.533],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1721,6 +1762,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'golden-hour-shine': [1.26, 0.308],
       lime: [1.65, 0.367],
       'lagoon-shine': [1.43, 0.17],
+      'tule-green': [3.9, 0.441],
+      obsidian: [4.65, 0.434],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1817,6 +1860,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'golden-hour-shine': [1.13, 0.23],
       lime: [1.15, 0.234],
       hyacinth: [1.43, 0.17],
+      'tule-green': [5.56, 0.451],
+      obsidian: [6.64, 0.48],
     });
     for (const [id, [grey, colour]] of Object.entries(separation)) {
       expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
@@ -1873,7 +1918,7 @@ describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
     }
   });
 
-  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold, Golden hour shine, Lime and Lagoon shine', () => {
+  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold, Golden hour shine, Lime, Lagoon shine, Tule green and Obsidian', () => {
     for (const [name, id, palette] of everyPair()) {
       if (RIM_IDS.includes(id)) expect(palette.extras?.rim, name).toEqual(DREAM_RIM_LIGHT);
       else expect(palette.extras?.rim, name).toBeUndefined();
@@ -2235,7 +2280,7 @@ describe('Dream marker (guide 4e, 6p)', () => {
 });
 
 describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
-  it('leaves exactly the eighteen solids plain', () => {
+  it('leaves exactly the twenty solids plain', () => {
     const plain = DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'plain');
     expect(plain).toEqual(SOLID_IDS);
   });

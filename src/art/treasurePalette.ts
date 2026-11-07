@@ -451,6 +451,64 @@ export const CAROUSEL_RIDER = UI_PANEL_PINK;
 /** Carousel's round turning platform, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
 export const CAROUSEL_BASE = FESTIVAL_PLINTH;
 
+// ---- Open lake Area 12 Decoration fills (issue #214, ND-8; all at least 9:1 with ink) ----
+// The five lake Decorations: a windsock, a pinwheel, a little pelican (the area's special treasure), the twin volcanoes
+// and a little sailboat. Two fills are new, both the pelican line's own (guide 7r): its soft white feathers and its pale
+// orange pouch; the rest reuse shipped colours by name. None equals a BADGE_FILL rarity colour, and none is red. Ratios
+// are fill against ink. Aliases of a shipped colour say so.
+
+/** Windsock's tapering sock, the pale apricot. Alias of STRIPED_SCARF_FILL. 10.97:1. */
+export const WINDSOCK_FILL = STRIPED_SCARF_FILL;
+/** Windsock's round mouth hoop, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const WINDSOCK_HOOP = FIREFLY_HOOK;
+/** Pinwheel's four blades, in turn the lotus lantern pink and the pale teal. 9.90:1 and 11.05:1. */
+export const PINWHEEL_BLADES: readonly string[] = [TRAJINERA_BLOSSOM_PINK, TRAJINERA_ARCH];
+/** Pinwheel's round middle pin, the butter yellow. Alias of MARIACHI_JACKET_FILL. 12.53:1. */
+export const PINWHEEL_PIN = MARIACHI_JACKET_FILL;
+/** Pinwheel's stick, the decoy's pale carved wood. Alias of DECOY_BODY. 10.59:1. */
+export const PINWHEEL_STICK = DECOY_BODY;
+/** Pinwheel's little round mound of sand, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const PINWHEEL_BASE = FESTIVAL_PLINTH;
+/** Little pelican's body, neck, head and tail, the pelican line's soft white feathers (guide 7r). 11.54:1. */
+export const LITTLE_PELICAN_BODY = '#e8e4f4';
+/**
+ * Little pelican's closed bill with its slim empty pouch, the pelican line's pale orange pouch (guide 7r). The real
+ * bird's warm orange bill is 7.38:1, under 9:1, so the toy's whole bill takes the pouch colour. 9.51:1.
+ */
+export const LITTLE_PELICAN_BILL = '#ffc977';
+/** Twin volcanoes' two mountains, the stalactite's pale lilac stone. Alias of STALACTITE_ROCK. 10.33:1. */
+export const TWIN_VOLCANO_ROCK = STALACTITE_ROCK;
+/** Twin volcanoes' snow caps, a pale silver-white. Alias of CRYSTAL_CROWN_BAND. 12.96:1; inside the mountains, so free. */
+export const TWIN_VOLCANO_SNOW = CRYSTAL_CROWN_BAND;
+/** Twin volcanoes' round lake plinth, the pale paper blue. Alias of PAPER_BOAT_FILL. 11.18:1. */
+export const TWIN_VOLCANO_BASE = PAPER_BOAT_FILL;
+/** Little sailboat's hull, the decoy's pale carved wood. Alias of DECOY_BODY. 10.59:1. */
+export const LITTLE_SAILBOAT_HULL = DECOY_BODY;
+/** Little sailboat's two sails, the pale blue-white. Alias of SAILOR_CAP_FILL. 13.04:1. */
+export const LITTLE_SAILBOAT_SAIL = SAILOR_CAP_FILL;
+/** Little sailboat's mast, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const LITTLE_SAILBOAT_MAST = FIREFLY_HOOK;
+
+// ---- Open lake Area 12 Wearable fills (issue #214, ND-8; all at least 9:1 with ink) ----
+// The five lake Wearables: wave socks, a cloud scarf, a pelican swim ring, a surfboard and pelican slippers. Every fill
+// reuses a shipped colour by name (the two pelican items share the Little pelican's feathers and bill); the worn looks
+// import these names. None equals a BADGE_FILL rarity colour, and none is red. Ratios are fill against ink.
+
+/** Wave socks, the pale paper blue. Alias of PAPER_BOAT_FILL. 11.18:1. */
+export const WAVE_SOCKS_FILL = PAPER_BOAT_FILL;
+/** Cloud scarf's puffs and hanging tail, a pale silver-white. Alias of CRYSTAL_CROWN_BAND. 12.96:1. */
+export const CLOUD_SCARF_FILL = CRYSTAL_CROWN_BAND;
+/** Pelican swim ring's ring, neck and head, the Little pelican's feathers. Alias of LITTLE_PELICAN_BODY. 11.54:1. */
+export const PELICAN_SWIM_RING_FILL = LITTLE_PELICAN_BODY;
+/** Pelican swim ring's closed bill, the Little pelican's bill. Alias of LITTLE_PELICAN_BILL. 9.51:1. */
+export const PELICAN_SWIM_RING_BILL = LITTLE_PELICAN_BILL;
+/** Surfboard, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const SURFBOARD_FILL = TRAJINERA_ARCH;
+/** Pelican slippers' puffy upper and round toe head, the Little pelican's feathers. Alias of LITTLE_PELICAN_BODY. 11.54:1. */
+export const PELICAN_SLIPPER_FILL = LITTLE_PELICAN_BODY;
+/** Pelican slippers' closed bill along the toe and the sole (the pelican's orange feet), the Little pelican's bill. Alias of LITTLE_PELICAN_BILL. 9.51:1. */
+export const PELICAN_SLIPPER_BILL = LITTLE_PELICAN_BILL;
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -508,7 +566,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The thirty-one Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-three Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -540,7 +598,9 @@ export type DreamSwatchId =
   | 'golden-hour-shine'
   | 'lime'
   | 'hyacinth'
-  | 'lagoon-shine';
+  | 'lagoon-shine'
+  | 'tule-green'
+  | 'obsidian';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -645,4 +705,6 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
     dark: false,
   },
+  'tule-green': { body: '#043d00', pattern: 'plain', marks: [], dark: true },
+  obsidian: { body: '#1f2925', pattern: 'plain', marks: [], dark: true },
 };

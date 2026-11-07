@@ -11,7 +11,7 @@
  * and the bowl floor, off it. The pelican line is its one new threat.
  */
 import type { AreaExit } from './areas';
-import { DEEP_CANAL_4_TREASURES, type Treasure } from './catalogue';
+import { OPEN_LAKE_TREASURES } from './catalogue';
 import { DEEP_CANAL_4_CARP, DEEP_CANAL_4_TILAPIA } from './deepCanal4Layout';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
 import type { RockWall } from './pebble';
@@ -67,14 +67,6 @@ export const OPEN_LAKE_TILAPIA: Readonly<TilapiaTuning> = Object.freeze({
 export const OPEN_LAKE_CARP: Readonly<PredatorSpecies> = tunedSpecies(
   CARP_SPECIES,
   Object.freeze({ ...DEEP_CANAL_4_CARP.tuning, cooldown: 1.3, patrolSpeed: 75 }),
-);
-
-/**
- * The treasures Area 12 hides until its own come (issue #214; auto-taken Q4): Area 11's 3 Common and
- * 6 Rare treasures, the Little cormorant among them, in catalogue order.
- */
-export const OPEN_LAKE_SHARED_TREASURES: readonly Treasure[] = Object.freeze(
-  DEEP_CANAL_4_TREASURES.filter((treasure) => treasure.rarity === 'common' || treasure.rarity === 'rare'),
 );
 
 /** Area 12's tadpole rule, the top of the later snack ramp row: 72 px/s, as Area 11's (ND-8). */
@@ -238,8 +230,12 @@ export const OPEN_LAKE_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: `${OPEN_LAKE_AREA_ID}/strand-3`, x: 2280, y: 440 }),
     Object.freeze({ id: `${OPEN_LAKE_AREA_ID}/strand-4`, x: 2760, y: 420 }),
   ]),
-  treasures: Object.freeze([]),
-  sharedTreasures: OPEN_LAKE_SHARED_TREASURES,
+  /**
+   * Area 12's own 4 Common and 8 Rare treasures (issue #214, ND-3), each hiding in any spot of its
+   * rarity (issue #214, ND-7): the Commons share the 5 band 1 Common spots, the Rares the 9 band 2
+   * Rare spots.
+   */
+  treasures: OPEN_LAKE_TREASURES,
   /** 4 tadpoles and 10 shrimp to 3 worms and 3 bugs: 14 of 20 snacks mobile, 70% (the later snack ramp row, ND-8). */
   snackWorms: 3,
   snackBugs: 3,
