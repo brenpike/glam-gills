@@ -148,20 +148,8 @@ export const PELICAN_FACT: Readonly<FactCard> = Object.freeze({
 
 /**
  * The mud turtle fact card, shown the first time the axolotl comes within MUD_TURTLE_MEET_RANGE of a
- * mud turtle, outside the Home Spot (PRD C13; issue #212, ND-14). Provisional copy.
- * Sources, checked 2026-11-06 (web research only; the game fetches nothing):
- * Turtles of the World (Naturalis), Kinosternon hirtipes,
- * https://turtles.linnaeus.naturalis.nl/linnaeus_ng/app/views/species/taxon.php?id=8022
- * (the species ranges from the Big Bend region of Texas to the Valley of Mexico; it "is found in
- * lakes, ponds, streams, or rivers flowing into lakes"; it "is chiefly nocturnal"; it eats insects,
- * worms, small invertebrates, amphibians and small fish; the nominate subspecies K. h. hirtipes, the
- * Valley of Mexico mud turtle, lives only in the drainages of the Valley of Mexico) for "ponds and
- * streams", "from Texas to the Valley of Mexico", "at night" and "small fish";
- * the iNaturalist record of Kinosternon hirtipes in Xochimilco (owner decision on issue #209), why
- * the turtle swims in the game's lake. The card speaks of the species, so it never says the
- * turtle lives only in the Valley of Mexico, and it never says a mud turtle eats an axolotl.
- * "Axolotls stay safe by swimming away before they snap" is the game's rule (the snap goes to a spot
- * fixed at the warning start), not a source claim.
+ * mud turtle, outside the Home Spot (PRD C13; issue #212, ND-14).
+ * Sources and owner checks: PRD C13 only (ADR 0045).
  */
 export const MUD_TURTLE_FACT: Readonly<FactCard> = Object.freeze({
   id: 'mud-turtle',
