@@ -58,6 +58,8 @@ export const PLASTIC_WORM_FACT: Readonly<FactCard> = Object.freeze({
  * in Xochimilco, we observed a great egret (Ardea alba) capturing an axolotl from the canal."; "Great
  * egrets are present in both study areas and are classified as migratory birds"). This is the bird
  * of the Audubon Great Egret source above; the card's text does not change.
+ * "Axolotls are safer down deep, away from the surface" is the game's rule (the heron's stab
+ * reaches only so deep, ADR 0019), not checked against a source.
  * Owner to verify: the quotes' exact wording on the page (read through a page summarizer), and
  * "live around", since the study calls great egrets migratory.
  */
