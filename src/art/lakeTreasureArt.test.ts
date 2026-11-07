@@ -165,10 +165,10 @@ const LAKE_DECORATION_DIGESTS: Readonly<Record<number, string>> = {
   80: '4b13dfc528404031:109',
 };
 const LAKE_WEARABLE_DIGESTS: Readonly<Record<number, string>> = {
-  28: '87c51e483e5c6cc4:109',
-  32: 'a9b6e90443293148:109',
-  48: 'c40ccd91b601efe5:109',
-  80: '893f1515ae76ee31:109',
+  28: '4b88fcf383cb8dc7:109',
+  32: 'd7b153fc983e7f10:109',
+  48: 'fa354f5d0b603e29:109',
+  80: '66db42553dd31af1:109',
 };
 /**
  * The same digests for the open lake Area 12's two Paint shell icons (issue #214, ND-2), by slug then size, pinned when
@@ -981,6 +981,64 @@ describe('Open lake Area 12 item construction (issue #214)', () => {
     // The stringer and the band's two lines are the 1.2 lines; the silhouette keeps none.
     expect(inkLines('surfboard', 1.2)).toHaveLength(3);
     expect(inkLines('surfboard', 1.2, paintTreasureSilhouette)).toHaveLength(0);
+  });
+
+  it('tilts the Surfboard band and shine with the board: the band square across it on its stringer, the shine inside it on the nose half', () => {
+    const rec = record((ctx) => paintTreasureIcon(ctx, 'surfboard', PX));
+    const [board] = rec.ops.filter((op) => op.op === 'fill' && op.fillStyle === SURFBOARD_FILL);
+    const [placed] = board.args[0] as unknown[][];
+    expect(placed[0]).toBe('addPath');
+    const m = placed[2] as Affine;
+    const tilt = Math.atan2(m.b, m.a);
+    expect(tilt).toBeGreaterThan(0.3);
+    // The nose's way along the board, from its centre, and the way across it.
+    const along: [number, number] = [-m.c, -m.d].map((v) => v / Math.hypot(m.c, m.d)) as [number, number];
+    const across: [number, number] = [along[1] * -1, along[0]];
+    const local = ([x, y]: readonly [number, number]): [number, number] => {
+      const dx = x - m.e;
+      const dy = y - m.f;
+      return [dx * across[0] + dy * across[1], dx * along[0] + dy * along[1]];
+    };
+    // The band's one fillRect is drawn under a transform turned by the board's own tilt, centred on the stringer.
+    let t: Affine = IDENTITY;
+    const stack: Affine[] = [];
+    let bandAt: Affine | null = null;
+    let rect: number[] = [];
+    let fillRects = 0;
+    const bandIndex = rec.ops.filter((op) => op.op === 'fillRect').findIndex((op) => op.fillStyle === BOAT_TRIM);
+    expect(bandIndex).toBeGreaterThanOrEqual(0);
+    for (const [name, args] of rec.calls) {
+      const a = args as number[];
+      if (name === 'save') stack.push(t);
+      else if (name === 'restore') t = stack.pop() ?? t;
+      else if (name === 'translate') t = compose(t, { a: 1, b: 0, c: 0, d: 1, e: a[0], f: a[1] });
+      else if (name === 'rotate') t = compose(t, { a: Math.cos(a[0]), b: Math.sin(a[0]), c: -Math.sin(a[0]), d: Math.cos(a[0]), e: 0, f: 0 });
+      else if (name === 'fillRect' && fillRects++ === bandIndex) {
+        bandAt = t;
+        rect = a;
+      }
+    }
+    expect(bandAt).not.toBeNull();
+    const band = bandAt as Affine;
+    expect(Math.atan2(band.b, band.a)).toBeCloseTo(tilt, 9);
+    const mid: [number, number] = [band.a * (rect[0] + rect[2] / 2) + band.c * (rect[1] + rect[3] / 2) + band.e, band.b * (rect[0] + rect[2] / 2) + band.d * (rect[1] + rect[3] / 2) + band.f];
+    expect(local(mid)[0]).toBeCloseTo(0, 6);
+    // The shine sits wholly inside the board's fill, on the nose half.
+    const outline = pointsOf(board).map(local);
+    const inside = ([x, y]: readonly [number, number]): boolean => {
+      let hit = false;
+      for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+        const [xi, yi] = outline[i];
+        const [xj, yj] = outline[j];
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    const [glint] = rec.ops.filter((op) => op.op === 'fill' && op.fillStyle === SHINE);
+    const glintPoints = pointsOf(glint).map(local);
+    expect(glintPoints.length).toBeGreaterThan(8);
+    for (const p of glintPoints) expect(inside(p), `shine point ${p.join(', ')}`).toBe(true);
+    for (const [, v] of glintPoints) expect(v).toBeGreaterThan(0);
   });
 
   it('draws the Pelican slippers as a puffy upper with a soft opening, a round toe head and a closed bill, over an orange sole', () => {

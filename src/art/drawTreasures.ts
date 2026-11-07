@@ -5696,6 +5696,16 @@ function paintPelicanSwimRing(pen: Pen): void {
  * centre that sets the nose and the tail on the box's top and bottom edges.
  */
 const SURFBOARD = { half: 15, width: 4.6, tilt: 0.5, drop: 0.7 } as const;
+/** The Surfboard's one trim band, across the upright board just tailward of its middle (y0 to y1, before the tilt). */
+const SURFBOARD_BAND = { y0: 1.6, y1: 3.4 } as const;
+/** The Surfboard's one shine on the upright board, nose half, on the side that tilts up to the left (before the tilt). */
+const SURFBOARD_SHINE = { x: -1.6, y: -7.4 } as const;
+
+/** A point on the upright Surfboard, tilted and dropped as the board is drawn (`place(..., 0, drop, tilt)`). */
+function surfboardPoint(x: number, y: number): Pt {
+  const { tilt, drop } = SURFBOARD;
+  return { x: x * Math.cos(tilt) - y * Math.sin(tilt), y: x * Math.sin(tilt) + y * Math.cos(tilt) + drop };
+}
 
 /** The Surfboard upright before it tilts: a long board with a soft round nose at the top and a round tail. */
 function surfboardPath(): Path2D {
@@ -5722,9 +5732,15 @@ function paintSurfboard(pen: Pen): void {
     ctx.strokeStyle = INK;
     ctx.lineWidth = BAND_LW;
     ctx.stroke(place(line(0, -half + 1.8, 0, half * 0.8), k, 0, drop, tilt));
-    trimBand(pen, 1.6, 3.4, BOAT_TRIM);
+    // The band is drawn on the upright board, then tilted with it, so it crosses the board square on (as worn).
+    ctx.save();
+    ctx.translate(0, drop * k);
+    ctx.rotate(tilt);
+    trimBand(pen, SURFBOARD_BAND.y0, SURFBOARD_BAND.y1, BOAT_TRIM);
+    ctx.restore();
   });
-  shine(pen, 1.6, -7.4, 0.6, 1.8, tilt);
+  const glint = surfboardPoint(SURFBOARD_SHINE.x, SURFBOARD_SHINE.y);
+  shine(pen, glint.x, glint.y, 0.6, 1.8, tilt);
 }
 
 /** The Pelican slippers' bill: its root on the toe's head and its length to the round tip, the rightmost fill edge. */
