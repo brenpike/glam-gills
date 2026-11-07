@@ -94,6 +94,7 @@ function recordingContext(ops: Op[]): CanvasRenderingContext2D {
         const name = String(key);
         if ((STATE_KEYS as readonly string[]).includes(name)) return state[name];
         return (...args: unknown[]) => {
+          if (name === 'createRadialGradient') return { addColorStop: () => undefined };
           if (name === 'fill' || name === 'stroke') {
             ops.push({
               op: name,

@@ -457,7 +457,7 @@ describe('the golden-hour deep canal look (issue #112)', () => {
   const look = habitatLook(GOLDEN);
 
   it('is an area look variant after the dusk pond, never a habitat look, and resolves to its frozen entry', () => {
-    expect(AREA_LOOK_IDS.slice(-3)).toEqual(['pond-dusk', 'deep-canal-golden', 'open-lake-windy']);
+    expect(AREA_LOOK_IDS.slice(-4)).toEqual(['pond-dusk', 'deep-canal-golden', 'open-lake-windy', 'open-lake-still']);
     expect(HABITAT_LOOK_IDS).not.toContain(GOLDEN);
     expect(isAreaLookId(GOLDEN)).toBe(true);
     expect(isHabitatLookId(GOLDEN)).toBe(false);
@@ -665,7 +665,7 @@ describe('every other look paints exactly what it did on trunk', () => {
   });
 
   it('covers every look from before the golden one and the open lake: the lake looks are new, so no trunk to match', () => {
-    const lake: readonly AreaLookId[] = ['open-lake', 'open-lake-windy'];
+    const lake: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still'];
     expect(Object.keys(TRUNK).sort()).toEqual(AREA_LOOK_IDS.filter((id) => id !== GOLDEN && !lake.includes(id)).sort());
   });
 

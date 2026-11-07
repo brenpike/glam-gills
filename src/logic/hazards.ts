@@ -143,6 +143,18 @@ export interface GlowPlantSpot {
 }
 
 /**
+ * A fading light's place (issue #212, ND-7 to ND-10): a circle centred on (`x`, `y`) with `radius`
+ * px, which the axolotl's body touches to light it or relight it to full. Not a sweep: nothing about
+ * it blocks or hits.
+ */
+export interface FadingLightSpot {
+  x: number;
+  y: number;
+  /** Must be greater than 0. */
+  radius: number;
+}
+
+/**
  * A pebble's groove (issue #105, ND-8): the pebble's centre rolls in a straight line from (`x0`,
  * `y0`) to (`x1`, `y1`), never back. `radius` is the pebble's in px. Not a sweep: the pebble never
  * hits; it only blocks the axolotl (pebble.ts).
@@ -198,6 +210,8 @@ export interface ElementSpawn {
   matPair?: MatPair;
   /** Glow-plant geometry (issue #77, ND-8); absent on every element that is not a glow-plant. */
   glowPlant?: GlowPlantSpot;
+  /** Fading light geometry (issue #212, ND-7); absent on every element that is not a fading light. */
+  fadingLight?: FadingLightSpot;
   /** Pebble groove (issue #105, ND-8); absent on every element that is not a pebble. */
   pebble?: PebbleGroove;
   /** Gliding trajinera crossing (issue #78, ND-8); absent on every element that is not a boat. */
@@ -219,6 +233,24 @@ export const GLOW_PLANT: Readonly<ElementType> = Object.freeze({
   period: 1,
   activeFor: 1,
 });
+
+/**
+ * The fading light (issue #212, ND-7 to ND-10 and ND-26), a puzzle element: always active
+ * (`activeFor` equals `period`), with no fact card and no meet range, so it is never met. It has no
+ * sweep (elementSweep), so it never blocks the axolotl, never counts as a hazard for the snacks and
+ * never costs a leg. Each spawn carries its own `fadingLight` geometry and never a `glowPlant`, so
+ * the glow-plant rules (glowPlants.ts) never see it.
+ */
+export const FADING_LIGHT: Readonly<ElementType> = Object.freeze({
+  id: 'fading-light',
+  name: 'Fading light',
+  kind: 'puzzle',
+  period: 1,
+  activeFor: 1,
+});
+
+/** Radius in px of a fading light's touch circle (issue #212, ND-7), as the spring cave's glow-plants. */
+export const FADING_LIGHT_RADIUS = 14;
 
 /** Returns 0 when `pos` is inside the shape, else the distance from `pos` to its edge. */
 export function shapeDistance(pos: Point, shape: HazardShape): number {

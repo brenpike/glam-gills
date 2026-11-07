@@ -362,6 +362,80 @@ describe('meetsRarity for an open Legendary near a threat', () => {
   });
 });
 
+describe('isDeep and meetsRarity in a depth-banded area (issue #212, ND-29)', () => {
+  /**
+   * An area with no depth bands, no current and its cave far off, so once banded only the band can
+   * make a spot deep. Reeds cover x 100 to 400 from y 400 down, and the main path runs down x 130.
+   */
+  const UNBANDED_GEO: HidingGeometry = {
+    reedPatches: [{ x0: 100, x1: 400, y0: 400, y1: 1000, dragMul: 2.5 }],
+    pads: [],
+    cave: { id: 'banded/cave', x0: 5000, x1: 5100, y0: 200, y1: 318 },
+    currents: [],
+    homeSpot: { x: 0, y: 200, radius: 72 },
+    mainPath: [
+      { x: 130, y: 200 },
+      { x: 130, y: 1000 },
+    ],
+    tilapiaRoutes: [],
+  };
+  /** UNBANDED_GEO in a depth-banded area. */
+  const BANDED_GEO: HidingGeometry = { ...UNBANDED_GEO, depthBanded: true };
+  /** UNBANDED_GEO with a long tilapia route along y = 780, far from every turn. */
+  const UNBANDED_NEAR_THREAT: HidingGeometry = {
+    ...UNBANDED_GEO,
+    tilapiaRoutes: [{ id: 'band-3', waypoints: [{ x: -1000, y: 780 }, { x: 3000, y: 780 }] }],
+  };
+  /** BANDED_GEO with a long tilapia route along y = 780, far from every turn. */
+  const BANDED_NEAR_THREAT: HidingGeometry = { ...UNBANDED_NEAR_THREAT, depthBanded: true };
+  const BAND_3_Y = 800;
+  const BAND_2_Y = 500;
+
+  it('counts band 3 and deeper as deep, and band 2 as not deep', () => {
+    expect(isDeep({ x: 600, y: 720 }, BANDED_GEO)).toBe(true);
+    expect(isDeep({ x: 600, y: BAND_3_Y }, BANDED_GEO)).toBe(true);
+    expect(isDeep({ x: 600, y: 1100 }, BANDED_GEO)).toBe(true);
+    expect(isDeep({ x: 600, y: 719.999 }, BANDED_GEO)).toBe(false);
+    expect(isDeep({ x: 600, y: BAND_2_Y }, BANDED_GEO)).toBe(false);
+  });
+
+  it('never counts the same y as deep without the flag', () => {
+    expect(isDeep({ x: 600, y: 720 }, UNBANDED_GEO)).toBe(false);
+    expect(isDeep({ x: 600, y: BAND_3_Y }, UNBANDED_GEO)).toBe(false);
+    expect(isDeep({ x: 600, y: BAND_3_Y }, { ...BANDED_GEO, depthBanded: false })).toBe(false);
+  });
+
+  it('never reads a band without the flag, so a y above the area is not deep', () => {
+    expect(isDeep({ x: 600, y: -10 }, UNBANDED_GEO)).toBe(false);
+  });
+
+  it('accepts an open Epic in band 3 with no cave and no current', () => {
+    expect(meetsRarity({ x: 600, y: BAND_3_Y, container: false }, 'epic', BANDED_GEO)).toBe(true);
+    expect(meetsRarity({ x: 600, y: BAND_3_Y, container: false }, 'epic', UNBANDED_GEO)).toBe(false);
+    expect(meetsRarity({ x: 600, y: BAND_2_Y, container: false }, 'epic', BANDED_GEO)).toBe(false);
+  });
+
+  it('accepts an open Legendary in band 3 near a threat', () => {
+    expect(meetsRarity({ x: 600, y: BAND_3_Y, container: false }, 'legendary', BANDED_NEAR_THREAT)).toBe(true);
+    expect(meetsRarity({ x: 600, y: BAND_3_Y, container: false }, 'legendary', UNBANDED_NEAR_THREAT)).toBe(false);
+    expect(meetsRarity({ x: 600, y: BAND_3_Y, container: false }, 'legendary', BANDED_GEO)).toBe(false);
+  });
+
+  it('rejects a Common or a Rare in band 3 that passes without the flag', () => {
+    const common = { x: 130, y: BAND_3_Y, container: false };
+    const rare = { x: 350, y: BAND_3_Y, container: false };
+    expect(meetsRarity(common, 'common', UNBANDED_GEO)).toBe(true);
+    expect(meetsRarity(rare, 'rare', UNBANDED_GEO)).toBe(true);
+    expect(meetsRarity(common, 'common', BANDED_GEO)).toBe(false);
+    expect(meetsRarity(rare, 'rare', BANDED_GEO)).toBe(false);
+  });
+
+  it('keeps a Common and a Rare in band 2', () => {
+    expect(meetsRarity({ x: 130, y: BAND_2_Y, container: false }, 'common', BANDED_GEO)).toBe(true);
+    expect(meetsRarity({ x: 350, y: BAND_2_Y, container: false }, 'rare', BANDED_GEO)).toBe(true);
+  });
+});
+
 describe('spotMatchesLabels', () => {
   it('accepts correctly labelled spots of every kind', () => {
     expect(spotMatchesLabels(spotAt(130, 200), GEO)).toBe(true);

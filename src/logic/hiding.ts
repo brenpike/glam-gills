@@ -5,8 +5,11 @@
  * stretch (the risk ladder, issue #70).
  * Legendaries are the rarest finds, more hidden and/or more dangerous to get: a Legendary spot is
  * deep and in the Legendary risk band, and is in a Dash pot or in an area with a measurable threat.
+ * Deep means in the cave, past a current or, in a depth-banded area, in band 3 or deeper
+ * (issue #212, ND-29).
  */
 import type { Rarity } from './catalogue';
+import { DEEP_BAND, depthBandAt } from './depthBand';
 import { dragNetSweep, type DragNetSpawn } from './dragNets';
 import { shapeDistance, type HazardShape, type HazardSpawn } from './hazards';
 import { lurePath, TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
@@ -40,11 +43,21 @@ export const RISK_COMMON_MARGIN = 60;
 /**
  * The zone geometry the hiding rules read. Absent predator routes, hazards, moving hazards, fishing
  * boats or drag nets mean none; together with the tilapia routes they are the zone's threats. Absent `tilapia` means the
- * TILAPIA tuning; absent `bankOverhangs` means no bank cover.
+ * TILAPIA tuning; absent `bankOverhangs` means no bank cover. Absent `depthBanded` means the area
+ * has no depth bands.
  */
 export type HidingGeometry = Pick<
   ZoneLayout,
-  'reedPatches' | 'pads' | 'cave' | 'currents' | 'homeSpot' | 'mainPath' | 'tilapiaRoutes' | 'tilapia' | 'bankOverhangs'
+  | 'reedPatches'
+  | 'pads'
+  | 'cave'
+  | 'currents'
+  | 'homeSpot'
+  | 'mainPath'
+  | 'tilapiaRoutes'
+  | 'tilapia'
+  | 'bankOverhangs'
+  | 'depthBanded'
 > & {
   predatorRoutes?: readonly Readonly<PredatorRoute>[];
   hazards?: readonly Readonly<HazardSpawn>[];
@@ -180,9 +193,17 @@ export function distanceToPath(pos: Point, path: readonly Point[]): number {
   return best;
 }
 
-/** Whether a point is deep: in the cave or past a current. */
+/**
+ * Whether a point is deep: in the cave, past a current or, in a depth-banded area, in band
+ * DEEP_BAND or deeper (issue #212, ND-29). The band is read only when the area sets `depthBanded`,
+ * so an area without bands never calls depthBandAt.
+ */
 export function isDeep(pos: Point, geo: HidingGeometry): boolean {
-  return inCave(pos, geo.cave) || pastCurrent(pos, geo.currents);
+  return (
+    inCave(pos, geo.cave) ||
+    pastCurrent(pos, geo.currents) ||
+    (geo.depthBanded === true && depthBandAt(pos.y) >= DEEP_BAND)
+  );
 }
 
 /**
@@ -337,7 +358,8 @@ function threatTurnDistance(pos: Point, threats: readonly Threat[]): number {
  * no container, near the main path. Rare: the same but away from the path. Epic: deep, no
  * container. Legendary: deep, and in a container (a Dash pot) or measurably near some threat
  * (riskDistance not Infinity), so a Legendary with no pot only sits in an area with a threat.
- * Containers are reserved for Legendary. Every rarity must also meet the risk ladder for every
+ * Deep follows isDeep, so in a depth-banded area band 3 or deeper is deep with no cave or current,
+ * and a Common or Rare spot there fails (issue #212, ND-29). Containers are reserved for Legendary. Every rarity must also meet the risk ladder for every
  * threat in the geometry (zoneThreats).
  */
 export function meetsRarity(

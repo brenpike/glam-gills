@@ -567,6 +567,31 @@ export const CORMORANT: Readonly<TilapiaTuning> = Object.freeze({
 });
 
 /**
+ * Provisional mud turtle values (issue #212, ND-11 and ND-12); tune in play. The mud turtle creeps
+ * along its stretch at patrolSpeed, warns for 1.2 s (above the PRD's 0.8 s floor) when
+ * the axolotl is within lungeRange of where it is, then snaps its head out to the spot fixed at the
+ * warning start in lungeDuration and holds still through the 2.5 s cooldown. lungeSpeed is the
+ * snap's top speed (its reach over its duration); no mud turtle rule reads it, because the snap tip
+ * moves from the turtle to the fixed spot (stabTip in src/logic/predators.ts). Hit, touch and body
+ * reach, and the gentle bump, are the tilapia's, so they match a Medium axolotl at every size
+ * (PRD F4). It never chases (MUD_TURTLE_SPECIES).
+ */
+export const MUD_TURTLE: Readonly<TilapiaTuning> = Object.freeze({
+  minWindup: 0.8,
+  windup: 1.2,
+  cooldown: 2.5,
+  lungeRange: 110,
+  lungeSpeed: 110 / 0.3,
+  lungeDuration: 0.3,
+  hitRadius: TILAPIA.hitRadius,
+  contactRadius: TILAPIA.contactRadius,
+  bodyRadius: TILAPIA.bodyRadius,
+  patrolSpeed: 20,
+  bumpSpeed: TILAPIA.bumpSpeed,
+  bumpCooldown: TILAPIA.bumpCooldown,
+});
+
+/**
  * Provisional chase defaults for each predator type (PRD open question 251, ND-4); tune in play.
  * None is wired into a real area. Each speed is strictly between the 2-leg (112.5 px/s) and 4-leg
  * (150 px/s) top speeds, and each sight is greater than its predator's lungeRange (ND-3). This one
@@ -666,7 +691,8 @@ export const TRIP_TREASURES: Readonly<TripTreasureTuning> = Object.freeze({
  * have 9, the chinampa gardens' Area 5 has 10, the spring cave, Area 6, has 11 (issue #77), and the
  * spring cave's Area 7 has 12 (issue #105), the deep canal's Area 8 has 13 (issue #78), the deep
  * canal's Area 9 has 14 (issue #107), the deep canal's Area 10 has 15 (issue #108), the deep canal's
- * Area 11 has 16 (issue #112) and the open lake's Area 12 has 17 (issue #211).
+ * Area 11 has 16 (issue #112), the open lake's Area 12 has 17 (issue #211) and the open lake's
+ * Area 13 has 18 (issue #212).
  */
 export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasureOverride>>> = Object.freeze({
   canal: Object.freeze({ slots: 6 }),
@@ -681,6 +707,7 @@ export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasu
   'deep-canal-3': Object.freeze({ slots: 15 }),
   'deep-canal-4': Object.freeze({ slots: 16 }),
   'open-lake-1': Object.freeze({ slots: 17 }),
+  'open-lake-2': Object.freeze({ slots: 18 }),
 });
 
 /**

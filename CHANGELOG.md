@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.68.0] - 2026-11-06
+
+### Added
+
+- Area 13, the trench of the open lake: a stepped dive down to the first pitch-black bottom (#212).
+- The Valley of Mexico mud turtle creeps along the dark bottom, warns, then snaps. Swim away in time (#212).
+- Fading lights: touch one to light the dark. It fades slowly, so touch it again (#212).
+- A new fact card: "Meet the mud turtle" (#212).
+- Area 13 hides Area 11's treasure for now, and its special treasure waits deep in the dark (#212).
+
+### Changed
+
+- The open lake now reads "Areas 12 and 13" on the map and in the refuge (#212).
+
 ## [0.67.1] - 2026-11-06
 
 ### Changed

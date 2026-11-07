@@ -13,6 +13,7 @@ import {
   DEEP_CANAL_AREA,
   DEEP_CANAL_HABITAT,
   HABITATS,
+  OPEN_LAKE_2_AREA,
   OPEN_LAKE_AREA,
   OPEN_LAKE_HABITAT,
   POND_2_AREA,
@@ -56,6 +57,7 @@ import { bailingBoatSpawn } from './bailingBuckets';
 import { CHINAMPA_2_AREA_ID, CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_AREA_ID, CHINAMPA_LAYOUT } from './chinampaLayout';
 import { createCollectibles, snackDriftMaxSpeed, snackX, snackY } from './collectibles';
+import { DEEP_BAND, deepestWaterBand, raritySpotsInDeepestBand } from './depthBand';
 import { DEV_AREAS, DEV_TEST_AREA } from './devAreas';
 import {
   ANCHOR_DROP_FACT,
@@ -72,6 +74,7 @@ import {
   HERON_FACT,
   LURE_FACT,
   MUD_SEEP_FACT,
+  MUD_TURTLE_FACT,
   MURKY_WATER_FACT,
   PELICAN_FACT,
   PLASTIC_WORM_FACT,
@@ -87,6 +90,7 @@ import {
 import type { ElementType, HazardType } from './hazards';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, type MovingHazardType } from './movingHazards';
+import { OPEN_LAKE_2_AREA_ID } from './openLake2Layout';
 import { OPEN_LAKE_AREA_ID } from './openLakeLayout';
 import { SNACK_MAGNET_PULL_SPEED } from './perks';
 import { CARP_SPECIES, TILAPIA_SPECIES, type PredatorSpecies } from './predators';
@@ -193,13 +197,24 @@ const MAX_SNACK_DRIFT = SNACK_MAGNET_PULL_SPEED / 2;
 
 /**
  * Strength in px/s of the strongest push in an area's default zone: its strongest current, or the
- * surface gust of its wind and waves (issue #211), whichever is stronger.
+ * surface gust of its wind and waves (issue #211), whichever is stronger, or 0 when it has neither
+ * (issue #212, ND-16).
  */
 function strongestCurrentIn(area: AreaData): number {
   const zone = buildZone(area.layout, DEFAULT_ZONE_SEED);
   const currents = zone.currents.map((current) => Math.hypot(current.force.x, current.force.y));
   const gusts = winds(zone.elements).map(() => WINDS.surfaceSpeed);
-  return Math.max(...currents, ...gusts);
+  return Math.max(0, ...currents, ...gusts);
+}
+
+/**
+ * The deepest band of a deep-banded area when it is band 3 or deeper, where its special treasure may
+ * be of any rarity (issue #212, ND-24); undefined for any other area.
+ */
+function deepSpecialBand(area: Readonly<AreaData>): number | undefined {
+  if (area.layout.depthBanded !== true) return undefined;
+  const deepest = deepestWaterBand(area.layout);
+  return deepest >= DEEP_BAND ? deepest : undefined;
 }
 
 /** Areas that add more than one new threat or element (PRD N2). */
@@ -222,12 +237,18 @@ describe('CANAL_AREA', () => {
   });
 
   it.each([...AREAS, ...DEV_AREAS].map((area) => [area.id, area] as const))(
-    'gives %s a Common or Rare special treasure that the area hides',
+    'gives %s a special treasure that the area hides, Common or Rare unless the area is deep-banded to band 3, where every spot of its rarity is in the deepest band (issue #212, ND-24)',
     (_id, area) => {
       const special = treasureById(area.specialTreasureId);
       expect(special).toBeDefined();
       expect([...area.layout.treasures, ...(area.layout.sharedTreasures ?? [])]).toContain(special);
-      expect(['common', 'rare']).toContain(special?.rarity);
+      const deepest = deepSpecialBand(area);
+      if (deepest === undefined) {
+        expect(['common', 'rare']).toContain(special?.rarity);
+      } else {
+        const spots = buildZone(area.layout, DEFAULT_ZONE_SEED).spots;
+        expect(special !== undefined && raritySpotsInDeepestBand(spots, special.rarity, deepest)).toBe(true);
+      }
     },
   );
 
@@ -551,7 +572,7 @@ describe('threats', () => {
     expect(threatIds(layoutWith({ tilapiaRoutes: [] }))).toEqual([]);
   });
 
-  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite, geyser, underwater springs, black bass, murky water, anchor, mud seep, fishing lines, fishing nets, cormorant and pelican cards, for the shipped areas', () => {
+  it('gives the tilapia, carp, plastic worm, tadpole, shrimp, heron, ghost net, punting pole, garter snake, water hyacinth, crayfish, stalactite, geyser, underwater springs, black bass, murky water, anchor, mud seep, fishing lines, fishing nets, cormorant, pelican and mud turtle cards, for the shipped areas', () => {
     expect(areaFactCards()).toEqual([
       TILAPIA_FACT,
       CARP_FACT,
@@ -575,6 +596,7 @@ describe('threats', () => {
       DRAG_NET_FACT,
       CORMORANT_FACT,
       PELICAN_FACT,
+      MUD_TURTLE_FACT,
     ]);
   });
 
@@ -744,6 +766,7 @@ describe('bookFactCards', () => {
       DRAG_NET_FACT,
       CORMORANT_FACT,
       PELICAN_FACT,
+      MUD_TURTLE_FACT,
       AXOLOTL_REFUGES_FACT,
       CANAL_CLEAN_UPS_FACT,
     ]);
@@ -762,7 +785,7 @@ describe('newThingsByArea', () => {
     expect(areasOverNewLimit(AREAS)).toEqual([]);
   });
 
-  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, the crayfish and the glow-plant in Area 6, the pulsing current and the pebble in Area 7, the black bass and the gliding trajinera in Area 8, the murky water and the bailing bucket in Area 9, the trajinera lure and the drag net in Area 10, the cormorant in Area 11, and the pelican and the wind and waves in Area 12', () => {
+  it('counts the canal tilapia as new in Area 1, the plastic worm in Area 2, the heron in Area 3, with no timing element (#111), the ghost net in Area 4, the garter snake and the water hyacinth mats in Area 5, the crayfish and the glow-plant in Area 6, the pulsing current and the pebble in Area 7, the black bass and the gliding trajinera in Area 8, the murky water and the bailing bucket in Area 9, the trajinera lure and the drag net in Area 10, the cormorant in Area 11, the pelican and the wind and waves in Area 12, and the mud turtle and the fading light in Area 13', () => {
     expect(newThingsByArea()).toEqual([
       { areaId: 'canal', threats: ['tilapia'], elements: [] },
       { areaId: 'pond-1', threats: ['plastic-worm'], elements: [] },
@@ -776,6 +799,7 @@ describe('newThingsByArea', () => {
       { areaId: 'deep-canal-3', threats: ['trajinera-lure'], elements: ['drag-net'] },
       { areaId: 'deep-canal-4', threats: ['cormorant'], elements: [] },
       { areaId: 'open-lake-1', threats: ['pelican'], elements: ['wind'] },
+      { areaId: 'open-lake-2', threats: ['mud-turtle'], elements: ['fading-light'] },
     ]);
   });
 
@@ -1082,7 +1106,7 @@ describe('areaById', () => {
   });
 
   it('lists every area in number order', () => {
-    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(AREAS.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
     expect(AREAS).toEqual([
       CANAL_AREA,
       POND_AREA,
@@ -1096,8 +1120,10 @@ describe('areaById', () => {
       DEEP_CANAL_3_AREA,
       DEEP_CANAL_4_AREA,
       OPEN_LAKE_AREA,
+      OPEN_LAKE_2_AREA,
     ]);
     expect(areaById(OPEN_LAKE_AREA_ID)).toBe(OPEN_LAKE_AREA);
+    expect(areaById(OPEN_LAKE_2_AREA_ID)).toBe(OPEN_LAKE_2_AREA);
   });
 });
 
@@ -1170,7 +1196,7 @@ describe.each(AREA_CASES)('%s exit geometry', (_id, area) => {
 describe('snack drift', () => {
   const surfacePeak = SURF + 1.6 + 0.8;
 
-  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s, the Area 6 drift at about 16.0 px/s, the Area 7 drift at about 16.2 px/s, the Area 8 drift at about 16.9 px/s, the Area 9 drift at about 17.4 px/s, the Area 10 drift at about 17.7 px/s, the Area 11 drift at about 18.0 px/s and the Area 12 drift at about 18.2 px/s', () => {
+  it('pins the canal drift at about 11.9 px/s, the pond drift at about 14.8 px/s, the Area 3 drift at about 15.2 px/s, the Area 4 drift at about 15.6 px/s, the Area 5 drift at about 15.8 px/s, the Area 6 drift at about 16.0 px/s, the Area 7 drift at about 16.2 px/s, the Area 8 drift at about 16.9 px/s, the Area 9 drift at about 17.4 px/s, the Area 10 drift at about 17.7 px/s, the Area 11 drift at about 18.0 px/s, the Area 12 drift at about 18.2 px/s and the Area 13 drift at about 18.5 px/s', () => {
     expect(snackDriftMaxSpeed(CANAL_AREA.snackDrift)).toBeCloseTo(11.9, 1);
     expect(snackDriftMaxSpeed(POND_AREA.snackDrift)).toBeCloseTo(14.8, 1);
     expect(snackDriftMaxSpeed(POND_2_AREA.snackDrift)).toBeCloseTo(15.2, 1);
@@ -1183,11 +1209,12 @@ describe('snack drift', () => {
     expect(snackDriftMaxSpeed(DEEP_CANAL_3_AREA.snackDrift)).toBeCloseTo(17.7, 1);
     expect(snackDriftMaxSpeed(DEEP_CANAL_4_AREA.snackDrift)).toBeCloseTo(18.0, 1);
     expect(snackDriftMaxSpeed(OPEN_LAKE_AREA.snackDrift)).toBeCloseTo(18.2, 1);
+    expect(snackDriftMaxSpeed(OPEN_LAKE_2_AREA.snackDrift)).toBeCloseTo(18.5, 1);
   });
 
-  it("pins the one-leg headway against the strongest push: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 to 8, 18 in Areas 9 to 11 and 30 in Area 12, against the wind's surface gust", () => {
+  it("pins the one-leg headway against the strongest push: 20 px/s in the canal and the pond, 16 in Area 3, 18 in Area 4, 17 in Areas 5 to 8, 18 in Areas 9 to 11, 30 in Area 12, against the wind's surface gust, and 90 in Area 13, which has no current and no wind (issue #212, ND-16)", () => {
     const headways = AREAS.map((area) => SWIM.maxSpeed * LEGS.speedByLegs[0] - strongestCurrentIn(area));
-    expect(headways).toEqual([20, 20, 16, 18, 17, 17, 17, 17, 18, 18, 18, 30]);
+    expect(headways).toEqual([20, 20, 16, 18, 17, 17, 17, 17, 18, 18, 18, 30, 90]);
   });
 
   it.each(AREA_CASES)('drifts slower than a one-leg axolotl swims against the strongest current, and at most 20 px/s, in %s', (_id, area) => {
@@ -1251,10 +1278,10 @@ describe('Legendary treasures by area (issue #146)', () => {
     ]);
   });
 
-  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour; only Area 12 hides none of its own yet (issue #214)', () => {
+  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour; only Areas 12 and 13 hide none of their own yet (issues #214 and #215)', () => {
     const laterAreas = AREAS.filter((area) => area.number >= 6 && area.layout.treasures.length > 0);
     expect(laterAreas.length).toBeGreaterThan(0);
-    expect(AREAS.filter((area) => area.layout.treasures.length === 0)).toEqual([OPEN_LAKE_AREA]);
+    expect(AREAS.filter((area) => area.layout.treasures.length === 0)).toEqual([OPEN_LAKE_AREA, OPEN_LAKE_2_AREA]);
     for (const area of laterAreas) {
       const shells = area.layout.treasures.filter((treasure) => treasure.category === 'paintShell');
       expect(shells.length, area.id).toBeGreaterThanOrEqual(2);

@@ -89,6 +89,7 @@ import {
   POND_WATER_SHALLOW,
   HABITAT_LOOK_IDS,
   OPEN_LAKE_LOOK,
+  OPEN_LAKE_STILL_LOOK,
   OPEN_LAKE_WINDY_LOOK,
   habitatLook,
   isAreaLookId,
@@ -793,7 +794,7 @@ describe('pond background chunk', () => {
 const LUMINANCE_FLOOR = 0.1687;
 
 describe('area looks (issue #98)', () => {
-  it('lists the habitat looks, then the dusk, golden-hour and windy lake variants; only the habitat looks key the area map', () => {
+  it('lists the habitat looks, then the dusk, golden-hour, windy lake and still lake variants; only the habitat looks key the area map', () => {
     expect(AREA_LOOK_IDS).toEqual([
       'canal',
       'pond',
@@ -804,6 +805,7 @@ describe('area looks (issue #98)', () => {
       'pond-dusk',
       'deep-canal-golden',
       'open-lake-windy',
+      'open-lake-still',
     ]);
     expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake']);
     for (const id of AREA_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
@@ -813,6 +815,8 @@ describe('area looks (issue #98)', () => {
     expect(isHabitatLookId('deep-canal-golden')).toBe(false);
     expect(isAreaLookId('open-lake-windy')).toBe(true);
     expect(isHabitatLookId('open-lake-windy')).toBe(false);
+    expect(isAreaLookId('open-lake-still')).toBe(true);
+    expect(isHabitatLookId('open-lake-still')).toBe(false);
     expect(isAreaLookId('moon')).toBe(false);
     expect(() => habitatLook('pond-night')).toThrow(RangeError);
   });
@@ -832,6 +836,7 @@ describe('area looks (issue #98)', () => {
       ['pond-dusk', true, { kind: 'rootArch', anchor: 'bank' }, true, 2],
       ['deep-canal-golden', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
       ['open-lake-windy', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
+      ['open-lake-still', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
     ]);
   });
 
@@ -1863,21 +1868,23 @@ describe('bakePondTextures', () => {
 describe('open lake looks (issue #211)', () => {
   const lake = habitatLook('open-lake');
   const windy = habitatLook('open-lake-windy');
-  const lakeIds: readonly AreaLookId[] = ['open-lake', 'open-lake-windy'];
+  const lakeIds: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still'];
 
-  it('adds the lake as the last habitat look and its windy variant as the last area look, both frozen', () => {
+  it('adds the lake as the last habitat look, its windy and still variants as the last area looks, all frozen', () => {
     expect(HABITAT_LOOK_IDS[HABITAT_LOOK_IDS.length - 1]).toBe('open-lake');
-    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 1]).toBe('open-lake-windy');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 2]).toBe('open-lake-windy');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 1]).toBe('open-lake-still');
+    expect(habitatLook('open-lake-still')).toBe(OPEN_LAKE_STILL_LOOK);
     expect(lake).toBe(OPEN_LAKE_LOOK);
     expect(windy).toBe(OPEN_LAKE_WINDY_LOOK);
-    for (const look of [lake, windy]) {
+    for (const look of [lake, windy, habitatLook('open-lake-still')]) {
       expect(Object.isFrozen(look)).toBe(true);
       expect(Object.isFrozen(look.water)).toBe(true);
       expect(Object.isFrozen(look.bed)).toBe(true);
     }
   });
 
-  it('turns the lakebed, the depth bands and the volcano horizon on for both, and the streaming clouds for the windy one only', () => {
+  it('turns the lakebed, the depth bands and the volcano horizon on for every lake look, and the streaming clouds for the windy one only', () => {
     for (const id of lakeIds) {
       expect(habitatLook(id).lakebed, id).toBe(true);
       expect(habitatLook(id).depthBands, id).toBe(true);
@@ -1885,6 +1892,7 @@ describe('open lake looks (issue #211)', () => {
     }
     expect(lake.streamingClouds).toBe(false);
     expect(windy.streamingClouds).toBe(true);
+    expect(habitatLook('open-lake-still').streamingClouds).toBe(false);
   });
 
   it('leaves the new fields off for every other look, so their bakes are unchanged', () => {

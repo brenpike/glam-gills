@@ -38,9 +38,11 @@ import {
 import { BUTTON_PRESS_OFFSET, BUTTON_SQUARE, BUTTON_WIDE, ICON_SIZE, type IconKind } from '../art/drawUi';
 import { AREAS, habitatById, type AreaData } from '../logic/areas';
 import type { Decoration } from '../logic/catalogue';
+import { fadingLights } from '../logic/fadingLights';
 import { createGhostNets } from '../logic/ghostNets';
 import { buttonPressSound } from '../logic/homeSounds';
 import { createPlasticWorms } from '../logic/plasticWorms';
+import { MUD_TURTLE_SPECIES } from '../logic/predators';
 import { mulberry32 } from '../logic/rng';
 import { TANK } from '../logic/tank';
 import { VIEW } from '../logic/tuning';
@@ -116,8 +118,9 @@ export interface BakedDecorationPack {
  * some area has fishing trajineras or drag nets, else each is null. `goldenCanal` holds the one
  * sinking marigold petal (issue #112, ND-13), baked only when some area's look lets petals sink,
  * else null. `lake` holds the open lake's small sprites (the pelican body frames, bill, neck and
- * splash, and the wind's ripple arcs and gust streak), baked only when some area has pelican lines or
- * wind and waves, else null (issue #211). A look that paints the lakebed paints its rock walls into
+ * splash, the wind's ripple arcs and gust streak, the mud turtle frames with its head and neck
+ * pieces, and the fading light frames), baked only when some area has pelican lines, wind and waves,
+ * a mud turtle route or fading lights, else null (issues #211 and #212). A look that paints the lakebed paints its rock walls into
  * its on-demand scenery chunks, so its walls are never baked as spring cave rock wall sprites.
  * "Some area" counts the dev area when one was loaded. A dev area that
  * is a real area (devAreaById finds real areas too) is not added again. The carp frames are part
@@ -674,9 +677,17 @@ function bakeDeepCanalProps(
   return needed ? bakeDeepCanalTextures(scene, bakeScale, murkyPatchSizes(AREAS), areas) : null;
 }
 
-/** Whether area `area` has any pelican line or wind and waves (issue #211, ND-5, ND-10). */
+/**
+ * Whether area `area` has any pelican line or wind and waves (issue #211, ND-5, ND-10), or any mud
+ * turtle route or fading light (issue #212).
+ */
 function hasLakeHazards(area: Readonly<AreaData>): boolean {
-  return (area.layout.pelicanLines ?? []).length > 0 || winds(area.layout.elements).length > 0;
+  return (
+    (area.layout.pelicanLines ?? []).length > 0 ||
+    winds(area.layout.elements).length > 0 ||
+    area.layout.predatorRoutes.some((route) => route.species.id === MUD_TURTLE_SPECIES.id) ||
+    fadingLights(area.layout.elements).length > 0
+  );
 }
 
 /** AREAS, then the dev area when one was asked for and it is not one of AREAS already. */

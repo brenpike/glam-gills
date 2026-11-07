@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, DEEP_CANAL_2_AREA, DEEP_CANAL_3_AREA, DEEP_CANAL_4_AREA, DEEP_CANAL_AREA, OPEN_LAKE_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_2_AREA, SPRING_CAVE_AREA } from './areas';
+import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, DEEP_CANAL_2_AREA, DEEP_CANAL_3_AREA, DEEP_CANAL_4_AREA, DEEP_CANAL_AREA, OPEN_LAKE_2_AREA, OPEN_LAKE_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_2_AREA, SPRING_CAVE_AREA } from './areas';
 import { DEV_TEST_AREA } from './devAreas';
 import { DEFAULT_LOOK, LOOK_FIELDS, rescuedLook, type AxolotlLook, type AxolotlSex } from './axolotlLook';
 import { NAME_MAX, nameFits, nameLength, suggestedNamesFor } from './axolotlNames';
@@ -88,6 +88,7 @@ const DEEP_CANAL_2_ID = DEEP_CANAL_2_AREA.id;
 const DEEP_CANAL_3_ID = DEEP_CANAL_3_AREA.id;
 const DEEP_CANAL_4_ID = DEEP_CANAL_4_AREA.id;
 const OPEN_LAKE_ID = OPEN_LAKE_AREA.id;
+const OPEN_LAKE_2_ID = OPEN_LAKE_2_AREA.id;
 const LILY_PAD = 'pond/lily-pad';
 
 /** Steps the trip once with the axolotl at `pos`. */
@@ -295,6 +296,7 @@ describe('createSession', () => {
         'deep-canal-3': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'deep-canal-4': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'open-lake-1': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
+        'open-lake-2': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
       },
     });
     expect(STARTER_AXOLOTL_ID).toBe('starter');
@@ -1754,7 +1756,7 @@ describe('Start over (#73)', () => {
     const fresh = createSession();
     expect(fresh.hub.lastAreaId).toBe(CANAL_AREA_ID);
     expect(fresh.hub.metHazards).toEqual([]);
-    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID, SPRING_CAVE_ID, SPRING_CAVE_2_ID, DEEP_CANAL_ID, DEEP_CANAL_2_ID, DEEP_CANAL_3_ID, DEEP_CANAL_4_ID, OPEN_LAKE_ID]);
+    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID, SPRING_CAVE_ID, SPRING_CAVE_2_ID, DEEP_CANAL_ID, DEEP_CANAL_2_ID, DEEP_CANAL_3_ID, DEEP_CANAL_4_ID, OPEN_LAKE_ID, OPEN_LAKE_2_ID]);
     expect(fresh.areas.canal).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
@@ -1767,6 +1769,7 @@ describe('Start over (#73)', () => {
     expect(fresh.areas[DEEP_CANAL_3_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[DEEP_CANAL_4_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[OPEN_LAKE_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
+    expect(fresh.areas[OPEN_LAKE_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
   });
 });
 

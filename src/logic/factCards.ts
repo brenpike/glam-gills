@@ -147,6 +147,18 @@ export const PELICAN_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The mud turtle fact card, shown the first time the axolotl comes within MUD_TURTLE_MEET_RANGE of a
+ * mud turtle, outside the Home Spot (PRD C13; issue #212, ND-14).
+ * Sources and owner checks: PRD C13 only (ADR 0045).
+ */
+export const MUD_TURTLE_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'mud-turtle',
+  name: 'Mud turtle',
+  title: 'Meet the mud turtle',
+  body: 'Mud turtles live in ponds and streams from Texas to the Valley of Mexico. They hunt small fish at night. Axolotls stay safe by swimming away before they snap.',
+});
+
+/**
  * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
  * issue #77, ND-3).
  * Sources and owner checks: PRD C13 only (ADR 0045).
@@ -370,6 +382,13 @@ export const BLACK_BASS_MEET_RANGE = 180;
  * later than the first warning.
  */
 export const CORMORANT_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a mud turtle (issue #212, ND-14).
+ * Provisional; tune in play. The same as the heron's, and larger than the turtle's 110 px reach so
+ * the card can show before the first snap.
+ */
+export const MUD_TURTLE_MEET_RANGE = 180;
 
 /**
  * Centre distance in px to a bird of a pelican line within which the axolotl meets the pelicans

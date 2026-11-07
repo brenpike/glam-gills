@@ -860,7 +860,7 @@ describe('Area 12 registration (issue #211)', () => {
     return Object.fromEntries(areaIds.map((id) => [id, { ...NO_STARS, exit: true }]));
   }
 
-  it('is Area 12, last in AREAS, in the open lake, with its layout, exit, special treasure and windy look', () => {
+  it('is Area 12, at its place in AREAS, in the open lake, with its layout, exit, special treasure and windy look', () => {
     expect(OPEN_LAKE_AREA).toMatchObject({
       id: OPEN_LAKE_AREA_ID,
       number: 12,
@@ -870,7 +870,7 @@ describe('Area 12 registration (issue #211)', () => {
     });
     expect(OPEN_LAKE_AREA.layout).toBe(OPEN_LAKE_LAYOUT);
     expect(OPEN_LAKE_AREA.exit).toBe(OPEN_LAKE_EXIT);
-    expect(AREAS.at(-1)).toBe(OPEN_LAKE_AREA);
+    expect(AREAS[OPEN_LAKE_AREA.number - 1]).toBe(OPEN_LAKE_AREA);
     expect(areaById(OPEN_LAKE_AREA_ID)).toBe(OPEN_LAKE_AREA);
     expect(areaTimeOfDay(OPEN_LAKE_AREA)).toBe('day');
     expect(Object.isFrozen(OPEN_LAKE_AREA)).toBe(true);
@@ -909,12 +909,12 @@ describe('Area 12 registration (issue #211)', () => {
     expect(threatFactCards(OPEN_LAKE_LAYOUT)).toEqual([TILAPIA_FACT, CARP_FACT, PELICAN_FACT]);
   });
 
-  it('gives its threat cards, then the tadpole and shrimp cards, and puts the pelican card last in the area cards', () => {
+  it('gives its threat cards, then the tadpole and shrimp cards, and puts the pelican card last in the area cards through Area 12', () => {
     expect(sourceFactCards(OPEN_LAKE_LAYOUT)).toEqual({
       ids: ['tilapia', 'carp', 'pelican', 'tadpole', 'shrimp'],
       cards: [TILAPIA_FACT, CARP_FACT, PELICAN_FACT, TADPOLE_FACT, SHRIMP_FACT],
     });
-    expect(areaFactCards().at(-1)).toBe(PELICAN_FACT);
+    expect(areaFactCards(AREAS.slice(0, OPEN_LAKE_AREA.number)).at(-1)).toBe(PELICAN_FACT);
   });
 
   it("plays the open lake's cue, Lagoon Breeze, in its day version", () => {

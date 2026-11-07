@@ -60,7 +60,8 @@
  * relative luminance 0.1687 or more.
  *
  * Open lake (issue #211, Area 12): the open lake look ('open-lake') and its windy variant for Area 12
- * ('open-lake-windy'). The lake is wide open water under a wide sky, with the two volcanoes small on
+ * ('open-lake-windy'); issue #212 adds Area 13's still variant ('open-lake-still': a grey overcast sky and
+ * air wash, rays at half strength, ordinary clouds). The lake is wide open water under a wide sky, with the two volcanoes small on
  * the horizon. Its sky, water bands, haze and silt come from drawLake.ts. A look also says whether
  * the lakebed is painted into its chunks (`lakebed`: silt, smooth stones and tule roots with a light
  * lip on every top edge), whether its water is drawn by depth band (`depthBands`), whether the
@@ -100,8 +101,8 @@ import {
 /** Look ids shipped so far. Must match the logic layer's Habitat.look values. */
 export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave' | 'deep-canal' | 'open-lake';
 
-/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3; the deep canal at golden hour, Area 11; the open lake in the wind, Area 12). */
-export type AreaLookId = HabitatLookId | 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy';
+/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3; the deep canal at golden hour, Area 11; the open lake in the wind, Area 12; the open lake overcast and still, Area 13). */
+export type AreaLookId = HabitatLookId | 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy' | 'open-lake-still';
 
 /** Sky gradient (guide 7a): `top` at y 0 down to `horizon` at the surface. */
 export interface SkyLook {
@@ -875,6 +876,31 @@ export const OPEN_LAKE_WINDY_LOOK: HabitatLook = Object.freeze({
   streamingClouds: true,
 });
 
+/**
+ * Open lake still (issue #212, Area 13; guide 7a): the open lake overcast and still. An overcast
+ * grey-blue sky, #8a9bad (luminance 0.3186) at the top to #c4ced8 (0.6084) at the horizon, and a flat cool
+ * grey air wash over the sky band only. Through the wash the sky is #8a9aab (0.3155) and #bbc5cf (0.5503).
+ */
+export const OPEN_LAKE_STILL_SKY_TOP = '#8a9bad';
+export const OPEN_LAKE_STILL_SKY_HORIZON = '#c4ced8';
+export const OPEN_LAKE_STILL_AIR_WASH = 'rgba(140,150,160,0.16)';
+/** The still lake's light rays, at half the open lake's strength (guide 7a). */
+export const OPEN_LAKE_STILL_RAY_ALPHA_SCALE = 0.5;
+
+/**
+ * Open lake, overcast and still (issue #212, Area 13): the open lake look with the grey sky and wash,
+ * rays at half strength and the three ordinary day clouds (no streaming clouds). Water by depth band, haze,
+ * surface line, lakebed, volcano horizon and the day sun are the open lake's own.
+ */
+export const OPEN_LAKE_STILL_LOOK: HabitatLook = Object.freeze({
+  ...OPEN_LAKE_LOOK,
+  id: 'open-lake-still',
+  sky: Object.freeze({ top: OPEN_LAKE_STILL_SKY_TOP, horizon: OPEN_LAKE_STILL_SKY_HORIZON }),
+  airWash: OPEN_LAKE_STILL_AIR_WASH,
+  rayAlphaScale: OPEN_LAKE_STILL_RAY_ALPHA_SCALE,
+  streamingClouds: false,
+});
+
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   canal: CANAL_LOOK,
   pond: POND_LOOK,
@@ -885,13 +911,14 @@ const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   'deep-canal-golden': DEEP_CANAL_GOLDEN_LOOK,
   'open-lake': OPEN_LAKE_LOOK,
   'open-lake-windy': OPEN_LAKE_WINDY_LOOK,
+  'open-lake-still': OPEN_LAKE_STILL_LOOK,
 };
 
 /** Every shipped habitat look id, in habitat order. Area-map markers are keyed by these. */
 export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake'];
 
 /** Every shipped area look id: the habitat looks, then the per-area variants. */
-export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk', 'deep-canal-golden', 'open-lake-windy'];
+export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk', 'deep-canal-golden', 'open-lake-windy', 'open-lake-still'];
 
 export function isHabitatLookId(id: string): id is HabitatLookId {
   return (HABITAT_LOOK_IDS as readonly string[]).includes(id);

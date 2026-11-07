@@ -292,7 +292,7 @@ describe('habitat area labels (issue #113, ND-6)', () => {
       'Chinampa gardens: Areas 4 and 5',
       'Spring cave: Areas 6 and 7',
       'Deep canal: Areas 8 to 11',
-      'Open lake: Area 12',
+      'Open lake: Areas 12 and 13',
     ]);
   });
 
