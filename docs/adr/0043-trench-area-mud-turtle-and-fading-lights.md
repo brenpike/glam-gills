@@ -19,12 +19,7 @@ Three rules block that pit as built:
 
 Every predator so far swims or wades its route and strikes along the aim it locks. A pit floor suits a slow ambusher that creeps and snaps but never chases.
 
-Real basis, checked 2026-11-06 (web research only; the game fetches nothing):
-
-- Turtles of the World (Naturalis), Kinosternon hirtipes: the species ranges from the Big Bend region of Texas to the Valley of Mexico; it is found in lakes, ponds, streams, or rivers flowing into lakes; it is chiefly nocturnal; it eats insects, worms, small invertebrates, amphibians and small fish. The nominate subspecies, the Valley of Mexico mud turtle, lives only in the drainages of the Valley of Mexico.
-- The iNaturalist record of Kinosternon hirtipes in Xochimilco (owner decision on #209), which is why the turtle swims in the game's lake.
-
-"Axolotls stay safe by swimming away before they snap" is the game's rule (the snap goes to a spot fixed at the warning start), not a source claim. The fading light is game licence, not a real plant, and it has no fact card.
+The mud turtle swims in the game's lake by the owner's decision on #209. Its real basis (the sources, check date and game's-rule note of its card, "Meet the mud turtle") lives only in that card's paragraph in PRD C13, per [ADR 0045](0045-fact-card-sources-live-in-the-prd.md). The fading light is game licence, not a real plant, and it has no fact card.
 
 ## Decision
 
