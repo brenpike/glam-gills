@@ -23,7 +23,7 @@ ADR 0020 (ND-23) had each fact card's sources and owner checks kept by hand in t
 
 - The two copies can no longer drift, because there is one.
 - A source-only fix becomes a docs-only change. It is a no-bump path under AGENTS.md, and it starts no CI run under ADR 0033.
-- The PRD open-question rows stay the decision log: they record what the owner decided and when, as before.
+- The PRD open-question rows stay the decision log: they record what the owner decided and when, as before. A row may repeat the points the owner checked. When a row and the card's paragraph differ, the card's paragraph wins.
 - No lint enforces the rule. AGENTS.md states it.
 - A card added on a branch cut before this ADR keeps the old two-copy form until the branch meets it, and must be converted then.
 
