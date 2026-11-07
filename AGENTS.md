@@ -41,6 +41,7 @@ Markdown-only changes have no self-check.
 - Stay on Phaser 3. Do not upgrade to Phaser 4 unless asked.
 - Art follows [`docs/art-style-guide.md`](docs/art-style-guide.md).
 - Requirements live in the PRD, [`docs/prds/axolotl-mvp.md`](docs/prds/axolotl-mvp.md). Any requirement change updates the PRD in the same PR. Issues link to PRD IDs (such as B4) instead of restating requirements.
+- Fact card sources, quotes, check dates and owner checks live only in the card's PRD paragraph (C13, or C14 for the "Boy or girl?" and refuge cards). A card's comment in `src/logic/factCards.ts` names its PRD ID and holds no source text. See [ADR 0045](docs/adr/0045-fact-card-sources-live-in-the-prd.md).
 - `src/platform/` holds browser glue: network, page location, text entry, device storage, and build-time constants. Build-time constants (`__APP_VERSION__`, `__BUILD_ID__`) never appear in `src/logic/`; pass them in as arguments.
 - Do not add dependencies except in a planned scaffold step.
 - No ads, chat, in-app purchases, analytics, accounts, or network requests (including CDNs and webfonts). See [ADR 0007](docs/adr/0007-kid-safety-and-privacy.md). The one exception is the first-party update check in [ADR 0009](docs/adr/0009-update-check.md).
