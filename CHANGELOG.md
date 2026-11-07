@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-11-07
+
+### Added
+
+- Area 12, the open lake, now hides 12 treasures of its own: 4 Commons and 8 Rares (#214).
+- 5 new Decorations: the Windsock, the Pinwheel, the Twin volcanoes, the Little sailboat, and the Little pelican, Area 12's special treasure (#214).
+- 5 new Wearables with perks: the Wave socks, the Cloud scarf, the Pelican swim ring, the Surfboard (a big Back item) and the Pelican slippers (#214).
+- 2 new Dream colours, each in its own Paint shell: Tule green, a deep reed green, and Obsidian, a green-black volcanic glass (#214).
+
+### Changed
+
+- Area 12 no longer borrows Area 11's treasures, because it has its own (#214).
+- The Treasure Chest now lists 163 treasures, and the Collection Book shows 33 Dream colours (#214).
+
 ## [0.68.0] - 2026-11-06
 
 ### Added
