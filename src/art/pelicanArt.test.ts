@@ -117,6 +117,7 @@ function recordingContext(ops: Op[]): CanvasRenderingContext2D {
         const name = String(key);
         if ((STATE_KEYS as readonly string[]).includes(name)) return state[name];
         return (...args: unknown[]) => {
+          if (name === 'createRadialGradient') return { addColorStop: () => undefined };
           if (name === 'fill' || name === 'stroke') {
             ops.push({
               op: name,
@@ -624,7 +625,7 @@ describe('pelican poses and the lake bake', () => {
     } as never;
   }
 
-  it('bakeLakeTextures bakes ten small textures once, each at the logical size times the bake scale', () => {
+  it('bakeLakeTextures bakes every small texture once, each at the logical size times the bake scale', () => {
     vi.stubGlobal('Path2D', LogPath);
     const made = new Map<string, { w: number; h: number; ops: Op[] }>();
     const lake = bakeLakeTextures(fakeScene(made), 2);
