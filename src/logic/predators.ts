@@ -11,12 +11,27 @@ import {
   GARTER_SNAKE_MEET_RANGE,
   HERON_FACT,
   HERON_MEET_RANGE,
+  MUD_TURTLE_FACT,
+  MUD_TURTLE_MEET_RANGE,
   TILAPIA_FACT,
   TILAPIA_MEET_RANGE,
   type FactCard,
 } from './factCards';
 import type { RockWall } from './pebble';
-import { BLACK_BASS, CARP, CORMORANT, CRAYFISH, GARTER_SNAKE, HERON, LEGS, SWIM, TILAPIA, type ChaseTuning, type TilapiaTuning } from './tuning';
+import {
+  BLACK_BASS,
+  CARP,
+  CORMORANT,
+  CRAYFISH,
+  GARTER_SNAKE,
+  HERON,
+  LEGS,
+  MUD_TURTLE,
+  SWIM,
+  TILAPIA,
+  type ChaseTuning,
+  type TilapiaTuning,
+} from './tuning';
 import { normalize, scale, type Vec2 } from './vec';
 import { inSafeArea, type Point, type SafeArea, type SwimBounds, type TilapiaRoute } from './zone';
 
@@ -336,6 +351,22 @@ export const CORMORANT_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
   neverTouches: true,
 });
 
+/**
+ * The Valley of Mexico mud turtle (issue #212, ND-11 and ND-12), an ambusher: it warns by distance
+ * when the axolotl is within reach of it, snaps its head out to the spot fixed at its warning start
+ * from where it is (`fixedStrikeSpot`), and holds still facing the axolotl through its cooldown
+ * (`stillCooldown`). It never chases. It sees into cover, may touch and bumps gently, and is not a
+ * danger part.
+ */
+export const MUD_TURTLE_SPECIES: Readonly<PredatorSpecies> = Object.freeze({
+  id: 'mud-turtle',
+  name: 'Mud turtle',
+  tuning: MUD_TURTLE,
+  meetRange: MUD_TURTLE_MEET_RANGE,
+  fact: MUD_TURTLE_FACT,
+  rules: Object.freeze({ fixedStrikeSpot: true, stillCooldown: true }),
+});
+
 /** Every predator species. */
 export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.freeze([
   TILAPIA_SPECIES,
@@ -343,6 +374,7 @@ export const PREDATOR_SPECIES: readonly Readonly<PredatorSpecies>[] = Object.fre
   CRAYFISH_SPECIES,
   BLACK_BASS_SPECIES,
   CORMORANT_SPECIES,
+  MUD_TURTLE_SPECIES,
   GARTER_SNAKE_SPECIES,
   CARP_SPECIES,
 ]);

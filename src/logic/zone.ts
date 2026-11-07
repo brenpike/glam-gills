@@ -974,6 +974,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     type: copyElementType(element.type),
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
+    ...(element.fadingLight ? { fadingLight: { ...element.fadingLight } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
     ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
     ...(element.wind ? { wind: { ...element.wind } } : {}),

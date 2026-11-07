@@ -415,6 +415,7 @@ Non-hue cues at golden hour are the deep canal's (the moored boats, the old pavi
 
 - Band 3 (dark indigo) and band 4 (near-black) are under the floor (ink is 1.03:1 to 1.41:1 on them). They are defined for the later lake areas (13 and 14) and are never used by Area 12. Where a later area uses them they are lit only by what the player lights: the existing dark-water rule (7b, Dark water) holds, so the darkness hides scenery, snacks and treasure, and never the axolotl, the exit, predators or hazards, and nothing that must be seen there is edged by ink alone.
 - Nothing else is under the floor. Band 2 is dim, but its deep stop #2a7fb4 is the floor of the rule for the water, and the lake paints no dark interior.
+- Dark water in the lake (issue #212). A dark part of a lake area uses the one dark layer of 7b (Dark water), with its fade, light stamp and hide rules unchanged, but drawn in the lake's own colour: band 4's deep stop #04060f (luminance 0.0019, 1.41:1 with ink), the lake's deepest colour stop, opaque in its core. The dark layer's colour is a property of the look (ADR 0016: scenes read look properties, never look ids). The spring cave keeps its own dark colour, `SPRING_DARK` #050f1c (3g, 7b). A light erases the darkness, and what shows in the hole is the water under it: in the lake's dark part that is band 3, dark indigo (#1f2d7a / #1a2468 / #141a52), so a lit hole is dusky indigo, never the sunlit blue-green of the shallows. Both are under the floor on purpose (ink is 1.03:1 to 1.18:1 on band 3). So nothing in the lake's dark is edged by ink alone: what shows there carries its own light fill (7b, 10). The fading light's outline is 4.65:1 to 7.68:1 against band 3 and band 4 (7u), and the mud turtle's pale rim is 8.88:1 to 14.67:1 against them (7t). The darkness never hides the axolotl, the exit, predators or hazards, as in 7b. All values are `derived (provisional)`.
 
 Non-hue cues for the open lake: the volcano horizon (a snow-capped cone and a ridge of rounded humps), the pale terrace lip along every top edge of the lakebed with its stones and tule roots, the depth bands told by value (lighter at the shallows, darker with depth), the surface line, and in the windy variant the long streaming clouds, so it still reads without colour.
 
@@ -2577,6 +2578,21 @@ Area 6's moving hazards (PRD N2, Area 6 danger pass; the owner's answer to ND-3,
 | Reduced motion | Nothing moves: every part is baked into a chunk (9). | `derived (provisional)` |
 | Known limitation | See the lakebed lip at row seams (7b, Lakebed terraces). | `derived (provisional)` |
 
+**Open lake still variant (`open-lake-still`; issue #212; [ADR 0016](adr/0016-heron-timer-warnings-and-area-look-variants.md)).** The lake's still variant: the open lake look (3c) overcast and still, for a lake area that area data gives this look by key. Like the dusk pond (3c), it is a whole palette baked into the background chunks, never an overlay over gameplay depths. It keeps the lake's gradient stop positions (0, 0.45, 1), stack order, state rules, water by depth band, haze, surface line, lakebed, volcano horizon and daytime sun on its chunk (`sunChunk`); only the sky, the air wash, the ray strength and the clouds change. Every value below is `derived (provisional)` pending play-test (section 12).
+
+| Part | Construction | Source |
+|---|---|---|
+| Sky | An overcast grey-blue: #8a9bad (luminance 0.3186) at the top to #c4ced8 (0.6084) at the horizon, the prototype's gradient positions, from y 0 to SURF + 6 under the water, which starts at SURF + 3. Seen through the air wash: #8a9aab (0.3155) and #bbc5cf (0.5503); ink 5.00:1 and 8.23:1 there. | `derived (provisional)` |
+| Air wash | rgba(140,150,160,0.16), a flat cool grey, baked over the sky band (y 0 to SURF + 6) after the sun, the clouds and the volcanoes and before the water, as the dusk pond's wash (3c): never over the water, the haze or any gameplay depth. Through it the volcanoes keep their shapes: body #8fa5c2 (0.3663), shaded side #7f98b8 (0.3034), snow #e3e8ed (0.8041) and snow in shade #bfcdde (0.6026). | `derived (provisional)` |
+| Light rays | The three static rays of the lake at half strength (`rayAlphaScale` 0.5), white, at the day slant (`DAY_RAY_TINT`, `DAY_RAY_SLANT` 70). Same random draws as the open lake. The rays only lighten, so they never take a background under the floor. | `derived (provisional)` |
+| Clouds | The three ordinary day clouds of the prototype (Elements in the prototype, above), no streaming clouds (`streamingClouds` false), so nothing in the sky leans or streams: the air is still. | `derived (provisional)` |
+| Daytime | The day sun on its chunk and white rays: no dusk or golden-hour tint, no warm wash. The sun and the clouds sit under the grey wash, so the day reads dim, not dark. | `derived (provisional)` |
+| Water | By depth band, as the open lake (3c): band 1 sunlit blue-green, band 2 dusky blue, band 3 dark indigo and band 4 near-black, with their own hazes and the surface line, all unchanged. The sky is the only thing that tells this variant from the windy one by colour. | `derived (provisional)` |
+| Greyscale cue | A flat, grey, paler-toward-the-horizon sky with soft white clouds and faint rays, against the windy variant's long streaming clouds and full-strength rays: told by value and by cloud shape, never by hue, and never needed for play. | `derived (provisional)` |
+| Reduced motion | Nothing moves: every part is baked into a chunk (9). | `derived (provisional)` |
+
+**Still variant contrast rule.** The lake contrast rule (3c) holds: the sky stops, the sky seen through the wash, the volcano colours under the wash and every water, haze and bed colour have relative luminance 0.1687 or more where they are lit (the lowest is the shaded mountain side under the wash, 0.3034), so ink is 3:1 or better against them. The wash and the clouds are above the water line, so the hero stays the brightest thing in the water (2); the snow under the wash (0.8041) is below the Leucistic belly #ffe3ed (0.8231). Bands 3 and 4 are the recorded dark exceptions of 3c, lit only by what the player lights (3c, Dark water in the lake).
+
 The gap edges either side of the current (7b), the bank overhangs (7e), the root tangle (7e), the ghost nets (7j), the water hyacinth mats (7b), the spring cave's rock ledges and side grotto (7e), glow-plants and darkness (7b), and the pulsing vents, rock walls and pebble (7b), and the deep canal's moored hulls and sunken hull (7e), gliding trajineras and their shadows, side-canal inflow marks, murky water patches and bailing boats (7b), are separate sprites over these chunks, baked only for a look or area that needs them.
 
 ### 7b. Still to design
@@ -4131,6 +4147,88 @@ PRD N3, timing elements; ADR 0007 and [ADR 0042](adr/0042-pelican-line-and-wind-
 **Greyscale cues.** The warning by curved arcs that nest and grow toward the way of the wind, on the surface. The gust by straight lines that each end in a chevron, with two shorter trails, in rows through the surface band. The two read apart by shape alone: curved against straight with a chevron. The direction by the arcs' bow and the chevron's point. None relies on hue (10).
 
 **Reduced motion.** Under reduced motion the ripple arcs and the gust streaks hold still, but still show on their phases, because the push is gameplay and the warning must be seen: the arcs hold at their base places for the whole warning and the streaks at their base places for the whole gust, with no drift and no flow. The streak's fade with depth is its alpha, not a motion, so it stays (9).
+
+### 7t. Mud turtle (lake predator)
+
+PRD N3 and A11; ADR 0007, ADR 0008 and [ADR 0016](adr/0016-heron-timer-warnings-and-area-look-variants.md); issue #212. The mud turtle is a small, friendly Valley of Mexico mud turtle (Kinosternon hirtipes) for the dark lake bottom: a low, dark, slow walker that creeps along its stretch of the lakebed and never chases. When the explorer comes near it turns to face them and lifts its head as a warning, then stretches its neck out to a spot fixed at the warning's start, and holds still, facing the explorer, through its cooldown. It uses the shared predator rules with two rule options, `fixedStrikeSpot` and `stillCooldown`, on `MUD_TURTLE_SPECIES` in `src/logic/predators.ts`, with its tuning `MUD_TURTLE` in `src/logic/tuning.ts` (provisional). Colours are in 3g. This section is a design: the painter, the baked frames and the scene glue are added by the art step, and every value below is `derived (provisional)` and awaits a render (section 12).
+
+**Character rules**
+
+| Rule | Detail | Source |
+|---|---|---|
+| Gentle | Round and soft, never scary, as the tilapia (7c), the heron (7h), the cormorant (7n) and the black bass (7o): a low, domed shell, a round head on a short neck, four stubby round legs and a tiny round tail nub. A round, closed, toothless beak: one short blunt nub with a round tip (radius 2.5), no ridge, no hook and no serrations. No spikes, spines, keels or claws: the shell is smooth and every toe is a round end. | `derived (provisional)` |
+| Friendly face | A bead eye #1b1535 (radius 2.2) with two white glints and one tiny closed smile line in ink (1.6 wide) running back from the beak under the eye. Nothing else is on the face. | `derived (provisional)` |
+| Never | An open beak, teeth, a tongue, brows, red eyes or any red. The beak is one closed path in every frame. | `derived (provisional)` |
+| Never shown | Holding, grabbing, biting, lifting, pinning or carrying the axolotl or anything else (A11, ADR 0007, ADR 0008). No frame has the axolotl, a snack or any other thing in it, and no beak is ever drawn on, round or over anything: the snap ends in an empty closed beak and the neck draws back. A touch is a gentle bump. Whatever the rules give a touch, the art shows only the shared leg-loss poof or a gentle bump (3g, 9), as a tilapia touch does. | `derived (provisional)` |
+| No "!" bubble | The warning is the raised head. There is no "!" bubble and no glint: those are the tilapia's telegraph (7c). | `derived (provisional)` |
+| Hierarchy | No turtle fill lighter than the hero's belly #ffe3ed (0.8231): the rim is 0.7114, the beak 0.6080, the skin 0.2320 and the shell 0.0725. | `derived (provisional)` |
+| Told from the cormorant | Both are dark bodies with a pale edge, so they are told apart by shape first: a low flat-based dome on four legs, against an upright bird with a long neck and a wing-held T (7n). The rim is a warm sand #e6dcb0, against the cormorant's cool lavender #cec9f0. | `derived (provisional)` |
+
+**Colours and widths**
+
+| Part | Value | Contrast with ink | Source |
+|---|---|---|---|
+| Shell | #5a4a2c (0.0725), a dark olive-brown, drawn as the core of the shell group | 1.68:1 | `derived (provisional)` |
+| Rim | #e6dcb0 (0.7114), a pale sand, 2 px, just inside the ink and all round every part | 10.44:1 | `derived (provisional)` |
+| Skin: head, neck, legs, tail | #8c8650 (0.2320), a lighter olive | 3.87:1 | `derived (provisional)` |
+| Beak | #d8cda0 (0.6080), ink 2.4 outside its fill | 9.02:1 | `derived (provisional)` |
+| Scute lines, shine | Three curved lines rgba(230,220,176,0.45), 1.6 wide, on the dome (internal detail, never an edge); one shine rgba(255,255,255,0.35), an ellipse 8 x 2 on the dome's upper left. Inside the silhouette. | - | `derived (provisional)` |
+
+**Frames.** Five baked still frames, all facing right, sharing one frame: the union of the five poses with their ink plus 6 px of padding (about 82 x 47). The snap's head and neck are two pieces, drawn apart from the body frame as the pelican's bill and neck are (7r), because the head goes out up to 110 px. The anchor is the shell centre, the turtle's logic point, with the tail trailing toward -x; the scene mirrors every frame with `faceSprite`. Back to front: the far legs, the tail nub, the near legs, the neck, the head, the closed beak (ink 2.4 outside its fill), the shell, the scute lines and the one shine, then the eye. Every part but the beak is one rim group, painted ink first, then rim, then core: each part is inked LW (3.5) outside, filled with the rim, then its core, 2 px smaller, so the rim runs all the way round the silhouette and no ink or rim shows across a joint. The shell is a dome 40 wide and 13 tall on a flat base at y +4 (its top at y -9), at least three times as wide as tall. The head is a circle of radius 7; the legs are rounded ovals about 5 x 3.5, so the feet reach about 8 below the anchor.
+
+| Frame (key) | Construction | Source |
+|---|---|---|
+| Crawl: `mud-turtle-crawl-a`, `mud-turtle-crawl-b` | The shell level, the head out level and a little low at (21,-1) on a short neck, the beak level. The two frames differ only in the legs and the body: the diagonal leg pairs swing 3 px one way and the other, and `crawlB` is `crawlA` with the body moved 1 px down. | `derived (provisional)` |
+| Warn: `mud-turtle-warn` | The warning cue, turned toward the axolotl with the head up. The shell tipped 0.08 rad nose up, the front legs planted wide, and the neck raised straight up and a little forward to a head at (23,-14) with the beak tipped up 0.35 rad, closed. The head stands well above the dome, so the silhouette is taller and broken into a dome and a raised head, a change of silhouette. | `derived (provisional)` |
+| Snap: `mud-turtle-snap` | The neck stretched toward a fixed spot. The body frame is the shell tipped 0.05 rad nose down with the legs braced and a short neck stump at (17,-3); the head is a piece, `mud-turtle-head` (the round head, radius 7, the closed beak and the eye, anchored on the head centre), and the neck a piece, `mud-turtle-neck` (a plain skin tube 7 wide, one rim group, round ends, 48 px as baked, anchored on its top end centre). The scene stretches the neck along its length between the stump and the head, and puts the head on the way to the fixed spot. The spot is fixed when the warning starts, so the head goes to the same place whether or not the axolotl moves. The beak stays closed and empty, and the pieces never show anything held. | `derived (provisional)` |
+| Still: `mud-turtle-still` | The pose for rest, for the cooldown and for reduced motion. The legs planted level, the head out level at (21,-1), the beak closed, no tip and no swing, so nothing in it suggests motion. | `derived (provisional)` |
+
+**Placement.** The sprite's anchor is on the turtle's logic point, with the feet on the lakebed lane, at the predators' depth `tilapia` (35): above the dark layer (32) and the glow-plants (33), so the darkness never hides it (7b, Dark water), and behind the axolotl. Placements are area data. In the dark part of a lake area it shows over the darkness, so it carries its own light edge (below).
+
+**Phases and poses.** Times and speeds are the tuning's in `src/logic/tuning.ts` (provisional).
+
+| Phase | What shows | Source |
+|---|---|---|
+| Crawl | Under full motion the crawl frames swap every 0.5 s while it creeps along its stretch (20 px/s, never chasing), and the frame holds when it does not. It faces the way it crawls. Under reduced motion it holds `still`. | `derived (provisional)` |
+| Warning (1.2 s, above the 0.8 s floor) | The `warn` pose for the whole warning, held steady: never blinked (9, 10). It faces the axolotl. This is the cue that a snap is coming. | `derived (provisional)` |
+| Snap (0.3 s) | The `snap` body frame with the head and neck pieces: the head goes out from the shell to the fixed spot locked at the warning's start, then the neck draws back in. Only the neck stretches; nothing is held or grabbed. | `derived (provisional)` |
+| Cooldown (2.5 s) | The `still` pose, held, with the neck drawn in and the beak empty. It keeps facing the axolotl and does not turn away, so the empty, closed beak and the drawn-in neck are what say it is not holding on. | `derived (provisional)` |
+
+**Contrast.** The rim is 10.44:1 with ink, 9:1 or more, so ink and rim pass on any background by the pair method (10): 3.23:1 or better, and the rim runs all round every part, the head, neck and legs included, so no darker skin or shell fill meets the background. The beak is 9.02:1 with ink and passes on its own (3.00:1 or better). On lit lake water the ink carries the edge, held at 3:1 by the lake floor (3c). In the dark ink is only 1.41:1 on band 4, so the rim carries it: 8.88:1, 10.18:1 and 11.72:1 against band 3, and 13.46:1, 14.22:1 and 14.67:1 against band 4 (3c, Dark water in the lake). The shell alone is 2.17:1 to 2.36:1 against band 4, and the rim is 6.21:1 against the shell, so the dome reads as a dark shape inside a pale outline.
+
+**Greyscale cues.** Crawling: a low dark dome (0.0725) traced all round by a pale rim (0.7114), a pale beak and a lighter head and legs. Warning: the head raised above the dome, a taller broken silhouette. Snap: a long low shape with the neck stretched out. Still: the round dome. A touch: only the shared poof or bump. None relies on hue (10).
+
+**Reduced motion.** The turtle still crawls along its stretch, because that is gameplay, but holds the `still` frame and never swaps crawl frames. The warning switches to the `warn` pose at once and holds it. The snap still goes out to the fixed spot in 0.3 s, because it is gameplay (9).
+
+### 7u. Fading light (lake puzzle element)
+
+PRD N3, puzzle elements; ADR 0007; issue #212. The fading light is a puzzle element for the dark part of a lake area, the lake's own cousin of the spring cave glow-plant (7b): a light-bulb-like water plant, one round bloom like a small lantern on a short stalk, that sits on the lake bottom. The axolotl lights it by swimming into it. It then lights the water round it, and, unlike the glow-plant, the light fades: it stays fully lit for a while (15 s), dims over 4 s and goes out, and a touch relights it to full whether it is lit, dimming or out. The hint shows after 20 s in the dark. Its rules are `src/logic/fadingLights.ts`. Colours are in 3g. The painter and baked frames are added by the art step, and every value below is `derived (provisional)` (section 12).
+
+**Character rules**
+
+| Rule | Detail | Source |
+|---|---|---|
+| Gentle | One round bulb, round leaves and a curled stalk. No sharp points, no spikes, no face, no flame and no text. It is never a snack, a hint star, a hazard or a hiding place, and never shaped like a worm, an eye or a star. | `derived (provisional)` |
+| Distinct from the glow-plant | The glow-plant (7b) is three upright pods on stalks with two leaf blades, in teal and mint. The fading light is one large bulb (radius 14) on one hooked stalk, under a small cap and over a small collar, in warm yellow when lit and a pale blue outline when out. It is told apart by shape (one bulb against three pods, a hooked stalk against upright ones) and by colour, never by colour alone. | `derived (provisional)` |
+| No flash | Every change is a fade of 4 s or a breathe of 3 s, or one swap when touched. Nothing alternates and nothing changes faster than once per 2.4 s (10, Flashing). | `derived (provisional)` |
+| Out stays visible | The out state is never invisible and never faded below its own outline: the player can always find a light to touch again. | `derived (provisional)` |
+
+**Frames and anchor.** 88 x 88 (x and y -44 to 44), one frame for every state, so a swap is a texture change and the light never moves, as the glow-plant's. Three baked frames: `fading-light-out`, `fading-light-hint` and `fading-light-lit`. The anchor is the centre of the touch circle (the logic's). The bulb, radius 14, is centred on the anchor and covers the touch circle, so what is drawn is what is touched; if the logic's circle is larger, the bulb is enlarged to cover it. A small cap (radii 6 x 3.5, at (0,-15)) sits on the bulb and a small collar (radii 9 x 3.5, at (0,14)) under it; a curled stalk (3 wide) rises from a base at (0,32) in a hook to the collar, with two small round leaves (radii 7 x 4) at the base.
+
+| State | Construction | Source |
+|---|---|---|
+| Lit | Full glow. A halo rgba(255,236,150,0.55) at the centre, nothing at radius 40; the stalk and leaves as #3f9a6a tubes (0.2521) with 2 of ink a side, one `inkMany` group; the cap and collar #c9b36a (0.4570), ink 2.6; then the bulb #f2de8a (0.7295) with ink 2.6 and a white core (radius 5). The light round it in the dark is 200 px (7b, Dark water), the same radius as a lit glow-plant's. | `derived (provisional)` |
+| Dimming | The glow fades smoothly over 4 s, in the logic's time on the scene clock: the lit frame (with its halo) crossfades from alpha 1 to 0 over the out frame, on a smoothstep ease, flat at both ends. The out frame sits underneath at alpha 1 the whole time, so the light is never less visible than its outline. The 200 px light fades with it, in the logic's light share steps (7b). Under reduced motion there is no fade: the lit frame steps to alpha 0.5 and holds there until the light is out. | `derived (provisional)` |
+| Out | A dim outline, always visible. The stalk, leaves, cap, collar and bulb in a pale blue line #6aa8c0 (0.3488), 2.6 wide, round a faint body rgba(106,168,192,0.16). No ink and no gradient. Every shape is first stroked in a keyline of the lake's darkness, #04060f (band 4's deep stop, 3c), 1.2 px wider each side (5.0 wide), so the outline always sits on it. | `derived (provisional)` |
+| Hint | A gentle pulse. The out shapes in a brighter, thicker outline #cfeeff (0.8163), 3.6 wide, on a keyline 6.0 wide, over a soft ring of light (rgba(207,238,255,0.30) at the centre, nothing at radius 34). A second sprite over the light the hint points at. Under full motion it pulses (9): alpha 0.25 to 1 and up to 10% larger and back, one slow breathe every 3 s (a cosine on the scene clock), slower than the 2.4 s floor. Under reduced motion it brightens instead: still at alpha 1 and its own size, brighter and thicker than the out outline, with no pulse. | `derived (provisional)` |
+
+**Placement.** At `glowPlant` (33), as the glow-plants: just over the dark layer (32), so the darkness never hides a light, and under the tilapia (35). Placements are area data.
+
+**Contrast.** The out outline #6aa8c0 is 7.68:1 against its keyline and 4.65:1, 5.33:1 and 6.14:1 against band 3, 7.05:1, 7.44:1 and 7.68:1 against band 4, so it holds in the dark with or without the keyline. On the lit bands the keyline carries it: #04060f is 4.62:1 or better against every lit lake water (3c). The hint outline #cfeeff is 16.69:1 against the keyline and 10.11:1 or better against bands 3 and 4. The lit bulb is 10.69:1 with ink and the stalk 4.14:1 with ink; the lit frame is drawn on the water it lights, and the bulb is below the Leucistic belly (0.7295 against 0.8231), so the axolotl stays the brightest thing. The dim outline and the keyline never use ink alone (10).
+
+**Greyscale cues.** Out: a hollow pale-blue outline (0.3488) with no fill. Hint: the same shapes in a thicker, much lighter outline (0.8163) with a ring of light. Lit: a filled, inked bulb (0.7295) in a halo. Dimming: the lit bulb fading toward the out outline. Lit and out read by fill and weight, never by hue: a filled, inked bulb against a hollow line. One round bulb against three pods tells it from the glow-plant in greyscale too. None relies on hue (10).
+
+**Reduced motion.** No fade and no pulse. The light steps to half at the start of the dimming and holds, the hint shows still and brighter, and the lit and out swaps are instant. The light's 4 s clock still runs, because it is gameplay (9).
 
 ---
 

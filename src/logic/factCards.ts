@@ -147,6 +147,30 @@ export const PELICAN_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The mud turtle fact card, shown the first time the axolotl comes within MUD_TURTLE_MEET_RANGE of a
+ * mud turtle, outside the Home Spot (PRD C13; issue #212, ND-14). Provisional copy.
+ * Sources, checked 2026-11-06 (web research only; the game fetches nothing):
+ * Turtles of the World (Naturalis), Kinosternon hirtipes,
+ * https://turtles.linnaeus.naturalis.nl/linnaeus_ng/app/views/species/taxon.php?id=8022
+ * (the species ranges from the Big Bend region of Texas to the Valley of Mexico; it "is found in
+ * lakes, ponds, streams, or rivers flowing into lakes"; it "is chiefly nocturnal"; it eats insects,
+ * worms, small invertebrates, amphibians and small fish; the nominate subspecies K. h. hirtipes, the
+ * Valley of Mexico mud turtle, lives only in the drainages of the Valley of Mexico) for "ponds and
+ * streams", "from Texas to the Valley of Mexico", "at night" and "small fish";
+ * the iNaturalist record of Kinosternon hirtipes in Xochimilco (owner decision on issue #209), why
+ * the turtle swims in the game's lake. The card speaks of the species, so it never says the
+ * turtle lives only in the Valley of Mexico, and it never says a mud turtle eats an axolotl.
+ * "Axolotls stay safe by swimming away before they snap" is the game's rule (the snap goes to a spot
+ * fixed at the warning start), not a source claim.
+ */
+export const MUD_TURTLE_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'mud-turtle',
+  name: 'Mud turtle',
+  title: 'Meet the mud turtle',
+  body: 'Mud turtles live in ponds and streams from Texas to the Valley of Mexico. They hunt small fish at night. Axolotls stay safe by swimming away before they snap.',
+});
+
+/**
  * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
  * issue #77, ND-3).
  * Sources and owner checks: PRD C13 only (ADR 0045).
@@ -370,6 +394,13 @@ export const BLACK_BASS_MEET_RANGE = 180;
  * later than the first warning.
  */
 export const CORMORANT_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px within which the axolotl meets a mud turtle (issue #212, ND-14).
+ * Provisional; tune in play. The same as the heron's, and larger than the turtle's 110 px reach so
+ * the card can show before the first snap.
+ */
+export const MUD_TURTLE_MEET_RANGE = 180;
 
 /**
  * Centre distance in px to a bird of a pelican line within which the axolotl meets the pelicans

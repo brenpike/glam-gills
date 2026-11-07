@@ -71,7 +71,8 @@ export type DarkWaterPart =
   | 'moving-hazard'
   | 'warning'
   | 'stranded-axolotl'
-  | 'glow-plant';
+  | 'glow-plant'
+  | 'fading-light';
 
 /** The parts the darkness may hide, in DarkWaterPart order (issue #77, ND-7). */
 export const DARK_HIDDEN_PARTS: readonly DarkWaterPart[] = Object.freeze([
@@ -82,7 +83,10 @@ export const DARK_HIDDEN_PARTS: readonly DarkWaterPart[] = Object.freeze([
   'find',
 ]);
 
-/** The parts the darkness never hides, in DarkWaterPart order (issue #77, ND-7 and ND-9). */
+/**
+ * The parts the darkness never hides, in DarkWaterPart order (issue #77, ND-7 and ND-9). A fading
+ * light shows even when out (issue #212, ND-9).
+ */
 export const DARK_SHOWN_PARTS: readonly DarkWaterPart[] = Object.freeze([
   'axolotl',
   'exit',
@@ -92,6 +96,7 @@ export const DARK_SHOWN_PARTS: readonly DarkWaterPart[] = Object.freeze([
   'warning',
   'stranded-axolotl',
   'glow-plant',
+  'fading-light',
 ]);
 
 /** How the glow-plants move under the reduced-motion preference (issue #77, ND-8 and ND-18). */
