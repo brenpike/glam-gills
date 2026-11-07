@@ -3,6 +3,8 @@ import { createAxolotlRigView, type AxolotlRigView } from '../art/axolotlRig';
 import { AXO_MAX_TAIL_AMP, AXO_SCENE_SCALE, type AxolotlPose } from '../art/drawAxolotl';
 import { AXO_SIZE_SCALE } from '../art/drawAxolotlParts';
 import { dreamSheenAt } from '../art/drawDreamOverlay';
+import { LAKE_DARK } from '../art/drawLake';
+import { SPRING_DARK } from '../art/drawSpringCave';
 import { artOutfit } from '../art/drawWearables';
 import type { HabitatLook } from '../art/habitatLook';
 import type { MobileSnackTextures } from '../art/mobileSnackTextures';
@@ -35,6 +37,7 @@ import { TURN_SQUASH, bodyPoint, drawnAxolotl, type DrawnAxolotl } from '../logi
 import { currentAt, reedDragAt, reedsNear } from '../logic/environment';
 import { exitArrowSide } from '../logic/exitArrow';
 import { exitGateBase } from '../logic/exitGate';
+import { fadingLights, type FadingLightTimers } from '../logic/fadingLights';
 import {
   GAME_EVENTS,
   REGISTRY_KEYS,
@@ -91,6 +94,7 @@ import {
   CRAYFISH_SPECIES,
   GARTER_SNAKE_SPECIES,
   HERON_SPECIES,
+  MUD_TURTLE_SPECIES,
 } from '../logic/predators';
 import { addPulseCurrent, pulseMotion, pulsingCurrents, type PulseMotion, type PulsingCurrentSpawn } from '../logic/pulsingCurrents';
 import { mulberry32 } from '../logic/rng';
@@ -146,9 +150,10 @@ import { BlackBassView } from './BlackBassView';
 import { CarpView } from './CarpView';
 import { CormorantView } from './CormorantView';
 import { CrayfishView } from './CrayfishView';
-import { DarkCaveView } from './DarkCaveView';
+import { DarkCaveView, type DarkCaveFading } from './DarkCaveView';
 import { DragNetView, type DragNetFrame } from './DragNetView';
 import { ExitView } from './ExitView';
+import { FadingLightView, type FadingLightViewFrame } from './FadingLightView';
 import { FireflyView } from './FireflyView';
 import { FishingTrajineraView, type FishingTrajineraFrame } from './FishingTrajineraView';
 import { GarterSnakeView } from './GarterSnakeView';
@@ -162,6 +167,7 @@ import { MobileSnackView } from './MobileSnackView';
 import { MurkyWaterView, type MurkyWaterFrame } from './MurkyWaterView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
+import { MudTurtleView } from './MudTurtleView';
 import { PebbleRoomView } from './PebbleRoomView';
 import { PelicanLineView, type PelicanLineFrame } from './PelicanLineView';
 import { PetalView } from './PetalView';
@@ -199,6 +205,8 @@ const MOUTH_Y = 4.2;
 const MOUTH_AT: Vec2 = { x: 0, y: 0 };
 /** Scratch point for a dash sparkle spawn, reused each spawn; it is read straight into setPosition. */
 const SPARKLE_AT: Vec2 = { x: 0, y: 0 };
+/** The fading light timers of an area with no fading lights: none touched. Shared, so it allocates nothing. */
+const NO_FADING_LIGHT_TIMERS: FadingLightTimers = Object.freeze({});
 const REED_PERIOD = 4;
 const REED_TOUCH_RADIUS = 26;
 const REED_NUDGE_PX = 7;
@@ -366,6 +374,8 @@ export class SwimScene extends Phaser.Scene {
   private blackBassView: BlackBassView | null = null;
   /** The cormorants and their dive trails, or null in an area with no cormorant. */
   private cormorantView: CormorantView | null = null;
+  /** The mud turtles, or null in an area with no mud turtle. */
+  private mudTurtleView: MudTurtleView | null = null;
   /** The gliding trajineras, their shadows and push ripples, or null in an area with no gliding trajineras. */
   private trajineraView: TrajineraView | null = null;
   /** The murky patches, the dim ring, the meter and the warning cue, or null in an area with no murky patches. */
@@ -397,6 +407,12 @@ export class SwimScene extends Phaser.Scene {
    * light still growing in); empty in an area with no dark water.
    */
   private darkLightsNow: DarkLight[] = [];
+  /** The fading lights' state the dark layer reads, reused each frame. */
+  private darkFading: DarkCaveFading = { timers: NO_FADING_LIGHT_TIMERS, reduced: false };
+  /** The fading lights and their hint, or null in an area with no fading lights. */
+  private fadingLightView: FadingLightView | null = null;
+  /** The reused render argument of the fading light view, made on its first frame. */
+  private fadingLightFrame: FadingLightViewFrame | null = null;
   /** The tadpole and shrimp poses, or null in an area with no mobile snacks. */
   private mobileSnackView: MobileSnackView | null = null;
   /** The area's pulsing vents (issue #105, ND-5); empty in an area with none. Fixed for the trip. */
@@ -515,6 +531,7 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView = null;
     this.blackBassView = null;
     this.cormorantView = null;
+    this.mudTurtleView = null;
     this.trajineraView = null;
     this.murkyWaterView = null;
     this.murkyFrame = null;
@@ -528,6 +545,9 @@ export class SwimScene extends Phaser.Scene {
     this.darkCaveView = null;
     this.glowPlantView = null;
     this.darkLightsNow = [];
+    this.darkFading = { timers: NO_FADING_LIGHT_TIMERS, reduced: false };
+    this.fadingLightView = null;
+    this.fadingLightFrame = null;
     this.mobileSnackView = null;
     this.vents = [];
     this.pulsingCurrentView = null;
@@ -747,6 +767,16 @@ export class SwimScene extends Phaser.Scene {
    * by the area's bird count, the same class as the residual below. A scoop's bump arrives as the trip
    * step's impulse, as every bump does. The lake's rock walls are painted into the scenery chunks, so
    * PebbleRoomView never draws them; they still block the body (blockAtRock).
+   * Open lake Area 13 (#212): Areas 1 to 12 build and call nothing new, and Areas 6 and 7 keep the
+   * SPRING_DARK darkness (only a look with depth bands takes LAKE_DARK). MudTurtleView and
+   * FadingLightView are made once per trip, and only in an area with a mud turtle or with fading
+   * lights. MudTurtleView reuses its sprites and allocates only its render argument object; its
+   * warning sounds through the shared predator warning path, and the lights are silent (ND-26).
+   * FadingLightView reuses its sprites and a render argument object the scene makes once and reuses,
+   * and allocates nothing per frame. The dark layer's fading state is one object the scene reuses;
+   * in an area with fading lights DarkCaveView adds fadingLightCircles' result per frame, bounded by
+   * the light count, and its radii are quantized into steps, so a dimming light redraws the layer
+   * only on a step change.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -1012,6 +1042,9 @@ export class SwimScene extends Phaser.Scene {
     this.cormorantView = predators.some((predator) => predator.species === CORMORANT_SPECIES.id)
       ? new CormorantView(this, this.assets, predators)
       : null;
+    this.mudTurtleView = predators.some((predator) => predator.species === MUD_TURTLE_SPECIES.id)
+      ? new MudTurtleView(this, this.assets, predators)
+      : null;
     const lane = this.trip.trajineras;
     this.trajineraView = lane !== null ? new TrajineraView(this, this.assets, lane.boats) : null;
     const patches = murkyPatches(this.trip.encounter.hazards);
@@ -1030,9 +1063,13 @@ export class SwimScene extends Phaser.Scene {
     this.fireflyView = this.look.firefliesPerScreen > 0 ? new FireflyView(this, this.assets, this.look, zone) : null;
     this.petalView = this.look.sinkingPetalsPerScreen > 0 ? new PetalView(this, this.assets, this.look, zone) : null;
     const dark = this.trip.darkWater;
-    this.darkCaveView = dark !== null ? new DarkCaveView(this, this.assets, zone, dark, this.trip.elements) : null;
+    const darkColor = this.look.depthBands ? LAKE_DARK : SPRING_DARK;
+    this.darkCaveView =
+      dark !== null ? new DarkCaveView(this, this.assets, zone, dark, this.trip.elements, darkColor) : null;
     this.glowPlantView =
       glowPlants(this.trip.elements).length > 0 ? new GlowPlantView(this, this.assets, this.trip.elements) : null;
+    this.fadingLightView =
+      fadingLights(this.trip.elements).length > 0 ? new FadingLightView(this, this.assets, this.trip.elements) : null;
     this.pulsingCurrentView = this.vents.length > 0 ? new PulsingCurrentView(this, this.assets, this.vents) : null;
     // INVARIANT: a look that paints the lakebed paints its rock walls into the scenery chunks; they still block the body.
     const drawnWalls = this.look.lakebed ? [] : this.rockWalls;
@@ -1685,6 +1722,7 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.destroy();
     this.blackBassView?.destroy();
     this.cormorantView?.destroy();
+    this.mudTurtleView?.destroy();
     this.petalView?.destroy();
     this.trajineraView?.destroy();
     this.murkyWaterView?.destroy();
@@ -1693,6 +1731,7 @@ export class SwimScene extends Phaser.Scene {
     this.dragNetView?.destroy();
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
+    this.fadingLightView?.destroy();
     this.pulsingCurrentView?.destroy();
     this.pebbleRoomView?.destroy();
     this.pelicanLineView?.destroy();
@@ -1733,6 +1772,7 @@ export class SwimScene extends Phaser.Scene {
     this.crayfishView?.render({ encounter: this.trip.encounter, motion: this.motion, dt, axolotl: this.swim });
     this.blackBassView?.render({ encounter: this.trip.encounter, motion: this.motion, dt });
     this.cormorantView?.render({ encounter: this.trip.encounter, motion: this.motion, dt });
+    this.mudTurtleView?.render({ encounter: this.trip.encounter, motion: this.motion, dt });
     this.trajineraView?.render({ elementTime: this.trip.elementTime, motion: this.motion, dt });
     this.renderMurkyWater();
     this.renderBailingBuckets(dt);
@@ -1869,25 +1909,31 @@ export class SwimScene extends Phaser.Scene {
 
   /**
    * This frame's lights through the dark water (issue #77, ND-7): the axolotl's own glow round its
-   * body centre, the exit's faint glow and one light per glow-plant lit this trip. Only in an area
-   * with dark water; every other area calls nothing here.
+   * body centre, the exit's faint glow, one light per glow-plant lit this trip and, in an area with
+   * fading lights, one per fading light lit or dimming (issue #212). Only in an area with dark water;
+   * every other area calls nothing here.
    */
   private updateDarkLights(): void {
     if (this.darkCaveView === null) return;
     // One list for the dark layer and the dark rule, so a hint star shows only where the drawn light reaches.
+    const fading = this.darkFading;
+    fading.timers = this.trip.fadingLightTimers ?? NO_FADING_LIGHT_TIMERS;
+    fading.reduced = !this.motion.ambient;
     this.darkLightsNow = this.darkCaveView.lights({
       axolotl: this.swim,
       exit: this.area.exit,
       lit: this.trip.litGlowPlants,
       motion: this.glowPlantMotion,
       time: this.clock,
+      fading,
     });
   }
 
   /**
    * The dark layer and the glow-plants (issue #77, ND-7, ND-8 and ND-18): the plants lit this trip,
    * the hinted plant only while swimming (the trip snapshot's hint) and the camera view the dark
-   * layer is redrawn for. Only in an area with dark water or glow-plants.
+   * layer is redrawn for, then the fading lights. Only in an area with dark water, glow-plants or
+   * fading lights.
    */
   private renderDarkCave(): void {
     const lit = this.trip.litGlowPlants;
@@ -1898,6 +1944,23 @@ export class SwimScene extends Phaser.Scene {
       motion: this.glowPlantMotion,
       time: this.clock,
     });
+    this.renderFadingLights();
+  }
+
+  /**
+   * The fading lights (issue #212, ND-7 to ND-10): each light's share from its timer and the hinted
+   * light only while swimming (the trip snapshot's hint). Only in an area with fading lights; its
+   * argument object is made once and reused.
+   */
+  private renderFadingLights(): void {
+    const view = this.fadingLightView;
+    if (view === null) return;
+    const frame = (this.fadingLightFrame ??= { timers: NO_FADING_LIGHT_TIMERS, hint: null, reduced: false, time: 0 });
+    frame.timers = this.trip.fadingLightTimers ?? NO_FADING_LIGHT_TIMERS;
+    frame.hint = this.snapshot.fadingLightHint ?? null;
+    frame.reduced = !this.motion.ambient;
+    frame.time = this.clock;
+    view.render(frame);
   }
 
   /**

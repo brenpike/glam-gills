@@ -1,8 +1,9 @@
 import type * as Phaser from 'phaser';
-import { DARK_FADE_BAND, SOFT_LIGHT_RADIUS, SPRING_DARK, darkFadeEdges } from '../art/drawSpringCave';
+import { DARK_FADE_BAND, SOFT_LIGHT_RADIUS, darkFadeEdges } from '../art/drawSpringCave';
 import { DEPTH } from '../art/layers';
 import type { SpringCaveTextures } from '../art/springCaveTextures';
 import type { TexInfo } from '../art/textures';
+import { fadingLightCircles, fadingLights, type FadingLightTimers } from '../logic/fadingLights';
 import {
   darkLights,
   glowPlants,
@@ -20,6 +21,14 @@ const LEADING_LIGHTS = 2;
 /** Numbers kept per drawn light: x, y and radius, each rounded to whole px. */
 const LIGHT_FIELDS = 3;
 
+/** The fading lights' state for the dark layer (issue #212, ND-7 and ND-10). */
+export interface DarkCaveFading {
+  /** Seconds left on each touched fading light, by element id (`TripState.fadingLightTimers`). */
+  timers: FadingLightTimers;
+  /** True under reduced motion: a dimming light holds at half until out. */
+  reduced: boolean;
+}
+
 /** The part of the world the camera shows: Phaser's `camera.worldView` fits. */
 export type DarkCaveViewRect = Readonly<Pick<Phaser.Geom.Rectangle, 'x' | 'y' | 'width' | 'height'>>;
 
@@ -35,6 +44,8 @@ export interface DarkCaveLightFrame {
   motion: Readonly<GlowMotion>;
   /** Scene clock in seconds, for a new light growing in. */
   time: number;
+  /** The fading lights' state; absent or unused in an area with no fading lights. */
+  fading?: Readonly<DarkCaveFading>;
 }
 
 /**
@@ -95,18 +106,21 @@ function viewMeetsDark(view: DarkCaveViewRect, dark: Readonly<DarkWater>): boole
 
 /**
  * Draws the darkness over an area's dark part (issue #77, ND-7 and ND-18): one layer at
- * DEPTH.darkWater, the SPRING_DARK colour over the dark water rect. Each edge darkFadeEdges says
+ * DEPTH.darkWater, the darkness colour it is given over the dark water rect (SPRING_DARK in the
+ * spring cave, LAKE_DARK in the lake; issue #212). Each edge darkFadeEdges says
  * fades is erased with a baked fade strip stretched along the whole edge, so the darkness fades into
  * the water over DARK_FADE_BAND px (an edge on the world's side, at the surface or at the bed stays
  * hard); where two fading bands meet the darkness compounds to ease(dx) x ease(dy). Then a soft hole
  * is erased for each light darkLights gives: the axolotl's own glow, the exit's faint glow (so the exit, drawn under the
- * layer, always shows) and each lit glow-plant. A newly lit plant's light grows in over
+ * layer, always shows) and each lit glow-plant, then one for each fading light that is lit or
+ * dimming (fadingLightCircles, issue #212), its radius in quantized steps so a dimming light
+ * redraws the layer only on a step change. A newly lit plant's light grows in over
  * `motion.lightFadeIn` (lightShare), so under reduced motion it appears at once. `lights` gives the
  * frame's lights with that growth applied, and the scene uses the same list for the dark rule
  * (shownInDark), so a hint star never shows past the edge of a light still growing in. The layer is
  * redrawn only when the camera view meets the dark water and a light has moved, grown or appeared
  * since the last draw. Per frame it allocates darkLights' result and, on a new light, one lit-time
- * entry. The fading edges are worked out once, but each redraw erases every fading edge's strip
+ * entry; in an area with fading lights, also fadingLightCircles' result, bounded by the light count. The fading edges are worked out once, but each redraw erases every fading edge's strip
  * again before the light holes (two in Area 6, three in Area 7), and the layer is redrawn on most
  * swimming frames while the view meets the dark water, so the fade adds that work to those frames
  * (PRD open questions 524 and 543: an owner frame-time check). Visual only: nothing here changes
@@ -120,6 +134,8 @@ export class DarkCaveView {
   private readonly lightInfo: TexInfo;
   private readonly darkColor: number;
   private readonly plantIds: readonly string[];
+  /** True when the trip's elements hold a fading light; worked out once. */
+  private readonly hasFadingLights: boolean;
   /** Scene time each lit plant was first seen lit, by id. */
   private readonly litAt = new Map<string, number>();
   /** The lights of the last draw, LIGHT_FIELDS numbers each, rounded. Null before the first draw. */
@@ -127,7 +143,8 @@ export class DarkCaveView {
 
   /**
    * `area` gives the area's size, for which edges of the dark fade; `dark` is the area's dark water;
-   * `elements` holds the trip's elements, of which the glow-plants give light.
+   * `elements` holds the trip's elements, of which the glow-plants and the fading lights give light;
+   * `darkColor` is the darkness's CSS colour.
    */
   constructor(
     scene: Phaser.Scene,
@@ -135,11 +152,13 @@ export class DarkCaveView {
     area: Readonly<Pick<ZoneLayout, 'width' | 'bedTop'>>,
     private readonly dark: Readonly<DarkWater>,
     private readonly elements: readonly Readonly<ElementSpawn>[],
+    darkColor: string,
   ) {
     const textures = springCaveTextures(assets);
     this.lightInfo = textures.softLight;
-    this.darkColor = cssColor(SPRING_DARK).color;
+    this.darkColor = cssColor(darkColor).color;
     this.plantIds = glowPlants(elements).map((plant) => plant.id);
+    this.hasFadingLights = fadingLights(elements).length > 0;
     this.layer = scene.add
       .renderTexture(dark.x0, dark.y0, dark.x1 - dark.x0, dark.y1 - dark.y0)
       .setOrigin(0, 0)
@@ -183,17 +202,24 @@ export class DarkCaveView {
     }
   }
 
-  /** darkLights for this frame, each plant light's radius scaled by how far it has grown in. */
+  /**
+   * darkLights for this frame, each plant light's radius scaled by how far it has grown in, then the
+   * fading light circles when the area has fading lights and the frame gives their state.
+   */
   private lightsNow(frame: DarkCaveLightFrame): DarkLight[] {
     const lights = darkLights({ axolotl: frame.axolotl, exit: frame.exit, elements: this.elements, lit: frame.lit });
     // INVARIANT: darkLights gives LEADING_LIGHTS lights, then one per lit glow-plant in element order,
-    // which is plantIds order filtered by `lit`.
+    // which is plantIds order filtered by `lit`. The fading light circles are pushed only after this
+    // loop, so they never shift a plant light's index.
     let index = LEADING_LIGHTS;
     for (const id of this.plantIds) {
       if (!frame.lit.includes(id)) continue;
       const since = Math.max(0, frame.time - (this.litAt.get(id) ?? frame.time));
       lights[index].radius *= lightShare(since, frame.motion);
       index += 1;
+    }
+    if (this.hasFadingLights && frame.fading !== undefined) {
+      lights.push(...fadingLightCircles(this.elements, frame.fading.timers, frame.fading.reduced));
     }
     return lights;
   }
