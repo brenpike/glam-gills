@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-06
-- Amends: [ADR 0020](0020-u-turn-areas-garter-snake-and-hyacinth-mats.md) (in part: ND-23's two records of a card's sources and owner checks, one in `src/logic/factCards.ts` and one in PRD C13; every other ADR 0020 rule stays in force), [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (in part: its source-comment consequence), [ADR 0035](0035-deep-canal-moving-hazards-anchor-drop-and-mud-seep.md) (in part: its source-comment consequence)
+- Amends: [ADR 0020](0020-u-turn-areas-garter-snake-and-hyacinth-mats.md) (in part: ND-23's two records of a card's sources and owner checks, one in `src/logic/factCards.ts` and one in PRD C13; every other ADR 0020 rule stays in force), [ADR 0021](0021-danger-pass-chase-rule-and-moving-hazards.md) (in part: its source-comment consequence), [ADR 0035](0035-deep-canal-moving-hazards-anchor-drop-and-mud-seep.md) (in part: its source-comment consequence), [ADR 0037](0037-hub-areas-murky-water-and-the-bailing-bucket.md) (in part: the "Dirty water" card's source-comment note)
 - Related: [ADR 0007](0007-kid-safety-and-privacy.md) (kid safety, which keeps the fact cards true), [ADR 0033](0033-deploy-job-in-ci-and-docs-only-changes-skip-ci.md) (docs-only changes start no CI run)
 
 This ADR records the build choice for issue #217: where a fact card's sources and owner checks are kept.
