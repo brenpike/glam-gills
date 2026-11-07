@@ -49,8 +49,17 @@ export const PLASTIC_WORM_FACT: Readonly<FactCard> = Object.freeze({
  * National Audubon Society, Guide to North American Birds, Great Blue Heron,
  * https://www.audubon.org/field-guide/bird/great-blue-heron ("Forages mostly by standing still or
  * walking very slowly in shallow water, waiting for fish to swim near, then striking with a rapid
- * thrust of the bill."). Herons around Xochimilco's canals: owner to verify against a Xochimilco
- * bird list (for example CONABIO or the Parque Ecologico de Xochimilco); not checked.
+ * thrust of the bill.");
+ * Ramos, Mena, Schneider and Zambrano, "Movement ecology of captive-bred axolotls in restored and
+ * artificial wetlands: Conservation insights for amphibian reintroductions and translocations",
+ * PLoS One 20(4):e0314257 (2025), https://doi.org/10.1371/journal.pone.0314257 (read as
+ * https://pmc.ncbi.nlm.nih.gov/articles/PMC12043180/, checked 2026-11-06 by web research only, issue
+ * #217; site: a chinampa in the chinampa-refuge project in Xochimilco; "After the study concluded
+ * in Xochimilco, we observed a great egret (Ardea alba) capturing an axolotl from the canal."; "Great
+ * egrets are present in both study areas and are classified as migratory birds"). This is the bird
+ * of the Audubon Great Egret source above; the card's text does not change.
+ * Owner to verify: the quotes' exact wording on the page (read through a page summarizer), and
+ * "live around", since the study calls great egrets migratory.
  */
 export const HERON_FACT: Readonly<FactCard> = Object.freeze({
   id: 'heron',

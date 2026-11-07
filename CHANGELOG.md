@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.1] - 2026-11-06
+
+### Changed
+
+- The heron fact card's source now includes a 2025 study that saw a great egret catch an axolotl in a Xochimilco canal (#217).
+
 ## [0.67.0] - 2026-11-06
 
 ### Added
