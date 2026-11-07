@@ -10,7 +10,10 @@ export interface FactCard {
   unfoundHint?: string;
 }
 
-/** The tilapia fact card, shown the first time the axolotl meets a tilapia. */
+/**
+ * The tilapia fact card, shown the first time the axolotl meets a tilapia.
+ * Sources and owner checks: PRD C13 only (ADR 0045).
+ */
 export const TILAPIA_FACT: Readonly<FactCard> = Object.freeze({
   id: 'tilapia',
   name: 'Tilapia',
