@@ -73,6 +73,17 @@
  * arch are the shape cue apart from the disc, the pad, the plot and the stone (greyscale, guide 10);
  * the padlock badge still marks locked.
  *
+ * The Open lake marker (issue #211, Area 12) is a wide lake with two small snowy peaks behind its far
+ * shore, same frame, anchor and ink (3.5) for the lake. The lake is a rounded oval 60 wide and 44 tall
+ * to the ink edge, centred 3 below the marker centre (its inner ink edge stays clear of the number
+ * box, as the stone's does), and the peaks, two thick tubes with rounded tops, show 7 to 10 px above it,
+ * the taller one right of centre, so the marker reaches about 30 above the centre and 25 below it and
+ * stays inside the 64 px frame and clear of the focus ring. The lake is {@link MAP_OPEN_LAKE_FILL}
+ * (7.35:1 with ink, and 3.10:1 against the backdrop, so the edge passes 3:1 by its fill); locked it is
+ * white. The peaks are {@link MAP_OPEN_LAKE_PEAK_FILL} unlocked and white locked. The wide oval with
+ * two bumps on top is the shape cue apart from the disc, the pad, the plot, the stone with its shards
+ * and the trajinera (greyscale, guide 10); the padlock badge still marks locked. No text.
+ *
  * Sizes are to the outer ink edge, as the guide gives them. Every value is
  * `derived (provisional)`. Presentational only: no Phaser, and no import from
  * src/logic.
@@ -442,6 +453,51 @@ function trajineraArchPath(): Path2D {
   return p;
 }
 
+/**
+ * Unlocked Open lake marker fill: a clear lake blue. Ink 2b2350 on it is 7.35:1, and against the
+ * #0c6a8c backdrop it is 3.10:1, so the marker edge passes 3:1 by its fill as the other markers do.
+ * Locked it is white. Derived (provisional).
+ */
+export const MAP_OPEN_LAKE_FILL = '#6fc3ee';
+/** Open lake marker peak fill when unlocked: snow white with a cool tint. Locked it is white. Derived (provisional). */
+export const MAP_OPEN_LAKE_PEAK_FILL = '#f4f8fc';
+/** Colour width of a peak tube and the ink added each side. */
+const PEAK_W = 5;
+const PEAK_OL = 2;
+
+/**
+ * The lake and its peaks, in marker units (derived, provisional). The lake is an oval to the ink
+ * centreline (ink edge 30 across and 22 up and down), centred `centreY` below the marker centre, so
+ * its inner ink edge stays 1.5 clear of the number box at the top. Each peak is a tube from a foot
+ * hidden behind the lake up to its apex and down to the other foot.
+ */
+export const MAP_OPEN_LAKE = {
+  halfW: 30 - MARKER_LW / 2,
+  halfH: 22 - MARKER_LW / 2,
+  centreY: 3,
+  peaks: [
+    { footL: [-26, -6], apex: [-14, -23], footR: [-3, -6] },
+    { footL: [-6, -8], apex: [8, -26], footR: [24, -8] },
+  ],
+} as const;
+
+/** The lake outline (centreline) as a closed oval. */
+function lakePath(): Path2D {
+  const { halfW, halfH, centreY } = MAP_OPEN_LAKE;
+  const p = new Path2D();
+  ell(p, 0, centreY, halfW, halfH);
+  return p;
+}
+
+/** One peak (centreline): up one side to the apex and down the other. */
+function peakPath(peak: (typeof MAP_OPEN_LAKE.peaks)[number]): Path2D {
+  const p = new Path2D();
+  p.moveTo(peak.footL[0], peak.footL[1]);
+  p.lineTo(peak.apex[0], peak.apex[1]);
+  p.lineTo(peak.footR[0], peak.footR[1]);
+  return p;
+}
+
 type MarkerPainter = (ctx: CanvasRenderingContext2D, locked: boolean) => void;
 
 /** Every look's marker painter. A new `HabitatLookId` fails to compile until it has its own marker, so no look falls back to the canal's. */
@@ -465,6 +521,18 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
     inkMany(ctx, [seg(trajineraArchPath(), ARCH_W, locked ? WHITE : MAP_DEEP_CANAL_ARCH_FILL, ARCH_OL)]);
     shape(ctx, trajineraHullPath(), locked ? WHITE : MAP_DEEP_CANAL_HULL_FILL, MARKER_LW);
   },
+  // The peaks first, so the lake covers their feet; then the lake, whose fill is the marker's own fill.
+  'open-lake': (ctx, locked) => {
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    inkMany(
+      ctx,
+      MAP_OPEN_LAKE.peaks.map((peak) => seg(peakPath(peak), PEAK_W, locked ? WHITE : MAP_OPEN_LAKE_PEAK_FILL, PEAK_OL)),
+    );
+    ctx.restore();
+    shape(ctx, lakePath(), locked ? WHITE : MAP_OPEN_LAKE_FILL, MARKER_LW);
+  },
 };
 
 /**
@@ -476,7 +544,8 @@ const MARKER_PAINTERS: Readonly<Record<HabitatLookId, MarkerPainter>> = {
  * {@link MAP_SPRING_CAVE_STONE_FILL} stone, {@link MAP_SPRING_CAVE_CRYSTAL_FILL} crystals
  * unlocked, #ffffff crystals locked. The deep canal look is the trajinera, a crescent hull under a flower
  * arch: {@link MAP_DEEP_CANAL_HULL_FILL} hull and {@link MAP_DEEP_CANAL_ARCH_FILL} arch unlocked, #ffffff
- * both locked. The number is scene text; the locked cue is the padlock badge, not
+ * both locked. The open lake look is a wide oval lake with two snowy peaks behind it:
+ * {@link MAP_OPEN_LAKE_FILL} lake and {@link MAP_OPEN_LAKE_PEAK_FILL} peaks unlocked, #ffffff both locked. The number is scene text; the locked cue is the padlock badge, not
  * the fill. An unknown look throws a RangeError, so none falls back to the canal.
  */
 export function paintMapMarker(ctx: CanvasRenderingContext2D, locked: boolean, look: HabitatLookId = 'canal'): void {
@@ -649,7 +718,7 @@ export function paintMapPanel(ctx: CanvasRenderingContext2D, w: number, h: numbe
  * each tint is a light shade of its marker's hue. A new `HabitatLookId` fails to compile until it
  * has its tint. Ink on each is 4.5:1 or more and each is 3:1 or more against the #0c6a8c backdrop:
  * canal #fff6c9 (ink 13.21:1, backdrop 5.58:1), pond #caf2d0 (11.74:1, 4.95:1), chinampa #ffe7c6
- * (11.99:1, 5.06:1), spring cave #e5ebf2 (11.99:1, 5.06:1), deep canal #ffe3dd (11.85:1, 5.00:1).
+ * (11.99:1, 5.06:1), spring cave #e5ebf2 (11.99:1, 5.06:1), deep canal #ffe3dd (11.85:1, 5.00:1), open lake #d4edfa (11.85:1, 5.00:1).
  * Derived (provisional).
  */
 export const MAP_HABITAT_TINTS: Readonly<Record<HabitatLookId, string>> = {
@@ -658,6 +727,7 @@ export const MAP_HABITAT_TINTS: Readonly<Record<HabitatLookId, string>> = {
   chinampa: '#ffe7c6',
   'spring-cave': '#e5ebf2',
   'deep-canal': '#ffe3dd',
+  'open-lake': '#d4edfa',
 };
 
 /** The habitat tint of `look`. An unknown look throws a RangeError, so none falls back to the canal's. */

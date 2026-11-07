@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, DEEP_CANAL_2_AREA, DEEP_CANAL_3_AREA, DEEP_CANAL_4_AREA, DEEP_CANAL_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_2_AREA, SPRING_CAVE_AREA } from './areas';
+import { CANAL_AREA, CHINAMPA_2_AREA, CHINAMPA_AREA, DEEP_CANAL_2_AREA, DEEP_CANAL_3_AREA, DEEP_CANAL_4_AREA, DEEP_CANAL_AREA, OPEN_LAKE_AREA, POND_2_AREA, POND_AREA, SPRING_CAVE_2_AREA, SPRING_CAVE_AREA } from './areas';
 import { DEV_TEST_AREA } from './devAreas';
 import { DEFAULT_LOOK, LOOK_FIELDS, rescuedLook, type AxolotlLook, type AxolotlSex } from './axolotlLook';
 import { NAME_MAX, nameFits, nameLength, suggestedNamesFor } from './axolotlNames';
 import { CANAL_TREASURES, WEARABLE_SLOTS, type DreamColourId, type Wearable } from './catalogue';
 import { collectNear, type Collectible } from './collectibles';
+import { DEEP_CANAL_4_LAYOUT } from './deepCanal4Layout';
 import { createEncounterContext } from './encounter';
 import { REGISTRY_KEYS } from './gameEvents';
 import { REAL_MORPHS, STARTER_MORPH, axolotlFindId, isAxolotlFindId, type RealMorphId } from './morphs';
 import { dueFirstFindCards } from './firstFind';
+import { OPEN_LAKE_LAYOUT, OPEN_LAKE_SHARED_TREASURES } from './openLakeLayout';
 import { emptyOutfit, type Outfit } from './outfit';
 import { nextTripSeed, type PlacedFind } from './placement';
 import { pickStranding } from './rescue';
@@ -62,7 +64,7 @@ import {
 } from './trip';
 import { TRIP_REGISTRY_KEYS } from './tripEvents';
 import { LEGS } from './tuning';
-import { CANAL_AREA_ID, buildCanalZone, type Point } from './zone';
+import { CANAL_AREA_ID, DEFAULT_ZONE_SEED, buildCanalZone, buildZone, type Point } from './zone';
 
 const DT = 1 / 60;
 const FIRST_SEED = 0x1234abcd;
@@ -85,6 +87,7 @@ const DEEP_CANAL_ID = DEEP_CANAL_AREA.id;
 const DEEP_CANAL_2_ID = DEEP_CANAL_2_AREA.id;
 const DEEP_CANAL_3_ID = DEEP_CANAL_3_AREA.id;
 const DEEP_CANAL_4_ID = DEEP_CANAL_4_AREA.id;
+const OPEN_LAKE_ID = OPEN_LAKE_AREA.id;
 const LILY_PAD = 'pond/lily-pad';
 
 /** Steps the trip once with the axolotl at `pos`. */
@@ -291,6 +294,7 @@ describe('createSession', () => {
         'deep-canal-2': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'deep-canal-3': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
         'deep-canal-4': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
+        'open-lake-1': { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
       },
     });
     expect(STARTER_AXOLOTL_ID).toBe('starter');
@@ -613,6 +617,50 @@ describe('lost treasures next trip (A12, B9)', () => {
     expect(after.areas.canal.returnedFinds).toEqual([find.id]);
     expect(after.areas.canal.waitingStranded?.morph).toBe(morph);
     expect(startRescueTrip(after, 0).placed.map((placed) => placed.id)).toContain(find.id);
+  });
+});
+
+describe('a treasure Area 12 shares with Area 11 (issue #211, ND-12; auto-taken Q4)', () => {
+  const lakeZone = buildZone(OPEN_LAKE_LAYOUT, DEFAULT_ZONE_SEED);
+  const area11Zone = buildZone(DEEP_CANAL_4_LAYOUT, DEFAULT_ZONE_SEED);
+  const shared = OPEN_LAKE_SHARED_TREASURES.find((treasure) => treasure.id !== OPEN_LAKE_AREA.specialTreasureId);
+  if (shared === undefined) throw new Error('Area 12 shares no treasure but its special');
+  const sharedId = shared.id;
+  const TRIP_SEEDS = [0, 1, 2, 3, 42];
+
+  /** A session whose last Area 12 trip was carried home losing `sharedId`. */
+  function lostInLake(): Session {
+    return recordTripEnd(withStarter(), { ...record([], 1), areaId: OPEN_LAKE_ID, returnedFinds: [sharedId] });
+  }
+
+  /** The ids a trip in the area of `areaZone` places with `tripSeed`, started from `session`'s banked ids and that area's lost treasures. */
+  function placedIds(session: Session, areaZone: typeof lakeZone, tripSeed: number): string[] {
+    const start = tripStart(session, tripSeed, areaZone.areaId);
+    return createTrip(areaZone, LEGS, start.banked, tripSeed, { returnedFinds: start.returnedFinds }).placed.map((find) => find.id);
+  }
+
+  it('is a treasure Area 11 owns, not its special treasure', () => {
+    expect(DEEP_CANAL_4_LAYOUT.treasures.map((treasure) => treasure.id)).toContain(sharedId);
+    expect(sharedId).not.toBe(OPEN_LAKE_AREA.specialTreasureId);
+  });
+
+  it('comes back on the next Area 12 trip when lost there, whatever its seed, and stays in Area 12 memory only', () => {
+    const session = lostInLake();
+    expect(tripStart(session, 0, OPEN_LAKE_ID).returnedFinds).toEqual([sharedId]);
+    expect(tripStart(session, 0, DEEP_CANAL_4_ID).returnedFinds).toEqual([]);
+    for (const seed of TRIP_SEEDS) expect(placedIds(session, lakeZone, seed), `seed ${seed}`).toContain(sharedId);
+  });
+
+  it.each([
+    ['Area 11', DEEP_CANAL_4_ID],
+    ['Area 12', OPEN_LAKE_ID],
+  ])('is placed in neither area once banked in %s', (_name, areaId) => {
+    const banked = recordTripEnd(lostInLake(), { ...record([sharedId], 2), areaId });
+    expect(banked.hub.banked).toContain(sharedId);
+    for (const seed of TRIP_SEEDS) {
+      expect(placedIds(banked, lakeZone, seed), `Area 12, seed ${seed}`).not.toContain(sharedId);
+      expect(placedIds(banked, area11Zone, seed), `Area 11, seed ${seed}`).not.toContain(sharedId);
+    }
   });
 });
 
@@ -1706,7 +1754,7 @@ describe('Start over (#73)', () => {
     const fresh = createSession();
     expect(fresh.hub.lastAreaId).toBe(CANAL_AREA_ID);
     expect(fresh.hub.metHazards).toEqual([]);
-    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID, SPRING_CAVE_ID, SPRING_CAVE_2_ID, DEEP_CANAL_ID, DEEP_CANAL_2_ID, DEEP_CANAL_3_ID, DEEP_CANAL_4_ID]);
+    expect(Object.keys(fresh.areas)).toEqual([CANAL_AREA_ID, POND_ID, POND_2_ID, CHINAMPA_ID, CHINAMPA_2_ID, SPRING_CAVE_ID, SPRING_CAVE_2_ID, DEEP_CANAL_ID, DEEP_CANAL_2_ID, DEEP_CANAL_3_ID, DEEP_CANAL_4_ID, OPEN_LAKE_ID]);
     expect(fresh.areas.canal).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[POND_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
@@ -1718,6 +1766,7 @@ describe('Start over (#73)', () => {
     expect(fresh.areas[DEEP_CANAL_2_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[DEEP_CANAL_3_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
     expect(fresh.areas[DEEP_CANAL_4_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
+    expect(fresh.areas[OPEN_LAKE_ID]).toEqual(areaMemory(fresh, DEV_TEST_AREA.id));
   });
 });
 

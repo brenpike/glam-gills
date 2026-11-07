@@ -15,12 +15,18 @@ import {
   movingHazardPhase,
   type MovingHazardSpawn,
 } from './movingHazards';
+import { pelicanBirdPositions, pelicanLinePhase, type PelicanLineSpawn } from './pelicanLine';
 import type { TripState } from './trip';
+import { SURF } from './zone';
 
-/** The parts of a trip the hazard sound edges read. A TripState is one. */
-export type HazardSoundTrip = Readonly<Pick<TripState, 'phase' | 'ghostNets' | 'elements' | 'elementTime'>> & {
-  readonly encounter: Readonly<Pick<EncounterState, 'movingHazards' | 'hazardTime'>>;
-};
+/**
+ * The parts of a trip the hazard sound edges read. A TripState is one. `pelicanLines` may be left
+ * out when the trip has none.
+ */
+export type HazardSoundTrip = Readonly<Pick<TripState, 'phase' | 'ghostNets' | 'elements' | 'elementTime'>> &
+  Readonly<Partial<Pick<TripState, 'pelicanLines'>>> & {
+    readonly encounter: Readonly<Pick<EncounterState, 'movingHazards' | 'hazardTime'>>;
+  };
 
 /**
  * What one frame of a trip leaves for the next frame's edges: whether the explorer was snagged, and
@@ -43,8 +49,9 @@ export interface ViewRect {
 
 /**
  * The hazard edges of one frame: the snag ended (wriggle free, ND-5), an on-screen moving hazard of
- * any type started its warning (the ripple, ND-4; issue #77, ND-3), and an on-screen mat pair
- * started opening (ND-6). Each is at most one a frame. `poleWarned` keeps its first type's name.
+ * any type or an on-screen pelican line started its warning (the ripple, ND-4; issue #77, ND-3;
+ * issue #211, ND-14), and an on-screen mat pair started opening (ND-6). Each is at most one a frame.
+ * `poleWarned` keeps its first type's name.
  */
 export interface HazardEdges {
   readonly snagEnded: boolean;
@@ -95,6 +102,26 @@ function anyMovingHazardWarned(
   return false;
 }
 
+/**
+ * Whether any bird of the pelican line has its scoop box, `scoopWidth` wide and from SURF down to the
+ * dip depth, overlapping `view` at element time `t`.
+ */
+function pelicanLineOnScreen(line: Readonly<PelicanLineSpawn>, t: number, view: ViewRect): boolean {
+  const half = line.tuning.scoopWidth / 2;
+  return pelicanBirdPositions(line, t).some((bird) =>
+    overlapsView(view, bird.x - half, bird.x + half, SURF, SURF + line.tuning.dipDepth),
+  );
+}
+
+/** Whether some on-screen pelican line goes into 'warn' between `before` and `now` (issue #211, ND-14). */
+function anyPelicanLineWarned(lines: readonly Readonly<PelicanLineSpawn>[], before: number, now: number, view: ViewRect): boolean {
+  for (const line of lines) {
+    if (!pelicanLineOnScreen(line, now, view)) continue;
+    if (pelicanLinePhase(line, before).phase !== 'warn' && pelicanLinePhase(line, now).phase === 'warn') return true;
+  }
+  return false;
+}
+
 /** Whether some on-screen water hyacinth mat pair goes into 'opening' between `before` and `now` (ND-6). */
 function anyMatsOpened(elements: readonly Readonly<ElementSpawn>[], before: number, now: number, view: ViewRect): boolean {
   for (const element of elements) {
@@ -110,7 +137,9 @@ function anyMatsOpened(elements: readonly Readonly<ElementSpawn>[], before: numb
  * first frame and none unless the trip is swimming now, so the carry start's endSnag plays no
  * wriggle. The snag ends when the explorer was snagged and is not now (ND-5). A moving hazard of any
  * type warns when it goes from 'rest' to 'warn' with its sweep on screen where it really is;
- * several in one frame are one edge (ND-4; issue #77, ND-3). Mats open when a water hyacinth pair goes into 'opening' with its box on screen; at most
+ * several in one frame are one edge (ND-4; issue #77, ND-3). An on-screen pelican line (a bird's
+ * scoop box overlaps the view) going into 'warn' is the same edge, so it adds no second ripple on a
+ * frame a pole warns (issue #211, ND-14); the wind and waves give none. Mats open when a water hyacinth pair goes into 'opening' with its box on screen; at most
  * one a frame (ND-6). The jab, hold, lift, open, closing and closed phases and off-screen starts give
  * none. Returns NO_HAZARD_EDGES when there are none.
  */
@@ -118,11 +147,12 @@ export function hazardSoundEdges(prev: HazardSnapshot | undefined, trip: HazardS
   if (prev === undefined || trip.phase !== 'swimming') return NO_HAZARD_EDGES;
   const snagEnded = prev.snagged && !isSnagged(trip.ghostNets);
   const { movingHazards, hazardTime } = trip.encounter;
-  const poleWarned =
+  const movingWarned =
     movingHazards !== undefined &&
     hazardTime !== undefined &&
     prev.hazardTime !== undefined &&
     anyMovingHazardWarned(movingHazards, prev.hazardTime, hazardTime, view);
+  const poleWarned = movingWarned || anyPelicanLineWarned(trip.pelicanLines ?? [], prev.elementTime, trip.elementTime, view);
   const matsOpened = anyMatsOpened(trip.elements, prev.elementTime, trip.elementTime, view);
   if (!snagEnded && !poleWarned && !matsOpened) return NO_HAZARD_EDGES;
   return { snagEnded, poleWarned, matsOpened };

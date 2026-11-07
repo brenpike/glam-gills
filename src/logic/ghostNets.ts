@@ -19,6 +19,13 @@ export const GHOST_NET: Readonly<HazardType> = Object.freeze({
 });
 
 /**
+ * The safe passing width: the least clear width of a gap, between the places the body centre must
+ * stay out of. One body height (twice the net reach, the body's half height) of room, so the
+ * axolotl may stray half a body either way off the middle of a gap and still pass clear.
+ */
+export const SAFE_PASSING_WIDTH = 2 * GHOST_NET.reach;
+
+/**
  * Ghost net state of a trip: the nets, the seconds of snag time left (0 when not snagged) and the
  * ids of the nets whose reach held the explorer on the last step. Functions in this module never
  * mutate their input; they return new states.

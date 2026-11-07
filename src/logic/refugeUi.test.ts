@@ -76,6 +76,12 @@ const AREA_LINES: Readonly<Record<string, string>> = Object.freeze({
   'deep-canal': 'Areas 8 to 10',
 });
 
+/** Every section's habitat name by section id: the PRD N2 area table's, then the open lake's (issue #211). */
+const SECTION_NAMES: Readonly<Record<string, string>> = Object.freeze({ ...HABITAT_NAMES, 'open-lake': 'Open lake' });
+
+/** Every section's area line by section id: AREA_LINES, then the open lake's (issue #211). */
+const SECTION_AREA_LINES: Readonly<Record<string, string>> = Object.freeze({ ...AREA_LINES, 'open-lake': 'Area 12' });
+
 /** Height of a one-line area line panel: 18 px text and the 2 px padding above and below. */
 const AREA_LINE_H = AREA_LINE_PX * LINE_HEIGHT_EM + 2 * REFUGE_AREA_LINE_PAD_Y;
 
@@ -125,7 +131,7 @@ function panelSize(text: string, px: number, wrapW: number, padX: number, padY: 
 
 /** An area line panel as the scene draws it: 18 px text padded 8 across and 2 down. */
 function areaLineSize(id: string, wrapW: number): Size {
-  return panelSize(AREA_LINES[id], AREA_LINE_PX, wrapW, REFUGE_AREA_LINE_PAD_X, REFUGE_AREA_LINE_PAD_Y);
+  return panelSize(SECTION_AREA_LINES[id], AREA_LINE_PX, wrapW, REFUGE_AREA_LINE_PAD_X, REFUGE_AREA_LINE_PAD_Y);
 }
 
 /**
@@ -138,7 +144,7 @@ function measureFor(entries: readonly RefugeEntry[]): RefugeMeasure {
   const shows = (id: string): boolean => id === 'canal' || shown.has(id);
   return {
     title: (wrapW) => panelSize(TITLE_TEXT, TITLE_PX, wrapW, 8, 8),
-    name: (id, wrapW) => panelSize(shows(id) ? HABITAT_NAMES[id] : HIDDEN_NAME, NAME_PX, wrapW, 8, 4),
+    name: (id, wrapW) => panelSize(shows(id) ? SECTION_NAMES[id] : HIDDEN_NAME, NAME_PX, wrapW, 8, 4),
     hint: (id, wrapW) => (id === 'canal' ? null : panelSize(HINT_TEXT, HINT_PX, wrapW, 8, 4)),
     areaLine: (id, wrapW) => (shows(id) ? areaLineSize(id, wrapW) : null),
   };
@@ -153,7 +159,7 @@ function measureWithoutAreaLines(entries: readonly RefugeEntry[]): RefugeMeasure
 /** Every habitat named and every area line shown, so the widest names and area lines are measured. */
 const NAMED_MEASURE: RefugeMeasure = {
   ...measureFor([]),
-  name: (id, wrapW) => panelSize(HABITAT_NAMES[id], NAME_PX, wrapW, 8, 4),
+  name: (id, wrapW) => panelSize(SECTION_NAMES[id], NAME_PX, wrapW, 8, 4),
   areaLine: areaLineSize,
 };
 
@@ -538,19 +544,21 @@ describe('refugeLayout at the smallest canvases', () => {
   });
 
   it.each([SMALL_LANDSCAPE, SMALL_PORTRAIT])(
-    "fits today's five sections at $cssW x $cssH, clean or not, and shows the third whole two pans on, the fourth three pans on and the last four pans on",
+    "fits today's six sections at $cssW x $cssH, clean or not, and shows the third whole two pans on, the fourth three pans on, the fifth four pans on and the last five pans on",
     (view) => {
-      for (const clean of [0, 1, 2, 3, 4, 5]) {
+      for (const clean of [0, 1, 2, 3, 4, 5, 6]) {
         const entries = todaysSections(clean);
         const layout = layoutOf(view, entries);
         expect(layout.fits, `clean=${clean}`).toBe(true);
-        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
+        expect(layout.sections.map((section) => section.id)).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake']);
         const twoPans = panRefugeScroll(layout, panRefugeScroll(layout, 0, 1), 1);
         expect(sectionShows(layout, 2, twoPans), `clean=${clean}`).toBe(true);
         const threePans = panRefugeScroll(layout, twoPans, 1);
         expect(sectionShows(layout, 3, threePans), `clean=${clean}`).toBe(true);
         const fourPans = panRefugeScroll(layout, threePans, 1);
         expect(sectionShows(layout, 4, fourPans), `clean=${clean}`).toBe(true);
+        const fivePans = panRefugeScroll(layout, fourPans, 1);
+        expect(sectionShows(layout, 5, fivePans), `clean=${clean}`).toBe(true);
       }
     },
   );

@@ -87,12 +87,23 @@
  * the tilapia and behind the halo and the axolotl. Its dive trail bubbles use `bubbles`. `petals`
  * (the golden-hour drifting petals) sits between bg and haze, above the reeds and the cave front:
  * hazed scenery, below every cue object.
+ * Area 12 (issue #211). The pelican line takes the heron's two bands, with values of its own, as no
+ * other layer shares `heronBody` or `heronStab`: `pelicanBody` (the floating body, neck and head at
+ * the water line, and the body of the scoop and the rise) sits just over `heronBody`, above the haze
+ * and under `homeSpot`, so every cue object draws over it; `pelicanBill` (the dipped head and bill,
+ * and the neck piece joining it to the body) sits just over `heronStab`, in front of the tilapia and
+ * the moving hazard band and behind the halo and the axolotl, so the bill is never drawn over the
+ * hero. `pelicanSplash` (the scoop splash at the water line) and `windRipple` (the surface ripple
+ * arcs of the warning) sit just above the surface line and the drag net floats, below the pads. `windStreak` (the gust streaks and
+ * their chevrons) sits just over the fishing lure and below the tilapia: a see-through cue above the
+ * scenery and the snacks, behind every predator, moving hazard, the halo and the axolotl, so a streak
+ * never hides the hero.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker < petals
- * < haze < trajineraShadow < hyacinthMat < heronBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
- * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < rock < fishingLure < tilapia
+ * < haze < trajineraShadow < hyacinthMat < heronBody < pelicanBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
+ * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < rock < fishingLure < windStreak < tilapia
  * < movingHazard = trajineraHull = bailingBoat = bailingShadow = fishingBoat = fishingShadow = dragNetBoat
- * < heronStab < halo = bailingBucket < friend < axolotl < queasyTint < bailingBucketFront
- * < bubbles < surface < dragNetFloats < pads < fireflies < hint < fx < ui.
+ * < heronStab < pelicanBill < halo = bailingBucket < friend < axolotl < queasyTint < bailingBucketFront
+ * < bubbles < surface < dragNetFloats < pelicanSplash = windRipple < pads < fireflies < hint < fx < ui.
  */
 export const DEPTH = {
   bg: 0,
@@ -114,6 +125,8 @@ export const DEPTH = {
   hyacinthMat: 22,
   /** Provisional. Wading heron body, legs, and rest, watch and warn head and neck: above the haze, below every cue object. */
   heronBody: 23,
+  /** Provisional. Pelican body, neck and head at the water line: just over the heron body, above the haze, below every cue object. */
+  pelicanBody: 23.5,
   /** Provisional. Home Spot burrow and marker flag. */
   homeSpot: 24,
   /** Provisional. Home Spot safe-ring dots. */
@@ -137,6 +150,8 @@ export const DEPTH = {
   rock: 34,
   /** Provisional. Fishing lure, its line and float bead: above collectibles and the rock, below every predator, the halo and the axolotl. */
   fishingLure: 34.5,
+  /** Provisional. Wind gust streaks and chevrons: above the fishing lure, below every predator, the halo and the axolotl. */
+  windStreak: 34.6,
   /** Provisional. Predator: behind the axolotl, in front of collectibles. */
   tilapia: 35,
   /** Provisional. Moving hazard shadow, shaft and bow: in front of the tilapia, behind the heron stab, the halo and the axolotl. */
@@ -155,6 +170,8 @@ export const DEPTH = {
   dragNetBoat: 36,
   /** Provisional. Wading heron stab head and neck piece: in front of the tilapia, behind the halo and the axolotl. */
   heronStab: 37,
+  /** Provisional. Pelican dipped head, bill and neck piece: just over the heron stab, behind the halo and the axolotl. */
+  pelicanBill: 37.5,
   /** Provisional. Protected halo: behind the axolotl, in front of the tilapia. */
   halo: 38,
   /** Provisional. Whole bailing bucket on its rope: in front of the boat, behind the axolotl. */
@@ -170,6 +187,10 @@ export const DEPTH = {
   surface: 60,
   /** Provisional. Drag net float line and floats, lit or not: above the surface, below the pads. */
   dragNetFloats: 61,
+  /** Provisional. Pelican scoop splash at the water line: above the drag net floats, below the pads. */
+  pelicanSplash: 62,
+  /** Provisional. Wind surface ripple arcs of the warning: above the drag net floats, below the pads. */
+  windRipple: 62,
   pads: 70,
   /** Provisional. Pond fireflies above the water band: above pads, below hint. */
   fireflies: 72,

@@ -3,7 +3,7 @@
  * obstacles, and the narrowest one its main path swims through. Layout tests use it to keep every
  * hazard gap at least the safe passing width and to rank areas by their tightest passage.
  */
-import { GHOST_NET } from './ghostNets';
+import { GHOST_NET, SAFE_PASSING_WIDTH } from './ghostNets';
 import { hazardSweep, type HazardShape } from './hazards';
 import { zoneThreats } from './hiding';
 import { lurePath, TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
@@ -25,12 +25,7 @@ type GapGeometry = Pick<ZoneLayout, 'hazards' | 'tilapiaRoutes' | 'tilapia' | 'p
   fishingBoats?: readonly Readonly<FishingBoatSpawn>[];
 };
 
-/**
- * The safe passing width: the least clear width of a gap, between the places the body centre must
- * stay out of. One body height (twice the net reach, the body's half height) of room, so the
- * axolotl may stray half a body either way off the middle of a gap and still pass clear.
- */
-export const SAFE_PASSING_WIDTH = 2 * GHOST_NET.reach;
+export { SAFE_PASSING_WIDTH };
 
 /**
  * Least px from a ghost net to every current: the farthest a snagged axolotl at the speed perk cap

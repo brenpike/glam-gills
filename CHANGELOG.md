@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-11-06
+
+### Added
+
+- Area 12 and the open lake habitat, a 9 x 2 bowl with stepped lakebed shelves and depth bands (issue #211, epic #209).
+- The pelican line: a line of American white pelicans that warn, then dip their bills together. A scoop costs a leg and bumps the axolotl away, never a catch.
+- Wind and waves: surface gusts that switch direction and fade with depth, with a ripple warning.
+- The lake look: open sky, Popocatépetl and Iztaccíhuatl, water darker by depth band, and silt-and-stone lakebed terraces. Area 12 plays "Lagoon Breeze".
+- The open lake section in the refuge, and its marker on the area map.
+- A new fact card: "Meet the pelican".
+- Area 12 hides Area 11's Common and Rare treasures until its own arrive (#214).
+
+### Changed
+
+- Danger checks read stepped, depth-banded areas.
+- Each habitat holds 2 to 3 areas (PRD N2).
+
 ## [0.66.0] - 2026-11-04
 
 ### Added

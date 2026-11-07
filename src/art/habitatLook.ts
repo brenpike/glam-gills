@@ -58,6 +58,16 @@
  * Every other look says white rays at the day slant, false, false and 0, so its bakes are unchanged.
  * The golden look keeps the deep canal contrast rule: every water stop, haze blend and bed colour has
  * relative luminance 0.1687 or more.
+ *
+ * Open lake (issue #211, Area 12): the open lake look ('open-lake') and its windy variant for Area 12
+ * ('open-lake-windy'). The lake is wide open water under a wide sky, with the two volcanoes small on
+ * the horizon. Its sky, water bands, haze and silt come from drawLake.ts. A look also says whether
+ * the lakebed is painted into its chunks (`lakebed`: silt, smooth stones and tule roots with a light
+ * lip on every top edge), whether its water is drawn by depth band (`depthBands`), whether the
+ * volcanoes stand on its horizon (`volcanoHorizon`) and whether its clouds stream in the wind
+ * (`streamingClouds`, the windy variant only). Every other look says false for all four, so its
+ * bakes are unchanged. The lake keeps the contrast rule: band 1 and band 2 water, every haze blend,
+ * the sky, the mountains and the silt have relative luminance 0.1687 or more.
  */
 import {
   BED_BOTTOM,
@@ -77,12 +87,21 @@ import {
   WATER_SHALLOW,
   WATER_STOP_MID,
 } from './palette';
+import {
+  LAKE_LIP,
+  LAKE_SILT_BOTTOM,
+  LAKE_SILT_FLECK_DARK,
+  LAKE_SILT_TOP,
+  LAKE_SKY_HORIZON,
+  LAKE_SKY_TOP,
+  lakeWaterBand,
+} from './drawLake';
 
 /** Look ids shipped so far. Must match the logic layer's Habitat.look values. */
-export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave' | 'deep-canal';
+export type HabitatLookId = 'canal' | 'pond' | 'chinampa' | 'spring-cave' | 'deep-canal' | 'open-lake';
 
-/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3; the deep canal at golden hour, Area 11). */
-export type AreaLookId = HabitatLookId | 'pond-dusk' | 'deep-canal-golden';
+/** Every look an area can use: a habitat's own look, or a variant of it for one area (the pond at dusk, Area 3; the deep canal at golden hour, Area 11; the open lake in the wind, Area 12). */
+export type AreaLookId = HabitatLookId | 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy';
 
 /** Sky gradient (guide 7a): `top` at y 0 down to `horizon` at the surface. */
 export interface SkyLook {
@@ -93,7 +112,8 @@ export interface SkyLook {
 /**
  * The hiding place an area's cave is drawn as (guide 7e): the canal's rocks, the pond's hollow log,
  * the dusk pond's root arch, the chinampa's tangle of ahuejote roots, the spring cave's side grotto,
- * or the deep canal's sunken old trajinera hull.
+ * the deep canal's sunken old trajinera hull, or the open lake's smooth stones (scenery only: the lake
+ * has no hiding place, ND-17).
  */
 export type CaveKind = 'rocks' | 'log' | 'rootArch' | 'rootTangle' | 'grotto' | 'sunkenHull';
 /** Where a cave hangs: base centre on the bed, or top centre under the bank at the waterline. */
@@ -219,6 +239,17 @@ export interface HabitatLook {
   readonly goldenDecor: boolean;
   /** Marigold petals sinking slowly through the water, per screen of area width (drawGoldenCanal.ts paintSinkingPetal). 0 shows none. */
   readonly sinkingPetalsPerScreen: number;
+  /**
+   * Paint the lakebed into the chunks (drawLake.ts paintLakebed): silt with flecks, smooth stones and
+   * tule roots, and a light lip on every top edge. Only the open lake does.
+   */
+  readonly lakebed: boolean;
+  /** Draw the water by depth band (drawLake.ts lakeWaterBand: sunlit blue-green, then dusky blue). Only the open lake does. */
+  readonly depthBands: boolean;
+  /** Stand Popocatepetl and Iztaccihuatl on the horizon, over the sky and before the water (drawLake.ts paintLakeVolcanoes). Only the open lake does. */
+  readonly volcanoHorizon: boolean;
+  /** Paint streaming clouds drawn out by the wind (drawLake.ts paintStreamingClouds). Only the windy open lake does. */
+  readonly streamingClouds: boolean;
 }
 
 /** A colour as [r, g, b], each 0 to 255. */
@@ -275,6 +306,10 @@ const CANAL_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -358,6 +393,10 @@ const POND_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -458,6 +497,10 @@ const POND_DUSK_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -533,6 +576,10 @@ const CHINAMPA_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -613,6 +660,10 @@ export const SPRING_CAVE_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -690,6 +741,10 @@ export const DEEP_CANAL_LOOK: HabitatLook = Object.freeze({
   lowerRowLight: false,
   goldenDecor: false,
   sinkingPetalsPerScreen: 0,
+  lakebed: false,
+  depthBands: false,
+  volcanoHorizon: false,
+  streamingClouds: false,
 });
 
 /**
@@ -748,6 +803,78 @@ export const DEEP_CANAL_GOLDEN_LOOK: HabitatLook = Object.freeze({
   sinkingPetalsPerScreen: GOLDEN_SINKING_PETALS_PER_SCREEN,
 });
 
+/**
+ * Open lake water (issue #211, ND-15): band 1, the sunlit blue-green of the shallows (drawLake.ts
+ * LAKE_WATER_BANDS), is the look's own water; band 2, the dusky blue, is drawn by depth. Every stop
+ * and every haze blend is at the luminance floor 0.1687 or more.
+ */
+const LAKE_BAND_1 = lakeWaterBand(1);
+/** Open lake surface line: the canal line cooled toward a pale aqua-white. */
+export const OPEN_LAKE_SURFACE_LINE = 'rgba(236,252,250,0.95)';
+
+/**
+ * Open lake look (issue #211, Area 12; owner look decision Q10): a wide open sky with the volcanoes
+ * small on the horizon, band 1 water, and a lakebed of silt, smooth stones and tule roots. No stream,
+ * no reeds at the edges, no bank, no pond props. The cave kind is smooth stones: scenery only, never
+ * a hiding place (ND-17).
+ */
+export const OPEN_LAKE_LOOK: HabitatLook = Object.freeze({
+  id: 'open-lake',
+  sky: Object.freeze({ top: LAKE_SKY_TOP, horizon: LAKE_SKY_HORIZON }),
+  airWash: null,
+  rayAlphaScale: 1,
+  water: Object.freeze({
+    shallow: LAKE_BAND_1.shallow,
+    mid: LAKE_BAND_1.mid,
+    deep: LAKE_BAND_1.deep,
+    stopMid: WATER_STOP_MID,
+    gradientEndY: WATER_GRADIENT_END_Y,
+  }),
+  haze: LAKE_BAND_1.haze,
+  surfaceFill: LAKE_BAND_1.shallow,
+  surfaceLine: OPEN_LAKE_SURFACE_LINE,
+  surfaceLineWidth: SURFACE_LINE_WIDTH,
+  bed: Object.freeze({
+    top: LAKE_SILT_TOP,
+    bottom: LAKE_SILT_BOTTOM,
+    lip: LAKE_LIP,
+    mud: LAKE_SILT_FLECK_DARK,
+    // The lakebed painter draws the bed (silt, stones, roots); these counts are for the canal bed painter, unused here.
+    mudCount: 10,
+    pebbles: PEBBLE_COLOURS,
+    pebbleShine: PEBBLE_SHINE,
+    pebbleCount: 4,
+  }),
+  edgeReeds: null,
+  stream: false,
+  cave: Object.freeze({ kind: 'rocks', anchor: 'bed' }),
+  pondProps: false,
+  firefliesPerScreen: 0,
+  bank: 'willows',
+  currentGap: false,
+  chinampaProps: false,
+  rowDetails: 'none',
+  springCaveProps: false,
+  deepCanalProps: false,
+  bedStones: false,
+  rayTint: DAY_RAY_TINT,
+  raySlant: DAY_RAY_SLANT,
+  lowerRowLight: false,
+  goldenDecor: false,
+  sinkingPetalsPerScreen: 0,
+  lakebed: true,
+  depthBands: true,
+  volcanoHorizon: true,
+  streamingClouds: false,
+});
+
+/** Open lake in the wind (issue #211, Area 12): the open lake look with its clouds streaming out to the left. */
+export const OPEN_LAKE_WINDY_LOOK: HabitatLook = Object.freeze({
+  ...OPEN_LAKE_LOOK,
+  id: 'open-lake-windy',
+  streamingClouds: true,
+});
+
 const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   canal: CANAL_LOOK,
   pond: POND_LOOK,
@@ -756,13 +883,15 @@ const LOOKS: Readonly<Record<AreaLookId, HabitatLook>> = {
   'spring-cave': SPRING_CAVE_LOOK,
   'deep-canal': DEEP_CANAL_LOOK,
   'deep-canal-golden': DEEP_CANAL_GOLDEN_LOOK,
+  'open-lake': OPEN_LAKE_LOOK,
+  'open-lake-windy': OPEN_LAKE_WINDY_LOOK,
 };
 
 /** Every shipped habitat look id, in habitat order. Area-map markers are keyed by these. */
-export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal'];
+export const HABITAT_LOOK_IDS: readonly HabitatLookId[] = ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake'];
 
 /** Every shipped area look id: the habitat looks, then the per-area variants. */
-export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk', 'deep-canal-golden'];
+export const AREA_LOOK_IDS: readonly AreaLookId[] = [...HABITAT_LOOK_IDS, 'pond-dusk', 'deep-canal-golden', 'open-lake-windy'];
 
 export function isHabitatLookId(id: string): id is HabitatLookId {
   return (HABITAT_LOOK_IDS as readonly string[]).includes(id);

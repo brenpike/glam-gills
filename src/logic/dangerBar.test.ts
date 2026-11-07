@@ -6,8 +6,10 @@ import {
   depthBands,
   floorQuietStretch,
   hasSurfaceDanger,
+  legCostingMovingHazardTypeCount,
   longestQuietStretch,
   longestQuietSwim,
+  meetsBandDepthRule,
   meetsDepthRule,
   meetsFloorRule,
   meetsWholeWaterDangerBar,
@@ -15,9 +17,13 @@ import {
   movingHazardTypeCount,
   movingThreatCount,
   predatorTypeCount,
+  waterDepthBands,
+  waterScreenCount,
 } from './dangerBar';
 import { DEV_DANGER_AREA } from './devAreas';
 import { ANCHOR_DROP, MUD_SEEP, PUNTING_POLE, movingHazardSpawn } from './movingHazards';
+import type { RockWall } from './pebble';
+import { PELICAN_LINE, pelicanLineSpawn } from './pelicanLine';
 import {
   BLACK_BASS_SPECIES,
   CARP_SPECIES,
@@ -633,5 +639,211 @@ describe('the dev danger area, whole water', () => {
 
   it('does not meet the whole-water danger bar', () => {
     expect(meetsWholeWaterDangerBar(devWater)).toBe(false);
+  });
+});
+
+/** The whole-water measures' input plus a stepped, depth-banded area's parts (issue #211, ND-8, ND-9). */
+type LakeLayout = WaterLayout & Partial<Pick<ZoneLayout, 'rockWalls' | 'pelicanLines' | 'depthBanded'>>;
+
+/** Three screens across and two down, its swim water x 40 to 1400 and y 94 to 656. */
+const BOWL_SHAPE = areaSize(3, 2);
+
+/** The bowl's shelves: rock under the top row of its outer screens, from y 338 to the area's bottom, so the shelf lane runs at y 316. */
+const BOWL_SHELVES: RockWall[] = [
+  { x0: 0, x1: 480, y0: 338, y1: 720 },
+  { x0: 960, x1: 1440, y0: 338, y1: 720 },
+];
+
+/** A pelican line over the bowl's surface from `x0` to `x1`: three birds, its sweep y 80 to 300. */
+function pelicans(id: string, x0: number, x1: number) {
+  return pelicanLineSpawn(id, 0, { x0, x1 }, swimBounds(BOWL_SHAPE));
+}
+
+/** A stepped bowl (issue #211): three screens across, two down, the outer screens of its bottom row rock. No threats unless given. */
+function bowl(parts: Partial<LakeLayout> = {}): LakeLayout {
+  return { ...BOWL_SHAPE, safeArea: OFF_WATER, tilapiaRoutes: [], predatorRoutes: [], rockWalls: BOWL_SHELVES, ...parts };
+}
+
+/**
+ * The bowl meeting the full bar: two pelican lines over the whole surface, a chasing tilapia loop
+ * and a chasing carp loop deep in the middle band, which together reach both of its edges.
+ */
+function bowlBar(parts: Partial<LakeLayout> = {}): LakeLayout {
+  return bowl({
+    depthBanded: true,
+    tilapia: CHASING_TILAPIA,
+    tilapiaRoutes: [tilapiaLoop('t-1', loop(500, 940, 384, 632))],
+    predatorRoutes: [predatorLoop('carp-1', CHASING_CARP, loop(520, 920, 384, 632))],
+    pelicanLines: [pelicans('pl-1', 40, 700), pelicans('pl-2', 700, 1400)],
+    ...parts,
+  });
+}
+
+describe('pelican lines as moving threats (issue #211, ND-8)', () => {
+  it('counts each bird of each line as one moving threat', () => {
+    expect(movingThreatCount(bowl({ pelicanLines: [pelicans('pl-1', 40, 700)] }))).toBe(PELICAN_LINE.count);
+    const mixed = bowl({ tilapiaRoutes: [route('t-1', 500, 900)], pelicanLines: [pelicans('pl-1', 40, 700), pelicans('pl-2', 700, 1400)] });
+    expect(movingThreatCount(mixed)).toBe(1 + 2 * PELICAN_LINE.count);
+  });
+
+  it('fills the leg-costing moving hazard type slot once, beside the moving hazard types (Q2)', () => {
+    expect(legCostingMovingHazardTypeCount(bowl())).toBe(0);
+    const lined = bowl({ pelicanLines: [pelicans('pl-1', 40, 700), pelicans('pl-2', 700, 1400)] });
+    expect(movingHazardTypeCount(lined)).toBe(0);
+    expect(legCostingMovingHazardTypeCount(lined)).toBe(1);
+    expect(legCostingMovingHazardTypeCount({ ...lined, movingHazards: [pole('p-1', 300)] })).toBe(2);
+    expect(legCostingMovingHazardTypeCount({ movingHazards: [pole('p-1', 300)] })).toBe(1);
+  });
+
+  it('keeps the main path in reach within the touch reach of the whole sweep', () => {
+    const lined = { ...layout(), pelicanLines: [pelicanLineSpawn('pl-1', 0, { x0: 300, x1: 900 }, swimBounds(areaSize(4, 2)))] };
+    expect(longestQuietStretch(lined)).toBe(300 - PELICAN_LINE.touchReach);
+  });
+
+  it('counts the whole sweep for quiet swims', () => {
+    const open = longestQuietSwim(bowl());
+    const lined = longestQuietSwim(bowl({ pelicanLines: [pelicans('pl-1', 40, 700), pelicans('pl-2', 700, 1400)] }));
+    expect(open).not.toBeNull();
+    expect(lined?.length).toBeLessThan(open?.length ?? 0);
+  });
+
+  it('is surface danger', () => {
+    expect(hasSurfaceDanger(bowl())).toBe(false);
+    expect(hasSurfaceDanger(bowl({ pelicanLines: [pelicans('pl-1', 40, 700)] }))).toBe(true);
+  });
+
+  it('counts on the floor lane only where its scoop reaches the floor', () => {
+    const overShelf = [pelicans('pl-1', 40, 560)];
+    expect(floorQuietStretch(bowl({ pelicanLines: overShelf }))).toBe(1400 - 480);
+    expect(floorQuietStretch({ ...bowl({ pelicanLines: overShelf }), rockWalls: [] })).toBe(1360);
+  });
+});
+
+describe('screens and bands of water (issue #211, ND-8, ND-9)', () => {
+  it('counts the whole area with no rock walls, or with rock that leaves water in every screen', () => {
+    expect(waterScreenCount(bowl({ rockWalls: [] }))).toBe(6);
+    expect(waterScreenCount(bowl({ rockWalls: [{ x0: 600, x1: 1240, y0: 340, y1: 380 }] }))).toBe(6);
+    expect(waterScreenCount(water())).toBe(2);
+  });
+
+  it('leaves out each screen whose water is all rock', () => {
+    expect(waterScreenCount(bowl())).toBe(4);
+    expect(carpTarget(waterScreenCount(bowl()))).toBe(1);
+  });
+
+  it('gives one band per screen row holding water, as its part of the swim water, top down', () => {
+    expect(waterDepthBands(bowl())).toEqual([
+      { top: 94, bottom: 360 },
+      { top: 360, bottom: 656 },
+    ]);
+    const tall = { ...areaSize(2, 3), rockWalls: [{ x0: 0, x1: 960, y0: 700, y1: 1080 }] };
+    expect(waterDepthBands(tall)).toEqual([
+      { top: 94, bottom: 360 },
+      { top: 360, bottom: 720 },
+    ]);
+  });
+});
+
+describe('the floor lane over a stepped floor (issue #211, ND-8)', () => {
+  const shelfCarp = predatorLoop('carp-1', STILL_CARP, across(40, 480, 316));
+
+  it('runs over the rock top under each x, else the bed', () => {
+    expect(floorQuietStretch(bowl())).toBe(1360);
+    expect(floorQuietStretch(bowl({ predatorRoutes: [shelfCarp] }))).toBe(1400 - 480);
+    expect(floorQuietStretch(bowl({ predatorRoutes: [shelfCarp], rockWalls: [] }))).toBe(1360);
+    const bedCarp = predatorLoop('carp-2', STILL_CARP, across(500, 900, 656));
+    expect(floorQuietStretch(bowl({ predatorRoutes: [shelfCarp, bedCarp] }))).toBe(1400 - (900 + STRIKE));
+  });
+
+  it('follows rock stacked on rock', () => {
+    const step: RockWall = { x0: 100, x1: 300, y0: 200, y1: 338 };
+    const stepCarp = predatorLoop('carp-1', STILL_CARP, across(100, 300, 178));
+    expect(floorQuietStretch(bowl({ predatorRoutes: [stepCarp] }))).toBe(1360);
+    expect(floorQuietStretch(bowl({ predatorRoutes: [stepCarp], rockWalls: [...BOWL_SHELVES, step] }))).toBe(1400 - 300);
+  });
+
+  it('skips samples in rock or above the swim water, without ending a stretch', () => {
+    const boulder: RockWall = { x0: 600, x1: 700, y0: 640, y1: 670 };
+    expect(floorQuietStretch(bowl({ predatorRoutes: [shelfCarp], rockWalls: [...BOWL_SHELVES, boulder] }))).toBe(1400 - 480);
+    const endRock: RockWall = { x0: 1300, x1: 1440, y0: 300, y1: 330 };
+    expect(floorQuietStretch(bowl({ predatorRoutes: [shelfCarp], rockWalls: [...BOWL_SHELVES, endRock] }))).toBe(1299 - 480);
+    const pillar: RockWall = { x0: 0, x1: 100, y0: 100, y1: 338 };
+    expect(floorQuietStretch(bowl({ rockWalls: [...BOWL_SHELVES, pillar] }))).toBe(1400 - 101);
+  });
+
+  it('keeps the bed lane for rock that does not rest on the floor', () => {
+    expect(floorQuietStretch(water())).toBe(880);
+    expect(floorQuietStretch({ ...water(), rockWalls: [{ x0: 200, x1: 840, y0: 150, y1: 190 }] })).toBe(880);
+  });
+});
+
+describe('the band depth rule (issue #211, ND-9, Q3)', () => {
+  const surface = [pelicans('pl-1', 40, 700)];
+  const tilapiaBetween = (id: string, y0: number, y1: number) => tilapiaLoop(id, loop(500, 900, y0, y1));
+  const carpBetween = (id: string, y0: number, y1: number) => predatorLoop(id, CHASING_CARP, loop(500, 900, y0, y1));
+  const banded = (tilapiaRoutes: TilapiaRoute[], predatorRoutes: PredatorRoute[] = [], pelicanLines = surface) =>
+    bowl({ depthBanded: true, tilapiaRoutes, predatorRoutes, pelicanLines });
+
+  it('replaces the thirds rule only in a depth-banded area', () => {
+    const deep = banded([tilapiaBetween('t-1', 384, 632)]);
+    expect(meetsDepthRule(deep)).toBe(true);
+    expect(meetsBandDepthRule(deep)).toBe(true);
+    expect(meetsDepthRule({ ...deep, depthBanded: false })).toBe(false);
+    expect(meetsDepthRule({ ...deep, depthBanded: undefined })).toBe(false);
+  });
+
+  it('asks every band holding water for a moving threat of its own', () => {
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 384, 632)], [], []))).toBe(false);
+    expect(meetsDepthRule(banded([]))).toBe(false);
+    const heron = predatorLoop('heron-1', STABBING_HERON, across(500, 900, 500));
+    expect(meetsDepthRule(banded([], [heron]))).toBe(true);
+    const deepPole = movingHazardSpawn('p-1', PUNTING_POLE, 700, 0, 560);
+    expect(meetsDepthRule({ ...banded([]), movingHazards: [deepPole] })).toBe(false);
+    expect(meetsDepthRule(banded([tilapiaLoop('t-1', loop(500, 900, 118, 632))]))).toBe(false);
+  });
+
+  it("asks each species' loops together to reach within 24 px of the top and bottom of each band they enter", () => {
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 385, 632)]))).toBe(false);
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 384, 631)]))).toBe(false);
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 384, 450), tilapiaBetween('t-2', 560, 632)]))).toBe(true);
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 384, 450)], [carpBetween('carp-1', 560, 632)]))).toBe(false);
+    expect(meetsDepthRule(banded([tilapiaBetween('t-1', 384, 632)], [carpBetween('carp-1', 384, 632)]))).toBe(true);
+  });
+
+  it('reads a band of the species by the band, each on its own', () => {
+    const heron = predatorLoop('heron-1', STABBING_HERON, across(500, 900, 500));
+    expect(meetsDepthRule(banded([tilapiaLoop('t-1', loop(100, 400, 118, 336))], [heron]))).toBe(true);
+    expect(meetsDepthRule(banded([tilapiaLoop('t-1', loop(100, 400, 119, 336))], [heron]))).toBe(false);
+    expect(meetsDepthRule(banded([tilapiaLoop('t-1', loop(500, 900, 118, 632))], [heron]))).toBe(true);
+    expect(meetsDepthRule(banded([tilapiaLoop('t-1', loop(500, 900, 118, 631))], [heron]))).toBe(false);
+  });
+});
+
+describe('the full danger bar in a stepped, depth-banded area (issue #211, ND-8, ND-9)', () => {
+  it('passes the bowl: pelican lines on top, tilapia and carp deep, one carp for its four screens of water', () => {
+    const lake = bowlBar();
+    expect(waterScreenCount(lake)).toBe(4);
+    expect(longestQuietSwim(lake)?.length ?? 0).toBeLessThanOrEqual(SCREEN_W);
+    expect(meetsDepthRule(lake)).toBe(true);
+    expect(meetsFloorRule(lake)).toBe(true);
+    expect(meetsWholeWaterDangerBar(lake)).toBe(true);
+  });
+
+  it('counts the carp target over screens of water, not the whole area', () => {
+    expect(carpTarget((BOWL_SHAPE.width / SCREEN_W) * (BOWL_SHAPE.height / WORLD_H))).toBe(2);
+    expect(carpCount(bowlBar())).toBe(1);
+  });
+
+  it('fails without its pelican lines, which fill the moving hazard slot and the top band', () => {
+    const unlined = bowlBar({ pelicanLines: [] });
+    expect(legCostingMovingHazardTypeCount(unlined)).toBe(0);
+    expect(meetsDepthRule(unlined)).toBe(false);
+    expect(meetsWholeWaterDangerBar(unlined)).toBe(false);
+  });
+
+  it('fails when a species misses an edge of its band', () => {
+    const shallowCarp = bowlBar({ predatorRoutes: [predatorLoop('carp-1', CHASING_CARP, loop(520, 920, 400, 632))] });
+    expect(meetsDepthRule(shallowCarp)).toBe(false);
+    expect(meetsWholeWaterDangerBar(shallowCarp)).toBe(false);
   });
 });

@@ -47,9 +47,25 @@ import { paintCanalBedStones } from './drawDeepCanal';
 import { paintGoldenDecor, paintLitLowerRow, type GoldenChunk } from './drawGoldenCanal';
 import { paintSpringRowDetails } from './drawSpringCave';
 import { habitatLook, type AreaLookId, type EdgeReedLook, type HabitatLook } from './habitatLook';
+import {
+  lakeWaterBand,
+  lakeWaterStops,
+  paintLakeVolcanoes,
+  paintLakebed,
+  paintStreamingClouds,
+  type LakeBand,
+  type LakeRect,
+} from './drawLake';
+import { BED_TOP as ZONE_BED_TOP } from '../logic/zone';
 
 /** Background chunk size in logical units (the 480 x 360 reference viewport). */
 export const BG_CHUNK = { w: VIEW_W, h: VIEW_H } as const;
+
+/**
+ * The floor under the bed top of a row with the bed, in chunk coordinates: a lakebed look paints it
+ * (the bowl floor), since the floor is solid ground but no rock wall.
+ */
+export const LAKE_FLOOR: Readonly<LakeRect> = Object.freeze({ x: 0, y: ZONE_BED_TOP, w: VIEW_W, h: VIEW_H - ZONE_BED_TOP });
 
 /** Water surface height at x and time t (guide section 9). For scene use. */
 export function waveY(x: number, t: number): number {
@@ -125,6 +141,20 @@ export interface ChunkOptions {
   readonly edgeLeft?: boolean;
   /** This chunk is the last of its row. Looks with edge reeds or rock walls paint them on the right. Default false. */
   readonly edgeRight?: boolean;
+  /**
+   * The chunk's solid rects (rock walls and side rooms) in chunk coordinates, 0 to VIEW_W by 0 to
+   * VIEW_H, already clipped to the chunk (clipRectsToChunk). Only a look that paints the lakebed
+   * (`lakebed`) uses them: it paints silt, stones and roots inside them and a light lip on each top
+   * edge, and no canal bed. Every other look ignores them. Default none.
+   */
+  readonly solids?: readonly LakeRect[];
+  /**
+   * Depth band of this chunk's row (1 the shallows, 2 the middle, 3 and 4 deeper): the water colours
+   * of a look that draws water by depth band (`depthBands`). Default 1. Every other look ignores it.
+   * The top row's water runs the band's three stops from the surface; a lower row starts on the
+   * deep colour of the band above it, so rows meet with no seam, and ends on its own deep colour.
+   */
+  readonly band?: LakeBand;
   /** Injected randomness in [0, 1). */
   readonly rand: () => number;
 }
@@ -368,6 +398,53 @@ function paintWater(ctx: CanvasRenderingContext2D, look: HabitatLook): void {
   g.addColorStop(1, water.deep);
   ctx.fillStyle = g;
   ctx.fillRect(0, SURF_WATER_TOP, VIEW_W, VIEW_H - SURF_WATER_TOP);
+}
+
+/**
+ * Water of a look that draws it by depth band (drawLake.ts). A chunk with sky runs the band's stops
+ * (lakeWaterStops) from the surface down, as paintWater does. A chunk without sky runs from the deep
+ * colour of the band above (the colour the row above ends on) through its own mid colour to its own
+ * deep colour, so the rows meet with no seam.
+ */
+function paintBandWater(ctx: CanvasRenderingContext2D, look: HabitatLook, band: LakeBand, hasSky: boolean): void {
+  if (hasSky) {
+    const g = ctx.createLinearGradient(0, SURF, 0, look.water.gradientEndY);
+    for (const [offset, colour] of lakeWaterStops(band)) g.addColorStop(offset, colour);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, SURF_WATER_TOP, VIEW_W, VIEW_H - SURF_WATER_TOP);
+    return;
+  }
+  const above = lakeWaterBand(Math.max(1, band - 1) as LakeBand);
+  const own = lakeWaterBand(band);
+  const g = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  g.addColorStop(0, above.deep);
+  g.addColorStop(look.water.stopMid, own.mid);
+  g.addColorStop(1, own.deep);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+}
+
+/**
+ * The parts of `walls` (world coordinates, x0 to x1 and y0 to y1) that lie inside the chunk at column
+ * `column` of row `row`, as rects in chunk coordinates. A wall that only touches the chunk's edge, or
+ * lies outside it, gives nothing. Order follows `walls`. Pure.
+ */
+export function clipRectsToChunk(
+  walls: readonly Readonly<{ x0: number; x1: number; y0: number; y1: number }>[],
+  column: number,
+  row: number,
+): LakeRect[] {
+  const ox = column * BG_CHUNK.w;
+  const oy = row * BG_CHUNK.h;
+  const out: LakeRect[] = [];
+  for (const wall of walls) {
+    const x0 = Math.max(wall.x0 - ox, 0);
+    const x1 = Math.min(wall.x1 - ox, BG_CHUNK.w);
+    const y0 = Math.max(wall.y0 - oy, 0);
+    const y1 = Math.min(wall.y1 - oy, BG_CHUNK.h);
+    if (x1 > x0 && y1 > y0) out.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+  }
+  return out;
 }
 
 /** Static light rays (guide 7a) in the look's tint, alpha scale and slant. Draws `rand` three times. */
@@ -677,6 +754,14 @@ function paintSpringCaveRow(ctx: CanvasRenderingContext2D, row: ChunkRow, opts: 
  * no clouds on its rock roof, and its row details last (paintSpringCaveRow). A look with
  * `goldenDecor` paints its golden-hour decorations after everything else (drawGoldenCanal.ts), and a
  * look with `lowerRowLight` then lights a bottom chunk; neither draws randomness.
+ *
+ * A look with `volcanoHorizon` stands the volcanoes on the horizon right after the sky of a chunk
+ * with sky (no randomness), and `streamingClouds` paints streaming clouds in place of the clouds
+ * (two draws per cloud row). `depthBands` draws the water of the chunk's `band` (paintBandWater), no
+ * randomness. `lakebed` paints no canal bed; it paints the lakebed into `solids` last of the water
+ * steps, on every row, drawing randomness only for what it paints. On a row with the bed ('single'
+ * or 'bottom') it first paints the lakebed into the floor under the bed top (LAKE_FLOOR), so the
+ * bowl floor shows where no solid stands.
  */
 export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkOptions): void {
   const { rand } = opts;
@@ -687,32 +772,42 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
   const rockRoof = look.rowDetails === 'springCave';
   if (hasSky) {
     paintSky(ctx, look);
+    // The volcanoes stand on the horizon: over the sky, before the sun, the clouds and the water.
+    if (look.volcanoHorizon) paintLakeVolcanoes(ctx, opts.index * VIEW_W);
     if (!rockRoof) {
       if (opts.hasSun) paintSun(ctx);
-      paintClouds(ctx, rand, opts.hasSun ? 16 : 120);
+      if (look.streamingClouds) paintStreamingClouds(ctx, rand);
+      else paintClouds(ctx, rand, opts.hasSun ? 16 : 120);
     }
     if (opts.hasBank) {
       if (look.bank === 'plots') paintChinampaBank(ctx, plotBankOf(opts));
       else paintBank(ctx, opts);
     }
     if (look.airWash !== null) paintAirWash(ctx, look.airWash);
-    paintWater(ctx, look);
+    if (look.depthBands) paintBandWater(ctx, look, opts.band ?? 1, true);
+    else paintWater(ctx, look);
     paintRays(ctx, rand, look);
     // Roots reach into the water, so they go over it, after the rays.
     if (opts.hasBank && look.bank === 'plots') paintChinampaBankRoots(ctx, plotBankOf(opts));
     if (opts.stream === true) paintStream(ctx, opts.streamClosed === true);
     if (opts.streamSpill === true) paintStreamSpill(ctx);
+  } else if (look.depthBands) {
+    paintBandWater(ctx, look, opts.band ?? 1, false);
   } else {
     paintDeepWater(ctx, look);
   }
   if (hasBed) {
-    paintBed(ctx, opts.index, rand, look);
+    if (!look.lakebed) paintBed(ctx, opts.index, rand, look);
     if (look.bedStones) paintCanalBedStones(ctx, (x) => bedEdgeY(opts.index * VIEW_W + x));
     if (look.edgeReeds) {
       if (opts.edgeLeft === true) paintEdgeReeds(ctx, opts.index, rand, look.edgeReeds, 'left');
       if (opts.edgeRight === true) paintEdgeReeds(ctx, opts.index, rand, look.edgeReeds, 'right');
     }
   }
+  // The lakebed goes in the solid parts of any row (a wall can stand in a middle row), over the water.
+  // A row with the bed also has the floor under the bed top (the bowl floor), painted first, so the
+  // solids go over it where they stand on it.
+  if (look.lakebed) paintLakebed(ctx, hasBed ? [LAKE_FLOOR, ...(opts.solids ?? [])] : (opts.solids ?? []), rand);
   if (rockRoof) paintSpringCaveRow(ctx, row, opts);
   if (look.goldenDecor) paintGoldenDecor(ctx, goldenChunkOf(row, opts));
   if (look.lowerRowLight && row === 'bottom') paintLitLowerRow(ctx, opts.index, look.raySlant);

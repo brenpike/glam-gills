@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS } from './areas';
 import { bailingBoatSpawn, bailingCatchBox } from './bailingBuckets';
-import { CANAL_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
+import { CANAL_TREASURES, POND_TREASURES, RARITIES, treasureById, type Rarity } from './catalogue';
 import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
 import { depthBands } from './dangerBar';
@@ -21,12 +21,14 @@ import { coversAt, inReeds, isDeep, routeDistance, spotMatchesLabels, turnDistan
 import { fishingBoatSpawn, lureLinePath, lurePath, type FishingBoatSpawn } from './lures';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander } from './mobileSnacks';
 import { PUNTING_POLE, movingHazardSpawn, movingHazardSweep } from './movingHazards';
+import { PELICAN_LINE, pelicanLineSpawn, pelicanLineSweep } from './pelicanLine';
 import { POND_2_LAYOUT } from './pond2Layout';
 import { trajineraHullBand, trajineraSpawn } from './trajineras';
 import { POND_LAYOUT } from './pondLayout';
 import { inSafeArea } from './tilapia';
 import { createTrip } from './trip';
 import { FINDS, LEGS, RISK, TILAPIA } from './tuning';
+import { windSpawn } from './wind';
 import {
   BED_TOP,
   CANAL_AREA_ID,
@@ -1503,5 +1505,152 @@ describe('dark water and glow-plants in the layout (issue #77, ND-7 and ND-8)', 
     expect(layout.darkWater).toBeUndefined();
     expect(layout.elements.some((element) => element.glowPlant !== undefined)).toBe(false);
     expect(buildZone(layout, DEFAULT_ZONE_SEED)).not.toHaveProperty('darkWater');
+  });
+});
+
+describe('depth banding in the layout (issue #211, ND-1)', () => {
+  it.each([true, false])('copies depthBanded %s with no rand() draw', (depthBanded) => {
+    const { depthBanded: copied, ...rest } = buildZone(canalWith({ depthBanded }), DEFAULT_ZONE_SEED);
+    expect(copied).toBe(depthBanded);
+    expect(rest).toStrictEqual(buildCanalZone());
+  });
+
+  it('adds no depthBanded key to a layout that has none', () => {
+    expect(buildCanalZone()).not.toHaveProperty('depthBanded');
+  });
+});
+
+const PELICAN_TUNING = { ...PELICAN_LINE, dipDepth: 150 };
+const PELICAN_LINES = [
+  pelicanLineSpawn('canal/pelican-line-1', 0, { x0: 320, x1: 1000 }, CANAL_BOUNDS, PELICAN_TUNING),
+  pelicanLineSpawn('canal/pelican-line-2', 2, { x0: 1100, x1: 1800 }, CANAL_BOUNDS, PELICAN_TUNING),
+];
+
+describe('pelican lines in the layout (issue #211, ND-5, ND-7)', () => {
+  it.each(ALL_SEEDS)('copies the lines and never keeps snacks away from them for seed %i', (seed) => {
+    const { pelicanLines, ...rest } = buildZone(canalWith({ pelicanLines: PELICAN_LINES }), seed);
+    expect(pelicanLines).toEqual(PELICAN_LINES);
+    expect(rest).toStrictEqual(buildCanalZone(seed));
+  });
+
+  it('tests lines whose sweeps reach where the canal puts snacks', () => {
+    const near = buildCanalZone().collectibles.some((snack) =>
+      PELICAN_LINES.some((line) => shapeDistance(snack, pelicanLineSweep(line)) < SNACK_HAZARD_CLEARANCE),
+    );
+    expect(near).toBe(true);
+  });
+
+  it('copies the lines, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ pelicanLines: PELICAN_LINES }), 3);
+    zone.pelicanLines?.forEach((line, index) => {
+      expect(line).not.toBe(PELICAN_LINES[index]);
+      expect(line.tuning).not.toBe(PELICAN_LINES[index].tuning);
+      expect(Object.isFrozen(line.tuning)).toBe(true);
+    });
+  });
+
+  it('never puts a pelican line in the hazards or the elements', () => {
+    const zone = buildZone(canalWith({ pelicanLines: PELICAN_LINES }), 3);
+    expect(zone.hazards).toEqual([]);
+    expect(zone.elements).toEqual([]);
+  });
+
+  it('adds no pelicanLines key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('pelicanLines');
+    expect(buildZone(canalWith({ pelicanLines: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), pelicanLines: [] });
+  });
+});
+
+const SHARED_TREASURES = [POND_TREASURES[0], POND_TREASURES[3]];
+
+describe('shared treasures in the layout (issue #211, ND-12)', () => {
+  it.each(ALL_SEEDS)('lists the own finds first, then each shared find over its rarity pool, for seed %i', (seed) => {
+    const canal = buildCanalZone(seed);
+    const { finds, sharedTreasures, ...rest } = buildZone(canalWith({ sharedTreasures: SHARED_TREASURES }), seed);
+    const poolOf = (rarity: Rarity) => canal.spots.filter((spot) => spot.rarity === rarity).map((spot) => spot.id);
+    expect(finds).toEqual([
+      ...canal.finds,
+      { id: 'pond/lily-pad', pool: poolOf('common') },
+      { id: 'pond/lotus-lantern', pool: poolOf('epic') },
+    ]);
+    expect(sharedTreasures).toEqual(['pond/lily-pad', 'pond/lotus-lantern']);
+    const { finds: canalFinds, ...canalRest } = canal;
+    expect(canalFinds).toHaveLength(CANAL_TREASURES.length);
+    expect(rest).toStrictEqual(canalRest);
+  });
+
+  it('refuses a shared treasure the area already hides or shares twice', () => {
+    expect(() => buildZone(canalWith({ sharedTreasures: [CANAL_TREASURES[0]] }), DEFAULT_ZONE_SEED)).toThrow(RangeError);
+    expect(() => buildZone(canalWith({ sharedTreasures: [POND_TREASURES[0], POND_TREASURES[0]] }), DEFAULT_ZONE_SEED)).toThrow(RangeError);
+  });
+
+  it('adds no sharedTreasures key to a layout that has none, and keeps an empty list', () => {
+    expect(buildCanalZone()).not.toHaveProperty('sharedTreasures');
+    expect(buildZone(canalWith({ sharedTreasures: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), sharedTreasures: [] });
+  });
+});
+
+const SHELF_FLOOR = 200;
+
+function canalWithShelfBed(baseY: number): AreaLayoutData {
+  return canalWith({ reedBeds: CANAL_LAYOUT.reedBeds.map((bed, index) => (index === 1 ? { ...bed, baseY } : bed)) });
+}
+
+/** Ids of the reeds of the canal's second bed: the reeds whose ids follow the first bed's. */
+function shelfBedReedIds(seed: number): Set<string> {
+  const reedCounts = CANAL_LAYOUT.reedBeds.map((_, index) => buildZone(canalWith({ reedBeds: CANAL_LAYOUT.reedBeds.slice(0, index + 1) }), seed).reeds.length);
+  return new Set(buildCanalZone(seed).reeds.slice(reedCounts[0], reedCounts[1]).map((reed) => reed.id));
+}
+
+describe('a reed bed on a shelf floor (issue #211, ND-18)', () => {
+  it.each(ALL_SEEDS)('stands the bed on its floor with the same rand() draws for seed %i', (seed) => {
+    const canal = buildCanalZone(seed);
+    const zone = buildZone(canalWithShelfBed(SHELF_FLOOR), seed);
+    const shelfIds = shelfBedReedIds(seed);
+    expect(zone.reeds).toHaveLength(canal.reeds.length);
+    zone.reeds.forEach((reed, index) => {
+      const before = canal.reeds[index];
+      const { by, ...shape } = reed;
+      const { by: beforeBy, ...beforeShape } = before;
+      expect(shape).toEqual(beforeShape);
+      if (shelfIds.has(reed.id)) {
+        expect(by - (SHELF_FLOOR - BED_TOP)).toBeCloseTo(beforeBy, 9);
+        expect(by).toBeGreaterThanOrEqual(SHELF_FLOOR + 8);
+        expect(by).toBeLessThanOrEqual(SHELF_FLOOR + 16);
+      } else {
+        expect(by).toBe(beforeBy);
+      }
+    });
+    expect(zone.reedPatches).toEqual(canal.reedPatches.map((patch, index) => (index === 1 ? { ...patch, y1: SHELF_FLOOR } : patch)));
+    expect({ ...zone, reeds: canal.reeds, reedPatches: canal.reedPatches }).toStrictEqual(canal);
+  });
+
+  it('builds a bed whose floor is the bed top exactly as one with no floor', () => {
+    expect(buildZone(canalWithShelfBed(BED_TOP), 3)).toStrictEqual(buildCanalZone(3));
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, SURF, SURF - 10, BED_TOP + 1])('refuses a floor at %s', (baseY) => {
+    expect(() => buildZone(canalWithShelfBed(baseY), DEFAULT_ZONE_SEED)).toThrow(RangeError);
+  });
+});
+
+const WIND_ELEMENTS: readonly ElementSpawn[] = [windSpawn('canal/wind-1', 0, { x0: 100, x1: 1800, direction: 'left' })];
+
+describe('wind and waves in the layout (issue #211, ND-10)', () => {
+  it.each(ALL_SEEDS)('copies each wind span with no rand() draw for seed %i', (seed) => {
+    const { elements, ...rest } = buildZone(canalWith({ elements: WIND_ELEMENTS }), seed);
+    expect(elements).toEqual(WIND_ELEMENTS);
+    elements.forEach((element, index) => {
+      expect(element).not.toBe(WIND_ELEMENTS[index]);
+      expect(element.wind).not.toBe(WIND_ELEMENTS[index].wind);
+    });
+    const { elements: canalElements, ...canalRest } = buildCanalZone(seed);
+    expect(canalElements).toEqual([]);
+    expect(rest).toStrictEqual(canalRest);
+  });
+
+  it('adds no wind key to an element that has none', () => {
+    const zone = buildZone(canalWith({ elements: GLOW_PLANTS_DATA }), DEFAULT_ZONE_SEED);
+    for (const element of zone.elements) expect(element).not.toHaveProperty('wind');
   });
 });

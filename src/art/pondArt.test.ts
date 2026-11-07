@@ -88,12 +88,22 @@ import {
   POND_WATER_MID,
   POND_WATER_SHALLOW,
   HABITAT_LOOK_IDS,
+  OPEN_LAKE_LOOK,
+  OPEN_LAKE_WINDY_LOOK,
   habitatLook,
   isAreaLookId,
   isHabitatLookId,
   type AreaLookId,
 } from './habitatLook';
 import { DEPTH } from './layers';
+import {
+  LAKE_LIP,
+  LAKE_SILT_BOTTOM,
+  LAKE_SILT_TOP,
+  LAKE_SKY_HORIZON,
+  LAKE_SKY_TOP,
+  lakeWaterBand,
+} from './drawLake';
 import {
   AXANTHIC,
   BANK_SOIL,
@@ -428,7 +438,7 @@ describe('habitat looks (guide 3c, 7a)', () => {
   });
 
   it('has one look per shipped id', () => {
-    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
+    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake']);
     for (const id of HABITAT_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
   });
 
@@ -783,14 +793,26 @@ describe('pond background chunk', () => {
 const LUMINANCE_FLOOR = 0.1687;
 
 describe('area looks (issue #98)', () => {
-  it('lists the habitat looks, then the dusk and golden-hour variants; only the habitat looks key the area map', () => {
-    expect(AREA_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'pond-dusk', 'deep-canal-golden']);
-    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal']);
+  it('lists the habitat looks, then the dusk, golden-hour and windy lake variants; only the habitat looks key the area map', () => {
+    expect(AREA_LOOK_IDS).toEqual([
+      'canal',
+      'pond',
+      'chinampa',
+      'spring-cave',
+      'deep-canal',
+      'open-lake',
+      'pond-dusk',
+      'deep-canal-golden',
+      'open-lake-windy',
+    ]);
+    expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake']);
     for (const id of AREA_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
     expect(isAreaLookId('pond-dusk')).toBe(true);
     expect(isHabitatLookId('pond-dusk')).toBe(false);
     expect(isAreaLookId('deep-canal-golden')).toBe(true);
     expect(isHabitatLookId('deep-canal-golden')).toBe(false);
+    expect(isAreaLookId('open-lake-windy')).toBe(true);
+    expect(isHabitatLookId('open-lake-windy')).toBe(false);
     expect(isAreaLookId('moon')).toBe(false);
     expect(() => habitatLook('pond-night')).toThrow(RangeError);
   });
@@ -806,8 +828,10 @@ describe('area looks (issue #98)', () => {
       ['chinampa', false, { kind: 'rootTangle', anchor: 'bed' }, false, 0],
       ['spring-cave', false, { kind: 'grotto', anchor: 'bed' }, false, 0],
       ['deep-canal', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
+      ['open-lake', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
       ['pond-dusk', true, { kind: 'rootArch', anchor: 'bank' }, true, 2],
       ['deep-canal-golden', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
+      ['open-lake-windy', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
     ]);
   });
 
@@ -1829,6 +1853,104 @@ describe('bakePondTextures', () => {
     const baked = withFakeScene((scene) => bakePondTextures(scene, 1, { caveW: 90, caveH: 68 }));
     expect(baked.logFront.w).toBe(logTextureSize(90, 68).w);
     expect(baked.logFront.h).toBe(logTextureSize(90, 68).h);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Open lake looks (issue #211, Area 12)
+// ---------------------------------------------------------------------------
+
+describe('open lake looks (issue #211)', () => {
+  const lake = habitatLook('open-lake');
+  const windy = habitatLook('open-lake-windy');
+  const lakeIds: readonly AreaLookId[] = ['open-lake', 'open-lake-windy'];
+
+  it('adds the lake as the last habitat look and its windy variant as the last area look, both frozen', () => {
+    expect(HABITAT_LOOK_IDS[HABITAT_LOOK_IDS.length - 1]).toBe('open-lake');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 1]).toBe('open-lake-windy');
+    expect(lake).toBe(OPEN_LAKE_LOOK);
+    expect(windy).toBe(OPEN_LAKE_WINDY_LOOK);
+    for (const look of [lake, windy]) {
+      expect(Object.isFrozen(look)).toBe(true);
+      expect(Object.isFrozen(look.water)).toBe(true);
+      expect(Object.isFrozen(look.bed)).toBe(true);
+    }
+  });
+
+  it('turns the lakebed, the depth bands and the volcano horizon on for both, and the streaming clouds for the windy one only', () => {
+    for (const id of lakeIds) {
+      expect(habitatLook(id).lakebed, id).toBe(true);
+      expect(habitatLook(id).depthBands, id).toBe(true);
+      expect(habitatLook(id).volcanoHorizon, id).toBe(true);
+    }
+    expect(lake.streamingClouds).toBe(false);
+    expect(windy.streamingClouds).toBe(true);
+  });
+
+  it('leaves the new fields off for every other look, so their bakes are unchanged', () => {
+    for (const id of AREA_LOOK_IDS.filter((other) => !lakeIds.includes(other))) {
+      const look = habitatLook(id);
+      expect([look.lakebed, look.depthBands, look.volcanoHorizon, look.streamingClouds], id).toEqual([false, false, false, false]);
+    }
+  });
+
+  it('uses the drawLake sky, band 1 water, haze and silt, with smooth stones as its scenery cave, and no banks, reeds or stream', () => {
+    const band1 = lakeWaterBand(1);
+    expect(lake.sky).toEqual({ top: LAKE_SKY_TOP, horizon: LAKE_SKY_HORIZON });
+    expect(lake.water).toEqual({
+      shallow: band1.shallow,
+      mid: band1.mid,
+      deep: band1.deep,
+      stopMid: WATER_STOP_MID,
+      gradientEndY: WATER_GRADIENT_END_Y,
+    });
+    expect(lake.haze).toBe(band1.haze);
+    expect(lake.bed.top).toBe(LAKE_SILT_TOP);
+    expect(lake.bed.bottom).toBe(LAKE_SILT_BOTTOM);
+    expect(lake.bed.lip).toBe(LAKE_LIP);
+    expect(lake.cave).toEqual({ kind: 'rocks', anchor: 'bed' });
+    expect(lake.edgeReeds).toBeNull();
+    expect(lake.stream).toBe(false);
+    expect(lake.pondProps || lake.chinampaProps || lake.springCaveProps || lake.deepCanalProps).toBe(false);
+    expect(lake.bedStones || lake.lowerRowLight || lake.goldenDecor).toBe(false);
+    expect(lake.rowDetails).toBe('none');
+    expect(lake.firefliesPerScreen).toBe(0);
+  });
+
+  it('makes the windy look the lake with only its id and its clouds changed', () => {
+    expect({ ...windy, id: 'open-lake', streamingClouds: false }).toEqual(lake);
+  });
+
+  it('keeps the contrast rule: every water stop, haze blend, sky stop and bed colour is at the luminance floor, so ink is 3:1 or better', () => {
+    const over = (base: string): string => {
+      const [r, g, b] = channelsOf(base);
+      const m = /rgba\((\d+),(\d+),(\d+),([\d.]+)\)/.exec(lake.haze)!;
+      const a = Number(m[4]);
+      return toHex([r * (1 - a) + Number(m[1]) * a, g * (1 - a) + Number(m[2]) * a, b * (1 - a) + Number(m[3]) * a]);
+    };
+    const colours = [
+      lake.sky.top,
+      lake.sky.horizon,
+      lake.water.shallow,
+      lake.water.mid,
+      lake.water.deep,
+      over(lake.water.shallow),
+      over(lake.water.mid),
+      over(lake.water.deep),
+      lake.bed.top,
+      lake.bed.bottom,
+      lake.bed.lip,
+    ];
+    for (const hex of colours) {
+      expect(relativeLuminance(hex), hex).toBeGreaterThanOrEqual(LUMINANCE_FLOOR);
+      expect(contrastRatio(INK, hex), hex).toBeGreaterThanOrEqual(PAIR_FLOOR);
+    }
+  });
+
+  it('keeps the hero the brightest thing in the water: every water stop is darker than the Leucistic body', () => {
+    for (const stop of ['shallow', 'mid', 'deep'] as const) {
+      expect(relativeLuminance(lake.water[stop]), stop).toBeLessThan(relativeLuminance(LEUCISTIC.body));
+    }
   });
 });
 

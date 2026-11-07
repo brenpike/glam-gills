@@ -20,6 +20,9 @@ import {
   MAP_HABITAT_TINTS,
   MAP_MARKER_D,
   MAP_MARKER_TEX,
+  MAP_OPEN_LAKE,
+  MAP_OPEN_LAKE_FILL,
+  MAP_OPEN_LAKE_PEAK_FILL,
   MAP_POND_PAD_FILL,
   MAP_POND_PAD_NOTCH,
   MAP_SPRING_CAVE_CRYSTAL_FILL,
@@ -37,6 +40,7 @@ import {
   areaMapChinampaMarkerKey,
   areaMapDeepCanalMarkerKey,
   areaMapMarkerKey,
+  areaMapOpenLakeMarkerKey,
   areaMapPondMarkerKey,
   areaMapSpringCaveMarkerKey,
   areaMapTabKey,
@@ -284,6 +288,7 @@ describe('pond marker frame', () => {
     const { canal, pond, chinampa } = art.markersByLook;
     const springCave = art.markersByLook['spring-cave'];
     const deepCanal = art.markersByLook['deep-canal'];
+    const openLake = art.markersByLook['open-lake'];
     expect(canal.unlocked).toBe(art.markerUnlocked);
     expect(canal.locked).toBe(art.markerLocked);
     expect(canal.unlocked.key).toBe(areaMapMarkerKey(false));
@@ -296,9 +301,11 @@ describe('pond marker frame', () => {
     expect(springCave.locked.key).toBe(areaMapSpringCaveMarkerKey(true));
     expect(deepCanal.unlocked.key).toBe(areaMapDeepCanalMarkerKey(false));
     expect(deepCanal.locked.key).toBe(areaMapDeepCanalMarkerKey(true));
+    expect(openLake.unlocked.key).toBe(areaMapOpenLakeMarkerKey(false));
+    expect(openLake.locked.key).toBe(areaMapOpenLakeMarkerKey(true));
     expect(Object.keys(art.markersByLook).sort()).toEqual([...HABITAT_LOOK_IDS].sort());
     expect(new Set(baked.map((b) => b.key)).size).toBe(baked.length);
-    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked, springCave.unlocked, springCave.locked, deepCanal.unlocked, deepCanal.locked]) {
+    for (const info of [pond.unlocked, pond.locked, canal.locked, chinampa.unlocked, chinampa.locked, springCave.unlocked, springCave.locked, deepCanal.unlocked, deepCanal.locked, openLake.unlocked, openLake.locked]) {
       expect(info.w).toBe(canal.unlocked.w);
       expect(info.h).toBe(canal.unlocked.h);
       expect(info.pxW).toBe(canal.unlocked.pxW);
@@ -841,6 +848,102 @@ describe('deep canal marker frame and silhouette (greyscale shape cue)', () => {
     const discArea = Math.PI * RIM_R * RIM_R;
     expect(areaOf(hullPoly)).toBeLessThan(0.8 * discArea);
     expect(areaOf(hullPoly)).toBeGreaterThan(0.5 * discArea);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Open lake marker (issue #211)
+// ---------------------------------------------------------------------------
+
+describe('open lake marker look', () => {
+  /** The two peak tubes' strokes (ink, ink, colour, colour) then the lake's fill and stroke, in paint order. */
+  const parts = (locked: boolean): { peaks: Painted[]; lakeFill: Painted; lakeInk: Painted; all: Painted[] } => {
+    const all = paintMarker(locked, 'open-lake');
+    return { peaks: all.slice(0, 4), lakeFill: all[4], lakeInk: all[5], all };
+  };
+
+  it('paints a blue lake under pale peaks unlocked, and a white lake under white peaks locked', () => {
+    const unlocked = parts(false);
+    const locked = parts(true);
+    expect(unlocked.all).toHaveLength(6);
+    expect(unlocked.lakeFill.op).toBe('fill');
+    expect(unlocked.lakeFill.style).toBe(MAP_OPEN_LAKE_FILL);
+    expect(unlocked.peaks.slice(2).map((p) => p.style)).toEqual([MAP_OPEN_LAKE_PEAK_FILL, MAP_OPEN_LAKE_PEAK_FILL]);
+    expect(locked.lakeFill.style).toBe(WHITE);
+    expect(locked.peaks.slice(2).map((p) => p.style)).toEqual([WHITE, WHITE]);
+    // The first fill is the marker's own fill, as for every other look.
+    expect(fillOf(paintMarker(false, 'open-lake')).style).toBe(MAP_OPEN_LAKE_FILL);
+  });
+
+  it('inks the lake at 3.5 and each peak tube at 2 a side, every ink stroke in the ink colour', () => {
+    for (const locked of [false, true]) {
+      const { peaks, lakeFill, lakeInk } = parts(locked);
+      for (const ink of peaks.slice(0, 2)) {
+        expect(ink.op).toBe('stroke');
+        expect(ink.style).toBe(INK);
+        expect(ink.lineWidth).toBe(5 + 2 * 2);
+      }
+      for (const colour of peaks.slice(2)) expect(colour.lineWidth).toBe(5);
+      expect(lakeInk.op).toBe('stroke');
+      expect(lakeInk.style).toBe(INK);
+      expect(lakeInk.lineWidth).toBe(LW);
+      expect(lakeInk.cmds).toEqual(lakeFill.cmds);
+    }
+  });
+
+  it('turns only the colours white when locked: the shapes and the ink are the same', () => {
+    const unlocked = paintMarker(false, 'open-lake');
+    const locked = paintMarker(true, 'open-lake');
+    expect(JSON.stringify(locked.map((p) => p.cmds))).toBe(JSON.stringify(unlocked.map((p) => p.cmds)));
+    expect(locked.map((p) => p.style)).not.toEqual(unlocked.map((p) => p.style));
+    expect(locked.filter((p) => p.style === INK)).toEqual(unlocked.filter((p) => p.style === INK));
+  });
+
+  it('is an oval lake with two peaks behind it, and the other looks keep their painting', () => {
+    const lake = fillOf(paintMarker(false, 'open-lake')).cmds;
+    expect(lake.some((c) => c[0] === 'ellipse')).toBe(true);
+    expect(MAP_OPEN_LAKE.peaks).toHaveLength(2);
+    expect(fillOf(paintMarker(false, 'canal')).style).toBe(UI_PRIMARY);
+    expect(fillOf(paintMarker(false, 'deep-canal')).style).toBe(MAP_DEEP_CANAL_HULL_FILL);
+  });
+
+  it('keeps ink 4.5:1 or more on the lake and its edge 3:1 or more against the backdrop, by its fill', () => {
+    expect(contrast(INK, MAP_OPEN_LAKE_FILL)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(MAP_OPEN_LAKE_FILL, BACKDROP)).toBeGreaterThanOrEqual(3);
+    expect(contrast(INK, MAP_OPEN_LAKE_PEAK_FILL)).toBeGreaterThanOrEqual(3);
+    for (const other of [UI_PRIMARY, MAP_POND_PAD_FILL, MAP_CHINAMPA_PLOT_FILL, MAP_SPRING_CAVE_STONE_FILL, MAP_DEEP_CANAL_HULL_FILL]) {
+      expect(MAP_OPEN_LAKE_FILL).not.toBe(other);
+    }
+  });
+
+  it('stays inside the 64 px frame and clear of the focus ring, ink included', () => {
+    const ringInner = MAP_FOCUS_WHITE_R - MAP_FOCUS_LW / 2;
+    const { halfW, halfH, centreY, peaks } = MAP_OPEN_LAKE;
+    expect(halfW + LW / 2).toBeLessThanOrEqual(MAP_MARKER_D / 2);
+    expect(centreY + halfH + LW / 2).toBeLessThan(MAP_MARKER_D / 2);
+    expect(centreY - halfH - LW / 2).toBeGreaterThan(-MAP_MARKER_D / 2);
+    // A peak tube is 5 wide with 2 of ink a side: 4.5 from its centreline round the apex.
+    for (const peak of peaks) {
+      expect(Math.hypot(peak.apex[0], peak.apex[1]) + 4.5).toBeLessThanOrEqual(ringInner);
+      expect(peak.apex[1] - 4.5).toBeGreaterThan(-MAP_MARKER_D / 2);
+    }
+    expect(MAP_MARKER_TEX.originY).toBeGreaterThanOrEqual(MAP_MARKER_D / 2);
+  });
+
+  it('keeps the lake\'s inner ink edge clear of the number box (a two-digit number, 34 x 28) at the middle', () => {
+    const { halfH, centreY } = MAP_OPEN_LAKE;
+    expect(centreY - halfH + LW / 2).toBeLessThanOrEqual(-14 + 1.5 + 0.0001);
+  });
+});
+
+describe('open lake panel tint', () => {
+  it('tints the open lake a pale blue, 30% of its lake over white (issue #211)', () => {
+    expect(mapHabitatTint('open-lake')).toBe('#d4edfa');
+    expect(contrast(INK, '#d4edfa').toFixed(2)).toBe('11.85');
+    expect(contrast('#d4edfa', BACKDROP).toFixed(2)).toBe('5.00');
+    for (const other of ['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal'] as const) {
+      expect(mapHabitatTint('open-lake')).not.toBe(mapHabitatTint(other));
+    }
   });
 });
 

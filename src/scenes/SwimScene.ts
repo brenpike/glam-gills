@@ -124,6 +124,7 @@ import {
 import { TRIP_EVENTS, TRIP_REGISTRY_KEYS, type TripSnapshot } from '../logic/tripEvents';
 import { LEGS, SWIM, type SwimTuning } from '../logic/tuning';
 import { len, type Vec2 } from '../logic/vec';
+import { addWindForce, winds, type WindSpawn } from '../logic/wind';
 import { SURF, swimBounds, waveY, type CollectibleKind, type CurrentZone, type ZoneLayout } from '../logic/zone';
 import { setMusicScreen } from '../platform/musicPlayer';
 import {
@@ -162,6 +163,7 @@ import { MurkyWaterView, type MurkyWaterFrame } from './MurkyWaterView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { MovingHazardView } from './MovingHazardView';
 import { PebbleRoomView } from './PebbleRoomView';
+import { PelicanLineView, type PelicanLineFrame } from './PelicanLineView';
 import { PetalView } from './PetalView';
 import { PlasticWormView } from './PlasticWormView';
 import { PredatorView } from './PredatorView';
@@ -172,6 +174,7 @@ import { StrandedView } from './StrandedView';
 import { TrajineraView } from './TrajineraView';
 import { TreasureView, type DarkShows } from './TreasureView';
 import { TripSoundRouter } from './TripSoundRouter';
+import { WindView, type WindFrame } from './WindView';
 
 const TAU = Math.PI * 2;
 const SIM_SEED = 0xb0bb1e;
@@ -410,6 +413,16 @@ export class SwimScene extends Phaser.Scene {
   private pebbleHintTime = 0;
   /** The rock walls and pebbles, or null in an area with neither. */
   private pebbleRoomView: PebbleRoomView | null = null;
+  /** The area's wind and waves (issue #211, ND-10); empty in an area with none. Fixed for the trip. */
+  private windElements: readonly Readonly<WindSpawn>[] = [];
+  /** The wind's ripples and gust streaks, or null in an area with no wind. */
+  private windView: WindView | null = null;
+  /** The reused render argument of the wind view, made on its first frame. */
+  private windFrame: WindFrame | null = null;
+  /** The pelican lines' birds, bills and splashes, or null in an area with no pelican lines. */
+  private pelicanLineView: PelicanLineView | null = null;
+  /** The reused render argument of the pelican line view, made on its first frame. */
+  private pelicanFrame: PelicanLineFrame | null = null;
   /** What every mobile snack pose shares this frame, reused each frame. */
   private mobileSnackScene: MobileSnackPoseScene = { clock: 0, reduced: false, head: { x: 0, y: 0 } };
   private homeSpotView!: HomeSpotView;
@@ -522,6 +535,11 @@ export class SwimScene extends Phaser.Scene {
     this.pebbleStates = [];
     this.pebbleHintTime = 0;
     this.pebbleRoomView = null;
+    this.windElements = [];
+    this.windView = null;
+    this.windFrame = null;
+    this.pelicanLineView = null;
+    this.pelicanFrame = null;
     this.swimPhase = (TAU * T_STATIC) / 1.2;
     this.gillPhase = (TAU * T_STATIC) / 0.8;
   }
@@ -582,6 +600,7 @@ export class SwimScene extends Phaser.Scene {
     this.vents = pulsingCurrents(zone.hazards);
     this.rockWalls = zone.rockWalls ?? [];
     this.pebbleStates = createPebbles(this.trip.elements);
+    this.windElements = winds(this.trip.elements);
     this.dashKeyLatched = true;
     this.tripCtx = perkTripContext(this.perks, this.bounds);
     this.registry.set(REGISTRY_KEYS.total, this.items.length);
@@ -719,6 +738,15 @@ export class SwimScene extends Phaser.Scene {
    * diveArcPose's result: bounded by the area's cormorant count, the same class as the residual below.
    * PetalView is made once per trip, and only in a look with sinking petals; PetalView.render
    * allocates nothing.
+   * Open lake Area 12 (#211): Areas 1 to 11 build and call nothing new, and bake no lake texture.
+   * PelicanLineView and WindView are made once per trip, and only in an area with pelican lines or
+   * with wind. Both use textures baked at boot, reuse their sprites and take a render argument object
+   * the scene makes once and reuses. Where there is wind, addWindForce adds to the steady current's
+   * own result after the vents, on the same element time, and allocates nothing; WindView allocates
+   * only windPose's result per wind. PelicanLineView allocates pelicanPose's result per bird: bounded
+   * by the area's bird count, the same class as the residual below. A scoop's bump arrives as the trip
+   * step's impulse, as every bump does. The lake's rock walls are painted into the scenery chunks, so
+   * PebbleRoomView never draws them; they still block the body (blockAtRock).
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -789,6 +817,8 @@ export class SwimScene extends Phaser.Scene {
     const current = currentAt(pos, zone.currents);
     // INVARIANT: the vents surge on the element time the trip reaches this frame, as the mats do.
     if (this.vents.length > 0) addPulseCurrent(current, pos, this.vents, this.trip.elementTime + dt);
+    // INVARIANT: the wind gusts on the same element time as the vents, after them.
+    if (this.windElements.length > 0) addWindForce(current, pos, this.windElements, this.trip.elementTime + dt, zone.safeArea);
     const swum = stepSwim(
       this.swim,
       steer,
@@ -1004,10 +1034,16 @@ export class SwimScene extends Phaser.Scene {
     this.glowPlantView =
       glowPlants(this.trip.elements).length > 0 ? new GlowPlantView(this, this.assets, this.trip.elements) : null;
     this.pulsingCurrentView = this.vents.length > 0 ? new PulsingCurrentView(this, this.assets, this.vents) : null;
+    // INVARIANT: a look that paints the lakebed paints its rock walls into the scenery chunks; they still block the body.
+    const drawnWalls = this.look.lakebed ? [] : this.rockWalls;
     this.pebbleRoomView =
-      this.rockWalls.length > 0 || this.pebbleStates.length > 0
-        ? new PebbleRoomView(this, this.assets, this.rockWalls, this.trip.elements)
+      drawnWalls.length > 0 || this.pebbleStates.length > 0
+        ? new PebbleRoomView(this, this.assets, drawnWalls, this.trip.elements)
         : null;
+    const pelicanLines = this.trip.pelicanLines;
+    this.pelicanLineView = pelicanLines.length > 0 ? new PelicanLineView(this, this.assets, pelicanLines) : null;
+    this.windView =
+      this.windElements.length > 0 ? new WindView(this, this.assets, this.windElements, this.zone.safeArea) : null;
 
     this.bubbleImages = Array.from({ length: BUBBLE_MAX_ALIVE }, () =>
       this.add.image(0, 0, baked.bubbles[0].key).setVisible(false).setDepth(DEPTH.bubbles),
@@ -1659,6 +1695,8 @@ export class SwimScene extends Phaser.Scene {
     this.glowPlantView?.destroy();
     this.pulsingCurrentView?.destroy();
     this.pebbleRoomView?.destroy();
+    this.pelicanLineView?.destroy();
+    this.windView?.destroy();
     this.hyacinthMatView?.destroy();
     this.axolotlView.destroy();
   }
@@ -1703,6 +1741,8 @@ export class SwimScene extends Phaser.Scene {
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
     this.pebbleRoomView?.render({ pebbles: this.pebbleStates, hint: this.trip.phase === 'swimming' && pebbleHintShown(this.pebbleHintTime) });
+    this.renderPelicanLines();
+    this.renderWind();
     this.fireflyView?.render(this.motion, this.clock);
     this.petalView?.render(this.motion, this.clock);
     this.renderReeds(dt, t);
@@ -1714,6 +1754,34 @@ export class SwimScene extends Phaser.Scene {
     this.renderSparkles(dt);
     this.renderSurface(t);
     this.renderPads(t);
+  }
+
+  /**
+   * The pelican lines (issue #211, ND-5, ND-6) at the trip's element time, with no bob under reduced
+   * motion. Only in an area with pelican lines; its argument object is made once and reused.
+   */
+  private renderPelicanLines(): void {
+    const view = this.pelicanLineView;
+    if (view === null) return;
+    const frame = (this.pelicanFrame ??= { elementTime: 0, reduced: false });
+    frame.elementTime = this.trip.elementTime;
+    frame.reduced = !this.motion.ambient;
+    view.render(frame);
+  }
+
+  /**
+   * The wind and waves (issue #211, ND-10, ND-11) at the trip's element time, still under reduced
+   * motion, near the camera view. Only in an area with wind; its argument object is made once and reused.
+   */
+  private renderWind(): void {
+    const view = this.windView;
+    if (view === null) return;
+    const worldView = this.cameras.main.worldView;
+    const frame = (this.windFrame ??= { elementTime: 0, reduced: false, view: worldView });
+    frame.elementTime = this.trip.elementTime;
+    frame.reduced = !this.motion.ambient;
+    frame.view = worldView;
+    view.render(frame);
   }
 
   /**

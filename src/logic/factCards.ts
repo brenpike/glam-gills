@@ -235,6 +235,35 @@ export const CORMORANT_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The pelican fact card, shown the first time the axolotl comes within PELICAN_MEET_RANGE of a
+ * pelican line, outside the Home Spot (PRD C13; issue #211, ND-20). Provisional copy.
+ * Sources, checked 2026-11-05 (web research only; the game fetches nothing):
+ * Milenio, "Cientos de pelícanos llegan a Xochimilco para refugiarse del frío extremo de EU y
+ * Canadá", 2025-02-11,
+ * https://amp.milenio.com/politica/comunidad/pelicanos-llegan-a-xochimilco-para-refugiarse-frio-extremo-eu-canada
+ * (Pelecanus erythrorhynchos, the American white pelican, from the Great Lakes region between Canada
+ * and the United States, October to March; more than 700 in the Ejidos de Xochimilco y San Gregorio
+ * Atlapulco protected area, about 200 of them at the Parque Ecológico de Xochimilco wetland; "Algunas
+ * aves forman grupos y al unísono clavan sus picos al agua") for "Hundreds", "in winter" and
+ * "dip their bills together";
+ * National Audubon Society, Guide to North American Birds, American White Pelican,
+ * https://www.audubon.org/bird-guide-api/1469 ("Forages by swimming on surface, dipping bill into
+ * water and scooping up fish in pouch"; "May forage cooperatively, lining up and driving fish toward
+ * shallower water"; "does not dive from the air for fish") for "float in a line" and "scoop up fish";
+ * Findholt and Anderson 1995, Colonial Waterbirds 18(1):58-68 (the diet of American white pelicans
+ * nesting at Pathfinder Reservoir, Wyoming; tiger salamanders, Ambystoma tigrinum, with carp and white
+ * suckers among the top prey), why the line is a danger to an axolotl; the card never says a
+ * pelican eats an axolotl. "Axolotls stay safe by swimming down deep" is the game's rule (the scoop
+ * goes only so deep), read from Audubon's surface feeding, not a source claim.
+ */
+export const PELICAN_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'pelican',
+  name: 'White pelican',
+  title: 'Meet the pelican',
+  body: 'Hundreds of white pelicans fly to Xochimilco in winter. They float in a line and dip their bills together to scoop up fish. Axolotls stay safe by swimming down deep.',
+});
+
+/**
  * The stalactite fact card, shown the first time the axolotl meets a dripping stalactite (PRD C13;
  * issue #77, ND-3). Provisional copy.
  * Sources, checked 2026-10-28 (web research only; the game fetches nothing):
@@ -621,6 +650,13 @@ export const BLACK_BASS_MEET_RANGE = 180;
  * later than the first warning.
  */
 export const CORMORANT_MEET_RANGE = 180;
+
+/**
+ * Centre distance in px to a bird of a pelican line within which the axolotl meets the pelicans
+ * (issue #211, ND-20). Provisional; tune in play. The same as the cormorant's, so the card can show
+ * before the first warning.
+ */
+export const PELICAN_MEET_RANGE = 180;
 
 /**
  * Distance in px from a pulsing current's band within which the axolotl meets it (issue #105,
