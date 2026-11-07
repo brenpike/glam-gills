@@ -15,7 +15,6 @@ import {
   type PlacementOptions,
   type RarityCounts,
 } from './placement';
-import { OPEN_LAKE_AREA_ID } from './openLakeLayout';
 import { createTrip } from './trip';
 import {
   LEGS,
@@ -280,9 +279,14 @@ describe('fallbackOrder', () => {
 describe('placeTreasures with every Common, Rare and Epic of an area banked (B4)', () => {
   const hasLegendaryFind = (area: (typeof AREAS)[number]): boolean =>
     buildZone(area.layout, DEFAULT_TRIP_SEED).finds.some((find) => rarityOf(find.id) === 'legendary');
+  const hasLegendarySpot = (area: (typeof AREAS)[number]): boolean =>
+    buildZone(area.layout, DEFAULT_TRIP_SEED).spots.some((spot) => spot.rarity === 'legendary');
+  const areaIds = (areas: readonly (typeof AREAS)[number][]): string[] => areas.map((area) => area.id);
 
-  it('gives no Legendary find to open-lake-1 until issue #214 adds one, and every other area has one', () => {
-    expect(AREAS.filter((area) => !hasLegendaryFind(area)).map((area) => area.id)).toEqual([OPEN_LAKE_AREA_ID]);
+  it('gives no Legendary find to exactly the areas with no Legendary spot (issue #214)', () => {
+    expect(areaIds(AREAS.filter((area) => !hasLegendaryFind(area)))).toEqual(
+      areaIds(AREAS.filter((area) => !hasLegendarySpot(area))),
+    );
   });
 
   it.each(AREAS.filter(hasLegendaryFind).map((area) => [area.id, area] as const))(

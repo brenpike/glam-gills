@@ -1,5 +1,5 @@
 /**
- * Worn looks of the sixty-one Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the sixty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -13,7 +13,8 @@
  * Sailor cap, Striped scarf, Mariachi jacket, Captain's hat and Rainbow fin streamers, and the deep canal Area 9's
  * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, and the deep canal Area 10's Party hat,
  * Confetti scarf, Festival shirt, Hero medal and Champion crown, and the deep canal Area 11's Propeller cap, Star
- * sunglasses, Robot suit, Jetpack and Wizard hat, painted on the anchors
+ * sunglasses, Robot suit, Jetpack and Wizard hat, and the open lake Area 12's Wave socks, Cloud scarf, Pelican swim
+ * ring, Surfboard and Pelican slippers, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -107,6 +108,17 @@
  * trim and gem. Kid-safe (ADR 0007): no letters, numbers, dials or grids; the jetpack puffs bubbles, never flames;
  * every blade, ray and tip is rounded; the lenses are the clear tint. The propeller is still: like every worn look it
  * never moves on its own. No look has net-like lines.
+ *
+ * The Area 12 looks (issue #214) keep the same rules. The Surfboard is the one big item (issue #214, ND-6): it draws
+ * within backBigFootprint, stood up on the back, and its visible paint stays under the axolotl's own; the Wave socks,
+ * Cloud scarf, Pelican swim ring and Pelican slippers keep their slots' footprints. Their outer fills are the icons' own
+ * colours, imported by name from treasurePalette.ts (WAVE_SOCKS_FILL, CLOUD_SCARF_FILL, PELICAN_SWIM_RING_FILL with
+ * PELICAN_SWIM_RING_BILL, SURFBOARD_FILL, PELICAN_SLIPPER_FILL with PELICAN_SLIPPER_BILL; each 9:1 or better with ink,
+ * none red). Their other colours are internal details: ink at the stripe alpha (the socks' waves) and the boat-yellow
+ * trim. The Wave socks' round-toed, wave-crested pad and the Pelican slippers' round toe, head and bill give outlines of
+ * their own, never the Stripy or Lily-pad socks', the Flippers' or the Froggy boots'. Kid-safe (issue #214, ND-8): every
+ * end and tip is rounded, no letters or numbers, and a pelican's bill is always closed over an empty pouch, never
+ * catching anything. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -125,6 +137,7 @@ import {
   axolotlBodyGeometry,
   backBigFootprint,
   backFootprint,
+  feetEnvelope,
   glassesNotches,
   shirtGeometry,
   shoeRect,
@@ -244,6 +257,13 @@ import {
   WIZARD_HAT_STAR,
   WIZARD_HAT_TIP,
   WORN_FAR_INK_MIX,
+  CLOUD_SCARF_FILL,
+  PELICAN_SLIPPER_BILL,
+  PELICAN_SLIPPER_FILL,
+  PELICAN_SWIM_RING_BILL,
+  PELICAN_SWIM_RING_FILL,
+  SURFBOARD_FILL,
+  WAVE_SOCKS_FILL,
 } from './treasurePalette';
 
 // ---------------------------------------------------------------------------
@@ -264,7 +284,7 @@ export const EXPLORER_VEST_BELT = '#b98a50';
 // The art-level outfit
 // ---------------------------------------------------------------------------
 
-/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/`, `chinampa/`, `spring-cave/` or `deep-canal/`). */
+/** The art slug of each Wearable: the catalogue id text after the area (`canal/`, `pond/`, `chinampa/`, `spring-cave/`, `deep-canal/` or `open-lake/`). */
 export type WearableArtSlug =
   | 'sun-hat'
   | 'shell-necklace'
@@ -326,13 +346,19 @@ export type WearableArtSlug =
   | 'star-sunglasses'
   | 'robot-suit'
   | 'jetpack'
-  | 'wizard-hat';
+  | 'wizard-hat'
+  | 'wave-socks'
+  | 'cloud-scarf'
+  | 'pelican-swim-ring'
+  | 'surfboard'
+  | 'pelican-slippers';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
  * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five, then the deep canal Area 8's,
- * Area 9's, Area 10's and Area 11's five each, the last, so WEARABLE_ART_SLUGS finds each slot's canal slug first.
+ * Area 9's, Area 10's and Area 11's five each, then the open lake Area 12's five, the last, so WEARABLE_ART_SLUGS
+ * finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
   'sun-hat': 'head',
@@ -396,6 +422,11 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'robot-suit': 'shirt',
   jetpack: 'back',
   'wizard-hat': 'head',
+  'wave-socks': 'socks',
+  'cloud-scarf': 'neck',
+  'pelican-swim-ring': 'shirt',
+  surfboard: 'back',
+  'pelican-slippers': 'feet',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -419,11 +450,11 @@ export function wornSlug(outfit: ArtOutfit, slot: WearableSlot): WearableArtSlug
 }
 
 /**
- * The big items (issue #207): the Head items drawn within HEAD_BIG_FOOTPRINT and the Back item drawn within
- * backBigFootprint. Every other item keeps its slot's footprint, so only an outfit with one of these grows the
- * picture it is baked into.
+ * The big items (issue #207): the Head items drawn within HEAD_BIG_FOOTPRINT and the Back items drawn within
+ * backBigFootprint, the Surfboard the open lake's one (issue #214, ND-6). Every other item keeps its slot's footprint,
+ * so only an outfit with one of these grows the picture it is baked into.
  */
-export const BIG_WEARABLE_ART_SLUGS: ReadonlySet<WearableArtSlug> = new Set<WearableArtSlug>(['propeller-cap', 'jetpack', 'wizard-hat']);
+export const BIG_WEARABLE_ART_SLUGS: ReadonlySet<WearableArtSlug> = new Set<WearableArtSlug>(['propeller-cap', 'jetpack', 'wizard-hat', 'surfboard']);
 
 /** Whether the item `outfit` wears in `slot` is a big item (BIG_WEARABLE_ART_SLUGS). */
 export function wearsBigItem(outfit: ArtOutfit, slot: WearableSlot): boolean {
@@ -1006,25 +1037,30 @@ function scarfUpperAt(x: number): number {
   return y;
 }
 
+/** The centres along x of the scarf band's two round ends: each end is a half circle as high as the band there. */
+function scarfBandEnds(): { readonly xa: number; readonly xb: number } {
+  const heightAt = (x: number): number => scarfLowerAt(x) - scarfUpperAt(x);
+  return { xa: SCARF_X0 + heightAt(SCARF_X0 + 2.2) / 2, xb: SCARF_X1 - heightAt(SCARF_X1 - 3.5) / 2 };
+}
+
 /**
  * The scarf band as one closed path: its upper edge from the rear to the front, a
  * round end at the front, its lower edge back, and a round end at the rear. Each end
  * is a half circle as high as the band there, so the band's fill still spans
- * SCARF_X0 to SCARF_X1.
+ * SCARF_X0 to SCARF_X1. `upperAt` is the upper edge between the ends: the footprint's
+ * top (scarfUpperAt) unless a look dips it lower (the Cloud scarf's puffs); it must
+ * meet scarfUpperAt at both ends' centres.
  */
-function scarfBandPath(): Path2D {
-  const heightAt = (x: number): number => scarfLowerAt(x) - scarfUpperAt(x);
-  const rearR = heightAt(SCARF_X0 + 2.2) / 2;
-  const frontR = heightAt(SCARF_X1 - 3.5) / 2;
-  const xa = SCARF_X0 + rearR;
-  const xb = SCARF_X1 - frontR;
+function scarfBandPath(upperAt: (x: number) => number = scarfUpperAt): Path2D {
+  const heightAt = (x: number): number => scarfLowerAt(x) - upperAt(x);
+  const { xa, xb } = scarfBandEnds();
   const steps = Math.round((xb - xa) / 0.5);
   const xs = Array.from({ length: steps + 1 }, (_, i) => xa + ((xb - xa) * i) / steps);
   const band = new Path2D();
-  xs.forEach((x, i) => (i === 0 ? band.moveTo(x, scarfUpperAt(x)) : band.lineTo(x, scarfUpperAt(x))));
-  band.arc(xb, (scarfUpperAt(xb) + scarfLowerAt(xb)) / 2, heightAt(xb) / 2, -Math.PI / 2, Math.PI / 2);
+  xs.forEach((x, i) => (i === 0 ? band.moveTo(x, upperAt(x)) : band.lineTo(x, upperAt(x))));
+  band.arc(xb, (upperAt(xb) + scarfLowerAt(xb)) / 2, heightAt(xb) / 2, -Math.PI / 2, Math.PI / 2);
   for (let i = steps; i >= 0; i--) band.lineTo(xs[i], scarfLowerAt(xs[i]));
-  band.arc(xa, (scarfUpperAt(xa) + scarfLowerAt(xa)) / 2, heightAt(xa) / 2, Math.PI / 2, (3 * Math.PI) / 2);
+  band.arc(xa, (upperAt(xa) + scarfLowerAt(xa)) / 2, heightAt(xa) / 2, Math.PI / 2, (3 * Math.PI) / 2);
   band.closePath();
   return band;
 }
@@ -4460,6 +4496,353 @@ function paintWizardHat(ctx: CanvasRenderingContext2D): void {
 }
 
 // ---------------------------------------------------------------------------
+// The open lake Area 12 looks (issue #214): shared shapes
+// ---------------------------------------------------------------------------
+
+/** Thin ink of the Area 12 looks' small inner details: the trim bands' lines, the bills' outlines and seams. */
+const LAKE_DETAIL_LW = BAND_LW / 2;
+/** A pelican's bead eye: an ink dot. */
+const PELICAN_EYE_R = 0.8;
+
+/**
+ * A pelican's closed bill lying along +x from its root at (x, y): a slim straight top edge to a soft round tip and a
+ * lower edge that sags a little under it, the slim pouch closed and empty (issue #214, ND-8). `height` is its depth at
+ * the root, `len` the root to the tip's fill edge.
+ */
+function closedBillPath(x: number, y: number, len: number, height: number, sag: number): Path2D {
+  const tip = x + len;
+  const tipR = height * 0.32;
+  const p = new Path2D();
+  p.moveTo(x, y);
+  p.lineTo(tip - tipR, y + height * 0.12);
+  p.quadraticCurveTo(tip, y + height * 0.16, tip, y + height * 0.16 + tipR);
+  p.bezierCurveTo(tip - len * 0.3, y + height * 0.6 + sag, x + len * 0.3, y + height + sag, x, y + height);
+  p.closePath();
+  return p;
+}
+
+/** The ink seam along a closedBillPath from the same root, length and height, where its upper and lower halves meet. */
+function closedBillSeamPath(x: number, y: number, len: number, height: number): Path2D {
+  return line(x + height * 0.4, y + height * 0.45, x + len - height * 0.55, y + height * 0.32);
+}
+
+// ---------------------------------------------------------------------------
+// Socks: Wave socks (Common), in leg space
+// ---------------------------------------------------------------------------
+
+/** The two soft waves across the sleeve (ink at the stripe alpha): how far back from the leg end each wave's middle sits. */
+const WAVE_SOCK_SLEEVE_WAVES: readonly number[] = [3.4, 7.4];
+/** The wave on the pad: how far past the toe tips its middle sits. */
+const WAVE_SOCK_PAD_WAVE = 2.4;
+/** One wave ribbon: its depth along the leg, the rise and fall of its crests and the length of one crest across the leg. */
+const WAVE_RIBBON_DEPTH = 1.6;
+const WAVE_RIBBON_LIFT = 0.9;
+const WAVE_RIBBON_STEP = 2.9;
+
+/**
+ * One soft wave ribbon across the leg at u: from v -half to +half, its edges rising and falling WAVE_RIBBON_LIFT about
+ * u - depth / 2 and u + depth / 2, as the icon's two waves.
+ */
+function waveRibbonPath(u: number, half: number): Path2D {
+  const top = u - WAVE_RIBBON_DEPTH / 2;
+  const bottom = u + WAVE_RIBBON_DEPTH / 2;
+  const count = Math.max(1, Math.round((2 * half) / WAVE_RIBBON_STEP));
+  const step = (2 * half) / count;
+  const lift = (i: number): number => (i % 2 === 0 ? WAVE_RIBBON_LIFT : -WAVE_RIBBON_LIFT);
+  const p = new Path2D();
+  p.moveTo(top, -half);
+  for (let i = 0; i < count; i++) p.quadraticCurveTo(top - lift(i), -half + (i + 0.5) * step, top, -half + (i + 1) * step);
+  p.lineTo(bottom, half);
+  for (let i = count - 1; i >= 0; i--) p.quadraticCurveTo(bottom - lift(i), -half + (i + 0.5) * step, bottom, -half + i * step);
+  p.closePath();
+  return p;
+}
+
+/**
+ * The Wave socks' foot pad, in leg space, as one closed path half the ink inside the Sock's foot pad (sockFootPad): a
+ * fully round toe (a half circle as wide as the pad) and, at the ankle, two round wave crests, one each side of the leg,
+ * that meet in a notch on the leg line. So its outline is never the Stripy socks' or the Lily-pad socks' rounded
+ * rectangle. The round toe still covers every toe tip, and the notch lies over the sleeve's round end.
+ */
+function wavePadPath(frame: LegSlotFrame): Path2D {
+  const pad = sockFootPad(frame);
+  const half = ITEM_LW / 2;
+  const v = pad.vHalf - half;
+  const back = pad.u0 + half;
+  const toe = pad.u1 - half - v;
+  const crest = toe - back;
+  const p = new Path2D();
+  p.moveTo(toe, -v);
+  p.arc(toe, 0, v, -Math.PI / 2, Math.PI / 2);
+  p.ellipse(toe, v / 2, crest, v / 2, 0, Math.PI / 2, (3 * Math.PI) / 2);
+  p.ellipse(toe, -v / 2, crest, v / 2, 0, Math.PI / 2, (3 * Math.PI) / 2);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Common (issue #214): a WAVE_SOCKS_FILL pale paper blue sleeve (colour 11.6, `ol` 2.4) from the leg root to the leg
+ * end, the Stripy socks' sleeve, and a wave foot pad over the toes (wavePadPath: a round toe and two wave crests at the
+ * ankle, `shape` 2.0). Three soft waves (ink at the stripe alpha, the same colour darkened, not a second colour): two
+ * across the sleeve and one on the pad, clipped to it. One shine on the pad; no trim, gem or star. In leg space: u along
+ * the leg from the root, v across it. Far legs use the fill mixed toward ink; the waves, ink and shine are as on the
+ * near legs.
+ */
+function paintWaveSocks(ctx: CanvasRenderingContext2D, frame: LegSlotFrame, tone: Tone): void {
+  const l = frame.length;
+  const t = frame.toeLength;
+  inkMany(ctx, [seg(line(0, 0, l, 0), SOCK_SLEEVE_W, tone(WAVE_SOCKS_FILL), SOCK_SLEEVE_OL)]);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  for (const back of WAVE_SOCK_SLEEVE_WAVES) ctx.fill(waveRibbonPath(l - back, SOCK_SLEEVE_W / 2));
+  ctx.restore();
+  inkedShape(ctx, wavePadPath(frame), tone(WAVE_SOCKS_FILL), () => {
+    ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+    ctx.fillStyle = INK;
+    ctx.fill(waveRibbonPath(l + t + WAVE_SOCK_PAD_WAVE, sockFootPad(frame).vHalf));
+  });
+  shine(ctx, l + 4.4, -4.5, 2, 0.9);
+}
+
+// ---------------------------------------------------------------------------
+// Neck: Cloud scarf (Rare)
+// ---------------------------------------------------------------------------
+
+/**
+ * The cloud puffs along the scarf's upper edge: how many, evenly between the band's two round ends, a crest on each end
+ * so the ends stay the Pond-weed scarf's, and the radius of each puff's round top.
+ */
+const CLOUD_PUFFS = 5;
+const CLOUD_PUFF_R = 4.2;
+/** The one trim band (Rare) across the scarf, through the rear puff: its two edges along x. */
+const CLOUD_BAND_X: readonly [number, number] = [5.6, 7.8];
+
+/** The crests of the Cloud scarf's puffs along x: on the band's two round ends and evenly between them. */
+function cloudCrests(): number[] {
+  const { xa, xb } = scarfBandEnds();
+  return Array.from({ length: CLOUD_PUFFS + 1 }, (_, k) => xa + ((xb - xa) * k) / CLOUD_PUFFS);
+}
+
+/**
+ * The Cloud scarf's upper edge at x: the Pond-weed scarf's (the Neck footprint's top, dipping under the cheek heart
+ * zone), dipped further between the puff crests, so the edge is a row of round puff tops that each reach the
+ * footprint's top. It is never higher than the Pond-weed scarf's, so it keeps every clearance of the scarf's band.
+ */
+function cloudUpperAt(x: number): number {
+  const nearest = Math.min(...cloudCrests().map((crest) => Math.abs(x - crest)));
+  const dip = CLOUD_PUFF_R - Math.sqrt(Math.max(0, CLOUD_PUFF_R ** 2 - nearest ** 2));
+  return Math.max(scarfUpperAt(x), SCARF_TOP_FLOOR + dip);
+}
+
+/**
+ * Rare (issue #214): the Pond-weed scarf's band under the chin and round the back of the neck (one `blob` with 0.6 of
+ * ink outside the fill, kept inside LW / 2 of the silhouette outline) in a CLOUD_SCARF_FILL pale silver-white, its upper
+ * edge a row of round cloud puffs (cloudUpperAt), with one #ffe14a trim band across the rear puff (between two 0.6
+ * ink lines, clipped to the band) and one shine. No gem, gold or star. The icon's hanging tail would hang below the
+ * silhouette, which a Neck item never does, so the puffs carry the cloud. It keeps every clearance of the scarf's band,
+ * so it keeps off the gill-root zone and the cheek heart zone; the mouth paints over its front.
+ */
+function paintCloudScarf(ctx: CanvasRenderingContext2D): void {
+  const band = scarfBandPath(cloudUpperAt);
+  silhouette(ctx, [{ path: band, fill: CLOUD_SCARF_FILL }], SCARF_OL);
+  ctx.save();
+  ctx.clip(band);
+  trimBand(ctx, { x0: CLOUD_BAND_X[0], x1: CLOUD_BAND_X[1], y0: 12, y1: 24 }, BOAT_TRIM, false, LAKE_DETAIL_LW);
+  ctx.restore();
+  shine(ctx, cloudCrests()[1], 16.6, 2, 0.6);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Pelican swim ring (Rare)
+// ---------------------------------------------------------------------------
+
+/**
+ * The one trim band (Rare), a stripe round the ring near its rear, where the ring is shallow, so its two ink lines are
+ * short: its centre along the Shirt from the rear (share of its length) and its width.
+ */
+const SWIM_RING_BAND_AT = 0.12;
+const SWIM_RING_BAND_W = 3;
+/**
+ * The toy pelican at the ring's front: its bead eye (how far behind the neckline's ink, and how far above the centre
+ * line as a share of the inset ry), and its closed bill hanging down the front from under the eye: its length (share
+ * of the inset ry), its depth and its sag.
+ */
+const SWIM_RING_EYE_BACK = 4.6;
+const SWIM_RING_EYE_RISE = 0.5;
+const SWIM_RING_BILL_LEN = 0.9;
+const SWIM_RING_BILL_H = 2.6;
+const SWIM_RING_BILL_SAG = 0.6;
+
+/**
+ * Rare (issue #214): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) as a puffy
+ * swim ring round the torso in a PELICAN_SWIM_RING_FILL soft white, with one #ffe14a stripe round the ring (the one
+ * trim band near its rear, between two 0.6 ink lines, clipped inside the silhouette) and, at the front, a toy pelican's
+ * bead eye and its closed bill in the PELICAN_SWIM_RING_BILL pale orange hanging down the ring's front with a 0.6 ink
+ * seam, its slim pouch closed and empty: never catching anything (issue #214, ND-8). The bill has no outline of its own,
+ * so the small Shirt keeps enough of its own fill in view; the seam and the eye carry it. The icon's neck and head would leave the
+ * Shirt footprint, so the ring's own front is the pelican's head. One shine placed as on the Tank top. It sits inside
+ * the silhouette, so it never reaches the torso edge band, the front line, the tail root or a leg.
+ */
+function paintPelicanSwimRing(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, PELICAN_SWIM_RING_FILL, () => {
+    const x = outline.xr + (outline.xf - outline.xr) * SWIM_RING_BAND_AT;
+    const box = { x0: x - SWIM_RING_BAND_W / 2, x1: x + SWIM_RING_BAND_W / 2, y0: e.cy - e.ry - 1, y1: e.cy + e.ry + 1 };
+    trimBand(ctx, box, BOAT_TRIM, false, LAKE_DETAIL_LW);
+    const eye = { x: shirt.neckline.apexX - 2 * outline.half - SWIM_RING_EYE_BACK, y: e.cy - e.ry * SWIM_RING_EYE_RISE };
+    const len = e.ry * SWIM_RING_BILL_LEN;
+    ctx.save();
+    ctx.translate(eye.x + PELICAN_EYE_R + 0.6, eye.y + PELICAN_EYE_R + 0.4);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = PELICAN_SWIM_RING_BILL;
+    ctx.fill(closedBillPath(0, -SWIM_RING_BILL_H, len, SWIM_RING_BILL_H, SWIM_RING_BILL_SAG));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = LAKE_DETAIL_LW;
+    ctx.stroke(closedBillSeamPath(0, -SWIM_RING_BILL_H, len, SWIM_RING_BILL_H));
+    ctx.restore();
+    ctx.fillStyle = INK;
+    ctx.fill(ellipsePath(eye.x, eye.y, PELICAN_EYE_R, PELICAN_EYE_R));
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Surfboard (Rare), big
+// ---------------------------------------------------------------------------
+
+/** The board's round tail and its soft round nose: the radius of each end, fill edge. */
+const SURFBOARD_TAIL_R = 4.4;
+const SURFBOARD_NOSE_R = 1.8;
+/** The one trim band (Rare) across the board: its centre along the board from the tail's centre (share of the length) and its width. */
+const SURFBOARD_BAND_AT = 0.36;
+const SURFBOARD_BAND_W = 3;
+/** The ink stringer down the board's middle stops this far inside each end's centre. */
+const SURFBOARD_STRINGER_IN = 1.2;
+/** The one shine: along the board (share of the length), off its middle toward the water, and its radii. */
+const SURFBOARD_SHINE_AT = 0.64;
+const SURFBOARD_SHINE_OFF = 1.5;
+
+/**
+ * The outline of two circles and their two outer tangents, as one closed path: a board with a round end of radius `ra`
+ * about `a` and a round end of radius `rb` about `b` (`ra` more than `rb`, so it tapers from `a` to `b`). Its extremes
+ * along each axis are its two circles' own.
+ */
+function taperedBoardPath(a: Pt, ra: number, b: Pt, rb: number): Path2D {
+  const along = Math.atan2(b.y - a.y, b.x - a.x);
+  const turn = Math.acos((ra - rb) / Math.hypot(b.x - a.x, b.y - a.y));
+  const p = new Path2D();
+  p.arc(b.x, b.y, rb, along - turn, along + turn);
+  p.arc(a.x, a.y, ra, along + turn, along - turn + TAU);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Rare (issue #214, ND-6), big: a SURFBOARD_FILL pale teal surfboard stood up on the back in the big Back box
+ * (backBigFootprint), as the icon's tilted board: its round tail low at the box's rear on the back, its soft round nose
+ * high at the box's front and outer edge, so it leans toward the snout. One `blob` (ink 2.0 all outside the fill),
+ * running the box end to end along the back and out to its outer edge; an ink stringer (1.2) down its middle and the
+ * one #ffe14a trim band across it (between two 1.2 ink lines), both clipped to the board; one shine near the nose. No
+ * fin, gem, gold or star, and no letters or numbers (ADR 0007). Painted in the Back frame (x' along the torso edge toward
+ * the snout, y' + into the body); the box is ink included, so the fills are ITEM_LW inside it.
+ */
+function paintSurfboard(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const tail: Pt = { x: box.minU + ITEM_LW + SURFBOARD_TAIL_R, y: box.maxV - ITEM_LW - SURFBOARD_TAIL_R };
+  const nose: Pt = { x: box.maxU - ITEM_LW - SURFBOARD_NOSE_R, y: box.minV + ITEM_LW + SURFBOARD_NOSE_R };
+  const board = taperedBoardPath(tail, SURFBOARD_TAIL_R, nose, SURFBOARD_NOSE_R);
+  const along = Math.atan2(nose.y - tail.y, nose.x - tail.x);
+  const length = Math.hypot(nose.x - tail.x, nose.y - tail.y);
+  const at = (share: number, off: number): Pt => ({
+    x: tail.x + Math.cos(along) * length * share + Math.sin(along) * off,
+    y: tail.y + Math.sin(along) * length * share - Math.cos(along) * off,
+  });
+  silhouette(ctx, [{ path: board, fill: SURFBOARD_FILL }]);
+  ctx.save();
+  ctx.clip(board);
+  const stringerFrom = at(SURFBOARD_STRINGER_IN / length, 0);
+  const stringerTo = at(1 - SURFBOARD_STRINGER_IN / length, 0);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  ctx.stroke(line(stringerFrom.x, stringerFrom.y, stringerTo.x, stringerTo.y));
+  const band = at(SURFBOARD_BAND_AT, 0);
+  ctx.translate(band.x, band.y);
+  ctx.rotate(along);
+  trimBand(ctx, { x0: -SURFBOARD_BAND_W / 2, x1: SURFBOARD_BAND_W / 2, y0: -2 * SURFBOARD_TAIL_R, y1: 2 * SURFBOARD_TAIL_R }, BOAT_TRIM, false);
+  ctx.restore();
+  const glint = at(SURFBOARD_SHINE_AT, SURFBOARD_SHINE_OFF);
+  shine(ctx, glint.x, glint.y, 2.2, 0.55, along);
+}
+
+// ---------------------------------------------------------------------------
+// Feet: Pelican slippers (Rare), in leg space
+// ---------------------------------------------------------------------------
+
+/**
+ * The toy pelican's round head on the slipper's toe, toward the snout side of the leg line: its centre, back from the
+ * Shoe's front ink edge along the leg and off the leg line across it, and its radius (fill edge).
+ */
+const SLIPPER_HEAD_BACK = 6;
+const SLIPPER_HEAD_OFF = -7.5;
+const SLIPPER_HEAD_R = 3.4;
+/** The closed bill, from under the head's front to the Feet envelope's front less the 2.0 ink: its depth at the root and its sag. */
+const SLIPPER_BILL_H = 2.8;
+const SLIPPER_BILL_SAG = 0.5;
+
+/**
+ * Rare (issue #214): a fluffy pelican slipper on each foot, in leg space. A puffy upper in the PELICAN_SLIPPER_FILL
+ * soft white over the Shoe's rectangle (shoeRect) but with a fully round toe and a squarer heel, a round head bulging
+ * from the toe toward the snout side, and a closed bill in the PELICAN_SLIPPER_BILL pale orange lying forward along the
+ * toe to the Feet envelope's front, its slim pouch closed and empty: never catching anything (issue #214, ND-8). Upper,
+ * head and bill are one `blob` (ink 2.0 all outside), so their outline is never the Froggy boots' rounded rectangle nor
+ * the Flippers' fan. One #ffe14a cuff band across the heel (the one trim, to one 0.6 ink line at u = l + 2.0), a 0.6
+ * ink ring round the head and outline and seam on the bill, a bead eye, and one shine. It covers every toe and the
+ * Sock's whole foot pad, so a Sock shows above it at the back. Far legs use the fills mixed toward ink.
+ */
+function paintPelicanSlippers(ctx: CanvasRenderingContext2D, frame: LegSlotFrame, tone: Tone): void {
+  const l = frame.length;
+  const rect = shoeRect(frame);
+  const v = rect.vHalf - ITEM_LW;
+  const back = rect.u0 + ITEM_LW;
+  const toe = rect.u1 - ITEM_LW - v;
+  const heel = Math.min(toe - back, v);
+  const upper = new Path2D();
+  upper.moveTo(toe, -v);
+  upper.arc(toe, 0, v, -Math.PI / 2, Math.PI / 2);
+  upper.lineTo(back + heel, v);
+  upper.arc(back + heel, v - heel, heel, Math.PI / 2, Math.PI);
+  upper.lineTo(back, -v + heel);
+  upper.arc(back + heel, -v + heel, heel, Math.PI, (3 * Math.PI) / 2);
+  upper.closePath();
+  const head: Pt = { x: rect.u1 - SLIPPER_HEAD_BACK, y: SLIPPER_HEAD_OFF };
+  const headPath = ellipsePath(head.x, head.y, SLIPPER_HEAD_R, SLIPPER_HEAD_R);
+  const billRoot: Pt = { x: head.x + 0.6, y: head.y + SLIPPER_HEAD_R * 0.35 };
+  const billLen = feetEnvelope(frame).u1 - ITEM_LW - billRoot.x;
+  const bill = closedBillPath(billRoot.x, billRoot.y, billLen, SLIPPER_BILL_H, SLIPPER_BILL_SAG);
+  silhouette(ctx, [
+    { path: upper, fill: tone(PELICAN_SLIPPER_FILL) },
+    { path: headPath, fill: tone(PELICAN_SLIPPER_FILL) },
+    { path: bill, fill: tone(PELICAN_SLIPPER_BILL) },
+  ]);
+  ctx.save();
+  ctx.clip(upper);
+  trimBand(ctx, { x0: back - 1, x1: l + 2, y0: -v - 1, y1: v + 1 }, tone(BOAT_TRIM), false, LAKE_DETAIL_LW, [false, true]);
+  ctx.restore();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = LAKE_DETAIL_LW;
+  ctx.stroke(headPath);
+  ctx.fillStyle = tone(PELICAN_SLIPPER_BILL);
+  ctx.fill(bill);
+  ctx.stroke(bill);
+  ctx.stroke(closedBillSeamPath(billRoot.x, billRoot.y, billLen, SLIPPER_BILL_H));
+  ctx.fillStyle = INK;
+  ctx.fill(ellipsePath(head.x + 0.4, head.y - 0.9, PELICAN_EYE_R, PELICAN_EYE_R));
+  shine(ctx, l + 4.5, 5.5, 2.6, 0.9);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -4677,6 +5060,17 @@ export function paintBodyWearable(
     case 'wizard-hat':
       paintWizardHat(ctx);
       break;
+    case 'cloud-scarf':
+      paintCloudScarf(ctx);
+      break;
+    case 'pelican-swim-ring':
+      paintPelicanSwimRing(ctx, look);
+      break;
+    case 'surfboard': {
+      const back = backBigFootprint(look);
+      inFrame(ctx, back.frame, () => paintSurfboard(ctx, back.box));
+      break;
+    }
     default:
       break;
   }
@@ -4699,8 +5093,10 @@ export function paintLegWearables(ctx: CanvasRenderingContext2D, outfit: ArtOutf
   inFrame(ctx, frame, () => {
     if (socks === 'stripy-socks') paintStripySocks(ctx, frame, tone);
     if (socks === 'lily-pad-socks') paintLilyPadSocks(ctx, frame, tone);
+    if (socks === 'wave-socks') paintWaveSocks(ctx, frame, tone);
     if (feet === 'flippers') paintFlippers(ctx, frame, tone);
     if (feet === 'froggy-boots') paintFroggyBoots(ctx, frame, tone);
+    if (feet === 'pelican-slippers') paintPelicanSlippers(ctx, frame, tone);
   });
   ctx.restore();
 }

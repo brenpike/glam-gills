@@ -466,9 +466,9 @@ describe('card copy fit', () => {
     expect(SORTED_AXOLOTL_NAMES[0]).toBe('Golden albino axolotl');
   });
 
-  it('brings home at most the 20 canal treasures on one trip, of the 151 in the catalogue', () => {
+  it('brings home at most the 20 canal treasures on one trip, of the 163 in the catalogue', () => {
     expect(MAX_TRIP_FINDS).toBe(20);
-    expect(SORTED_NAMES).toHaveLength(151);
+    expect(SORTED_NAMES).toHaveLength(163);
   });
 
   describe('fits every wording combination, naming up to the whole catalogue, on every supported canvas without clipping', () => {
@@ -977,7 +977,7 @@ describe('area beaten card copy fit (H5, H8)', () => {
       'Little bailing bucket',
       'Axolotl statue',
       'Little cormorant',
-      'Little cormorant',
+      'Little pelican',
       'Lagoon shine Paint shell',
     ]);
   });

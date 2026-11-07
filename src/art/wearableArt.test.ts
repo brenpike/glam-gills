@@ -2608,7 +2608,7 @@ interface WearableRecord {
 
 /**
  * The measured numbers of every catalogue Wearable of every area (the canal's eight, the pond's seven, the
- * pond Area 3's five, the chinampa Area 4's five, the chinampa Area 5's six, the spring cave Area 6's five and Area 7's five, the deep canal Area 8's five, Area 9's five, Area 10's five and Area 11's five), keyed by catalogue id. A new Wearable needs its row: the suite fails until its numbers are recorded,
+ * pond Area 3's five, the chinampa Area 4's five, the chinampa Area 5's six, the spring cave Area 6's five and Area 7's five, the deep canal Area 8's five, Area 9's five, Area 10's five and Area 11's five, and the open lake Area 12's five), keyed by catalogue id. A new Wearable needs its row: the suite fails until its numbers are recorded,
  * and fails when a number moves.
  */
 const WEARABLE_RECORD: Readonly<Record<string, WearableRecord>> = {
@@ -2741,6 +2741,19 @@ const WEARABLE_RECORD: Readonly<Record<string, WearableRecord>> = {
     slot: { minLength: 22, torsoLengthShare: 0.5, proud: 26.6266, outsideShare: 0.9377 },
   },
   'deep-canal/wizard-hat': { cssPx2: 232.7, worst: 'boy happy smile', slot: { headWidthShare: 0.7328, rise: 60.7234 } },
+  'open-lake/wave-socks': {
+    cssPx2: 84.3,
+    worst: 'medium boy short slim baby swim 2.09 amp 1',
+    slot: { legLengthShare: 1, tubeProud: 1.1, toeTipShare: 1 },
+  },
+  'open-lake/cloud-scarf': { cssPx2: 80.91, worst: 'boy happy bigGrin', slot: { minWidth: 38.11 } },
+  'open-lake/pelican-swim-ring': { cssPx2: 68.69, worst: 'medium boy short slim baby swim 0.00 amp 1', slot: { torsoSideShare: 0.8538 } },
+  'open-lake/surfboard': {
+    cssPx2: 71.58,
+    worst: 'medium girl short regular baby swim 0.00 amp 1',
+    slot: { minLength: 22, torsoLengthShare: 0.5, proud: 26.7253, outsideShare: 0.8454 },
+  },
+  'open-lake/pelican-slippers': { cssPx2: 144.66, worst: 'medium boy short slim baby swim 2.62 amp 1', slot: { toeShare: 1, padShare: 1 } },
 };
 
 /** The recorded row of a catalogue Wearable, failing the test with what to add when it has none. */
@@ -3940,8 +3953,8 @@ const contrast = (a: string, b: string): number => {
 };
 
 describe('chinampa Area 4 Wearables (issue #76): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five chinampa Area 4 Wearables of the 61: Head, Neck, Shirt, Head and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five chinampa Area 4 Wearables of the 66: Head, Neck, Shirt, Head and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(CHINAMPA_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:straw-sun-hat',
       'neck:marigold-necklace',
@@ -3950,7 +3963,7 @@ describe('chinampa Area 4 Wearables (issue #76): zones, footprints and layers', 
       'back:monarch-wings',
     ]);
     expect(CHINAMPA_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA4_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'head', 'back']);
   });
 
@@ -4435,8 +4448,8 @@ const AREA5_BODY_ITEMS = [
 const EVERY_SHIRT_SLUG = ['tank-top', POND_SLUG.raincoat, AREA3_SLUG.shirt, AREA4_SLUG.overalls, AREA5_SLUG.shirt] as const;
 
 describe('chinampa Area 5 Wearables (issue #103): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has six chinampa Area 5 Wearables of the 61: Head, Neck, Face, Shirt, Tail and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has six chinampa Area 5 Wearables of the 66: Head, Neck, Face, Shirt, Tail and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(CHINAMPA_2_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:bee-headband',
       'neck:bandana',
@@ -4446,7 +4459,7 @@ describe('chinampa Area 5 Wearables (issue #103): zones, footprints and layers',
       'back:rainbow-serape-cape',
     ]);
     expect(CHINAMPA_2_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES, ...CHINAMPA_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA5_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'face', 'shirt', 'tail', 'back']);
     // The Area 5 slugs come last, after the twenty-five earlier ones.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(25, 31)).toEqual([
@@ -5096,8 +5109,8 @@ const inkWidthsOf = (paints: readonly Paint[]): number[] =>
   [...new Set(paints.filter((p) => p.kind === 'stroke' && p.style === INK).map((p) => Math.round(p.lineWidth * 1e9) / 1e9))].sort((a, b) => a - b);
 
 describe('spring cave Area 6 Wearables (issue #77): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five spring cave Wearables of the 61: Head, Neck, Shirt, Tail and Head', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five spring cave Wearables of the 66: Head, Neck, Shirt, Tail and Head', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(SPRING_CAVE_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:miners-headlamp',
       'neck:crystal-pendant',
@@ -5106,7 +5119,7 @@ describe('spring cave Area 6 Wearables (issue #77): zones, footprints and layers
       'head:crystal-crown',
     ]);
     expect(SPRING_CAVE_WEARABLES.some((w) => [...POND_WEARABLES, ...POND_2_WEARABLES, ...CHINAMPA_WEARABLES, ...CHINAMPA_2_WEARABLES].includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA6_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'tail', 'head']);
     // The Area 6 slugs come after the thirty-one earlier ones.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(31, 36)).toEqual(['miners-headlamp', 'crystal-pendant', 'explorer-vest', 'crystal-tail-cuff', 'crystal-crown']);
@@ -5666,8 +5679,8 @@ const AREA7_BODY_ITEMS = [
 ] as const;
 
 describe('spring cave Area 7 Wearables (issue #105): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five spring cave Area 7 Wearables of the 61: Head, Neck, Face, Tail and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five spring cave Area 7 Wearables of the 66: Head, Neck, Face, Tail and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(SPRING_CAVE_2_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:climbing-helmet',
       'neck:pebble-necklace',
@@ -5676,7 +5689,7 @@ describe('spring cave Area 7 Wearables (issue #105): zones, footprints and layer
       'back:gemstone-cape',
     ]);
     expect(SPRING_CAVE_2_WEARABLES.some((w) => SPRING_CAVE_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA7_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'face', 'tail', 'back']);
     // The Area 7 slugs come after the thirty-six earlier ones, and the Area 8 slugs after them.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(36, 41)).toEqual(['climbing-helmet', 'pebble-necklace', 'cave-goggles', 'glow-tail-lantern', 'gemstone-cape']);
@@ -6116,8 +6129,8 @@ const AREA8_BODY_ITEMS = [
 const EVERY_BACK_SLUG_7 = [...EVERY_BACK_SLUG, AREA7_SLUG.cape] as const;
 
 describe('deep canal Area 8 Wearables (issue #78): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five deep canal Wearables of the 61: Head, Neck, Shirt, Head and Tail', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five deep canal Wearables of the 66: Head, Neck, Shirt, Head and Tail', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(DEEP_CANAL_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:sailor-cap',
       'neck:striped-scarf',
@@ -6126,7 +6139,7 @@ describe('deep canal Area 8 Wearables (issue #78): zones, footprints and layers'
       'tail:rainbow-fin-streamers',
     ]);
     expect(DEEP_CANAL_WEARABLES.some((w) => SPRING_CAVE_2_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA8_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'head', 'tail']);
     // The Area 8 slugs come after the forty-one earlier ones, and Area 9's five follow them.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(41, 46)).toEqual(['sailor-cap', 'striped-scarf', 'mariachi-jacket', 'captains-hat', 'rainbow-fin-streamers']);
@@ -6665,8 +6678,8 @@ const EVERY_SHIRT_SLUG_9 = [...EVERY_SHIRT_SLUG_6, AREA8_SLUG.jacket, AREA9_SLUG
 const EVERY_BACK_SLUG_8 = [...EVERY_BACK_SLUG_7, AREA9_SLUG.cape] as const;
 
 describe('deep canal Area 9 Wearables (issue #107): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five deep canal Area 9 Wearables of the 61: Head, Neck, Shirt, Tail and Back', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five deep canal Area 9 Wearables of the 66: Head, Neck, Shirt, Tail and Back', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(DEEP_CANAL_2_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:bucket-hat',
       'neck:rope-necklace',
@@ -6675,7 +6688,7 @@ describe('deep canal Area 9 Wearables (issue #107): zones, footprints and layers
       'back:golden-boatman-cape',
     ]);
     expect(DEEP_CANAL_2_WEARABLES.some((w) => DEEP_CANAL_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA9_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'tail', 'back']);
     // The Area 9 slugs come after the forty-six earlier ones, and the later areas' slugs follow them.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(46, 51)).toEqual(['bucket-hat', 'rope-necklace', 'poncho', 'tail-bell', 'golden-boatman-cape']);
@@ -7230,8 +7243,8 @@ const AREA10_OUTFIT_A: ArtOutfit = { head: AREA10_SLUG.hat, neck: AREA10_SLUG.sc
 const AREA10_OUTFIT_B: ArtOutfit = { head: AREA10_SLUG.crown, neck: AREA10_SLUG.medal, shirt: AREA10_SLUG.shirt };
 
 describe('deep canal Area 10 Wearables (issue #108): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five deep canal Area 10 Wearables of the 61: Head, Neck, Shirt, Neck and Head', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five deep canal Area 10 Wearables of the 66: Head, Neck, Shirt, Neck and Head', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(DEEP_CANAL_3_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:party-hat',
       'neck:confetti-scarf',
@@ -7240,7 +7253,7 @@ describe('deep canal Area 10 Wearables (issue #108): zones, footprints and layer
       'head:champion-crown',
     ]);
     expect(DEEP_CANAL_3_WEARABLES.some((w) => DEEP_CANAL_2_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA10_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'neck', 'shirt', 'neck', 'head']);
     // The Area 10 slugs come after the fifty-one earlier ones, and Area 11's five follow them.
     expect(Object.keys(WEARABLE_ART_SLOT).slice(51, 56)).toEqual(['party-hat', 'confetti-scarf', 'festival-shirt', 'hero-medal', 'champion-crown']);
@@ -7784,8 +7797,8 @@ function sharpestTurn(paint: Paint): number {
 }
 
 describe('deep canal Area 11 Wearables (issue #207): zones, footprints and layers', { timeout: ENUMERATION_TIMEOUT_MS }, () => {
-  it('has five deep canal Area 11 Wearables of the 61: Head, Face, Shirt, Back and Head, three of them big', () => {
-    expect(CATALOGUE_WEARABLES).toHaveLength(61);
+  it('has five deep canal Area 11 Wearables of the 66: Head, Face, Shirt, Back and Head, three of them big', () => {
+    expect(CATALOGUE_WEARABLES).toHaveLength(66);
     expect(DEEP_CANAL_4_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'head:propeller-cap',
       'face:star-sunglasses',
@@ -7794,12 +7807,12 @@ describe('deep canal Area 11 Wearables (issue #207): zones, footprints and layer
       'head:wizard-hat',
     ]);
     expect(DEEP_CANAL_4_WEARABLES.some((w) => DEEP_CANAL_3_WEARABLES.includes(w))).toBe(false);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(61);
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
     expect(Object.values(AREA11_SLUG).map((slug) => WEARABLE_ART_SLOT[slug])).toEqual(['head', 'face', 'shirt', 'back', 'head']);
-    // The Area 11 slugs come last, after the fifty-six earlier ones.
-    expect(Object.keys(WEARABLE_ART_SLOT).slice(56)).toEqual(['propeller-cap', 'star-sunglasses', 'robot-suit', 'jetpack', 'wizard-hat']);
-    // Only these three are big: no earlier item grows its picture.
-    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual([AREA11_SLUG.jetpack, AREA11_SLUG.cap, AREA11_SLUG.hat]);
+    // The Area 11 slugs come after the fifty-six earlier ones, before the open lake Area 12's five.
+    expect(Object.keys(WEARABLE_ART_SLOT).slice(56, 61)).toEqual(['propeller-cap', 'star-sunglasses', 'robot-suit', 'jetpack', 'wizard-hat']);
+    // Only these three are big, and the open lake's Surfboard after them (issue #214, ND-6): no earlier item grows its picture.
+    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual([AREA11_SLUG.jetpack, AREA11_SLUG.cap, 'surfboard', AREA11_SLUG.hat]);
     for (const [slot, slug] of AREA11_BIG_ITEMS) expect(wearsBigItem({ [slot]: slug }, slot), slug).toBe(true);
     for (const slug of Object.keys(WEARABLE_ART_SLOT) as WearableArtSlug[]) {
       if (BIG_WEARABLE_ART_SLUGS.has(slug)) continue;

@@ -1278,13 +1278,13 @@ describe('Legendary treasures by area (issue #146)', () => {
     ]);
   });
 
-  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour; only Areas 12 and 13 hide none of their own yet (issues #214 and #215)', () => {
+  it('gives every area from Area 6 on that hides treasures of its own at least 2 Paint shells, at least 1 of them a Legendary patterned or sheen Dream colour unless the area is depth-banded with its deepest water above the deep band (B3, issue #214)', () => {
     const laterAreas = AREAS.filter((area) => area.number >= 6 && area.layout.treasures.length > 0);
     expect(laterAreas.length).toBeGreaterThan(0);
-    expect(AREAS.filter((area) => area.layout.treasures.length === 0)).toEqual([OPEN_LAKE_AREA, OPEN_LAKE_2_AREA]);
     for (const area of laterAreas) {
       const shells = area.layout.treasures.filter((treasure) => treasure.category === 'paintShell');
       expect(shells.length, area.id).toBeGreaterThanOrEqual(2);
+      if (area.layout.depthBanded === true && deepestWaterBand(area.layout) < DEEP_BAND) continue;
       const legendaryFancy = shells.filter((shell) => {
         const kind = dreamColourById(shell.dreamColour)?.kind;
         return shell.rarity === 'legendary' && (kind === 'patterned' || kind === 'sheen');
