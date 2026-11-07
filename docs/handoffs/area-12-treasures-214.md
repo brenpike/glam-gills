@@ -13,7 +13,7 @@ Issue #214 (0.69.0, one PR, branch `feature/214-area-12-treasures`) gives Area 1
 - Icons, tank art and worn looks for all of them, and the cross-area treasure tests rewritten as general rules.
 - PRD rows 736 to 744, the art guide, README and CHANGELOG.
 
-## Owner decisions (2026-11-07, Q1 to Q12)
+## Owner decisions (2026-11-07, Q1 to Q14)
 
 Q1 to Q9 took the recommendations.
 
@@ -29,13 +29,15 @@ Q1 to Q9 took the recommendations.
 - **Q10** (2026-11-07) Amend ADR 0040 so it covers the Surfboard's opt-in set. Done in this PR.
 - **Q11** (2026-11-07) Answer A: fix the stale counts in this remediation, and file follow-up issue #222.
 - **Q12** (2026-11-07) Answer A: README line 9 is count-free, and the missing Area 13 README bullet is tracked on epic #209.
+- **Q13** (2026-11-07) Answer A: record the boot memory estimate of Area 12's 60 textures in PRD open question 736 and ND-9, add an owner check of boot memory on the owner's devices, and track a texture memory budget with a check in follow-up [issue #223](https://github.com/brenpike/glam-gills/issues/223). No budget or automated memory check in this PR.
+- **Q14** (2026-11-07) Answer A: keep the full Decoration tray sweep in `src/logic/tankUi.test.ts` unchanged (see Follow-ups and recorded decisions).
 
 ## Named defaults (ND-1 to ND-10)
 
 Posted on #214: <https://github.com/brenpike/glam-gills/issues/214#issuecomment-6701679703>.
 
 - ND-2 was amended to Tule green #043d00 and Obsidian #1f2925 (the colours that fit the value space; see Learnings).
-- ND-9: Area 12 needed 60 textures (36 icons at 3 sizes, 12 silhouettes, 2 swatches, 5 tank sprites and 5 glows), against the estimate of about 55.
+- ND-9: Area 12 needed 60 textures (36 icons at 3 sizes, 12 silhouettes, 2 swatches, 5 tank sprites and 5 glows), against the estimate of about 55. By estimate they take about 5.2 MiB at bake scale 3 (5,489,856 bytes; method: each texture's baked width x height in pixels x 4 bytes, summed over the 60), all baked at boot. The owner is to check boot memory on their devices, an iPhone with Safari included (Q13). The memory budget is follow-up #223.
 - ND-10 is the B3 exception (open question 737).
 
 ## Learnings
@@ -65,6 +67,8 @@ Posted on #214: <https://github.com/brenpike/glam-gills/issues/214#issuecomment-
 - Follow-up: [issue #222](https://github.com/brenpike/glam-gills/issues/222), an AGENTS.md rule that living docs cite the code or test for a count instead of copying it.
 - Follow-up: the missing Area 13 README bullet, tracked on epic #209 (Q12).
 - Follow-up: the CONTEXT.md catch-up (PRD open question 743; see Learnings).
+- Follow-up: [issue #223](https://github.com/brenpike/glam-gills/issues/223), a texture memory budget for boot-baked textures with a check (Q13). The boot bake of every treasure texture is inherited from main; this PR adds Area 12's 60 (about 5.2 MiB at bake scale 3, PRD open question 736). Until #223 lands, the owner's device check is the guard. A review finding that asks for a memory budget or an automated memory check in this PR repeats this decision.
+- Decision (Q14): the Decoration tray sweep in `src/logic/tankUi.test.ts` stays whole: every max tray count, every tray count up to it, and every page, on each canvas. It grows with the catalogue, so each new Decoration makes the test run longer; the owner accepts that cost. It affects test run time only, never the game. A review finding that asks to sample its cases, drop cases, or add a run-time budget for it repeats this decision.
 - Decision: dated records keep the counts of their time by design and are not stale. These are the Testing Decisions "With Area N" entries, the open-question rows and the art guide "Area N UI fits" rows.
 - Fixed in this PR, so no longer open: C11's "Area 1 to Area 11" and "eleven chips"; the Tuning "Treasures" canal line; art guide section 8's "up to 25 options" and "Forty-nine Decorations ship"; and ADR 0040 (amended by Q10).
 
