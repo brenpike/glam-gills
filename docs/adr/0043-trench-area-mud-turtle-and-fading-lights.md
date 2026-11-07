@@ -72,6 +72,10 @@ Real basis, checked 2026-11-06 (web research only; the game fetches nothing):
 - The one-leg run's narrow start window may move with a later shared tuning change, and each such change must re-measure it.
 - The turtle, light, layout and band values are provisional. The owner can tune or reverse them on the PR, as tuning, area data or art.
 
+Recorded residuals:
+
+- Area 13's dark layer is twice Area 6's (owner decision on #212, 2026-11-07, answer A; local review finding 35278ae50c0a1cf8085a6ae627905ea6baf848ff693f062ec5acbc02557e2ed1). Root cause: the dark layer of [ADR 0028](0028-descent-areas-crayfish-and-dark-water.md) is one render texture the size of the area's dark water, cleared, filled, faded at each fading edge and stamped with every light whenever a light moves, grows or appears while the camera view meets the dark water; the axolotl's glow moves a whole pixel on most swimming frames. Area 13's dark water (x 1440 to 3840, y 720 to the bed top at 1038) makes that layer 2400 x 318 px, about 763,000 px and 3.1 MB at 4 bytes a pixel, against Area 6's 1200 x 318 px and 1.5 MB, with three fading edges (left, right and top; the bed edge stays hard). Bounded: one layer in one area, at most 2 lights plus one per lit plant and one per lit or dimming fading light (4 in Area 13), nothing drawn while the view is off the pit, and a dimming light redraws only on a quantized step change. Ground: the owner's call, kept as built under the ADR 0028 design and its recorded frame-time residual, since frame time is not measured yet and no build agent can run the [ADR 0013](0013-axolotl-rig-and-frame-budget.md) budget on the owner's phone. Not changed: redrawing only the part the camera shows, for Areas 6, 7 and 13, was not chosen. The owner's on-device frame-time check (PRD open question 524) now includes Area 13's dark water. A measured frame time over budget there promotes this to a filed issue with the same scope.
+
 ## Alternatives considered
 
 | Option | Why not |

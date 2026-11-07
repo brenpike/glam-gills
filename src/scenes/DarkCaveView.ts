@@ -123,7 +123,13 @@ function viewMeetsDark(view: DarkCaveViewRect, dark: Readonly<DarkWater>): boole
  * entry; in an area with fading lights, also fadingLightCircles' result, bounded by the light count. The fading edges are worked out once, but each redraw erases every fading edge's strip
  * again before the light holes (two in Area 6, three in Area 7), and the layer is redrawn on most
  * swimming frames while the view meets the dark water, so the fade adds that work to those frames
- * (PRD open questions 524 and 543: an owner frame-time check). Visual only: nothing here changes
+ * (PRD open questions 524 and 543: an owner frame-time check). Recorded residual (owner decision on
+ * #212, 2026-11-07, answer A): Area 13's layer is 2400 x 318 px, twice Area 6's 1200 x 318 (about
+ * 3.1 MB against 1.5 MB at 4 bytes a pixel), with three fading edges (left, right and top), and it is
+ * cleared, filled, faded and stamped whole on most swimming frames while the view meets the pit. It
+ * is kept as built under the ADR 0028 design; redrawing only the part the camera shows was not
+ * chosen, so Areas 6, 7 and 13 share one layer design. The owner's on-device frame-time check now
+ * includes Area 13 (ADR 0043, recorded residuals). Visual only: nothing here changes
  * game state. Throws when the spring cave textures are missing.
  */
 export class DarkCaveView {

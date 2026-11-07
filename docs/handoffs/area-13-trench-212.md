@@ -49,6 +49,7 @@ If this strain merges second, renumber them after the sibling's open questions.
 - The one-leg run passes only for start times 3.05 to 3.20 s (pinned 3.15, 82.13 s). A shared tuning change re-measures it and never loosens it.
 - `hiding.ts` `isDeep`, `meetsRarity` and `spotMatchesLabels` are test-only readers.
 - Slow files time out under full-suite parallel load but pass alone: axolotlRig, axolotlRigStripe, wearableArt, chinampa2Layout, deepCanalFairness, deepCanalGolden, predators, springCave2Fairness, springCave2Golden, springCaveGolden, springCaveLayout, stylerUi.
+- Area 13's dark layer is 2400 x 318 px, twice Area 6's. The owner kept it as built (ADR 0043, recorded residuals), and the owner's frame-time check (PRD open question 524) now includes Area 13.
 - The plan had scope gaps several times: `TripSnapshot` in `tripEvents.ts`, `windArt.test.ts`, and the cross-area pins in `mobileSnacks`, `rescue` and `chestFilterUi`.
 
 ## Merge-second rebase checklist
