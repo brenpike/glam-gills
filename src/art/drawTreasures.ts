@@ -349,7 +349,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The thirty-one Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, Marigold and Golden shine, issue #112, then Lime, Hyacinth and Lagoon shine, issue #207, last). */
+/** The thirty-three Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, then Tule green and Obsidian, issue #214, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -382,6 +382,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'lime',
   'hyacinth',
   'lagoon-shine',
+  'tule-green',
+  'obsidian',
 ];
 
 /**
@@ -640,14 +642,14 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All one hundred and fifty-one icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and fifty-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
  * items, the eleven deep canal Area 10 items, the deep canal Area 11's nine items (the Little cormorant, issue #112, then
- * its three Decorations and five Wearables in catalogue order, issue #207), then the thirty-one Paint shells in
- * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; the last eleven, Jade, Fiesta
- * shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine, the
- * deep canal's).
+ * its three Decorations and five Wearables in catalogue order, issue #207), then the thirty-three Paint shells in
+ * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; Jade, Fiesta shine, Olive,
+ * Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine the deep canal's; the
+ * last two, Tule green and Obsidian, the open lake's, issue #214).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,

@@ -508,7 +508,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The thirty-one Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-three Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -540,7 +540,9 @@ export type DreamSwatchId =
   | 'golden-hour-shine'
   | 'lime'
   | 'hyacinth'
-  | 'lagoon-shine';
+  | 'lagoon-shine'
+  | 'tule-green'
+  | 'obsidian';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -645,4 +647,6 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
     marks: ['rgba(214,255,244,0.85)', 'rgba(255,190,176,0.85)'],
     dark: false,
   },
+  'tule-green': { body: '#043d00', pattern: 'plain', marks: [], dark: true },
+  obsidian: { body: '#1f2925', pattern: 'plain', marks: [], dark: true },
 };

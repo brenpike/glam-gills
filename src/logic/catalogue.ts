@@ -102,7 +102,9 @@ export type DreamColourId =
   | 'golden-hour-shine'
   | 'lime'
   | 'hyacinth'
-  | 'lagoon-shine';
+  | 'lagoon-shine'
+  | 'tule-green'
+  | 'obsidian';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -304,12 +306,28 @@ export const LAGOON_SHINE: DreamColour = Object.freeze({
   kind: 'sheen',
 });
 
+/** The open lake's Area 12 Common Dream colour, a deep tule green held by that area's Tule green Paint shell (issue #214, ND-2). */
+export const TULE_GREEN: DreamColour = Object.freeze({
+  id: 'tule-green',
+  name: 'Tule green',
+  rarity: 'common',
+  kind: 'solid',
+});
+
+/** The open lake's Area 12 Rare Dream colour, a green-black volcanic glass held by that area's Obsidian Paint shell (issue #214, ND-2). */
+export const OBSIDIAN: DreamColour = Object.freeze({
+  id: 'obsidian',
+  name: 'Obsidian',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
- * Lantern shine (Area 9), Peach and Confetti shine (Area 10), then Marigold, Golden shine, Lime,
- * Hyacinth and Lagoon shine (Area 11).
+ * Lantern shine (Area 9), Peach and Confetti shine (Area 10), Marigold, Golden shine, Lime,
+ * Hyacinth and Lagoon shine (Area 11), then Tule green and Obsidian (Area 12).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -335,6 +353,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   LIME,
   HYACINTH,
   LAGOON_SHINE,
+  TULE_GREEN,
+  OBSIDIAN,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
