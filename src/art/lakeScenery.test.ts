@@ -217,7 +217,7 @@ describe('clipRectsToChunk', () => {
 // ---------------------------------------------------------------------------
 
 describe('lake sky', () => {
-  it.each<AreaLookId>(['open-lake', 'open-lake-windy'])('%s stands the volcanoes in the top row where they reach', (look) => {
+  it.each<AreaLookId>(['open-lake', 'open-lake-windy', 'open-lake-still'])('%s stands the volcanoes in the top row where they reach', (look) => {
     expect(hasStyle(chunkOf(base(look, { index: VOLCANO_CHUNK })), LAKE_SNOW)).toBe(true);
   });
 

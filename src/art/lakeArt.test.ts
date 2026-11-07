@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   IZTACCIHUATL,
   LAKE_BED_FILLS,
+  LAKE_DARK,
   LAKE_LIP,
   LAKE_LIP_H,
   LAKE_LIP_HIGHLIGHT,
@@ -46,6 +47,7 @@ import {
   type LakeBand,
   type LakeRect,
 } from './drawLake';
+import { habitatLook } from './habitatLook';
 import { INK, LEUCISTIC, LW, SURF, VIEW_W } from './palette';
 
 // ---------------------------------------------------------------------------
@@ -763,5 +765,55 @@ describe('lakebed colours', () => {
       [LAKE_LIP, '0.5264'],
     ];
     for (const [hex, lum] of lums) expect(luminance(hex).toFixed(4), hex).toBe(lum);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Open lake still variant (issue #212, Area 13)
+// ---------------------------------------------------------------------------
+
+describe('open lake still variant (issue #212)', () => {
+  const still = habitatLook('open-lake-still');
+  const lake = habitatLook('open-lake');
+
+  it('has an overcast grey-blue sky, every stop at the luminance floor or more', () => {
+    expect(still.sky).toEqual({ top: '#8a9bad', horizon: '#c4ced8' });
+    expect(luminance(still.sky.top).toFixed(4)).toBe('0.3186');
+    expect(luminance(still.sky.horizon).toFixed(4)).toBe('0.6084');
+    expect(luminance(still.sky.top)).toBeGreaterThanOrEqual(FLOOR);
+    expect(luminance(still.sky.horizon)).toBeGreaterThanOrEqual(FLOOR);
+    expect(luminance(still.sky.horizon)).toBeGreaterThan(luminance(still.sky.top));
+  });
+
+  it('lays a flat cool grey air wash, and the sky seen through it stays at the floor or more', () => {
+    expect(still.airWash).toBe('rgba(140,150,160,0.16)');
+    const top = overlay(still.sky.top, still.airWash!);
+    const horizon = overlay(still.sky.horizon, still.airWash!);
+    expect(top).toBe('#8a9aab');
+    expect(horizon).toBe('#bbc5cf');
+    expect(luminance(top)).toBeGreaterThanOrEqual(FLOOR);
+    expect(luminance(horizon)).toBeGreaterThanOrEqual(FLOOR);
+  });
+
+  it('paints no streaming clouds, so the ordinary day clouds stand in the still air', () => {
+    expect(still.streamingClouds).toBe(false);
+    expect(lake.streamingClouds).toBe(false);
+  });
+
+  it('strikes the rays at half strength, white, at the day slant', () => {
+    expect(still.rayAlphaScale).toBe(0.5);
+    expect(lake.rayAlphaScale).toBe(1);
+    expect(still.rayTint).toEqual(lake.rayTint);
+    expect(still.raySlant).toBe(lake.raySlant);
+  });
+
+  it('is the open lake with only its id, sky, wash and ray strength changed, so the water stays by depth band', () => {
+    expect({ ...still, id: 'open-lake', sky: lake.sky, airWash: lake.airWash, rayAlphaScale: lake.rayAlphaScale }).toEqual(lake);
+  });
+
+  it('exports LAKE_DARK as band 4 deep stop, near-black, and not held to the floor', () => {
+    expect(LAKE_DARK).toBe('#04060f');
+    expect(LAKE_DARK).toBe(lakeWaterBand(4).deep);
+    expect(luminance(LAKE_DARK)).toBeLessThan(FLOOR);
   });
 });

@@ -262,6 +262,9 @@ export const LAKE_WATER_BANDS: readonly LakeWaterBand[] = Object.freeze<LakeWate
   { band: 4, shallow: '#0b1030', mid: '#070a1e', deep: '#04060f', haze: 'rgba(20,30,70,0.08)', lit: false },
 ]);
 
+/** The deepest water of the lake: band 4's deep stop, near-black (#04060f). The dark-water layer is this colour. */
+export const LAKE_DARK: string = LAKE_WATER_BANDS[3].deep;
+
 /** The water of a band. */
 export function lakeWaterBand(band: LakeBand): LakeWaterBand {
   return LAKE_WATER_BANDS[band - 1];

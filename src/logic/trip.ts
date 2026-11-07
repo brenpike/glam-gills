@@ -30,6 +30,7 @@ import {
   metThreatIds,
   type ThreatSighting,
 } from './factCards';
+import { fadingLightHint, fadingLights, stepFadingLights, type FadingLightTimers } from './fadingLights';
 import { createGhostNets, endSnag, isSnagged, stepGhostNets, type GhostNetState } from './ghostNets';
 import {
   darkHintPlant,
@@ -224,6 +225,11 @@ export interface MurkyGauge {
  * glow-plant element ids lit this trip, in lighting order; they are trip state only, never saved,
  * so every plant is unlit at a new trip. `darkHintTime` is the hint clock (stepDarkHintClock) in
  * seconds and `darkHint` the unlit plant the hint points at, or null (issue #77, ND-8).
+ * `fadingLightTimers` is the seconds left on each fading light touched this trip (stepFadingLights)
+ * and `fadingLightHint` the fading light that is out or never touched the hint points at
+ * (fadingLightHint, on the same hint clock), or null (issue #212, ND-7). Both are set only when the
+ * trip's elements hold a fading light, and absent otherwise; they are trip state only, never saved,
+ * so every fading light is unlit at a new trip.
  * `trajineras` is the trip's gliding trajineras and their push cooldowns, or null when the area has
  * none (issue #78, ND-8); each boat's hull is where trajineraHull puts it at `elementTime`, and it is
  * solid: each swimming step holds the axolotl centre out of it (stepTrajineraLane), and the hold is
@@ -273,6 +279,8 @@ export interface TripState {
   litGlowPlants: string[];
   darkHintTime: number;
   darkHint: string | null;
+  fadingLightTimers?: FadingLightTimers;
+  fadingLightHint?: string | null;
   trajineras: TrajineraLane | null;
   murkyTimer: MurkyTimer;
   bailingBoats: BailingBoatSpawn[];
@@ -425,7 +433,9 @@ function tripArea(areaId: string, area: Readonly<AreaData> | undefined): Readonl
  * axolotl starts not queasy; worms never change the placement. The source's ghost net hazards are
  * the trip's nets, and the axolotl starts not snagged; nets never change the placement here. The
  * source's elements are the trip's elements, with the element clock at 0. The source's dark water
- * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. The source's gliding
+ * is the trip's, with every glow-plant unlit, the hint clock at 0 and no hint. When the elements
+ * hold a fading light, every fading light starts unlit with no fading light hint (issue #212, ND-7);
+ * otherwise the trip has no fading light fields at all. The source's gliding
  * trajineras are the trip's, each push cooldown at 0, kept in the swim bounds of the source's width
  * and bed top and out of its rock walls. Throws when a pool cannot be placed, `options.area` is not
  * the source's area, or the source has trajineras but no width or bed top. Throws createTrajineraLane's
@@ -486,6 +496,7 @@ export function createTrip(
     litGlowPlants: [],
     darkHintTime: 0,
     darkHint: null,
+    ...noFadingLights(source.elements ?? []),
     trajineras: tripTrajineras(source),
     murkyTimer: createMurkyTimer(),
     bailingBoats: (source.bailingBoats ?? []).map(copyBailingBoat),
@@ -497,6 +508,16 @@ export function createTrip(
     pelicanLines: (source.pelicanLines ?? []).map(copyPelicanLine),
     pelicanScoops: noPelicanScoops(source.pelicanLines ?? []),
   };
+}
+
+/**
+ * Every fading light unlit and no fading light hint, when `elements` hold a fading light; else no
+ * fields at all, so a trip with no fading light keeps its shape (issue #212, ND-7).
+ */
+function noFadingLights(
+  elements: readonly Readonly<ElementSpawn>[],
+): Pick<TripState, 'fadingLightTimers' | 'fadingLightHint'> {
+  return fadingLights(elements).length === 0 ? {} : { fadingLightTimers: {}, fadingLightHint: null };
 }
 
 /** A copy of the pelican line sharing its frozen tuning. */
@@ -534,12 +555,16 @@ function copyBailingBoat(boat: Readonly<BailingBoatSpawn>): BailingBoatSpawn {
   return { ...boat, bailing: { ...boat.bailing, landing: { ...boat.bailing.landing } } };
 }
 
-/** A copy of the element sharing its type; the mat pair, glow-plant, pebble and trajinera geometry, when set, are copied. */
+/**
+ * A copy of the element sharing its type; the mat pair, glow-plant, fading light, pebble and
+ * trajinera geometry, when set, are copied.
+ */
 function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
   return {
     ...element,
     ...(element.matPair ? { matPair: { ...element.matPair } } : {}),
     ...(element.glowPlant ? { glowPlant: { ...element.glowPlant } } : {}),
+    ...(element.fadingLight ? { fadingLight: { ...element.fadingLight } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
     ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
   };
@@ -562,7 +587,8 @@ function tripTrajineras(source: TripSource): TrajineraLane | null {
 /**
  * Starts the next trip from an ended one, with the same area, Home Spot, routes, tilapia tuning,
  * finds, spots, main swim path, dark water, leg count and banked finds, an empty Trip Bag and
- * nothing found. Every glow-plant is unlit again, with the hint clock at 0 and no hint.
+ * nothing found. Every glow-plant and fading light is unlit again, with the hint clock at 0 and no
+ * hint (issue #212, ND-7).
  * `tripSeed` (default: the seed after this trip's) picks this trip's treasures afresh, and every
  * Dash pot is sealed again. The treasures returned when carried home (`ending.returned`) come back this trip, always
  * placed, and the area's special treasure is always placed while unbanked, on top of the treasure
@@ -765,6 +791,12 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * step while the axolotl centre is in the dark water, and goes back to 0 on a new light or out of
  * the dark; then `darkHint` is the plant darkHintPlant picks. A step that ends the trip, a paused
  * step, the banked card and the carry leave the hint clock and the hint as they were.
+ * Fading lights (issue #212, ND-7), only when the trip has them: with the glow-plants, every fading
+ * light timer counts down by the capped step and every light the axolotl centre touches, lit,
+ * dimming or out, is set back to full (stepFadingLights); lighting is silent and emits no event.
+ * A glow-plant or a fading light newly lit is the hint clock's new light, and `fadingLightHint` is
+ * the light fadingLightHint picks on that clock. A step that ends the trip, a paused step, a bailing
+ * bucket toss, the banked card and the carry leave the timers and the hint as they were.
  * Gliding trajineras (issue #78, ND-8, ND-9), after the encounter (stepTrajineraLane at the new
  * element time): each push cooldown counts down by the capped step; then, on a step with no bump
  * impulse, the first ready boat whose hull touches the axolotl centre pushes it aside: `pushed` and
@@ -1566,22 +1598,31 @@ function movedOutOfHull(held: Readonly<Point> | null, pos: Readonly<Point>): Poi
 }
 
 /**
- * Lights every unlit glow-plant the axolotl centre `pos` touches, then steps the hint clock by
- * `step` seconds and picks the hinted plant (issue #77, ND-8). The lit ids are the state's own
- * array when no new plant was lit.
+ * Lights every unlit glow-plant the axolotl centre `pos` touches and, when the trip has fading
+ * lights, steps their timers (stepFadingLights), then steps the hint clock by `step` seconds, with a
+ * new glow-plant or fading light as its new light, and picks the hinted plant and fading light
+ * (issue #77, ND-8; issue #212, ND-7). The lit ids are the state's own array when no new plant was
+ * lit. A trip with no fading lights gets no fading light fields.
  */
 function stepGlowPlants(
   state: TripState,
   pos: Point,
   step: number,
-): Pick<TripState, 'litGlowPlants' | 'darkHintTime' | 'darkHint'> {
+): Pick<TripState, 'litGlowPlants' | 'darkHintTime' | 'darkHint' | 'fadingLightTimers' | 'fadingLightHint'> {
   const lit = lightGlowPlants(state.litGlowPlants, state.elements, pos);
   const litGlowPlants = lit === state.litGlowPlants ? state.litGlowPlants : [...lit];
   const inDark = state.darkWater !== null && inDarkWater(pos, state.darkWater);
-  const newLight = litGlowPlants !== state.litGlowPlants;
+  const faded =
+    state.fadingLightTimers === undefined
+      ? null
+      : stepFadingLights(state.fadingLightTimers, state.elements, { dt: step, pos, paused: false });
+  const newLight = litGlowPlants !== state.litGlowPlants || faded?.newLight === true;
   const darkHintTime = stepDarkHintClock(state.darkHintTime, { dt: step, inDark, newLight, paused: false });
   const darkHint = darkHintPlant(darkHintTime, pos, state.elements, litGlowPlants);
-  return { litGlowPlants, darkHintTime, darkHint };
+  if (faded === null) return { litGlowPlants, darkHintTime, darkHint };
+  const fadingLightTimers = faded.timers;
+  const hinted = fadingLightHint(darkHintTime, pos, state.elements, fadingLightTimers);
+  return { litGlowPlants, darkHintTime, darkHint, fadingLightTimers, fadingLightHint: hinted };
 }
 
 /**
