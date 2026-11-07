@@ -394,8 +394,8 @@ export const DEEP_CANAL_4_AREA: Readonly<AreaData> = Object.freeze({
 
 /**
  * Area 12, the open lake, a bowl where the pelican lines scoop and the wind and waves blow (issue
- * #211). Until its own treasures come (issue #214), it hides Area 11's Common and Rare treasures, the
- * Little cormorant among them, as its special treasure.
+ * #211). It hides its own 4 Common and 8 Rare treasures (issue #214, ND-3), the Little pelican among
+ * them as its special treasure, a Rare hiding in band 2, its deepest band (issue #214, ND-7).
  */
 export const OPEN_LAKE_AREA: Readonly<AreaData> = Object.freeze({
   id: OPEN_LAKE_AREA_ID,
@@ -403,7 +403,7 @@ export const OPEN_LAKE_AREA: Readonly<AreaData> = Object.freeze({
   habitatId: OPEN_LAKE_HABITAT.id,
   layout: OPEN_LAKE_LAYOUT,
   exit: OPEN_LAKE_EXIT,
-  specialTreasureId: 'deep-canal/little-cormorant',
+  specialTreasureId: 'open-lake/little-pelican',
   /**
    * Provisional drift, a little faster than Area 11 (PRD H4): the same amplitudes with shorter
    * periods. That is below the one-leg headway against the wind's surface gust, Area 12's strongest

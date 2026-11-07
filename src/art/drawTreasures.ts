@@ -5,8 +5,9 @@
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
  * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), its three Decorations and five
- * Wearables (issue #207), and one Paint shell per Dream colour (Marigold and Golden shine, issue #112, then Lime,
- * Hyacinth and Lagoon shine, issue #207, the last three).
+ * Wearables (issue #207), the open lake Area 12's five Decorations and five Wearables (issue #214), and one Paint shell
+ * per Dream colour (Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, then Tule green
+ * and Obsidian, issue #214, the last two).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -219,6 +220,27 @@ import {
   FLOWER_RAFT_BLOOM,
   FLOWER_RAFT_EYE,
   FLOWER_RAFT_LEAF,
+  CLOUD_SCARF_FILL,
+  LITTLE_PELICAN_BILL,
+  LITTLE_PELICAN_BODY,
+  LITTLE_SAILBOAT_HULL,
+  LITTLE_SAILBOAT_MAST,
+  LITTLE_SAILBOAT_SAIL,
+  PELICAN_SLIPPER_BILL,
+  PELICAN_SLIPPER_FILL,
+  PELICAN_SWIM_RING_BILL,
+  PELICAN_SWIM_RING_FILL,
+  PINWHEEL_BASE,
+  PINWHEEL_BLADES,
+  PINWHEEL_PIN,
+  PINWHEEL_STICK,
+  SURFBOARD_FILL,
+  TWIN_VOLCANO_BASE,
+  TWIN_VOLCANO_ROCK,
+  TWIN_VOLCANO_SNOW,
+  WAVE_SOCKS_FILL,
+  WINDSOCK_FILL,
+  WINDSOCK_HOOP,
   type DreamSwatchId,
 } from './treasurePalette';
 
@@ -392,7 +414,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
  * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
  * Area 8 ones, the eleven deep canal Area 9 ones, the eleven deep canal Area 10 ones and the nine deep canal Area 11 ones
- * (the text after `deep-canal/`), in catalogue order.
+ * (the text after `deep-canal/`), then the ten open lake Area 12 ones (the text after `open-lake/`, issue #214), in
+ * catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -514,7 +537,17 @@ export type TreasureItemSlug =
   | 'robot-suit'
   | 'carousel'
   | 'jetpack'
-  | 'wizard-hat';
+  | 'wizard-hat'
+  | 'windsock'
+  | 'pinwheel'
+  | 'wave-socks'
+  | 'little-pelican'
+  | 'twin-volcanoes'
+  | 'little-sailboat'
+  | 'cloud-scarf'
+  | 'pelican-swim-ring'
+  | 'surfboard'
+  | 'pelican-slippers';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -639,14 +672,25 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'carousel',
   'jetpack',
   'wizard-hat',
+  'windsock',
+  'pinwheel',
+  'wave-socks',
+  'little-pelican',
+  'twin-volcanoes',
+  'little-sailboat',
+  'cloud-scarf',
+  'pelican-swim-ring',
+  'surfboard',
+  'pelican-slippers',
 ];
 
 /**
- * All one hundred and fifty-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and sixty-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
  * items, the eleven deep canal Area 10 items, the deep canal Area 11's nine items (the Little cormorant, issue #112, then
- * its three Decorations and five Wearables in catalogue order, issue #207), then the thirty-three Paint shells in
+ * its three Decorations and five Wearables in catalogue order, issue #207), the open lake Area 12's ten items (its five
+ * Decorations and five Wearables in catalogue order, issue #214), then the thirty-three Paint shells in
  * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; Jade, Fiesta shine, Olive,
  * Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine the deep canal's; the
  * last two, Tule green and Obsidian, the open lake's, issue #214).
@@ -743,6 +787,9 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The deep canal Area 11's Little cormorant (issue #112) ends on the same 12.6 edge: its weight (a Floating item, so the
  * box edge). So do its three issue #207 Decorations: the Flower raft's weight (a Floating item, so the box edge), the
  * lowest bow of the Festival kite's tail (a Hanging item) and the Carousel's platform (a Floor item).
+ * The five open lake Area 12 Decorations (issue #214, ND-5) end on the same 12.6 edge: the round tail end of the
+ * Windsock (a Hanging item), the sand mound of the Pinwheel and the lake plinth of the Twin volcanoes (Floor items), and
+ * the weights of the Little pelican and the Little sailboat (Floating items, so the box edge).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -804,6 +851,11 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'flower-raft': 12.6,
   'festival-kite': 12.6,
   carousel: 12.6,
+  windsock: 12.6,
+  pinwheel: 12.6,
+  'little-pelican': 12.6,
+  'twin-volcanoes': 12.6,
+  'little-sailboat': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -5274,6 +5326,442 @@ function paintCarousel(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Open lake Area 12 Decorations (issue #214)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Five lake Decorations: a windsock on the breeze, a pinwheel on a
+// stick, a toy pelican (the area's special treasure), the twin volcanoes of the horizon and a little sailboat. Every
+// outer fill is one of the Area 12 Decoration fills of treasurePalette.ts (9:1 or more with ink). The volcanoes are
+// snowy peaks that never smoke or show lava, and every pelican bill is closed over an empty pouch, so no bird catches
+// anything (issue #214, ND-8). No letters or numbers (ADR 0007).
+
+/** The Windsock's mouth hoop (centre and radii) and its round tail end (centre and radius), the tail's foot on the 12.6 edge. */
+const WINDSOCK = { mouth: { x: 0, y: -5, rx: 4.8, ry: 1.6 }, tail: { x: 5.2, y: 10.8, r: 1.8 } } as const;
+/** The Windsock's two soft ink stripes (alpha 0.30) across the sock: top and bottom y of each. */
+const WINDSOCK_STRIPES: readonly (readonly [number, number])[] = [
+  [-0.6, 1.6],
+  [5.2, 7.2],
+];
+
+/** The Windsock's sock: it hangs from the mouth and drifts out to the right on the breeze, tapering to a round tail end. */
+function windsockPath(): Path2D {
+  const { mouth, tail } = WINDSOCK;
+  const len = Math.hypot(tail.x - mouth.x, tail.y - mouth.y);
+  const ux = (tail.x - mouth.x) / len;
+  const uy = (tail.y - mouth.y) / len;
+  const left = { x: tail.x - uy * tail.r, y: tail.y + ux * tail.r };
+  const right = { x: tail.x + uy * tail.r, y: tail.y - ux * tail.r };
+  const p = new Path2D();
+  p.moveTo(mouth.x - mouth.rx, mouth.y);
+  p.bezierCurveTo(mouth.x - mouth.rx, mouth.y + 6.6, left.x - 4.2 * ux, left.y - 4.2 * uy, left.x, left.y);
+  p.arc(tail.x, tail.y, tail.r, Math.atan2(ux, -uy), Math.atan2(-ux, uy), true);
+  p.bezierCurveTo(right.x - 4.2 * ux, right.y - 4.2 * uy, mouth.x + mouth.rx, mouth.y + 6.6, mouth.x + mouth.rx, mouth.y);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Common, Hanging: a windsock in the pale apricot with two soft ink stripes (alpha 0.30), hanging from a round pebble A
+ * mouth hoop (its opening a soft ink oval) on a two-string ink bridle (1.6) from a pebble A hook ring on its top-centre.
+ * The sock tapers as it drifts out to the right on the breeze and ends in a round tail end, the lowest fill edge. One
+ * shine on the sock. No trim, no gem and no star. A Hanging Decoration moves left and right only.
+ */
+function paintWindsock(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { mouth } = WINDSOCK;
+  const bridle = new Path2D();
+  for (const s of [-1, 1]) {
+    bridle.moveTo(0, -10);
+    bridle.lineTo(s * (mouth.rx - 0.6), mouth.y);
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  ctx.stroke(place(bridle, k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, WINDSOCK_HOOP), DETAIL_LW);
+  silhouette(pen, place(windsockPath(), k), WINDSOCK_FILL, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [y0, y1] of WINDSOCK_STRIPES) ctx.fillRect(-ICON_BOX * k, y0 * k, 2 * ICON_BOX * k, (y1 - y0) * k);
+    ctx.globalAlpha = 1;
+  });
+  silhouette(pen, place(ellipse(mouth.x, mouth.y, mouth.rx, mouth.ry), k), WINDSOCK_HOOP, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.fill(place(ellipse(mouth.x, mouth.y + 0.2, mouth.rx - 1.4, mouth.ry - 0.6), k));
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -2.2, 3.4, 0.6, 1.4, 0.3);
+}
+
+/** The Pinwheel's hub, where the pin holds the four blades to the stick, and how far each blade reaches from it. */
+const PINWHEEL = { x: 0, y: -4.6, reach: 8 } as const;
+
+/** One Pinwheel blade before it turns: a triangle from the hub up to the top edge and out to the top-right corner, every corner rounded. */
+function pinwheelBladePath(): Path2D {
+  const r = PINWHEEL.reach;
+  return roundedPolygon(pts(0, 0, 0, -r, r, -r), [0.3, 0.8, 1.8]);
+}
+
+/**
+ * Common, Floor: a toy pinwheel: four rounded blades turning about a butter yellow round pin, in turn the lotus lantern
+ * pink and the pale teal, on a stick of pale carved wood stuck in a little round mound of sand in pebble C. One shine
+ * on the upper left blade. The mound is the lowest fill edge. No trim, no gem and no star.
+ */
+function paintPinwheel(pen: Pen): void {
+  const { k } = pen;
+  const stick = roundedPolygon(pts(-0.9, PINWHEEL.y, 0.9, PINWHEEL.y, 0.9, 10.2, -0.9, 10.2), 0.5);
+  outerShape(pen, place(stick, k), PINWHEEL_STICK, ITEM_LW);
+  const mound = new Path2D();
+  mound.moveTo(-5.4, AREA3_FOOT_Y);
+  mound.bezierCurveTo(-5, 9.4, -2.6, 8.6, 0, 8.6);
+  mound.bezierCurveTo(2.6, 8.6, 5, 9.4, 5.4, AREA3_FOOT_Y);
+  mound.closePath();
+  outerShape(pen, place(mound, k), PINWHEEL_BASE, ITEM_LW);
+  for (let i = 0; i < 4; i++) {
+    const blade = place(pinwheelBladePath(), k, PINWHEEL.x, PINWHEEL.y, (i * Math.PI) / 2);
+    outerShape(pen, blade, PINWHEEL_BLADES[i % PINWHEEL_BLADES.length], ITEM_LW);
+  }
+  outerShape(pen, place(ellipse(PINWHEEL.x, PINWHEEL.y, 1.6, 1.6), k), PINWHEEL_PIN, ITEM_LW);
+  shine(pen, -5.6, -7, 0.6, 1.5, 0.75);
+}
+
+/**
+ * A closed pelican bill pointing right: its root at (x, y) on the head, a straight top edge `len` long to a round tip,
+ * and a slim, empty pouch sagging `sag` under it back to the root. One path, never open (guide 7r): it holds nothing.
+ */
+function pelicanBillPath(x: number, y: number, len: number, sag: number): Path2D {
+  const tip = x + len;
+  const p = new Path2D();
+  p.moveTo(x, y);
+  p.lineTo(tip - 1.2, y + 0.6);
+  p.quadraticCurveTo(tip + 0.4, y + 0.9, tip, y + 2.2);
+  p.bezierCurveTo(tip - 1.6, y + 2.2 + sag, x + 1.6, y + 2.2 + sag, x, y + 3);
+  p.closePath();
+  return p;
+}
+
+/** The closed bill's seam (1.2) along a {@link pelicanBillPath} from the same root and length, and the bead eye at (eyeX, eyeY). */
+function paintPelicanFace(pen: Pen, x: number, y: number, len: number, eyeX: number, eyeY: number): void {
+  const { ctx, k } = pen;
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    ctx.fill(place(ellipse(eyeX, eyeY, 0.9, 0.9), k));
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(x + 1.2, y + 1.5, x + len - 1.4, y + 1.6), k));
+  });
+}
+
+/** The Little pelican's bill: its root on the head and its length to the round tip, the rightmost fill edge. */
+const LITTLE_PELICAN_BILL_AT = { x: 3.2, y: -11.4, len: 9.3, sag: 2.6 } as const;
+
+/**
+ * Rare, Floating, Area 12's special treasure: a friendly toy pelican afloat in the pelican line's soft white: a big
+ * round body, a short tail tipped up behind, a neck in a gentle S up to a round head and a long closed bill in the pale
+ * orange, round-tipped, with its slim pouch relaxed and empty. A bead eye, an ink seam along the closed bill (1.2) and
+ * an ink wing line (1.2). One yellow trim band across the lower body, a thin ink cord and a pebble A weight hanging
+ * below. One shine on the back. The back is on the waterline, 20 below the top of the 80 box; the weight is the lowest
+ * fill edge, the box edge. No feet, never holding or catching anything (issue #214, ND-8), and never the Little
+ * cormorant's slim bill and flat tail or the Wooden duck decoy's short neck.
+ */
+function paintLittlePelican(pen: Pen): void {
+  const { ctx, k } = pen;
+  const body = { cx: -2.4, cy: waterlineY(INK_OUT_SHAPE) + 3.2, rx: 8.6, ry: 3.8 };
+  const head = { cx: 1.6, cy: -10.2, rx: 2.5, ry: 2.3 };
+  const bill = LITTLE_PELICAN_BILL_AT;
+  boatTether(pen, body.cx, body.cy + body.ry - 0.4);
+  const tail = roundedPolygon(pts(-9.4, body.cy - 1.6, -12.6, body.cy - 4.2, -12.2, body.cy - 0.6, -9.4, body.cy + 1.4), [0.8, 1.2, 1, 0.8]);
+  outerShape(pen, place(tail, k), LITTLE_PELICAN_BODY, ITEM_LW);
+  const neck = new Path2D();
+  neck.moveTo(-1.2, body.cy - 2.8);
+  neck.bezierCurveTo(0.8, body.cy - 5, -1.4, -7.4, -0.4, -9.6);
+  neck.lineTo(3.4, -9.4);
+  neck.bezierCurveTo(2.2, -7.4, 4.6, body.cy - 4.2, 3.4, body.cy - 1.4);
+  neck.closePath();
+  outerShape(pen, place(neck, k), LITTLE_PELICAN_BODY, ITEM_LW);
+  silhouette(pen, place(ellipse(body.cx, body.cy, body.rx, body.ry), k), LITTLE_PELICAN_BODY, ITEM_LW, () => {
+    trimBand(pen, body.cy + 1.4, body.cy + 2.8, BOAT_TRIM);
+    const wing = new Path2D();
+    wing.moveTo(-8.4, body.cy - 1.2);
+    wing.quadraticCurveTo(-3.4, body.cy + 1.6, 1.6, body.cy - 1);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(wing, k));
+  });
+  outerShape(pen, place(pelicanBillPath(bill.x, bill.y, bill.len, bill.sag), k), LITTLE_PELICAN_BILL, ITEM_LW);
+  outerShape(pen, place(ellipse(head.cx, head.cy, head.rx, head.ry), k), LITTLE_PELICAN_BODY, ITEM_LW);
+  paintPelicanFace(pen, bill.x, bill.y, bill.len, head.cx + 0.6, head.cy - 0.6);
+  shine(pen, -6.8, body.cy - 2, 1.8, 0.6, -0.15);
+}
+
+/** Popocatepetl, the tall cone on the right: its centre, half its foot, its round peak (the 12.6 edge) and its foot. */
+const POPOCATEPETL_ICON = { cx: 6.2, half: 6.4, peak: -12.6, foot: 8.6 } as const;
+
+/** A snow line of `scallops` soft scallops from (x0, y) to (x1, y), each dipping `dip` below the line. */
+function snowLinePath(x0: number, x1: number, y: number, scallops: number, dip: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x0, y);
+  const step = (x1 - x0) / scallops;
+  for (let i = 0; i < scallops; i++) p.quadraticCurveTo(x0 + (i + 0.5) * step, y + 2 * dip, x0 + (i + 1) * step, y);
+  return p;
+}
+
+/** A snow cap inside a mountain (clipped by the caller): the pale silver-white above a scalloped snow line, and the line in ink (1.2). */
+function paintSnowCap(pen: Pen, x0: number, x1: number, y: number, scallops: number): void {
+  const { ctx, k } = pen;
+  const cap = snowLinePath(x0, x1, y, scallops, 0.9);
+  cap.lineTo(x1, -ICON_BOX);
+  cap.lineTo(x0, -ICON_BOX);
+  cap.closePath();
+  ctx.fillStyle = TWIN_VOLCANO_SNOW;
+  ctx.fill(place(cap, k));
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  ctx.stroke(place(snowLinePath(x0, x1, y, scallops, 0.9), k));
+}
+
+/**
+ * Rare, Floor: the twin volcanoes of the lake's horizon (guide 7q) as a little model in the stalactite's pale lilac
+ * stone: Iztaccihuatl on the left, a long low ridge of rounded humps, and Popocatepetl on the right, a tall cone with a
+ * soft round top, both under snow caps in the pale silver-white with a scalloped ink snow line (1.2), standing on a
+ * round lake plinth in the pale paper blue that carries the one yellow trim band. One shine on Popocatepetl. Snowy peaks
+ * only: no crater, smoke, ash or lava (issue #214, ND-8). The plinth is the lowest fill edge.
+ */
+function paintTwinVolcanoes(pen: Pen): void {
+  const { k } = pen;
+  const iztaccihuatl = new Path2D();
+  iztaccihuatl.moveTo(-12.4, 8.6);
+  iztaccihuatl.bezierCurveTo(-12.4, 3.2, -11.2, 0.2, -9, 0.2);
+  iztaccihuatl.quadraticCurveTo(-7.4, 0.2, -6.6, 1.2);
+  iztaccihuatl.bezierCurveTo(-5.6, -2.8, -1.4, -3.4, 0.2, -1.4);
+  iztaccihuatl.quadraticCurveTo(1.4, 0, 2.6, 0.6);
+  iztaccihuatl.lineTo(3.4, 8.6);
+  iztaccihuatl.closePath();
+  silhouette(pen, place(iztaccihuatl, k), TWIN_VOLCANO_ROCK, ITEM_LW, () => paintSnowCap(pen, -13, 3.6, 1, 4));
+  const { cx, half, peak, foot } = POPOCATEPETL_ICON;
+  const popocatepetl = new Path2D();
+  popocatepetl.moveTo(cx - half, foot);
+  popocatepetl.bezierCurveTo(cx - 4.8, 2, cx - 3.4, -8, cx - 2.4, peak + 1.6);
+  popocatepetl.quadraticCurveTo(cx, 2 * peak - (peak + 1.6), cx + 2.4, peak + 1.6);
+  popocatepetl.bezierCurveTo(cx + 3.4, -8, cx + 4.8, 2, cx + half, foot);
+  popocatepetl.closePath();
+  silhouette(pen, place(popocatepetl, k), TWIN_VOLCANO_ROCK, ITEM_LW, () => paintSnowCap(pen, cx - half, cx + half, -5.8, 3));
+  const plinth = roundedPolygon(pts(-12.6, AREA3_FOOT_Y, -12.6, 8.2, 12.6, 8.2, 12.6, AREA3_FOOT_Y), [1.6, 2.4, 2.4, 1.6]);
+  silhouette(pen, place(plinth, k), TWIN_VOLCANO_BASE, ITEM_LW, () => trimBand(pen, 9.6, 11.2, BOAT_TRIM));
+  shine(pen, cx - 2.2, -2.6, 0.6, 1.8, 0.25);
+}
+
+/**
+ * Rare, Floating: a little sailboat with its bow to the right: a deep hull of pale carved wood carrying the one yellow
+ * trim band, a pebble A mast, a mainsail behind it and a smaller jib in front, both pale blue-white and round-cornered. A thin ink cord and a pebble A weight hang below. One shine on the
+ * hull. The deck sits just under the waterline, 20 below the top of the 80 box, so the sails stand in the air; the
+ * weight is the lowest fill edge, the box edge. Plain sails: no letters, numbers or signs (ADR 0007), and never the Paper boat's fold or the Toy boat's canopy.
+ */
+function paintLittleSailboat(pen: Pen): void {
+  const { k } = pen;
+  const wl = waterlineY(INK_OUT_SHAPE);
+  boatTether(pen, 0, wl + 4.8);
+  const mast = roundedPolygon(pts(-0.7, -12.6, 0.7, -12.6, 0.7, wl + 1.6, -0.7, wl + 1.6), 0.6);
+  outerShape(pen, place(mast, k), LITTLE_SAILBOAT_MAST, ITEM_LW);
+  const mainsail = roundedPolygon(pts(-1.4, -12, -1.4, wl + 0.8, -9.8, wl + 0.8), [0.8, 0.6, 1.2]);
+  outerShape(pen, place(mainsail, k), LITTLE_SAILBOAT_SAIL, ITEM_LW);
+  const jib = roundedPolygon(pts(1.4, -10.6, 1.4, wl + 0.8, 8.4, wl + 0.8), [0.8, 0.6, 1.2]);
+  outerShape(pen, place(jib, k), LITTLE_SAILBOAT_SAIL, ITEM_LW);
+  const hull = roundedPolygon(pts(-10.4, wl + 0.6, 11.4, wl - 0.2, 7.8, wl + 5.2, -8.2, wl + 5.2), [1, 1.2, 2.6, 2.6]);
+  silhouette(pen, place(hull, k), LITTLE_SAILBOAT_HULL, ITEM_LW, () => trimBand(pen, wl + 2.4, wl + 3.8, BOAT_TRIM));
+  shine(pen, -6.4, wl + 1.6, 1.4, 0.4, -0.04);
+}
+
+// ---------------------------------------------------------------------------
+// Open lake Area 12 Wearables (issue #214)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Five lake looks: wave socks, a cloud scarf, a pelican swim ring, a
+// surfboard and pelican slippers. Every outer fill is one of the Area 12 Wearable fills of treasurePalette.ts (9:1 or
+// more with ink); the worn looks import the same names. The pelican bills are closed over empty pouches (issue #214,
+// ND-8), every tip and nose is rounded, and nothing carries letters or numbers (ADR 0007).
+
+/** The Wave socks' two soft ink waves (alpha 0.30) across the leg: the y of each wave's middle. */
+const SOCK_WAVES = [-5.2, 0.4] as const;
+
+/** One soft wave ribbon 1.8 deep across the icon box, its crests and troughs 1 above and below `y`. */
+function waveRibbonPath(y: number): Path2D {
+  const p = new Path2D();
+  const step = 3;
+  p.moveTo(-ICON_BOX / 2, y);
+  for (let x = -ICON_BOX / 2; x < ICON_BOX / 2; x += 2 * step) {
+    p.quadraticCurveTo(x + step / 2, y - 2, x + step, y);
+    p.quadraticCurveTo(x + 1.5 * step, y + 2, x + 2 * step, y);
+  }
+  p.lineTo(ICON_BOX / 2, y + 1.8);
+  for (let x = ICON_BOX / 2; x > -ICON_BOX / 2; x -= 2 * step) {
+    p.quadraticCurveTo(x - step / 2, y + 3.8, x - step, y + 1.8);
+    p.quadraticCurveTo(x - 1.5 * step, y - 0.2, x - 2 * step, y + 1.8);
+  }
+  p.closePath();
+  return p;
+}
+
+/**
+ * Common: one merged `shape` silhouette (2.8) of an upright leg whose cuff is two round wave crests, a round heel and a
+ * foot to the right, in the pale paper blue, with two soft ink waves (alpha 0.30) across the leg. One shine. No trim,
+ * no gem and no star. Never the Stripy socks' straight cuff and stripes, nor the Lily pad socks' pads.
+ */
+function paintWaveSocks(pen: Pen): void {
+  const { ctx, k } = pen;
+  const sock = new Path2D();
+  sock.moveTo(-8.4, -10.4);
+  sock.quadraticCurveTo(-5.4, -14.8, -2.4, -10.4);
+  sock.quadraticCurveTo(0.6, -14.8, 3.6, -10.4);
+  sock.lineTo(3.6, 3.6 - 1.5);
+  sock.arcTo(3.6, 3.6, 3.6 + 1.5, 3.6, 1.5);
+  sock.lineTo(8.1, 3.6);
+  sock.arc(8.1, 8.1, 4.5, -Math.PI / 2, Math.PI / 2, false);
+  sock.lineTo(-8.4 + 5, AREA3_FOOT_Y);
+  sock.arcTo(-8.4, AREA3_FOOT_Y, -8.4, AREA3_FOOT_Y - 5, 5);
+  sock.closePath();
+  silhouette(pen, place(sock, k), WAVE_SOCKS_FILL, ITEM_LW, () => {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = INK;
+    for (const y of SOCK_WAVES) ctx.fill(place(waveRibbonPath(y), k));
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -5.6, -8.2, 0.9, 1.6, 0.1);
+}
+
+/** The Cloud scarf's five round puffs along the sagging band round the neck: x, y and radius of each. */
+const CLOUD_DRAPE_PUFFS: readonly (readonly [number, number, number])[] = [
+  [-8.4, -7.6, 2.8],
+  [-4.4, -5.6, 3.2],
+  [0, -4.8, 3.4],
+  [4.4, -5.6, 3.2],
+  [8.4, -7.6, 2.8],
+];
+/** The two round puffs at the foot of the Cloud scarf's hanging tail, their feet on the merged silhouette's edge. */
+const CLOUD_TAIL_PUFFS: readonly (readonly [number, number, number])[] = [
+  [4, 9, 2.2],
+  [7.4, 9, 2.2],
+];
+
+/**
+ * Rare: a cloud scarf in the pale silver-white, one merged `blob` silhouette (2.8, all outside the fills, so no line
+ * crosses a joint): a sagging band of five round cloud puffs round the neck and one soft tail hanging on the right,
+ * carrying the one yellow trim band and ending in two round puffs. One shine on the band. No gem, gold or star.
+ */
+function paintCloudScarf(pen: Pen): void {
+  const { k } = pen;
+  const tail = roundedPolygon(pts(2.6, -4.4, 8.2, -4.4, 8.8, 7.6, 3.2, 7.6), [1.4, 1.4, 2, 2]);
+  const puffOf = ([x, y, r]: readonly [number, number, number]): Piece => ({ path: place(ellipse(x, y, r, r), k), fill: CLOUD_SCARF_FILL });
+  const pieces: Piece[] = [
+    { path: place(tail, k), fill: CLOUD_SCARF_FILL, inner: () => trimBand(pen, 1.4, 3.2, BOAT_TRIM) },
+    ...CLOUD_TAIL_PUFFS.map(puffOf),
+    ...CLOUD_DRAPE_PUFFS.map(puffOf),
+  ];
+  mergedSilhouette(pen, pieces, ITEM_LW);
+  shine(pen, -5.4, -6.8, 1.4, 0.6, -0.4);
+}
+
+/** The Pelican swim ring's bill: its root on the head and its length to the round tip. */
+const SWIM_RING_BILL_AT = { x: -2.6, y: -11, len: 10.8, sag: 2.4 } as const;
+
+/**
+ * Rare: a round swim ring in the pelican's soft white (the hole seen a little from above) with a toy pelican's neck
+ * rising from its back left to a round head and a long closed bill in the pale orange pointing forward, its slim pouch
+ * empty. A bead eye and an ink seam along the closed bill (1.2). One yellow trim band across the front of the ring.
+ * One shine on the ring. No gem, gold or star, and never catching anything (issue #214, ND-8).
+ */
+function paintPelicanSwimRing(pen: Pen): void {
+  const { k } = pen;
+  const bill = SWIM_RING_BILL_AT;
+  const neck = new Path2D();
+  neck.moveTo(-8.8, 1.2);
+  neck.bezierCurveTo(-9.2, -3.6, -7.8, -6.8, -6.8, -9);
+  neck.lineTo(-2.8, -8.6);
+  neck.bezierCurveTo(-3.8, -6.2, -4.6, -3, -4.2, 1.2);
+  neck.closePath();
+  outerShape(pen, place(neck, k), PELICAN_SWIM_RING_FILL, ITEM_LW);
+  const ring = new Path2D();
+  ring.ellipse(0, 5, 12.6, 7.6, 0, 0, TAU, false);
+  ring.moveTo(5.4, 4.2);
+  ring.ellipse(0, 4.2, 5.4, 2.6, 0, 0, -TAU, true);
+  silhouette(pen, place(ring, k), PELICAN_SWIM_RING_FILL, ITEM_LW, () => trimBand(pen, 8.4, 10.2, BOAT_TRIM));
+  outerShape(pen, place(pelicanBillPath(bill.x, bill.y, bill.len, bill.sag), k), PELICAN_SWIM_RING_BILL, ITEM_LW);
+  outerShape(pen, place(ellipse(-4.6, -9.8, 3, 2.6), k), PELICAN_SWIM_RING_FILL, ITEM_LW);
+  paintPelicanFace(pen, bill.x, bill.y, bill.len, -3.8, -10.6);
+  shine(pen, -8.6, 2, 1.8, 0.7, -0.5);
+}
+
+/**
+ * The Surfboard's half length (nose to tail), half width, tilt from upright (nose to the right) and the drop of its
+ * centre that sets the nose and the tail on the box's top and bottom edges.
+ */
+const SURFBOARD = { half: 15, width: 4.6, tilt: 0.5, drop: 0.7 } as const;
+
+/** The Surfboard upright before it tilts: a long board with a soft round nose at the top and a round tail. */
+function surfboardPath(): Path2D {
+  const { half, width } = SURFBOARD;
+  const p = new Path2D();
+  p.moveTo(-0.9, -half + 0.5);
+  p.quadraticCurveTo(0, -half - 0.4, 0.9, -half + 0.5);
+  p.bezierCurveTo(width * 0.8, -half * 0.55, width, half * 0.2, width * 0.85, half * 0.62);
+  p.bezierCurveTo(width * 0.7, half * 0.95, -width * 0.7, half * 0.95, -width * 0.85, half * 0.62);
+  p.bezierCurveTo(-width, half * 0.2, -width * 0.8, -half * 0.55, -0.9, -half + 0.5);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Rare: a surfboard in the pale teal, tilted with its soft round nose up to the right and its round tail down to the
+ * left, an ink stringer (1.2) down its middle and the one yellow trim band across it. One shine near the nose. No fin,
+ * gem, gold or star, and no letters or numbers (ADR 0007).
+ */
+function paintSurfboard(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { half, tilt, drop } = SURFBOARD;
+  silhouette(pen, place(surfboardPath(), k, 0, drop, tilt), SURFBOARD_FILL, ITEM_LW, () => {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(line(0, -half + 1.8, 0, half * 0.8), k, 0, drop, tilt));
+    trimBand(pen, 1.6, 3.4, BOAT_TRIM);
+  });
+  shine(pen, 1.6, -7.4, 0.6, 1.8, tilt);
+}
+
+/** The Pelican slippers' bill: its root on the toe's head and its length to the round tip, the rightmost fill edge. */
+const SLIPPER_BILL_AT = { x: 7.6, y: -2, len: 4.9, sag: 2.4 } as const;
+
+/**
+ * Rare: one fluffy pelican slipper with its toe to the right: a puffy upper in the pelican's soft white with a soft
+ * ink opening (alpha 0.30) at the heel and the one yellow trim band round it, a round toe head and a closed bill in the
+ * pale orange lying forward along the toe, its slim pouch empty, over a pale orange sole (the pelican's orange feet). A
+ * bead eye and an ink seam along the closed bill (1.2). One shine on the heel. No gem, gold or star, and never catching
+ * anything (issue #214, ND-8).
+ */
+function paintPelicanSlippers(pen: Pen): void {
+  const { ctx, k } = pen;
+  const bill = SLIPPER_BILL_AT;
+  const upper = new Path2D();
+  upper.moveTo(-11.8, 9.4);
+  upper.bezierCurveTo(-12.6, 3.4, -10.4, -0.6, -6.6, -0.6);
+  upper.lineTo(1.6, -0.6);
+  upper.bezierCurveTo(6.4, -0.6, 9.2, 4, 9, 9.4);
+  upper.closePath();
+  silhouette(pen, place(upper, k), PELICAN_SLIPPER_FILL, ITEM_LW, () => {
+    trimBand(pen, 4.6, 6.2, BOAT_TRIM);
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.fill(place(ellipse(-6.4, -0.2, 4.4, 1.4), k));
+    ctx.globalAlpha = 1;
+  });
+  const sole = roundedPolygon(pts(-12.6, 9, 9.6, 9, 9.6, AREA3_FOOT_Y, -12.6, AREA3_FOOT_Y), [1.6, 1.6, 1.8, 1.8]);
+  outerShape(pen, place(sole, k), PELICAN_SLIPPER_BILL, ITEM_LW);
+  outerShape(pen, place(pelicanBillPath(bill.x, bill.y, bill.len, bill.sag), k), PELICAN_SLIPPER_BILL, ITEM_LW);
+  outerShape(pen, place(ellipse(5.2, -0.8, 3.6, 3.2), k), PELICAN_SLIPPER_FILL, ITEM_LW);
+  paintPelicanFace(pen, bill.x, bill.y, bill.len, 6, -1.8);
+  shine(pen, -9.6, 3, 0.7, 1.8, 0.3);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -6055,6 +6543,36 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'carousel':
       paintCarousel({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'windsock':
+      paintWindsock({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'pinwheel':
+      paintPinwheel({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'wave-socks':
+      paintWaveSocks({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-pelican':
+      paintLittlePelican({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'twin-volcanoes':
+      paintTwinVolcanoes({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-sailboat':
+      paintLittleSailboat({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'cloud-scarf':
+      paintCloudScarf({ ctx, k: fitScale(size, INK_OUT_BLOB), flat });
+      break;
+    case 'pelican-swim-ring':
+      paintPelicanSwimRing({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'surfboard':
+      paintSurfboard({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'pelican-slippers':
+      paintPelicanSlippers({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
       break;
   }
 }

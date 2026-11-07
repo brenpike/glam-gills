@@ -106,6 +106,11 @@ const LITTLE_CORMORANT = 'deep-canal/little-cormorant';
 const FLOWER_RAFT = 'deep-canal/flower-raft';
 const FESTIVAL_KITE = 'deep-canal/festival-kite';
 const CAROUSEL = 'deep-canal/carousel';
+const WINDSOCK = 'open-lake/windsock';
+const PINWHEEL = 'open-lake/pinwheel';
+const LITTLE_PELICAN = 'open-lake/little-pelican';
+const TWIN_VOLCANOES = 'open-lake/twin-volcanoes';
+const LITTLE_SAILBOAT = 'open-lake/little-sailboat';
 const WIDE_SHIPPED = [STRING_LIGHTS, PAPEL_PICADO];
 const SHIPPED_FLOOR = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floor');
 const SHIPPED_FLOATING = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floating');
@@ -499,6 +504,11 @@ describe('placement kinds geometry (issue #95)', () => {
       [FLOWER_RAFT, 'floating'],
       [FESTIVAL_KITE, 'hanging'],
       [CAROUSEL, 'floor'],
+      [WINDSOCK, 'hanging'],
+      [PINWHEEL, 'floor'],
+      [LITTLE_PELICAN, 'floating'],
+      [TWIN_VOLCANOES, 'floor'],
+      [LITTLE_SAILBOAT, 'floating'],
     ]);
     for (const decoration of SHIPPED_DECORATIONS) {
       expect(decorationWidth(decoration), decoration.id).toBe(
@@ -587,6 +597,8 @@ describe('isValidPlacementFor', () => {
       MARIACHI_BAND,
       SNOW_GLOBE,
       CAROUSEL,
+      PINWHEEL,
+      TWIN_VOLCANOES,
     ]);
     for (const decoration of SHIPPED_FLOOR) {
       for (const pos of points) expect(isValidPlacementFor(decoration, pos)).toBe(isValidPlacement(pos));
@@ -611,6 +623,8 @@ describe('isValidPlacementFor', () => {
       MARIGOLD_BOAT,
       LITTLE_CORMORANT,
       FLOWER_RAFT,
+      LITTLE_PELICAN,
+      LITTLE_SAILBOAT,
     ]);
     expect(SHIPPED_HANGING.map((decoration) => decoration.id)).toEqual([
       STRING_LIGHTS,
@@ -624,6 +638,7 @@ describe('isValidPlacementFor', () => {
       NAME_SIGN,
       FLAG_STRING,
       FESTIVAL_KITE,
+      WINDSOCK,
     ]);
     for (const decoration of [...SHIPPED_FLOATING, ...SHIPPED_HANGING, LILY_PAD, PAPER_LANTERN, WIDE_BANNER]) {
       const range = placementXRangeFor(decoration);

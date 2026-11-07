@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isSupportedCanvas } from './cardFit';
 import type { HudView, Rect, Size } from './hudLayout';
-import { SHIPPED_DECORATIONS, decorationBandTop, lidTopCss, tankFrame, topKeepClearCss } from './tank';
+import { SHIPPED_DECORATIONS, decorationBandTop, lidTopCss, tankFrame, topKeepClearCss, type TankFrame } from './tank';
 import {
   CLOSE_LABEL,
   COLLECTION_BOOK_LABEL,
@@ -160,7 +160,8 @@ function clearance(a: Rect, b: Rect): number {
 /** Problems with a set of named rects: outside `bounds`, or closer than UI.gap to another. */
 function spacingProblems(label: string, bounds: Rect, rects: readonly [string, Rect][]): string[] {
   const problems: string[] = [];
-  for (const [name, rect] of rects) {
+  for (let index = 0; index < rects.length; index++) {
+    const [name, rect] = rects[index];
     const inside =
       rect.x >= bounds.x - 1e-9 &&
       rect.y >= bounds.y - 1e-9 &&
@@ -168,14 +169,31 @@ function spacingProblems(label: string, bounds: Rect, rects: readonly [string, R
       rect.y + rect.h <= bounds.y + bounds.h + 1e-9;
     if (!inside) problems.push(`${label}: ${name} outside bounds`);
   }
-  for (let i = 0; i < rects.length; i++) {
-    for (let j = i + 1; j < rects.length; j++) {
-      if (clearance(rects[i][1], rects[j][1]) < UI.gap - 1e-9) {
-        problems.push(`${label}: ${rects[i][0]} and ${rects[j][0]} closer than ${UI.gap}`);
-      }
+  for (const [i, j] of closePairs(rects)) problems.push(`${label}: ${rects[i][0]} and ${rects[j][0]} closer than ${UI.gap}`);
+  return problems;
+}
+
+/**
+ * The index pairs i < j of `rects` closer than UI.gap, in index order. A rect whose top is not finite
+ * is never close to another. The rest are scanned top first, so the scan from one rect stops at the
+ * first rect starting a gap or more under its bottom: every later one starts lower still.
+ */
+function closePairs(rects: readonly [string, Rect][]): [number, number][] {
+  const byTop: number[] = [];
+  for (let index = 0; index < rects.length; index++) {
+    if (Number.isFinite(rects[index][1].y)) byTop.push(index);
+  }
+  byTop.sort((a, b) => rects[a][1].y - rects[b][1].y);
+  const pairs: [number, number][] = [];
+  for (let upper = 0; upper < byTop.length; upper++) {
+    const a = rects[byTop[upper]][1];
+    for (let lower = upper + 1; lower < byTop.length; lower++) {
+      const b = rects[byTop[lower]][1];
+      if (b.y - bottomOf(a) >= UI.gap - 1e-9) break;
+      if (clearance(a, b) < UI.gap - 1e-9) pairs.push([Math.min(byTop[upper], byTop[lower]), Math.max(byTop[upper], byTop[lower])]);
     }
   }
-  return problems;
+  return pairs.sort((first, second) => first[0] - second[0] || first[1] - second[1]);
 }
 
 /** Problems with touch targets smaller than 48 x 48. */
@@ -283,6 +301,15 @@ function decorateTargets(layout: DecorateLayout): [string, Rect][] {
   ];
 }
 
+/** The lowest bottom of a decorate layout's targets (decorateTargets), without naming them. */
+function decorateTargetsBottom(layout: DecorateLayout): number {
+  let bottom = Math.max(bottomOf(layout.putAway), bottomOf(layout.done));
+  for (const rect of layout.tray) bottom = Math.max(bottom, bottomOf(rect));
+  if (layout.previousPage !== null) bottom = Math.max(bottom, bottomOf(layout.previousPage));
+  if (layout.nextPage !== null) bottom = Math.max(bottom, bottomOf(layout.nextPage));
+  return bottom;
+}
+
 /** Problems with a layout's page fields: the shown page's squares, its start, and Back and Next only with more than one page. */
 function pageProblems(label: string, layout: DecorateLayout, trayCount: number): string[] {
   const problems: string[] = [];
@@ -299,19 +326,29 @@ function pageProblems(label: string, layout: DecorateLayout, trayCount: number):
   return problems;
 }
 
+/** The leftmost and rightmost x of a row of rects. */
+interface RowSpan {
+  left: number;
+  right: number;
+}
+
 /** True when `row` spans an even width either side of the view's centre line. */
-function isCentredRow(view: HudView, row: readonly Rect[]): boolean {
-  const left = Math.min(...row.map((rect) => rect.x));
-  const right = Math.max(...row.map((rect) => rect.x + rect.w));
-  return Math.abs((left + right) / 2 - view.cssW / 2) < 1e-9;
+function isCentredRow(view: HudView, row: RowSpan): boolean {
+  return Math.abs((row.left + row.right) / 2 - view.cssW / 2) < 1e-9;
 }
 
 /** Problems with rows not centred across the view; rects that share a vertical centre are one row. */
 function centredRowProblems(label: string, view: HudView, rects: readonly [string, Rect][]): string[] {
-  const rows = new Map<number, Rect[]>();
+  const rows = new Map<number, RowSpan>();
   for (const [, rect] of rects) {
     const centreKey = Math.round((rect.y + rect.h / 2) * 1e6);
-    rows.set(centreKey, [...(rows.get(centreKey) ?? []), rect]);
+    const row = rows.get(centreKey);
+    if (row === undefined) {
+      rows.set(centreKey, { left: rect.x, right: rect.x + rect.w });
+    } else {
+      row.left = Math.min(row.left, rect.x);
+      row.right = Math.max(row.right, rect.x + rect.w);
+    }
   }
   return [...rows.entries()]
     .filter(([, row]) => !isCentredRow(view, row))
@@ -325,7 +362,7 @@ function centredRowProblems(label: string, view: HudView, rects: readonly [strin
  */
 function captionRuleTop(view: HudView, layout: DecorateLayout, caption: Size): number | null {
   if (caption.w > view.cssW - 2 * UI.margin + 1e-9) return null;
-  const top = Math.max(...decorateTargets(layout).map(([, rect]) => bottomOf(rect))) + UI.gap;
+  const top = decorateTargetsBottom(layout) + UI.gap;
   if (top + caption.h <= layout.room.bottom + 1e-9) return top;
   const waterTop = Math.max(top, topKeepClearCss(tankFrame(view.cssW, view.cssH)).y1 + UI.gap);
   return waterTop + caption.h <= view.cssH - UI.margin + 1e-9 ? waterTop : null;
@@ -382,13 +419,18 @@ function decorateLayoutProblems(
 }
 
 /**
- * Every decorate problem on every page of one tray. pageProblems pins each page's start, square
- * count and the page count, so each tray item is on exactly one page. The first page's layout, which
- * gives the page count, is the one checked as page 0.
+ * Every decorate problem on every page of one tray, laid out in `frame` with `sizes`, the view's
+ * tankFrame and decorateSizes. pageProblems pins each page's start, square count and the page count,
+ * so each tray item is on exactly one page. The first page's layout, which gives the page count, is
+ * the one checked as page 0.
  */
-function trayPagesProblems(view: HudView, trayCount: number, maxTrayCount: number): string[] {
-  const frame = tankFrame(view.cssW, view.cssH);
-  const sizes = decorateSizes(view);
+function trayPagesProblems(
+  view: HudView,
+  frame: TankFrame,
+  sizes: DecorateSizes,
+  trayCount: number,
+  maxTrayCount: number,
+): string[] {
   const layoutOf = (page: number): DecorateLayout => decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
   const first = layoutOf(0);
   const layouts = Array.from({ length: first.pageCount }, (_, page) => (page === 0 ? first : layoutOf(page)));
@@ -841,14 +883,18 @@ describe('decorateLayout', () => {
   });
 
   describe('fits every tray up to the shipped Decorations on every supported canvas, more than 4 by the tray rule, on every page', () => {
-    it('sweeps the 59 shipped Decorations', () => {
-      expect(SHIPPED_DECORATIONS).toHaveLength(59);
+    it('sweeps the 64 shipped Decorations', () => {
+      expect(SHIPPED_DECORATIONS).toHaveLength(64);
     });
 
     it.each(supportedCanvases())('at $cssW x $cssH', (view) => {
+      const frame = tankFrame(view.cssW, view.cssH);
+      const sizes = decorateSizes(view);
       const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
       const problems = maxCounts.flatMap((maxTrayCount) =>
-        maxCounts.filter((trayCount) => trayCount <= maxTrayCount).flatMap((trayCount) => trayPagesProblems(view, trayCount, maxTrayCount)),
+        maxCounts
+          .filter((trayCount) => trayCount <= maxTrayCount)
+          .flatMap((trayCount) => trayPagesProblems(view, frame, sizes, trayCount, maxTrayCount)),
       );
       expect(problems).toEqual([]);
     });
@@ -1012,12 +1058,19 @@ function sceneDecorate(view: HudView, trayCount: number, maxTrayCount: number, p
   return decorateLayout(view, tankFrame(view.cssW, view.cssH), trayCount, decorateSizes(view), maxTrayCount, page);
 }
 
+/** sceneDecorate on `view` with its frame and decorate sizes made once: the layout of `trayCount` of `maxTrayCount` on `page`. */
+function sceneDecorateOn(view: HudView): (trayCount: number, maxTrayCount: number, page?: number) => DecorateLayout {
+  const frame = tankFrame(view.cssW, view.cssH);
+  const sizes = decorateSizes(view);
+  return (trayCount, maxTrayCount, page = 0) => decorateLayout(view, frame, trayCount, sizes, maxTrayCount, page);
+}
+
 /** Every tray count from `least` up to the shipped Decorations. */
 function traysFrom(least: number): number[] {
   return Array.from({ length: SHIPPED_DECORATIONS.length - least + 1 }, (_, index) => least + index);
 }
 
-/** Canvases where a tray of 18 to 58 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
+/** Canvases where a tray of 18 to 64 of the shipped Decorations fits no room and goes in pages, with the trays that page. */
 const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 440 }, traysFrom(22)],
   [{ cssW: 320, cssH: 480 }, traysFrom(22)],
@@ -1027,6 +1080,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 320, cssH: 740 }, traysFrom(47)],
   [{ cssW: 320, cssH: 768 }, traysFrom(47)],
   [{ cssW: 320, cssH: 844 }, traysFrom(57)],
+  [{ cssW: 320, cssH: 932 }, traysFrom(62)],
   [{ cssW: 340, cssH: 440 }, traysFrom(23)],
   [{ cssW: 340, cssH: 480 }, traysFrom(23)],
   [{ cssW: 340, cssH: 568 }, traysFrom(33)],
@@ -1035,6 +1089,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 340, cssH: 740 }, traysFrom(48)],
   [{ cssW: 340, cssH: 768 }, traysFrom(48)],
   [{ cssW: 340, cssH: 844 }, traysFrom(53)],
+  [{ cssW: 340, cssH: 932 }, traysFrom(63)],
   [{ cssW: 360, cssH: 440 }, traysFrom(18)],
   [{ cssW: 360, cssH: 480 }, traysFrom(23)],
   [{ cssW: 360, cssH: 568 }, traysFrom(28)],
@@ -1043,6 +1098,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 360, cssH: 740 }, traysFrom(43)],
   [{ cssW: 360, cssH: 768 }, traysFrom(48)],
   [{ cssW: 360, cssH: 844 }, traysFrom(53)],
+  [{ cssW: 360, cssH: 932 }, traysFrom(63)],
   [{ cssW: 375, cssH: 440 }, traysFrom(18)],
   [{ cssW: 375, cssH: 480 }, traysFrom(23)],
   [{ cssW: 375, cssH: 568 }, traysFrom(28)],
@@ -1059,6 +1115,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 390, cssH: 667 }, traysFrom(46)],
   [{ cssW: 390, cssH: 740 }, traysFrom(52)],
   [{ cssW: 390, cssH: 768 }, traysFrom(52)],
+  [{ cssW: 390, cssH: 844 }, traysFrom(64)],
   [{ cssW: 414, cssH: 440 }, traysFrom(28)],
   [{ cssW: 414, cssH: 480 }, traysFrom(28)],
   [{ cssW: 414, cssH: 568 }, traysFrom(40)],
@@ -1066,6 +1123,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 414, cssH: 667 }, traysFrom(46)],
   [{ cssW: 414, cssH: 740 }, traysFrom(58)],
   [{ cssW: 414, cssH: 768 }, traysFrom(58)],
+  [{ cssW: 414, cssH: 844 }, traysFrom(64)],
   [{ cssW: 430, cssH: 440 }, traysFrom(22)],
   [{ cssW: 430, cssH: 480 }, traysFrom(28)],
   [{ cssW: 430, cssH: 568 }, traysFrom(40)],
@@ -1073,11 +1131,13 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 430, cssH: 667 }, traysFrom(46)],
   [{ cssW: 430, cssH: 740 }, traysFrom(52)],
   [{ cssW: 430, cssH: 768 }, traysFrom(58)],
+  [{ cssW: 430, cssH: 844 }, traysFrom(64)],
   [{ cssW: 459, cssH: 440 }, traysFrom(26)],
   [{ cssW: 459, cssH: 480 }, traysFrom(33)],
   [{ cssW: 459, cssH: 568 }, traysFrom(40)],
   [{ cssW: 459, cssH: 600 }, traysFrom(47)],
   [{ cssW: 459, cssH: 667 }, traysFrom(54)],
+  [{ cssW: 459, cssH: 740 }, traysFrom(61)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 460, cssH }, traysFrom(19)]),
   [{ cssW: 460, cssH: 414 }, traysFrom(26)],
   [{ cssW: 460, cssH: 440 }, traysFrom(26)],
@@ -1085,6 +1145,7 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 460, cssH: 568 }, traysFrom(40)],
   [{ cssW: 460, cssH: 600 }, traysFrom(47)],
   [{ cssW: 460, cssH: 667 }, traysFrom(54)],
+  [{ cssW: 460, cssH: 740 }, traysFrom(61)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 480, cssH }, traysFrom(19)]),
   [{ cssW: 480, cssH: 414 }, traysFrom(19)],
   [{ cssW: 480, cssH: 440 }, traysFrom(26)],
@@ -1092,17 +1153,21 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 480, cssH: 568 }, traysFrom(40)],
   [{ cssW: 480, cssH: 600 }, traysFrom(47)],
   [{ cssW: 480, cssH: 667 }, traysFrom(54)],
+  [{ cssW: 480, cssH: 740 }, traysFrom(61)],
+  [{ cssW: 480, cssH: 768 }, traysFrom(61)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 520, cssH }, traysFrom(22)]),
   [{ cssW: 520, cssH: 414 }, traysFrom(30)],
   [{ cssW: 520, cssH: 440 }, traysFrom(30)],
   [{ cssW: 520, cssH: 480 }, traysFrom(38)],
   [{ cssW: 520, cssH: 568 }, traysFrom(54)],
   [{ cssW: 520, cssH: 600 }, traysFrom(54)],
+  [{ cssW: 520, cssH: 667 }, traysFrom(62)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 568, cssH }, traysFrom(25)]),
   [{ cssW: 568, cssH: 414 }, traysFrom(34)],
   [{ cssW: 568, cssH: 440 }, traysFrom(34)],
   [{ cssW: 568, cssH: 480 }, traysFrom(43)],
   [{ cssW: 568, cssH: 568 }, traysFrom(52)],
+  [{ cssW: 568, cssH: 600 }, traysFrom(61)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 640, cssH }, traysFrom(28)]),
   [{ cssW: 640, cssH: 414 }, traysFrom(38)],
   [{ cssW: 640, cssH: 440 }, traysFrom(38)],
@@ -1119,39 +1184,49 @@ const PAGED_TRAYS: readonly [HudView, readonly number[]][] = [
   [{ cssW: 736, cssH: 440 }, traysFrom(42)],
   [{ cssW: 736, cssH: 480 }, traysFrom(53)],
   [{ cssW: 736, cssH: 568 }, traysFrom(53)],
+  [{ cssW: 736, cssH: 600 }, traysFrom(64)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 800, cssH }, traysFrom(36)]),
   [{ cssW: 800, cssH: 414 }, traysFrom(49)],
   [{ cssW: 800, cssH: 440 }, traysFrom(49)],
+  [{ cssW: 800, cssH: 480 }, traysFrom(62)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 844, cssH }, traysFrom(37)]),
   [{ cssW: 844, cssH: 414 }, traysFrom(50)],
   [{ cssW: 844, cssH: 440 }, traysFrom(50)],
+  [{ cssW: 844, cssH: 480 }, traysFrom(63)],
   ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 1024, cssH }, traysFrom(46)]),
+  [{ cssW: 1024, cssH: 414 }, traysFrom(62)],
+  [{ cssW: 1024, cssH: 440 }, traysFrom(62)],
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 1280, cssH }, traysFrom(60)]),
+  ...[320, 340, 360, 375].map((cssH): [HudView, readonly number[]] => [{ cssW: 1366, cssH }, traysFrom(64)]),
 ];
 
 describe('decorate tray pages', () => {
-  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 58 or more on the other narrow and tall canvases, 25 to 52 at 568 wide, 28, 48 or 58 at 640 and 667 wide, 31 to 53 at 736 wide, 36 or 49 at 800 wide, 37 or 50 at 844 wide and 46 at 1024 wide', () => {
+  it('pages only trays of 18 or more at 360 and 375 x 440, 19 or more at 460 and 480 by 320 to 375 and 480 x 414, 22 to 64 or more on the other narrow and tall canvases, 25 to 61 at 568 wide, 28, 48 or 58 at 640 and 667 wide, 31 to 64 at 736 wide, 36, 49 or 62 at 800 wide, 37, 50 or 63 at 844 wide, 46 or 62 at 1024 wide, 60 at 1280 wide and 64 at 1366 wide', () => {
     const maxCounts = Array.from({ length: SHIPPED_DECORATIONS.length + 1 }, (_, count) => count);
     const paged = supportedCanvases().flatMap((view) => {
-      const counts = maxCounts.filter((trayCount) => sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length).pageCount > 1);
+      const decorate = sceneDecorateOn(view);
+      const counts = maxCounts.filter((trayCount) => decorate(trayCount, SHIPPED_DECORATIONS.length).pageCount > 1);
       return counts.length > 0 ? [`${view.cssW}x${view.cssH}: ${counts.join(',')}`] : [];
     });
     expect(paged).toEqual(PAGED_TRAYS.map(([view, counts]) => `${view.cssW}x${view.cssH}: ${counts.join(',')}`));
   }, 30_000);
 
   it('keeps every one-page tray exactly as the tray rule lays it out, with no Back or Next, whatever page is asked for', () => {
-    const problems = supportedCanvases().flatMap((view) =>
-      Array.from({ length: 18 }, (_, trayCount) => trayCount).flatMap((trayCount) => {
+    const problems = supportedCanvases().flatMap((view) => {
+      const decorate = sceneDecorateOn(view);
+      return Array.from({ length: 18 }, (_, trayCount) => trayCount).flatMap((trayCount) => {
         const label = `${view.cssW}x${view.cssH} tray=${trayCount}`;
-        const layout = sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length);
+        const layout = decorate(trayCount, SHIPPED_DECORATIONS.length);
         const shape = { page: 0, pageCount: 1, trayStart: 0, pageSize: trayCount, previousPage: null, nextPage: null };
         const fields = { page: layout.page, pageCount: layout.pageCount, trayStart: layout.trayStart, pageSize: layout.pageSize, previousPage: layout.previousPage, nextPage: layout.nextPage };
-        const sameOnEveryPage = [1, -1, 7, Number.NaN].every((page) => JSON.stringify(sceneDecorate(view, trayCount, SHIPPED_DECORATIONS.length, page)) === JSON.stringify(layout));
+        const shown = JSON.stringify(layout);
+        const sameOnEveryPage = [1, -1, 7, Number.NaN].every((page) => JSON.stringify(decorate(trayCount, SHIPPED_DECORATIONS.length, page)) === shown);
         return [
           ...(JSON.stringify(fields) === JSON.stringify(shape) ? [] : [`${label}: paged`]),
           ...(sameOnEveryPage ? [] : [`${label}: changes with the page asked for`]),
         ];
-      }),
-    );
+      });
+    });
     expect(problems).toEqual([]);
   }, 30_000);
 
