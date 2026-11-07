@@ -47,3 +47,7 @@ Texture memory is tight. Baking every area's scenery at boot passed iOS Safari's
 |---|---|
 | Grow `AXO_TEX` for every look | Every bake of every axolotl would grow, worn items or not, and texture memory is the budget that crashed iOS Safari before (commit bbd5755). Most axolotls would pay for items they are not wearing. |
 | Keep today's footprints | The Propeller cap, the Wizard hat and the Jetpack cannot read as themselves inside the Head and Back boxes, and the owner wants Area 11's looks big and silly. |
+
+## Note: the Surfboard (issue #214)
+
+Issue #214, Area 12's treasures, adds a fourth big item as the first Consequence allows: the Surfboard, art slug `'surfboard'` in `BIG_WEARABLE_ART_SLUGS`. It is a Back item and draws inside `backBigFootprint`, so the Jetpack and the Surfboard now both use the big Back box. It passes the hero rule: its least shares are 17.14 on the still looks and 16.69 on the smallest look mid-swim (`HERO_RECORD` in `src/art/lakeWearableArt.test.ts`). Every rule above is unchanged.
