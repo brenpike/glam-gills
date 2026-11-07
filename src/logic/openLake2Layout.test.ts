@@ -505,7 +505,7 @@ describe('Area 13 trench (the area shape rule, ND-2)', () => {
 
 describe('Area 13 exit (ND-5)', () => {
   it('puts the exit on the pit floor east of the turtles, its gate on the bed, in the dark and out of the safe area', () => {
-    expect(exit).toEqual({ x: 2660, y: 990, radius: 40 });
+    expect(exit).toEqual({ x: 2650, y: 940, radius: 40 });
     expect(zone.mainPath[TURN.exit]).toEqual({ x: exit.x, y: exit.y });
     expect(exitGateBase(exit, zone)).toEqual({ x: exit.x, y: zone.bedTop });
     expect(exit.x - exit.radius).toBeGreaterThan(PIT_FLOOR.middle);

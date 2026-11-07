@@ -37,7 +37,7 @@ const FLOOD_STEP = 8;
  * shared tuning change re-measures the window and pins `start` inside it again; it never loosens
  * the run to fit.
  */
-const ONE_LEG_RUN = { start: 3.15, seconds: 82.52, warnings: ['cormorant-0', 'cormorant-0'], strikes: [] as string[] };
+const ONE_LEG_RUN = { start: 3.15, seconds: 82.13, warnings: ['cormorant-0', 'cormorant-0'], strikes: [] as string[] };
 
 const zone = buildZone(OPEN_LAKE_2_LAYOUT, DEFAULT_ZONE_SEED);
 const bounds = swimBounds(zone);

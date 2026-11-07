@@ -62,8 +62,11 @@ const RIGHT_STEP: Readonly<RockWall> = Object.freeze({ x0: 2880, x1: 3840, y0: S
 /** The right shelf: solid rock under the shallows of columns 8 and 9, from y 318 down (ND-2). */
 const RIGHT_SHELF: Readonly<RockWall> = Object.freeze({ x0: 3840, x1: SIZE.width, y0: SHELF_TOP, y1: SIZE.height });
 
-/** The exit (PRD X9, ND-5) on the pit floor, east of the turtles, its gate on the bed. */
-export const OPEN_LAKE_2_EXIT: Readonly<AreaExit> = Object.freeze({ x: 2660, y: 990, radius: 40 });
+/**
+ * The exit (PRD X9, ND-5) on the east side of the pit floor, east of the turtles, its gate on the
+ * bed and clear of the east terrace step (issue #212, ND-5).
+ */
+export const OPEN_LAKE_2_EXIT: Readonly<AreaExit> = Object.freeze({ x: 2650, y: 940, radius: 40 });
 
 /** Where a trip in Area 13 starts: the Home Spot in the middle shallows over the pit (ND-3). */
 export const OPEN_LAKE_2_START: Readonly<Point> = Object.freeze({ x: 2160, y: 200 });
