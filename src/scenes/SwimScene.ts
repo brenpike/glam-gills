@@ -359,6 +359,12 @@ export class SwimScene extends Phaser.Scene {
   private snapshot!: TripSnapshot;
   /** Whether the ended trip has been handed back and the Home Tank asked for; once per trip. */
   private leaving = false;
+  /**
+   * Whether the HUD has held play (GAME_EVENTS.PAUSED) since the scene last resumed. The HUD's pause
+   * of this scene is queued until the next frame, so a card shown mid-frame sets this to stop the
+   * rest of that frame's play.
+   */
+  private heldByHud = false;
 
   private padSteer: Vec2 = { x: 0, y: 0 };
   private lastSteer: Vec2 = { x: 0, y: 0 };
@@ -516,6 +522,7 @@ export class SwimScene extends Phaser.Scene {
     this.clock = 0;
     this.allDone = false;
     this.leaving = false;
+    this.heldByHud = false;
     this.driftClock = 0;
     this.wasAtExit = false;
     this.areaBeaten = false;
@@ -671,6 +678,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.on(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
     this.game.events.on(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.game.events.on(HUD_EVENTS.FIRST_HIT_TIP_CLOSED, this.handleFirstHitTipClosed, this);
+    this.game.events.on(GAME_EVENTS.PAUSED, this.handlePaused, this);
     this.events.on(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -836,7 +844,10 @@ export class SwimScene extends Phaser.Scene {
     // INVARIANT: the trip step runs before the eat, so the eat reads the transform drawn this frame.
     this.captureDrawnFrame();
     // INVARIANT: a trip that left swimming in its step, or is in a bailing bucket toss, eats nothing.
-    if (this.trip.phase === 'swimming' && this.trip.toss === null) {
+    // INVARIANT: once the HUD holds play mid-frame (a fact card or the first-hit tip card shown by the
+    // trip step), the rest of the frame neither eats nor ends the trip at the exit, so the card stays
+    // up until OK.
+    if (this.trip.phase === 'swimming' && this.trip.toss === null && !this.heldByHud) {
       const head = headPoint(this.body);
       // INVARIANT: the dart and the shrimp flick run before the Snack magnet and the eat, so a darter
       // hops and a shrimp flicks before either reads it.
@@ -849,7 +860,7 @@ export class SwimScene extends Phaser.Scene {
       this.eatPlasticWormsAtHead();
     }
     // INVARIANT: the exit check runs after the eat, so eating the last snack at the exit beats it this frame.
-    this.checkExit();
+    if (!this.heldByHud) this.checkExit();
     this.followPoint.set(this.swim.x, this.swim.y);
     this.renderFrame(dt);
   }
@@ -1739,7 +1750,13 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.emit(GAME_EVENTS.REQUEST_PAUSE);
   }
 
+  /** The HUD held play: the rest of this frame stops (see heldByHud) until the scene resumes. */
+  private handlePaused(): void {
+    this.heldByHud = true;
+  }
+
   private handleResume(): void {
+    this.heldByHud = false;
     this.padSteer = { x: 0, y: 0 };
   }
 
@@ -1777,6 +1794,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
     this.game.events.off(HUD_EVENTS.FIRST_HIT_TIP_CLOSED, this.handleFirstHitTipClosed, this);
+    this.game.events.off(GAME_EVENTS.PAUSED, this.handlePaused, this);
     this.events.off(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.tripSounds.destroy();
     this.strandedView.destroy();
