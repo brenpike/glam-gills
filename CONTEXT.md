@@ -134,7 +134,7 @@ Area 11's own look (`'deep-canal-golden'` in code), a variant of the **Deep cana
 _Avoid_: dusk look, sunset (say golden hour); hyacinth mat (the rafts are scenery, not a **Water hyacinth mat**)
 
 **Open lake**:
-The **Habitat** of Areas 12 and 13 (`'open-lake'` in code, named "Open lake"): a wide, open stretch of Xochimilco lake, not a canal, its water split into **Depth bands**, a **Pelican line** floating on its surface and **Wind and waves** across it, and a **Mud turtle** creeping its deep floor among **Fading lights**. It has its own look (`'open-lake'`), which Area 12 varies as windy (`'open-lake-windy'`), with streaming clouds, and Area 13 as still (`'open-lake-still'`), overcast with no streaming clouds and no wind, and its own **Refuge section**. Real lagoons are shallow; the deep water is game licence, and its fact cards stay true.
+The **Habitat** of the open lake's areas (`'open-lake'` in code, named "Open lake"): a wide, open stretch of Xochimilco lake, not a canal, its water split into **Depth bands**, a **Pelican line** floating on its surface and **Wind and waves** across it, and a **Mud turtle** creeping its deep floor among **Fading lights**. It has its own look (`'open-lake'`), which its areas vary as windy (`'open-lake-windy'`), with streaming clouds, as still (`'open-lake-still'`), overcast with no streaming clouds and no wind, and as late afternoon (`'open-lake-late'`), with a warm apricot and peach sky and long shafts of light down into the pits, and its own **Refuge section**. Real lagoons are shallow; the deep water is game licence, and its fact cards stay true.
 _Avoid_: ocean, sea, canal (the canal is Area 1's **Habitat**)
 
 **Depth band**:
