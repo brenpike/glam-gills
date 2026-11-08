@@ -162,13 +162,6 @@ describe('stepDashPotTip', () => {
     expect(stepDashPotTip(WAITING, input())).toEqual({ state: SHOWING, cue: 'show' });
   });
 
-  it('waits while another tip is on screen (busy), then shows once it is gone', () => {
-    expect(stepDashPotTip(UNSEEN, input({ pos: NEAR, busy: true }))).toEqual({ state: WAITING, cue: null });
-    expect(stepDashPotTip(UNSEEN, input({ events: [DASH_NEEDED], busy: true }))).toEqual({ state: WAITING, cue: null });
-    expect(stepDashPotTip(WAITING, input({ busy: true }))).toEqual({ state: WAITING, cue: null });
-    expect(stepDashPotTip(WAITING, input({ busy: false }))).toEqual({ state: SHOWING, cue: 'show' });
-  });
-
   it('counts down while on screen, becomes seen, and hides once no time is left', () => {
     const next = stepDashPotTip(SHOWING, input({ dt: 1 }));
     expect(next).toEqual({ state: SHOWN, cue: null });

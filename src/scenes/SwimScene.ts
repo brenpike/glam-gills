@@ -40,6 +40,13 @@ import { exitArrowSide } from '../logic/exitArrow';
 import { exitGateBase } from '../logic/exitGate';
 import { fadingLights, type FadingLightTimers } from '../logic/fadingLights';
 import {
+  closeFirstHitTip,
+  createFirstHitTip,
+  firstHitTipSeen,
+  stepFirstHitTip,
+  type FirstHitTipState,
+} from '../logic/firstHitTip';
+import {
   GAME_EVENTS,
   REGISTRY_KEYS,
   type AllCollectedPayload,
@@ -101,7 +108,13 @@ import {
 import { addPulseCurrent, pulseMotion, pulsingCurrents, type PulseMotion, type PulsingCurrentSpawn } from '../logic/pulsingCurrents';
 import { mulberry32 } from '../logic/rng';
 import { areaStrandingChance, tripStranding } from '../logic/rescue';
-import { explorerAxolotl, markDashPotTipSeen, restoreSnacks, tripStart } from '../logic/session';
+import {
+  explorerAxolotl,
+  markDashPotTipSeen,
+  markFirstHitTipSeen,
+  restoreSnacks,
+  tripStart,
+} from '../logic/session';
 import { createShrimpFlicks, stepShrimpFlicks, type ShrimpFlickState } from '../logic/shrimpFlick';
 import { stepSnackDarts, type SnackDartAvoid, type SnackDartState } from '../logic/snackDart';
 import { steerFromKeys, type KeyState } from '../logic/steering';
@@ -341,6 +354,8 @@ export class SwimScene extends Phaser.Scene {
   private dashPotTip: DashPotTipState = { phase: 'done' };
   /** Whether the HUD holds the Dash pot tip off screen for want of room (X10). */
   private dashPotTipHeld = false;
+  /** The first-hit tip in this save (PRD A23). */
+  private firstHitTip: FirstHitTipState = 'done';
   private snapshot!: TripSnapshot;
   /** Whether the ended trip has been handed back and the Home Tank asked for; once per trip. */
   private leaving = false;
@@ -629,6 +644,7 @@ export class SwimScene extends Phaser.Scene {
       area,
     });
     this.dashPotTip = createDashPotTip(session.hub);
+    this.firstHitTip = createFirstHitTip(session.hub);
     this.setUpMats();
     this.vents = pulsingCurrents(zone.hazards);
     this.rockWalls = zone.rockWalls ?? [];
@@ -654,6 +670,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.on(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
     this.game.events.on(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
     this.game.events.on(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
+    this.game.events.on(HUD_EVENTS.FIRST_HIT_TIP_CLOSED, this.handleFirstHitTipClosed, this);
     this.events.on(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -1491,16 +1508,27 @@ export class SwimScene extends Phaser.Scene {
       this.placeCarried();
     }
     this.dispatchTripEvents(result.events);
+    this.stepTips(result.events, input.axolotlPos, dt);
+    this.syncSnapshot();
+  }
+
+  /**
+   * Steps the trip's tips after a trip step: the Dash pot tip (PRD B11), then the first-hit tip
+   * (PRD A23), which tells the HUD its card is due on each step it shows.
+   */
+  private stepTips(events: readonly TripEvent[], pos: Vec2, dt: number): void {
     const tipInput = {
       trip: this.trip,
-      events: result.events,
-      pos: input.axolotlPos,
+      events,
+      pos,
       dt,
       held: this.dashPotTipHeld,
       ctx: this.tripCtx.encounter,
     };
     this.applyDashPotTip(stepDashPotTip(this.dashPotTip, tipInput));
-    this.syncSnapshot();
+    const firstHit = stepFirstHitTip(this.firstHitTip, tipInput);
+    this.firstHitTip = firstHit.state;
+    if (firstHit.show) this.game.events.emit(GAME_EVENTS.FIRST_HIT_TIP);
   }
 
   /** Puts the axolotl at the toss pose with no velocity, and keeps the pose's opacity for the draw. */
@@ -1550,6 +1578,15 @@ export class SwimScene extends Phaser.Scene {
   /** The player closed the Dash pot tip in the HUD: it never shows again. */
   private handleDashPotTipClosed(): void {
     this.applyDashPotTip(closeDashPotTip(this.dashPotTip));
+  }
+
+  /** The player closed the first-hit tip card in the HUD: it never shows again, and the save records it seen. */
+  private handleFirstHitTipClosed(): void {
+    const wasSeen = firstHitTipSeen(this.firstHitTip);
+    this.firstHitTip = closeFirstHitTip(this.firstHitTip);
+    if (!wasSeen && firstHitTipSeen(this.firstHitTip)) {
+      writeSession(this.registry, markFirstHitTipSeen(readSession(this.registry)));
+    }
   }
 
   /**
@@ -1739,6 +1776,7 @@ export class SwimScene extends Phaser.Scene {
     this.game.events.off(HUD_EVENTS.FACT_CARD_SEEN, this.handleFactCardSeen, this);
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_CLOSED, this.handleDashPotTipClosed, this);
     this.game.events.off(HUD_EVENTS.DASH_POT_TIP_HELD, this.handleDashPotTipHeld, this);
+    this.game.events.off(HUD_EVENTS.FIRST_HIT_TIP_CLOSED, this.handleFirstHitTipClosed, this);
     this.events.off(Phaser.Scenes.Events.RESUME, this.handleResume, this);
     this.tripSounds.destroy();
     this.strandedView.destroy();

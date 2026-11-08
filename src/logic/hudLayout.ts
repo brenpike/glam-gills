@@ -162,11 +162,6 @@ export interface HudOverlayRequest {
   boxAt: (maxW: number) => Size;
   /** Banners only: panel size with the text at HUD.bannerRetryTextPx. Ignored for the find toast. */
   retryBoxAt?: (maxW: number) => Size;
-  /**
-   * Rects this overlay alone must stay at least HUD.gap clear of, in every tier and in the final
-   * check; other overlays ignore them. Unset, the overlay places as if given none.
-   */
-  avoid?: readonly Rect[];
 }
 
 /**
@@ -183,13 +178,12 @@ export interface HudOverlayPlacement {
 
 /**
  * An overlay request with its panel sizes memoised per maxW for one call. `retrySizeAt` is null
- * when the request has no retry measure or its id may not retry; `avoid` is empty when unset.
+ * when the request has no retry measure or its id may not retry.
  */
 interface SizedRequest {
   id: HudOverlayId;
   sizeAt: (maxW: number) => Size;
   retrySizeAt: ((maxW: number) => Size) | null;
-  avoid: readonly Rect[];
 }
 
 /**
@@ -451,7 +445,7 @@ function memoiseSize(boxAt: (maxW: number) => Size): (maxW: number) => Size {
 
 /**
  * Wraps a request so each of its panel sizes is computed once per distinct maxW; keeps the retry
- * measure only for an id that may retry, and its own rects to avoid.
+ * measure only for an id that may retry.
  */
 function memoiseRequest(request: HudOverlayRequest): SizedRequest {
   const retryBoxAt = RETRY_IDS.has(request.id) ? request.retryBoxAt : undefined;
@@ -459,7 +453,6 @@ function memoiseRequest(request: HudOverlayRequest): SizedRequest {
     id: request.id,
     sizeAt: memoiseSize(request.boxAt),
     retrySizeAt: retryBoxAt === undefined ? null : memoiseSize(retryBoxAt),
-    avoid: request.avoid ?? [],
   };
 }
 
@@ -644,8 +637,7 @@ function placeInTiers(
 
 /**
  * Returns the spot for `request`: every tier at its own size first; then, only for a banner with no
- * place and a retry measure, every tier at HUD.bannerRetryTextPx. The request's own `avoid` rects
- * join `obstacles` in every tier. The find toast's textPx is null.
+ * place and a retry measure, every tier at HUD.bannerRetryTextPx. The find toast's textPx is null.
  */
 function placeRequest(
   request: SizedRequest,
@@ -655,11 +647,10 @@ function placeRequest(
   openMiddle: readonly Rect[],
 ): TieredRect | null {
   const isBanner = RETRY_IDS.has(request.id);
-  const ownObstacles = [...obstacles, ...request.avoid];
-  const placed = placeInTiers(request.sizeAt, view, tiers, ownObstacles, openMiddle);
+  const placed = placeInTiers(request.sizeAt, view, tiers, obstacles, openMiddle);
   if (placed !== null) return { ...placed, textPx: isBanner ? HUD.bannerTextPx : null };
   if (request.retrySizeAt === null) return null;
-  const retried = placeInTiers(request.retrySizeAt, view, tiers, ownObstacles, openMiddle);
+  const retried = placeInTiers(request.retrySizeAt, view, tiers, obstacles, openMiddle);
   return retried === null ? null : { ...retried, textPx: HUD.bannerRetryTextPx };
 }
 
@@ -685,7 +676,6 @@ function fitOverlays(
  * above the play middle, clear of the status row; the bottom edge below it; then the top band over
  * the status row.
  * In every tier, inside the play middle an overlay covers only the status panels themselves.
- * A request's `avoid` rects bind only that request, in every tier and in the final check.
  * A banner (snackBanner or hint) with no place at HUD.bannerTextPx tries every tier again with its
  * retryBoxAt size at HUD.bannerRetryTextPx, if given; the find toast never retries or shrinks.
  * Returns one placement per request, in request order; a rect is null when that overlay has no
@@ -701,10 +691,8 @@ export function placeHudOverlays(
   const sized = requests.map(memoiseRequest);
   const tiers = overlayTiers(view, controls);
   const openMiddle = openMiddleRects(view, controls);
-  const ordered = orderRequests(sized, HUD_OVERLAY_PRIORITY);
-  const fitted = fitOverlays(view, tiers, keepOuts, openMiddle, ordered);
-  const avoidById = new Map(ordered.map((request) => [request.id, request.avoid]));
-  const checked = checkPlacements(view, keepOuts, openMiddle, fitted, avoidById);
+  const fitted = fitOverlays(view, tiers, keepOuts, openMiddle, orderRequests(sized, HUD_OVERLAY_PRIORITY));
+  const checked = checkPlacements(view, keepOuts, openMiddle, fitted);
   const answered = new Set<HudOverlayId>();
   return requests.map((request) => {
     const tiered = answered.has(request.id) ? null : (checked.get(request.id) ?? null);
@@ -720,21 +708,18 @@ export function placeHudOverlays(
 
 /**
  * Re-checks every placed rect with clears() and the middle rule (no open middle covered, whatever
- * the tier); each rect also checks against its own request's `avoid` rects. A rect that fails
- * becomes null.
+ * the tier); a rect that fails becomes null.
  */
 function checkPlacements(
   view: HudView,
   keepOuts: readonly Rect[],
   openMiddle: readonly Rect[],
   placed: ReadonlyMap<HudOverlayId, TieredRect>,
-  avoidById: ReadonlyMap<HudOverlayId, readonly Rect[]>,
 ): Map<HudOverlayId, TieredRect | null> {
   const rects = [...placed.values()].map((entry) => entry.rect);
   const checked = new Map<HudOverlayId, TieredRect | null>();
   for (const [id, tiered] of placed) {
-    const others = rects.filter((other) => other !== tiered.rect);
-    const obstacles = [...keepOuts, ...others, ...(avoidById.get(id) ?? [])];
+    const obstacles = [...keepOuts, ...rects.filter((other) => other !== tiered.rect)];
     const ok = clears(tiered.rect, view, obstacles) && keepsOffOpenMiddle(tiered.rect, openMiddle);
     checked.set(id, ok ? tiered : null);
   }

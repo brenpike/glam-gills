@@ -41,6 +41,8 @@ import {
   type FirstFindKind,
   type FirstFindVariantSize,
 } from './firstFind';
+import { FIRST_HIT_TIP_BODY, FIRST_HIT_TIP_LINES, firstHitTipCardRoom } from './firstHitTip';
+import { HUD, type Rect } from './hudLayout';
 import { REAL_MORPHS } from './morphs';
 import { KEEP_EXPLORING_LABEL, REFUGE_MILESTONE_TITLE, milestoneBody } from './refuge';
 import { REFUGE_PICTURE, fitMilestoneCard, milestoneCardSections, type MilestoneCardSize, type MilestoneFit } from './refugeUi';
@@ -1070,4 +1072,85 @@ describe('start over card copy fit (D7)', () => {
       expect(startOverBodyVariants('ask')[fit.bodyVariant]).toContain(START_OVER_TEXT.ask.note);
     },
   );
+});
+
+/**
+ * The legs panel the first-hit tip card sits below: on the top row at HUD.margin, PANEL_H (48) tall,
+ * as tall as Pause (BUTTON_SQUARE.h 64 at PAUSE_BUTTON_SIZE 0.75) in src/scenes/HudScene.ts, so
+ * rowPanelTop adds no drop (logic tests must not import scenes). Only its y and h place the card.
+ */
+const TIP_LEGS_PANEL: Rect = { x: HUD.margin, y: HUD.margin, w: 0, h: 48 };
+
+/**
+ * The first-hit tip card on one canvas, in the room below the legs panel (firstHitTipCardRoom): no
+ * title, the body at each of factCardBodyWrapWidths, body width first, and one OK button.
+ */
+function firstHitTipCombination(canvas: Canvas): Combination {
+  return {
+    label: `first-hit tip ${canvas.cssW}x${canvas.cssH}`,
+    canvas,
+    count: 0,
+    availH: firstHitTipCardRoom(canvas.cssH, TIP_LEGS_PANEL).availH,
+    sections: [
+      { kind: 'body', variants: factCardBodyWrapWidths(canvas.cssW).map((wrapW) => bodyFit(FIRST_HIT_TIP_BODY, wrapW)) },
+      { kind: 'actions', height: BUTTON_H },
+    ],
+  };
+}
+
+/** Problems with the fitted first-hit tip card on one canvas: clipped, body lines dropped, or actions outside its room. */
+function firstHitTipProblems(canvas: Canvas): string[] {
+  const combination = firstHitTipCombination(canvas);
+  const fit = fitCard(combination.availH, combination.sections);
+  const wrapW = factCardBodyWrapWidths(canvas.cssW)[fit.bodyVariant];
+  const lines = bodyFit(FIRST_HIT_TIP_BODY, wrapW).lines;
+  const problems = fitProblems(combination, fit);
+  if (fit.bodyLines !== lines) problems.push(`${combination.label}: ${fit.bodyLines} of ${lines} body lines`);
+  return problems;
+}
+
+describe('first-hit tip card copy fit (A23)', () => {
+  it('checks the tip lines, one per body row, in the room from a gap below the legs panel', () => {
+    expect(FIRST_HIT_TIP_BODY.split('\n')).toEqual(FIRST_HIT_TIP_LINES);
+    expect(firstHitTipCardRoom(SMALLEST_CANVAS.landscape.cssH, TIP_LEGS_PANEL)).toEqual({
+      top: HUD.margin + 48 + HUD.gap,
+      availH: SMALLEST_CANVAS.landscape.cssH - (HUD.margin + 48 + HUD.gap) - CARD.margin,
+    });
+  });
+
+  it('fits on every supported canvas without clipping or dropping a body line', () => {
+    const problems = supportedCanvases().flatMap(firstHitTipProblems);
+    expect(problems).toEqual([]);
+  });
+
+  it('wraps the tip body at the body width on every supported canvas', () => {
+    const tightBodies = supportedCanvases().flatMap((canvas) => {
+      const combination = firstHitTipCombination(canvas);
+      return fitCard(combination.availH, combination.sections).bodyVariant === 0 ? [] : [combination.label];
+    });
+    expect(tightBodies).toEqual([]);
+  });
+
+  it.each([
+    { canvas: SMALLEST_CANVAS.landscape, neededH: 225, availH: 228 },
+    { canvas: SMALLEST_CANVAS.portrait, neededH: 325, availH: 348 },
+  ])('shows every tip line in full at $canvas.cssW x $canvas.cssH, needing $neededH of $availH px', ({ canvas, neededH, availH }) => {
+    const combination = firstHitTipCombination(canvas);
+    const fit = fitCard(combination.availH, combination.sections);
+    expect(combination.availH).toBe(availH);
+    expect(fit.clipped).toBe(false);
+    expect(fit.bodyLines).toBe(bodyFit(FIRST_HIT_TIP_BODY, factCardBodyWrapWidths(canvas.cssW)[0]).lines);
+    expect(fit.panelH).toBe(neededH);
+  });
+
+  it.each([
+    { cssW: 800, cssH: 600 },
+    { cssW: 1024, cssH: 768 },
+  ])('shows the full tip body at the body width at $cssW x $cssH', (canvas) => {
+    const combination = firstHitTipCombination(canvas);
+    const fit = fitCard(combination.availH, combination.sections);
+    expect(fit.clipped).toBe(false);
+    expect(fit.bodyVariant).toBe(0);
+    expect(fit.bodyLines).toBe(bodyFit(FIRST_HIT_TIP_BODY, cardTextWidth(canvas.cssW)).lines);
+  });
 });

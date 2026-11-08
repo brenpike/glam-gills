@@ -111,8 +111,7 @@ export function inThreatReach(trip: Pick<TripState, 'encounter'>, pos: Point, ct
 
 /**
  * Input for one tip step: the trip after its step, that step's events, the axolotl centre, the step
- * in seconds, whether the HUD holds the tip off screen for want of room (`held`, absent false), and
- * whether another tip is on screen (`busy`, absent false).
+ * in seconds, and whether the HUD holds the tip off screen for want of room (`held`, absent false).
  */
 export interface DashPotTipInput {
   trip: Pick<TripState, 'phase' | 'placed' | 'encounter'>;
@@ -120,7 +119,6 @@ export interface DashPotTipInput {
   pos: Point;
   dt: number;
   held?: boolean;
-  busy?: boolean;
   ctx?: EncounterContext;
 }
 
@@ -129,10 +127,9 @@ export interface DashPotTipInput {
  * hides the tip when it shows. Only swimming steps with `dt` above 0 do anything else.
  * 'unseen' becomes 'waiting' on a `dashNeeded` event or with a sealed pot near (nearSealedPot).
  * 'waiting' (also on the step it was met) shows the tip when the axolotl is not in a threat's
- * reach (inThreatReach) and no other tip is on screen (not `busy`). 'showing' counts down by
- * `dt` only while not `held`, and becomes seen on the first such step; it hides once no time is
- * left or a threat reaches the axolotl. Leaving 'swimming' or a threat hides it; a tip never seen
- * goes back to 'waiting' and shows again later.
+ * reach (inThreatReach). 'showing' counts down by `dt` only while not `held`, and becomes seen on
+ * the first such step; it hides once no time is left or a threat reaches the axolotl. Leaving
+ * 'swimming' or a threat hides it; a tip never seen goes back to 'waiting' and shows again later.
  */
 export function stepDashPotTip(state: DashPotTipState, input: DashPotTipInput): DashPotTipStep {
   if (state.phase === 'done') return { state, cue: null };
@@ -157,7 +154,7 @@ export function stepDashPotTip(state: DashPotTipState, input: DashPotTipInput): 
     input.events.some((event) => event.type === 'dashNeeded') ||
     nearSealedPot(input.trip.placed, input.pos);
   if (!met) return { state, cue: null };
-  if (input.busy === true || inThreatReach(input.trip, input.pos, input.ctx)) return { state: WAITING, cue: null };
+  if (inThreatReach(input.trip, input.pos, input.ctx)) return { state: WAITING, cue: null };
   return { state: { phase: 'showing', leftS: DASH_POT_TIP.holdS, seen: false }, cue: 'show' };
 }
 

@@ -17,6 +17,8 @@ export const GAME_EVENTS = Object.freeze({
   PLASTIC_WORM_SPAT: 'plastic-worm-spat',
   GHOST_NET_SNAGGED: 'ghost-net-snagged',
   DASH_POT_TIP: 'dash-pot-tip',
+  /** The first-hit tip card is due now (PRD A23); no payload. */
+  FIRST_HIT_TIP: 'first-hit-tip',
 } as const);
 
 export type GameEventName = (typeof GAME_EVENTS)[keyof typeof GAME_EVENTS];
@@ -90,6 +92,7 @@ export interface GameEventPayloads {
   [GAME_EVENTS.PLASTIC_WORM_SPAT]: PlasticWormSpatPayload;
   [GAME_EVENTS.GHOST_NET_SNAGGED]: GhostNetSnaggedPayload;
   [GAME_EVENTS.DASH_POT_TIP]: DashPotTipPayload;
+  [GAME_EVENTS.FIRST_HIT_TIP]: undefined;
 }
 
 /** Keys for values stored in the shared game registry. */

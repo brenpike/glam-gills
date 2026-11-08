@@ -75,6 +75,7 @@ import {
 } from './BootScene';
 import { FactCard } from './FactCard';
 import { FindPopup } from './FindPopup';
+import { FirstHitTipCard } from './FirstHitTipCard';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
 import { createMusicSwitch, toggleMusic } from './musicSwitch';
 import { createSoundsSwitch, toggleSounds } from './soundsSwitch';
@@ -114,6 +115,8 @@ const HINT_FADE_MS = 400;
 const FIND_POPUP_DEPTH = DEPTH.ui + 6;
 const BANKING_CARD_DEPTH = DEPTH.ui + 8;
 const FACT_CARD_DEPTH = DEPTH.ui + 9;
+// INVARIANT: the legs display lifted above the first-hit tip card's dim sits below the pause overlay.
+const LIFTED_LEGS_DEPTH = FACT_CARD_DEPTH + 0.5;
 const OVERLAY_DEPTH = DEPTH.ui + 10;
 // INVARIANT: the capture zone sits below every HUD button in depth so Pause, Dash and the pause overlay win the press.
 const STICK_ZONE_DEPTH = DEPTH.ui - 1;
@@ -133,6 +136,8 @@ export const HUD_EVENTS = Object.freeze({
   DASH_POT_TIP_CLOSED: 'dash-pot-tip-closed',
   /** Whether the Dash pot tip is held off screen for want of room (PRD B11, X10); payload DashPotTipHeldPayload. */
   DASH_POT_TIP_HELD: 'dash-pot-tip-held',
+  /** The player closed the first-hit tip card (PRD A23); no payload. */
+  FIRST_HIT_TIP_CLOSED: 'first-hit-tip-closed',
 } as const);
 
 /** Payload of HUD_EVENTS.DASH_POT_TIP_HELD: true while the tip has no room and is hidden. */
@@ -329,6 +334,7 @@ export class HudScene extends Phaser.Scene {
   /** How many of the trip's finds the pop-up has been given. */
   private announcedCount = 0;
   private factCard!: FactCard;
+  private firstHitTipCard!: FirstHitTipCard;
   /** Ids of the fact cards shown this trip, so each shows at most once while still due. */
   private factCardsShown: string[] = [];
 
@@ -387,6 +393,9 @@ export class HudScene extends Phaser.Scene {
     );
     this.bankingCard = new BankingCard(this, this.assets, this.view, BANKING_CARD_DEPTH);
     this.factCard = new FactCard(this, this.assets, this.view, FACT_CARD_DEPTH, () => this.closeFactCard());
+    this.firstHitTipCard = new FirstHitTipCard(this, this.assets, this.view, FACT_CARD_DEPTH, () =>
+      this.closeFirstHitTipCard(),
+    );
     this.bindKeys();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -400,6 +409,7 @@ export class HudScene extends Phaser.Scene {
     this.game.events.on(GAME_EVENTS.REDUCED_MOTION, this.handleReducedMotion, this);
     this.game.events.on(GAME_EVENTS.SNACK_BOOST, this.handleSnackBoost, this);
     this.game.events.on(GAME_EVENTS.DASH_POT_TIP, this.handleDashPotTip, this);
+    this.game.events.on(GAME_EVENTS.FIRST_HIT_TIP, this.handleFirstHitTip, this);
     this.game.events.on(TRIP_EVENTS.STATE, this.handleTripState, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
 
@@ -669,6 +679,7 @@ export class HudScene extends Phaser.Scene {
     this.layoutOverlay();
     this.bankingCard.layout(this.view);
     this.factCard.layout(this.view);
+    this.firstHitTipCard.layout(this.view, this.controls.legs);
     this.layoutOverlays();
   }
 
@@ -952,9 +963,12 @@ export class HudScene extends Phaser.Scene {
     if (goHomeVisible !== goHomeWasVisible) this.layoutOverlays();
   }
 
-  /** P or Esc: closes the fact card when it is up (ignoring key repeat), otherwise toggles Pause. */
+  /**
+   * P or Esc: closes the fact card or the first-hit tip card when one is up (ignoring key repeat),
+   * otherwise toggles Pause.
+   */
   private togglePause(event: KeyboardEvent): void {
-    if (this.pressFactCardKey(event)) return;
+    if (this.pressCardKey(event)) return;
     if (this.paused) {
       this.resumeSwim();
       return;
@@ -1070,11 +1084,47 @@ export class HudScene extends Phaser.Scene {
     this.resumeSwim();
   }
 
-  /** Presses OK on the fact card for a key that is not a repeat. Returns whether the card is up. */
-  private pressFactCardKey(event: KeyboardEvent): boolean {
-    if (!this.factCard.isShowing()) return false;
-    if (!event.repeat) this.factCard.press();
+  /**
+   * Presses OK on the fact card or the first-hit tip card, whichever is up, for a key that is not a
+   * repeat. Returns whether either card is up.
+   */
+  private pressCardKey(event: KeyboardEvent): boolean {
+    const card = this.factCard.isShowing() ? this.factCard : this.firstHitTipCard;
+    if (!card.isShowing()) return false;
+    if (!event.repeat) card.press();
     return true;
+  }
+
+  /**
+   * The swim scene says the first-hit tip card is due (PRD A23): shows it with play paused, as a fact
+   * card does, and lifts the legs display above its dim. Only while swimming, not paused and with no
+   * card up; ignored otherwise.
+   */
+  private handleFirstHitTip(): void {
+    if (this.trip.phase !== 'swimming' || this.paused) return;
+    if (this.factCard.isShowing() || this.firstHitTipCard.isShowing()) return;
+    this.holdSwim();
+    this.firstHitTipCard.show();
+    this.setLegsDepth(LIFTED_LEGS_DEPTH);
+    this.game.events.emit(GAME_EVENTS.PAUSED);
+  }
+
+  /** After OK on the first-hit tip card: puts the legs display back, tells the swim scene, then resumes play. */
+  private closeFirstHitTipCard(): void {
+    this.setLegsDepth(DEPTH.ui);
+    this.game.events.emit(HUD_EVENTS.FIRST_HIT_TIP_CLOSED);
+    this.resumeSwim();
+  }
+
+  /** Sets the depth of the whole legs display: the panel, every leg icon's outline, fill and mark, and the boost badge. */
+  private setLegsDepth(depth: number): void {
+    this.legsPanel.setDepth(depth);
+    for (const icon of this.legIcons) {
+      icon.outline.setDepth(depth);
+      icon.fill.setDepth(depth);
+      icon.mark.setDepth(depth);
+    }
+    this.boostBadge.setDepth(depth);
   }
 
   private resumeSwim(): void {
@@ -1122,11 +1172,11 @@ export class HudScene extends Phaser.Scene {
   }
 
   /**
-   * Enter or Space: closes the fact card when it is up (ignoring key repeat); resumes when paused;
-   * otherwise presses the focused banking card button, ignoring key repeat.
+   * Enter or Space: closes the fact card or the first-hit tip card when one is up (ignoring key
+   * repeat); resumes when paused; otherwise presses the focused banking card button, ignoring key repeat.
    */
   private handleConfirmKey(event: KeyboardEvent): void {
-    if (this.pressFactCardKey(event)) return;
+    if (this.pressCardKey(event)) return;
     if (this.paused) {
       const focused = this.pauseButtons()[this.pauseFocus];
       if (focused === this.resumeButton) this.resumeSwim();
@@ -1446,6 +1496,7 @@ export class HudScene extends Phaser.Scene {
     this.foundPopup.setResolution(dpr);
     this.bankingCard.setResolution(dpr);
     this.factCard.setResolution(dpr);
+    this.firstHitTipCard.setResolution(dpr);
     this.layout();
   }
 
@@ -1467,5 +1518,6 @@ export class HudScene extends Phaser.Scene {
     this.game.events.off(GAME_EVENTS.SNACK_BOOST, this.handleSnackBoost, this);
     this.game.events.off(TRIP_EVENTS.STATE, this.handleTripState, this);
     this.game.events.off(GAME_EVENTS.DASH_POT_TIP, this.handleDashPotTip, this);
+    this.game.events.off(GAME_EVENTS.FIRST_HIT_TIP, this.handleFirstHitTip, this);
   }
 }
