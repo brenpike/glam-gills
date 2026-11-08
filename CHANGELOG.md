@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-11-07
+
+### Added
+
+- Area 14, the twin trenches: two pitch-black pits with a shallow ridge between them. You start on the ridge, and the exit is in the far pit (#213).
+- Sharp litter: a dented can or a chipped bottle lies on the pit floors. Touching one costs a leg (#213).
+- Drifting islands: reed mats drift slowly across the surface. A pelican can't scoop under one (#213).
+- A new fact card: "Litter in the water" (#213).
+- A late-afternoon look for the open lake, with a warm sky and long shafts of light down into the pits (#213).
+
 ## [0.69.0] - 2026-11-07
 
 ### Added

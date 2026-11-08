@@ -12,6 +12,7 @@ import { TRAJINERA_LURE, type FishingBoatSpawn } from './lures';
 import type { MobileSnackMix } from './mobileSnacks';
 import type { MovingHazardSpawn } from './movingHazards';
 import { OPEN_LAKE_2_AREA_ID, OPEN_LAKE_2_EXIT, OPEN_LAKE_2_LAYOUT, OPEN_LAKE_2_SPECIAL_TREASURE_ID } from './openLake2Layout';
+import { OPEN_LAKE_3_AREA_ID, OPEN_LAKE_3_EXIT, OPEN_LAKE_3_LAYOUT, OPEN_LAKE_3_SPECIAL_TREASURE_ID } from './openLake3Layout';
 import { OPEN_LAKE_AREA_ID, OPEN_LAKE_EXIT, OPEN_LAKE_LAYOUT } from './openLakeLayout';
 import type { PelicanLineSpawn } from './pelicanLine';
 import type { PredatorRoute } from './predators';
@@ -46,7 +47,7 @@ export const SPRING_CAVE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'sprin
 /** The deep canal habitat, home of Areas 8 to 11 (issues #78, #107, #108 and #112). */
 export const DEEP_CANAL_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'deep-canal', name: 'Deep canal', look: 'deep-canal' });
 
-/** The open lake habitat, home of Areas 12 and 13 (issues #211 and #212). */
+/** The open lake habitat, home of Areas 12 to 14 (issues #211, #212 and #213). */
 export const OPEN_LAKE_HABITAT: Readonly<Habitat> = Object.freeze({ id: 'open-lake', name: 'Open lake', look: 'open-lake' });
 
 /** Every habitat. */
@@ -66,23 +67,26 @@ export function habitatById(id: string): Readonly<Habitat> | undefined {
 
 /**
  * Id of an area's own look, a variant of its habitat's look: the pond at dusk for Area 3, the deep
- * canal at golden hour for Area 11 (issue #112), the windy open lake for Area 12 (issue #211) and the
- * still open lake for Area 13 (issue #212). The art layer maps it to colours; this layer only names it.
+ * canal at golden hour for Area 11 (issue #112), the windy open lake for Area 12 (issue #211), the
+ * still open lake for Area 13 (issue #212) and the open lake in late afternoon for Area 14 (issue
+ * #213). The art layer maps it to colours; this layer only names it.
  */
-export type AreaLookVariant = 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy' | 'open-lake-still';
+export type AreaLookVariant = 'pond-dusk' | 'deep-canal-golden' | 'open-lake-windy' | 'open-lake-still' | 'open-lake-late';
 
 /** The time of day an area's look shows; the music rule reads it (M2, M4). */
 export type TimeOfDay = 'day' | 'dusk' | 'night';
 
 /**
  * The time of day each area look variant shows: golden hour is the deep canal at dusk (issue #112),
- * and the windy open lake (issue #211) and the still open lake (issue #212) are day looks.
+ * and the windy open lake (issue #211), the still open lake (issue #212) and the late-afternoon open
+ * lake (issue #213) are day looks.
  */
 export const AREA_LOOK_TIMES: Readonly<Record<AreaLookVariant, TimeOfDay>> = Object.freeze({
   'pond-dusk': 'dusk',
   'deep-canal-golden': 'dusk',
   'open-lake-windy': 'day',
   'open-lake-still': 'day',
+  'open-lake-late': 'day',
 });
 
 /** The time of day `area`'s look shows: its variant's, or day for the habitat's own look. */
@@ -437,6 +441,30 @@ export const OPEN_LAKE_2_AREA: Readonly<AreaData> = Object.freeze({
   look: 'open-lake-still',
 });
 
+/**
+ * Area 14, the open lake in late afternoon, twin trenches either side of a ridge, where sharp litter
+ * lies on the pit floors and drifting islands shelter from the pelican lines (issue #213). Until its
+ * own treasures come, it hides Area 10's whole set, with the Legendary Refuge snow globe, in the
+ * deepest band, as its special treasure (issue #213, Q1).
+ */
+export const OPEN_LAKE_3_AREA: Readonly<AreaData> = Object.freeze({
+  id: OPEN_LAKE_3_AREA_ID,
+  number: 14,
+  habitatId: OPEN_LAKE_HABITAT.id,
+  layout: OPEN_LAKE_3_LAYOUT,
+  exit: OPEN_LAKE_3_EXIT,
+  specialTreasureId: OPEN_LAKE_3_SPECIAL_TREASURE_ID,
+  /**
+   * Provisional drift, a little faster than Area 13 (PRD H4): the same amplitudes with shorter
+   * periods, peak speed about 18.8 px/s. That is below the 90 px/s a one-leg axolotl makes in Area
+   * 14, which has no current and no wind, and at most half the 40 px/s Snack magnet pull. No snacks
+   * dart once: the shrimp replace the one-time darters. No stranding chance of its own, so the
+   * default applies.
+   */
+  snackDrift: Object.freeze({ amplitudeX: 16, amplitudeY: 8, periodX: 6.3, periodY: 5.04 }),
+  look: 'open-lake-late',
+});
+
 /** Every area, in area-number order. */
 export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   CANAL_AREA,
@@ -452,6 +480,7 @@ export const AREAS: readonly Readonly<AreaData>[] = Object.freeze([
   DEEP_CANAL_4_AREA,
   OPEN_LAKE_AREA,
   OPEN_LAKE_2_AREA,
+  OPEN_LAKE_3_AREA,
 ]);
 
 /** The area with this id, or undefined when there is none. */

@@ -98,9 +98,15 @@
  * their chevrons) sits just over the fishing lure and below the tilapia: a see-through cue above the
  * scenery and the snacks, behind every predator, moving hazard, the halo and the axolotl, so a streak
  * never hides the hero.
+ * Area 14 (issue #213). `driftingIsland` (the drifting reed mat's two halves, with its reeds and trailing
+ * roots) sits just under `pelicanBody`, above the haze, the mats and the heron body: scenery that moves, so
+ * what is drawn is what carries, and every pelican, cue object, predator and the axolotl draw in front of
+ * it, so the axolotl is always over the roots. `litter` (the sharp can and bottle on the pit floors) sits
+ * just over `glowPlant`, above the dark layer and the fading lights, and under the rock, the tilapia and
+ * every predator and the axolotl: the darkness never hides a hazard, and its pale rim reads in the dark.
  * Full order: bg < caveBack < hiddenTreasure < reeds < caveFront = currentMarker < petals
- * < haze < trajineraShadow < hyacinthMat < heronBody < pelicanBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
- * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < rock < fishingLure < windStreak < tilapia
+ * < haze < trajineraShadow < hyacinthMat < heronBody < driftingIsland < pelicanBody < homeSpot < homeRing < treasureGlow < treasure < pulsingCurrent
+ * < collectibles < dragNetMesh < murkyCloud < darkWater < glowPlant < litter < rock < fishingLure < windStreak < tilapia
  * < movingHazard = trajineraHull = bailingBoat = bailingShadow = fishingBoat = fishingShadow = dragNetBoat
  * < heronStab < pelicanBill < halo = bailingBucket < friend < axolotl < queasyTint < bailingBucketFront
  * < bubbles < surface < dragNetFloats < pelicanSplash = windRipple < pads < fireflies < hint < fx < ui.
@@ -125,6 +131,8 @@ export const DEPTH = {
   hyacinthMat: 22,
   /** Provisional. Wading heron body, legs, and rest, watch and warn head and neck: above the haze, below every cue object. */
   heronBody: 23,
+  /** Provisional. Drifting island halves, reeds and roots: just under the pelican body, above the haze and the heron body, below every cue object and the axolotl. */
+  driftingIsland: 23.2,
   /** Provisional. Pelican body, neck and head at the water line: just over the heron body, above the haze, below every cue object. */
   pelicanBody: 23.5,
   /** Provisional. Home Spot burrow and marker flag. */
@@ -146,6 +154,8 @@ export const DEPTH = {
   darkWater: 32,
   /** Provisional. Glow-plants and their hint: just above the dark layer, below the tilapia. */
   glowPlant: 33,
+  /** Provisional. Sharp litter on the pit floors: just over the glow-plants and the fading lights, above the dark layer, below the rock, the tilapia and the axolotl. */
+  litter: 33.5,
   /** Provisional. Solid rock walls and the pebble: above the glow-plants, below the tilapia. */
   rock: 34,
   /** Provisional. Fishing lure, its line and float bead: above collectibles and the rock, below every predator, the halo and the axolotl. */

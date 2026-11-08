@@ -217,7 +217,7 @@ describe('clipRectsToChunk', () => {
 // ---------------------------------------------------------------------------
 
 describe('lake sky', () => {
-  it.each<AreaLookId>(['open-lake', 'open-lake-windy', 'open-lake-still'])('%s stands the volcanoes in the top row where they reach', (look) => {
+  it.each<AreaLookId>(['open-lake', 'open-lake-windy', 'open-lake-still', 'open-lake-late'])('%s stands the volcanoes in the top row where they reach', (look) => {
     expect(hasStyle(chunkOf(base(look, { index: VOLCANO_CHUNK })), LAKE_SNOW)).toBe(true);
   });
 
@@ -313,6 +313,72 @@ describe('lake water by row', () => {
     expect(waterGradients(chunkOf(base('open-lake', { row: 'single' })))[0].stops).toEqual(
       waterGradients(chunkOf(base('open-lake', { row: 'top' })))[0].stops,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pit shafts (issue #213, Area 14)
+// ---------------------------------------------------------------------------
+
+describe('pit shafts in the chunks', () => {
+  const isShaft = (p: Painted): boolean => p.gradient?.stops.some(([, c]) => c.startsWith('rgba(255,222,160,0.')) === true && p.cmds[0][0] === 'moveTo' && p.gradient.stops.length === 3;
+  const shaftsIn = (painted: readonly Painted[]): Painted[] => painted.filter(isShaft);
+  const lakeRows: readonly (readonly [ChunkOptions['row'], LakeBand])[] = [
+    ['top', 1],
+    ['middle', 2],
+    ['bottom', 2],
+  ];
+
+  it.each(lakeRows)('paints shafts in a %s row of band %i for the late look', (row, band) => {
+    expect(shaftsIn(chunkOf(base('open-lake-late', { row, band }))).length).toBeGreaterThan(0);
+  });
+
+  it.each([3, 4] as const)('paints no shaft in a row of band %i, so band 3 and 4 stay dark', (band) => {
+    for (const row of ['middle', 'bottom'] as const) {
+      expect(shaftsIn(chunkOf(base('open-lake-late', { row, band }))), `${row} ${band}`).toEqual([]);
+    }
+  });
+
+  it('fades every shaft to nothing by y 720: a band 2 row ends its gradient on a clear stop at the chunk bottom', () => {
+    for (const p of shaftsIn(chunkOf(base('open-lake-late', { row: 'middle', band: 2 })))) {
+      expect(p.gradient!.extent[3]).toBe(VIEW_H);
+      expect(p.gradient!.stops[2][1]).toBe('rgba(255,222,160,0.000)');
+    }
+  });
+
+  it.each<AreaLookId>(['canal', 'pond', 'pond-dusk', 'chinampa', 'spring-cave', 'deep-canal', 'deep-canal-golden', 'open-lake', 'open-lake-windy', 'open-lake-still'])(
+    'paints no shaft for %s',
+    (look) => {
+      for (const [row, band] of lakeRows) expect(shaftsIn(chunkOf(base(look, { row, band }))), `${row} ${band}`).toEqual([]);
+    },
+  );
+
+  it('paints the shafts over the water and the rays, and before the lakebed, so a wall hides them', () => {
+    const painted = chunkOf(base('open-lake-late', { row: 'bottom', band: 2, solids: [{ x: 100, y: 200, w: 160, h: 120 }] }));
+    const firstShaft = painted.findIndex(isShaft);
+    const lastShaft = painted.length - 1 - [...painted].reverse().findIndex(isShaft);
+    const water = painted.findIndex((p) => p.gradient !== null && p.cmds[0][0] === 'fillRect' && p.cmds[0][3] === VIEW_W && p.cmds[0][4] > 100);
+    const lip = painted.findIndex((p) => p.style === LAKE_LIP);
+    expect(water).toBeGreaterThanOrEqual(0);
+    expect(firstShaft).toBeGreaterThan(water);
+    expect(lip).toBeGreaterThan(lastShaft);
+  });
+
+  it('draws no randomness, so the late look draws what the open lake draws', () => {
+    for (const [row, band] of lakeRows) {
+      const late = counting(5);
+      const lake = counting(5);
+      record((ctx) => paintBackgroundChunk(ctx, { ...base('open-lake-late', { row, band }), rand: late.rand }));
+      record((ctx) => paintBackgroundChunk(ctx, { ...base('open-lake', { row, band }), rand: lake.rand }));
+      expect(late.count(), `${row} ${band}`).toBe(lake.count());
+    }
+  });
+
+  it('is the open lake chunk plus the shafts: the same marks, in the same order, apart from the shafts', () => {
+    const late = chunkOf(base('open-lake-late', { row: 'middle', band: 2 }));
+    const lake = chunkOf(base('open-lake', { row: 'middle', band: 2 }));
+    expect(signature(late.filter((p) => !isShaft(p)))).toBe(signature(lake));
+    expect(late.length).toBeGreaterThan(lake.length);
   });
 });
 

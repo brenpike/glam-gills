@@ -10,7 +10,15 @@ import {
 import { DEPTH } from '../art/layers';
 import type { LakeTextures } from '../art/lakeTextures';
 import type { TexInfo } from '../art/textures';
-import { PELICAN_PHASES, pelicanBirdCount, pelicanPose, type PelicanLineSpawn, type PelicanPose } from '../logic/pelicanLine';
+import { pelicanBirdSheltered, type DriftingIslandSpawn } from '../logic/driftingIslands';
+import {
+  PELICAN_PHASES,
+  pelicanBirdCount,
+  pelicanPose,
+  pelicanScoopNumber,
+  type PelicanLineSpawn,
+  type PelicanPose,
+} from '../logic/pelicanLine';
 import { SURF } from '../logic/zone';
 import type { GameAssets } from './BootScene';
 import { faceSprite } from './spriteFacing';
@@ -36,6 +44,10 @@ interface BirdDrawing {
   bill: Phaser.GameObjects.Image;
   /** Scoop splash, anchored on the water line where the bill goes in. */
   splash: Phaser.GameObjects.Image;
+  /** The scoop number `sheltered` was worked out for, or null before the first dip. */
+  shelterScoop: number | null;
+  /** Whether the drifting islands shelter this bird for scoop `shelterScoop` (pelicanBirdSheltered). */
+  sheltered: boolean;
 }
 
 function texturesFor(assets: GameAssets): LakeTextures {
@@ -75,16 +87,29 @@ function dips(frame: PelicanFrame): boolean {
  * Under reduced motion the birds glide and dip with no bob, so the body holds `floatA`; with full
  * motion `floatB` shows while a bird bobs below SURF. The bill layer is under the axolotl, and no
  * piece ever shows the axolotl, a grab or a carry: a scoop is only a bump away from the bill (ADR
- * 0007). Every sprite is made once per trip and reused; a frame allocates only pelicanPose's result
- * per bird, bounded by the area's bird count. Visual only: nothing here changes game state. Throws
- * when the lake textures are missing.
+ * 0007). A bird the drifting islands shelter for its scoop (issue #213, pelicanBirdSheltered) holds
+ * its `warn` frame through that scoop's plunge, hold and rise, with no neck, bill or splash, as it
+ * never dips that scoop; its warning ripple still sounds (ND-6), as the sound reads the line's phase.
+ * The shelter is worked out once per bird per scoop, as the answer holds for the whole cycle. With
+ * no islands every bird draws exactly as before. Every sprite is made once per trip and reused; a
+ * frame allocates only pelicanPose's result per bird, and once per bird per scoop the shelter check's
+ * own results, bounded by the area's bird and island counts. Visual only: nothing here changes game
+ * state. Throws when the lake textures are missing.
  */
 export class PelicanLineView {
   private readonly birds: BirdDrawing[] = [];
   private readonly textures: LakeTextures;
+  private readonly islands: readonly Readonly<DriftingIslandSpawn>[];
 
-  constructor(scene: Phaser.Scene, assets: GameAssets, lines: readonly Readonly<PelicanLineSpawn>[]) {
+  /** `islands` holds the trip's drifting islands, which shelter birds from their scoops; empty means none. */
+  constructor(
+    scene: Phaser.Scene,
+    assets: GameAssets,
+    lines: readonly Readonly<PelicanLineSpawn>[],
+    islands: readonly Readonly<DriftingIslandSpawn>[] = [],
+  ) {
     this.textures = texturesFor(assets);
+    this.islands = islands;
     for (const line of lines) {
       for (let index = 0; index < pelicanBirdCount(line); index++) this.birds.push(this.createBird(scene, line, index));
     }
@@ -113,25 +138,43 @@ export class PelicanLineView {
       neck: bakedImage(scene, art.pelicanNeck, DEPTH.pelicanBill),
       bill: bakedImage(scene, art.pelicanBill, DEPTH.pelicanBill),
       splash: bakedImage(scene, art.pelicanSplash, DEPTH.pelicanSplash),
+      shelterScoop: null,
+      sheltered: false,
     };
   }
 
   private renderBird(bird: BirdDrawing, frame: PelicanLineFrame): void {
     const pose = pelicanPose(bird.line, bird.index, frame.elementTime, frame.reduced);
-    const bodyFrame = bodyFrameOf(pose);
+    const posed = bodyFrameOf(pose);
+    const held = dips(posed) && this.isSheltered(bird, frame.elementTime);
+    const bodyFrame = held ? 'warn' : posed;
     const info = this.textures.pelican[bodyFrame];
     bird.body.setTexture(info.key).setVisible(true).setPosition(pose.pos.x, pose.pos.y);
     faceSprite(bird.body, pose.facing, 1 / info.scale);
 
     const neckX = pose.pos.x + pose.facing * PELICAN_NECK_X;
     const phase = PELICAN_PHASES[pose.frame];
-    bird.splash.setVisible(phase === 'plunge' || phase === 'hold').setPosition(neckX, SURF);
+    bird.splash.setVisible(!held && (phase === 'plunge' || phase === 'hold')).setPosition(neckX, SURF);
     if (!dips(bodyFrame)) {
       bird.neck.setVisible(false);
       bird.bill.setVisible(false);
       return;
     }
     this.renderDip(bird, pose, neckX);
+  }
+
+  /**
+   * Whether the drifting islands shelter `bird` for the scoop holding element time `t`: false with no
+   * islands; else pelicanBirdSheltered, worked out once per scoop and kept on the bird.
+   */
+  private isSheltered(bird: BirdDrawing, t: number): boolean {
+    if (this.islands.length === 0) return false;
+    const scoop = pelicanScoopNumber(bird.line, t);
+    if (bird.shelterScoop !== scoop) {
+      bird.shelterScoop = scoop;
+      bird.sheltered = pelicanBirdSheltered(bird.line, bird.index, t, this.islands);
+    }
+    return bird.sheltered;
   }
 
   /**

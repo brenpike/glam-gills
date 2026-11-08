@@ -68,6 +68,7 @@ export type DarkWaterPart =
   | 'exit'
   | 'home-spot'
   | 'predator'
+  | 'hazard'
   | 'moving-hazard'
   | 'warning'
   | 'stranded-axolotl'
@@ -85,13 +86,15 @@ export const DARK_HIDDEN_PARTS: readonly DarkWaterPart[] = Object.freeze([
 
 /**
  * The parts the darkness never hides, in DarkWaterPart order (issue #77, ND-7 and ND-9). A fading
- * light shows even when out (issue #212, ND-9).
+ * light shows even when out (issue #212, ND-9). A fixed hazard, such as sharp litter, shows too
+ * (issue #213).
  */
 export const DARK_SHOWN_PARTS: readonly DarkWaterPart[] = Object.freeze([
   'axolotl',
   'exit',
   'home-spot',
   'predator',
+  'hazard',
   'moving-hazard',
   'warning',
   'stranded-axolotl',

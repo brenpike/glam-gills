@@ -37,9 +37,14 @@
  * Non-hue cues: the lip is a pale band along every top edge, so a ledge reads as a terrace with a
  * flat top (not a wall) in greyscale too. The depth bands are told by value (lighter at band 1,
  * darker with depth), never by hue alone.
+ *
+ * Pit shafts (issue #213, Area 14, the late-afternoon look): long, warm, slanted shafts of light that
+ * carry on below the rays and sink into band 2 of the pits (paintPitShafts). They are painted with
+ * the screen blend, so they only ever lighten (the contrast floor of band 2 holds), and they fade to
+ * nothing by world y 720, the top of band 3, so band 3 and band 4 stay as dark as ever. No randomness.
  */
 import { blob, ell, inkMany, line, seg, shape, type Seg } from './canvasKit';
-import { INK, LW, SURF, VIEW_W, WATER_STOP_MID, WHITE } from './palette';
+import { INK, LW, RAY_END_Y, SURF, VIEW_H, VIEW_W, WATER_STOP_MID, WHITE } from './palette';
 
 // ---------------------------------------------------------------------------
 // Sky and mountains
@@ -452,4 +457,78 @@ export function paintLakebed(ctx: CanvasRenderingContext2D, rects: readonly Lake
     if (!(r.w > 0 && r.h > 0)) continue;
     paintRect(ctx, r, rand);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Pit shafts (the late-afternoon look)
+// ---------------------------------------------------------------------------
+
+/**
+ * The shafts' colour as [r, g, b]: the golden hour's warm gold (the same as GOLDEN_RAY_TINT in
+ * habitatLook.ts, which this file cannot import).
+ */
+export const PIT_SHAFT_RGB: readonly [number, number, number] = Object.freeze([255, 222, 160] as const);
+/** World y where a shaft starts, clear: where the rays end (RAY_END_Y), so the rays hand over to it. */
+export const PIT_SHAFT_START_Y = RAY_END_Y;
+/** World y where a shaft is brightest: 120 px below where it starts, in the top of band 2. */
+export const PIT_SHAFT_PEAK_Y = 420;
+/** World y where a shaft has faded to nothing: the top of band 3 (two chunk rows down). Band 3 stays black. */
+export const PIT_SHAFT_END_Y = 2 * VIEW_H;
+/** The shafts' brightest alpha. Screen blend, so lighten-only. */
+export const PIT_SHAFT_ALPHA = 0.14;
+/** Shafts stand on a world-x grid (spacing, first x at the start y, width), so one crossing a chunk edge is painted in both chunks. */
+export const PIT_SHAFT_SPACING = 170;
+const PIT_SHAFT_X0 = 60;
+const PIT_SHAFT_W = 30;
+/** The rays run from the water top (SURF + 3) to RAY_END_Y: the shafts keep their slope. */
+const PIT_RAY_DEPTH = RAY_END_Y - (SURF + 3);
+
+function pitShaftLight(alpha: number): string {
+  const [r, g, b] = PIT_SHAFT_RGB;
+  return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+}
+
+/**
+ * Paint the pit shafts into the chunk at column `index` whose row is depth band `band`: slanted gold
+ * shafts (`raySlant` px of run over the rays' depth) from world y PIT_SHAFT_START_Y, clear, to their
+ * brightest at PIT_SHAFT_PEAK_Y and back to clear at PIT_SHAFT_END_Y. Painted with the screen blend, so
+ * they only lighten. Band 1 holds only the first stub (below the rays' end), band 2 the rest, and a
+ * chunk of band 3 or 4 paints nothing, so the dark water stays dark. Paint after the water and before
+ * the lakebed, so a wall hides the shaft. No randomness.
+ */
+export function paintPitShafts(ctx: CanvasRenderingContext2D, index: number, band: LakeBand, raySlant: number): void {
+  if (band > 2) return;
+  const wx0 = index * VIEW_W;
+  const oy = (band - 1) * VIEW_H;
+  const slope = raySlant / PIT_RAY_DEPTH;
+  // The shaft's span in chunk coordinates, and the part of it inside this chunk.
+  const yStart = PIT_SHAFT_START_Y - oy;
+  const yEnd = PIT_SHAFT_END_Y - oy;
+  const y0 = Math.max(yStart, 0);
+  const y1 = Math.min(yEnd, VIEW_H);
+  if (!(y1 > y0)) return;
+  const run = slope * (PIT_SHAFT_END_Y - PIT_SHAFT_START_Y);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const g = ctx.createLinearGradient(0, yStart, 0, yEnd);
+  g.addColorStop(0, pitShaftLight(0));
+  g.addColorStop((PIT_SHAFT_PEAK_Y - PIT_SHAFT_START_Y) / (PIT_SHAFT_END_Y - PIT_SHAFT_START_Y), pitShaftLight(PIT_SHAFT_ALPHA));
+  g.addColorStop(1, pitShaftLight(0));
+  ctx.fillStyle = g;
+  const firstK = Math.floor((wx0 - PIT_SHAFT_W - PIT_SHAFT_X0) / PIT_SHAFT_SPACING);
+  const lastK = Math.ceil((wx0 + VIEW_W + run - PIT_SHAFT_X0) / PIT_SHAFT_SPACING);
+  for (let k = firstK; k <= lastK; k++) {
+    const x = PIT_SHAFT_X0 + k * PIT_SHAFT_SPACING - wx0;
+    const xAt = (y: number): number => x - slope * (y - yStart);
+    // The shaft slants left as it sinks: its rightmost point is its top right, its leftmost its bottom left.
+    if (xAt(y0) + PIT_SHAFT_W < 0 || xAt(y1) > VIEW_W) continue;
+    const p = new Path2D();
+    p.moveTo(xAt(y0), y0);
+    p.lineTo(xAt(y0) + PIT_SHAFT_W, y0);
+    p.lineTo(xAt(y1) + PIT_SHAFT_W, y1);
+    p.lineTo(xAt(y1), y1);
+    p.closePath();
+    ctx.fill(p);
+  }
+  ctx.restore();
 }

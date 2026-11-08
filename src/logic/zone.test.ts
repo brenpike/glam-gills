@@ -6,6 +6,7 @@ import { CHINAMPA_2_LAYOUT } from './chinampa2Layout';
 import { CHINAMPA_LAYOUT } from './chinampaLayout';
 import { depthBands } from './dangerBar';
 import { dragNetSpawn, dragNetSweep, type DragNetSpawn } from './dragNets';
+import { driftingIslandSpawn } from './driftingIslands';
 import { netDrift } from './ghostNets';
 import { glowPlantSpawn, type DarkWater } from './glowPlants';
 import {
@@ -1558,6 +1559,35 @@ describe('pelican lines in the layout (issue #211, ND-5, ND-7)', () => {
   it('adds no pelicanLines key to a layout that has none, and keeps an empty list', () => {
     expect(buildCanalZone()).not.toHaveProperty('pelicanLines');
     expect(buildZone(canalWith({ pelicanLines: [] }), DEFAULT_ZONE_SEED)).toStrictEqual({ ...buildCanalZone(), pelicanLines: [] });
+  });
+});
+
+const ISLANDS: readonly ElementSpawn[] = [
+  driftingIslandSpawn('canal/island-1', 0, { x0: 300, x1: 1500, direction: 'right' }),
+  driftingIslandSpawn('canal/island-2', 40, { x0: 600, x1: 1800, direction: 'left' }),
+];
+
+describe('drifting islands in the layout (issue #213)', () => {
+  it.each(ALL_SEEDS)('keeps each island and its path, with no extra rand() draws, for seed %i', (seed) => {
+    const zone = buildZone(canalWith({ elements: ISLANDS }), seed);
+    expect(zone).toStrictEqual({ ...buildCanalZone(seed), elements: ISLANDS });
+    expect(zone.elements.map((element) => element.island)).toEqual([
+      { x0: 300, x1: 1500, direction: 'right' },
+      { x0: 600, x1: 1800, direction: 'left' },
+    ]);
+  });
+
+  it('copies each island path, sharing no object with the data', () => {
+    const zone = buildZone(canalWith({ elements: ISLANDS }), 3);
+    zone.elements.forEach((element, index) => {
+      expect(element).not.toBe(ISLANDS[index]);
+      expect(element.island).not.toBe(ISLANDS[index].island);
+    });
+  });
+
+  it('adds no island key to an element that has none', () => {
+    const [element] = buildZone(canalWith({ elements: [PULSE] }), 3).elements;
+    expect(element).not.toHaveProperty('island');
   });
 });
 

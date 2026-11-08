@@ -2,7 +2,8 @@
  * Phaser glue for the open lake's small sprites (issue #211, Area 12; ND-5, ND-6, ND-10, ND-11): bakes
  * the pelican's body frames, bill piece, neck piece and scoop splash, the wind's ripple arcs and
  * gust streak, and (issue #212, Area 13) the mud turtle's body frames, head piece and neck piece and
- * the fading light's frames, into CanvasTextures. The lake's sky, water and lakebed are painted into the
+ * the fading light's frames, and (issue #213, Area 14) the sharp litter's two kinds and the drifting
+ * island's half mat, into CanvasTextures. The lake's sky, water and lakebed are painted into the
  * per-area background chunks (drawLake.ts), so they have no texture here. Visual only. No game
  * state, no input, no physics.
  *
@@ -15,12 +16,18 @@
 import * as Phaser from 'phaser';
 import type { TexSize } from './canvasKit';
 import {
+  DRIFTING_ISLAND_HALF_TEX,
+  DRIFTING_ISLAND_KEY,
+  paintDriftingIslandHalf,
+} from './drawDriftingIsland';
+import {
   FADING_LIGHT_FRAMES,
   FADING_LIGHT_KEYS,
   FADING_LIGHT_TEX,
   paintFadingLight,
   type FadingLightFrame,
 } from './drawFadingLight';
+import { LITTER_KEYS, LITTER_KINDS, LITTER_TEX, paintLitter, type LitterKind } from './drawLitter';
 import {
   MUD_TURTLE_FRAMES,
   MUD_TURTLE_HEAD_TEX,
@@ -69,6 +76,9 @@ export const LAKE_TEX = {
   fadingLightOut: FADING_LIGHT_KEYS.out,
   fadingLightHint: FADING_LIGHT_KEYS.hint,
   fadingLightLit: FADING_LIGHT_KEYS.lit,
+  litterCan: LITTER_KEYS.can,
+  litterBottle: LITTER_KEYS.bottle,
+  driftingIslandHalf: DRIFTING_ISLAND_KEY,
 } as const;
 
 /** The largest a lake sprite may be, in logical units: the memory guard for the small-sprites rule. */
@@ -96,6 +106,8 @@ export const LAKE_TEX_SIZES: Readonly<Record<string, TexSize>> = {
   [LAKE_TEX.mudTurtleHead]: MUD_TURTLE_HEAD_TEX,
   [LAKE_TEX.mudTurtleNeck]: MUD_TURTLE_NECK_TEX,
   ...Object.fromEntries(FADING_LIGHT_FRAMES.map((frame) => [FADING_LIGHT_KEYS[frame], FADING_LIGHT_TEX])),
+  ...Object.fromEntries(LITTER_KINDS.map((kind) => [LITTER_KEYS[kind], LITTER_TEX])),
+  [LAKE_TEX.driftingIslandHalf]: DRIFTING_ISLAND_HALF_TEX,
 };
 
 /** The baked lake sprites, ready for GameAssets. */
@@ -132,12 +144,24 @@ export interface LakeTextures {
    * the light's logic point.
    */
   readonly fadingLight: Readonly<Record<FadingLightFrame, TexInfo>>;
+  /**
+   * The sharp litter's kinds (LITTER_TEX): `can` and `bottle`. Anchor is the sprite centre, the litter's
+   * logic point.
+   */
+  readonly litter: Readonly<Record<LitterKind, TexInfo>>;
+  /**
+   * The right half of the drifting island (DRIFTING_ISLAND_HALF_TEX, 120 px of mat from the centre line).
+   * The scene shows it twice, the second flipX, both on the island's centre line. Anchor is the centre
+   * line at the water line (the left edge, top of the mat).
+   */
+  readonly driftingIslandHalf: TexInfo;
 }
 
 /**
  * Bake the lake's small sprites at `bakeScale` texture pixels per logical unit: the five pelican
  * body frames, the bill piece, the neck piece, the splash, the ripple arcs, the gust streak, the five
- * mud turtle frames, its head and neck pieces and the three fading light frames. A
+ * mud turtle frames, its head and neck pieces, the three fading light frames, the two
+ * sharp litter kinds and the drifting island's half mat. A
  * texture that already exists under a key is replaced.
  */
 export function bakeLakeTextures(scene: Phaser.Scene, bakeScale: number): LakeTextures {
@@ -169,6 +193,14 @@ export function bakeLakeTextures(scene: Phaser.Scene, bakeScale: number): LakeTe
     fadingLight[frame] = add(bake(scene, FADING_LIGHT_KEYS[frame], FADING_LIGHT_TEX, bakeScale, (ctx) => paintFadingLight(ctx, frame)));
   }
 
+  const litter = {} as Record<LitterKind, TexInfo>;
+  for (const kind of LITTER_KINDS) {
+    litter[kind] = add(bake(scene, LITTER_KEYS[kind], LITTER_TEX, bakeScale, (ctx) => paintLitter(ctx, kind)));
+  }
+  const driftingIslandHalf = add(
+    bake(scene, LAKE_TEX.driftingIslandHalf, DRIFTING_ISLAND_HALF_TEX, bakeScale, paintDriftingIslandHalf),
+  );
+
   return {
     info,
     pelican,
@@ -181,5 +213,7 @@ export function bakeLakeTextures(scene: Phaser.Scene, bakeScale: number): LakeTe
     mudTurtleHead,
     mudTurtleNeck,
     fadingLight,
+    litter,
+    driftingIslandHalf,
   };
 }

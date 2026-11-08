@@ -35,6 +35,12 @@ import {
   LAKE_VOLCANO_BODY,
   LAKE_VOLCANO_SHADE,
   LAKE_WATER_BANDS,
+  PIT_SHAFT_ALPHA,
+  PIT_SHAFT_END_Y,
+  PIT_SHAFT_PEAK_Y,
+  PIT_SHAFT_RGB,
+  PIT_SHAFT_SPACING,
+  PIT_SHAFT_START_Y,
   POPOCATEPETL,
   STREAK_ROWS,
   lakeWaterBand,
@@ -43,12 +49,21 @@ import {
   paintLakeSky,
   paintLakeVolcanoes,
   paintLakebed,
+  paintPitShafts,
   paintStreamingClouds,
   type LakeBand,
   type LakeRect,
 } from './drawLake';
-import { habitatLook } from './habitatLook';
-import { INK, LEUCISTIC, LW, SURF, VIEW_W } from './palette';
+import {
+  DAY_RAY_SLANT,
+  GOLDEN_RAY_SLANT,
+  GOLDEN_RAY_TINT,
+  OPEN_LAKE_LATE_AIR_WASH,
+  OPEN_LAKE_LATE_SKY_HORIZON,
+  OPEN_LAKE_LATE_SKY_TOP,
+  habitatLook,
+} from './habitatLook';
+import { INK, LEUCISTIC, LW, RAY_END_Y, SURF, VIEW_H, VIEW_W } from './palette';
 
 // ---------------------------------------------------------------------------
 // Colour maths
@@ -815,5 +830,159 @@ describe('open lake still variant (issue #212)', () => {
     expect(LAKE_DARK).toBe('#04060f');
     expect(LAKE_DARK).toBe(lakeWaterBand(4).deep);
     expect(luminance(LAKE_DARK)).toBeLessThan(FLOOR);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Open lake late variant and pit shafts (issue #213, Area 14)
+// ---------------------------------------------------------------------------
+
+describe('open lake late variant (issue #213)', () => {
+  const late = habitatLook('open-lake-late');
+  const lake = habitatLook('open-lake');
+
+  it('has a warm late-afternoon sky, apricot to peach, every stop at the luminance floor or more', () => {
+    expect(late.sky).toEqual({ top: '#f4b393', horizon: '#ffd9ae' });
+    expect([OPEN_LAKE_LATE_SKY_TOP, OPEN_LAKE_LATE_SKY_HORIZON]).toEqual(['#f4b393', '#ffd9ae']);
+    expect(luminance(late.sky.top).toFixed(4)).toBe('0.5358');
+    expect(luminance(late.sky.horizon).toFixed(4)).toBe('0.7394');
+    expect(luminance(late.sky.horizon)).toBeGreaterThan(luminance(late.sky.top));
+    // Warm: more red than blue, at both ends.
+    for (const hex of [late.sky.top, late.sky.horizon]) {
+      expect(channelsOf(hex)[0], hex).toBeGreaterThan(channelsOf(hex)[2]);
+      expect(luminance(hex), hex).toBeGreaterThanOrEqual(FLOOR);
+      expect(contrast(INK, hex), hex).toBeGreaterThanOrEqual(PAIR_FLOOR);
+    }
+  });
+
+  it('lays a soft warm wash, and the sky and the mountains seen through it stay at the luminance floor or more', () => {
+    expect(late.airWash).toBe('rgba(255,165,110,0.10)');
+    expect(OPEN_LAKE_LATE_AIR_WASH).toBe(late.airWash);
+    const top = overlay(late.sky.top, late.airWash!);
+    const horizon = overlay(late.sky.horizon, late.airWash!);
+    expect(top).toBe('#f5b28f');
+    expect(horizon).toBe('#ffd4a8');
+    for (const hex of [top, horizon, ...LAKE_SKY_FILLS.slice(2).map((fill) => overlay(fill, late.airWash!))]) {
+      expect(luminance(hex), hex).toBeGreaterThanOrEqual(FLOOR);
+    }
+  });
+
+  it('strikes warm golden rays at the longer golden slant, at full strength, with ordinary clouds', () => {
+    expect(late.rayTint).toBe(GOLDEN_RAY_TINT);
+    expect(late.raySlant).toBe(GOLDEN_RAY_SLANT);
+    expect(late.raySlant).toBeGreaterThan(DAY_RAY_SLANT);
+    expect(late.rayAlphaScale).toBe(1);
+    expect(late.streamingClouds).toBe(false);
+  });
+
+  it('keeps the open lake water: bands, haze, surface line, lakebed and volcanoes', () => {
+    expect({
+      ...late,
+      id: 'open-lake',
+      sky: lake.sky,
+      airWash: lake.airWash,
+      rayTint: lake.rayTint,
+      raySlant: lake.raySlant,
+      pitShafts: false,
+    }).toEqual(lake);
+    expect(late.water).toBe(lake.water);
+    expect(late.depthBands && late.lakebed && late.volcanoHorizon).toBe(true);
+  });
+
+  it('is a daytime look whose sun is the same sun as the open lake', () => {
+    expect(late.lowerRowLight || late.goldenDecor).toBe(false);
+    expect(late.sinkingPetalsPerScreen).toBe(0);
+  });
+});
+
+describe('pit shafts (issue #213)', () => {
+  const SLANT = GOLDEN_RAY_SLANT;
+  const SLOPE = SLANT / (RAY_END_Y - (SURF + 3));
+  /** The pit shaft fills: the ones painted under a gradient of the shaft colour. */
+  const shaftsOf = (rec: Recording): Painted[] => rec.painted.filter((p) => p.gradient?.stops.some(([, c]) => c.startsWith('rgba(255,222,160,')) ?? false);
+  const alphaOf = (colour: string): number => parseRgba(colour).alpha;
+  const shafts = (index: number, band: LakeBand): Recording => recordAll((ctx) => paintPitShafts(ctx, index, band, SLANT));
+
+  it('is the golden hour light, a lighten-only screen blend', () => {
+    expect(PIT_SHAFT_RGB).toEqual(GOLDEN_RAY_TINT);
+    let blend = '';
+    recordAll((ctx) => {
+      paintPitShafts(ctx, 3, 2, SLANT);
+      blend = ctx.globalCompositeOperation;
+    });
+    expect(blend).toBe('screen');
+  });
+
+  it('starts clear where the rays end, is brightest 120 px below, and is clear again at y 720, the top of band 3', () => {
+    expect(PIT_SHAFT_START_Y).toBe(RAY_END_Y);
+    expect(PIT_SHAFT_PEAK_Y).toBe(420);
+    expect(PIT_SHAFT_END_Y).toBe(720);
+    expect(PIT_SHAFT_END_Y).toBe(2 * VIEW_H);
+    for (const band of LIT_BANDS) {
+      const oy = (band - 1) * VIEW_H;
+      const grads = shaftsOf(shafts(3, band)).map((p) => p.gradient!);
+      expect(grads.length).toBeGreaterThan(0);
+      for (const g of grads) {
+        // The gradient runs from the start y to y 720, whatever the chunk row.
+        expect(g.extent).toEqual([0, PIT_SHAFT_START_Y - oy, 0, PIT_SHAFT_END_Y - oy]);
+        expect(g.stops.map(([t]) => t)).toEqual([0, (PIT_SHAFT_PEAK_Y - PIT_SHAFT_START_Y) / (PIT_SHAFT_END_Y - PIT_SHAFT_START_Y), 1]);
+        expect(alphaOf(g.stops[0][1])).toBe(0);
+        expect(alphaOf(g.stops[1][1])).toBe(PIT_SHAFT_ALPHA);
+        expect(alphaOf(g.stops[2][1])).toBe(0);
+      }
+    }
+  });
+
+  it('never goes brighter than the peak alpha, so it only lightens a little', () => {
+    expect(PIT_SHAFT_ALPHA).toBeGreaterThan(0);
+    expect(PIT_SHAFT_ALPHA).toBeLessThanOrEqual(0.2);
+    for (const p of shaftsOf(shafts(3, 2))) for (const [, c] of p.gradient!.stops) expect(alphaOf(c)).toBeLessThanOrEqual(PIT_SHAFT_ALPHA);
+  });
+
+  it('paints nothing in band 3 or band 4, so the dark water stays dark', () => {
+    for (const band of LATER_BANDS) expect(shafts(3, band).painted, `band ${band}`).toEqual([]);
+  });
+
+  it('keeps every shaft inside its chunk row: band 1 holds the stub below the rays, band 2 the rest down to y 720', () => {
+    for (const band of LIT_BANDS) {
+      const oy = (band - 1) * VIEW_H;
+      for (const p of shaftsOf(shafts(3, band))) {
+        const box = boxOf(p);
+        expect(box.y0 + oy, `band ${band}`).toBeGreaterThanOrEqual(PIT_SHAFT_START_Y);
+        expect(box.y1 + oy, `band ${band}`).toBeLessThanOrEqual(PIT_SHAFT_END_Y);
+        expect(box.y1, `band ${band}`).toBeLessThanOrEqual(VIEW_H);
+      }
+    }
+    // Band 2 shafts reach the chunk bottom, y 720, where they are clear.
+    expect(Math.max(...shaftsOf(shafts(3, 2)).map((p) => boxOf(p).y1))).toBe(VIEW_H);
+    // Band 1 shafts begin at the rays' end.
+    expect(Math.min(...shaftsOf(shafts(3, 1)).map((p) => boxOf(p).y0))).toBe(PIT_SHAFT_START_Y);
+  });
+
+  it('slants left as it sinks, at the look slope', () => {
+    for (const p of shaftsOf(shafts(3, 2))) {
+      const [topLeft, , , bottomLeft] = p.cmds;
+      expect(topLeft[0]).toBe('moveTo');
+      expect(bottomLeft[0]).toBe('lineTo');
+      const dy = bottomLeft[2] - topLeft[2];
+      expect(dy).toBeGreaterThan(0);
+      expect(topLeft[1] - bottomLeft[1]).toBeCloseTo(SLOPE * dy, 6);
+    }
+  });
+
+  it('stands on a world-x grid, so a shaft crossing a chunk edge is painted at the same place in both chunks', () => {
+    /** World x of each shaft's left edge at the chunk's top line. */
+    const worldLefts = (index: number): number[] => shaftsOf(shafts(index, 2)).map((p) => Math.round((p.cmds[0][1] + index * VIEW_W) * 1e6) / 1e6);
+    const chunks = [2, 3, 4].map(worldLefts);
+    expect(chunks.every((lefts) => lefts.length > 1)).toBe(true);
+    // Chunk 3 and 4 both paint the shafts that cross their shared edge.
+    expect(chunks[1].filter((x) => chunks[2].includes(x)).length).toBeGreaterThan(0);
+    // Every shaft of the three chunks together sits one PIT_SHAFT_SPACING from the next.
+    const all = [...new Set(chunks.flat())].sort((x, y) => x - y);
+    for (let i = 1; i < all.length; i++) expect(all[i] - all[i - 1]).toBeCloseTo(PIT_SHAFT_SPACING, 6);
+  });
+
+  it('draws the same pixels for the same chunk', () => {
+    expect(signature(shafts(3, 2).painted)).toBe(signature(shafts(3, 2).painted));
   });
 });

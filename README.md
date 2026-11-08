@@ -6,7 +6,7 @@ It is mostly fun, with real axolotl facts along the way.
 
 ## What you can do now
 
-Version 0.69.0 is playable in these habitats: the canal, the Lily pad pond, the Chinampa gardens, the Spring cave, the Deep canal and the Open lake:
+Version 0.70.0 is playable in these habitats: the canal, the Lily pad pond, the Chinampa gardens, the Spring cave, the Deep canal and the Open lake:
 
 - Make your own axolotl the first time you play, one step at a time in 11 steps: colour (one of eight real morphs), boy or girl (with a boy or girl sign), eyes, mouth (eight to choose from), gills, spots, tail, body, age, size, and name. Every choice is a big picture button that shows it on your axolotl, and the preview changes as you pick. On the first step, Surprise me picks a whole new axolotl at random, with a name that fits. On the other steps, it picks something new for that step only. The other seven colours are the ones you rescue.
 - Type a name, or pick a suggested one that fits a boy or a girl, so typing is optional. Names stay on your device.
@@ -76,6 +76,7 @@ Version 0.69.0 is playable in these habitats: the canal, the Lily pad pond, the 
 - Watch out for the pelican line in Area 12: a line of American white pelicans that float on the surface. Each one warns first, then they dip their bills together. A scoop costs a leg and bumps your axolotl away. It is never a catch. A "Meet the pelican" fact card tells you about them.
 - Wind and waves blow across the open lake. Surface gusts switch direction and fade with depth, and a ripple warns you before a gust. Swim deeper to get out of the wind.
 - The open lake has its own look: open sky, the volcanoes Popocatépetl and Iztaccíhuatl, water that gets darker with each depth band, and silt-and-stone lakebed terraces. It plays its own music, "Lagoon Breeze".
+- Beat Area 13 to unlock Area 14, the twin trenches, on the open lake in the late afternoon: two pitch-black pits side by side with a shallow ridge between them. You start on the ridge, and the exit is deep in the dark on the floor of the far pit. Watch out for sharp litter on the pit floors: touching a dented can or a chipped bottle costs a leg. Reed islands drift slowly across the surface, and a pelican never dips its bill where an island floats, so swim under one when the pelicans scoop. A "Litter in the water" fact card tells you about the litter.
 - Listen to cozy, happy background music, made right in the game with no downloads. Each habitat has its own tune, Area 3 plays a sleepy dusk version of the pond's, and the deep canal plays the trajinera waltz. It starts after your first tap or key press, plays softer while you pause a trip, and stops when you switch to another tab. Turn it off or on with the Music switch on the title screen, in the Home Tank, or on the pause screen; the game remembers your choice on this device, even after Start over.
 - Visit your Home Tank after the title and after every trip. A trip-end message tells you how the trip went.
 - Watch your axolotl swim around the Home Tank. With reduced motion it stays still.
