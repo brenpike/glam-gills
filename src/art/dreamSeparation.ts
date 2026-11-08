@@ -118,7 +118,9 @@ export interface RecordedDreamFloorMiss {
 /**
  * The older Dream colour pairs PRD F15 records as missing a floor, each once with its measure (owner decision,
  * 2026-11-08, option A; open question 747; tracked in issue #227). Only Dream colours that were once canal colours
- * (issue #146) may join a pair, so a newer colour's miss can never be recorded.
+ * (issue #146) may join a pair, so a newer colour's miss can never be recorded. This record, and ONCE_CANAL_DREAM_IDS,
+ * grow only by a reviewed edit to them and to PRD F15 in the same PR; no test keeps a second copy of either (owner
+ * decision, 2026-11-08, option A; open question 747; review finding 53ead5ff).
  */
 export const RECORDED_DREAM_FLOOR_MISSES: readonly RecordedDreamFloorMiss[] = Object.freeze([
   recordFloorMiss('sky-blue', 'lavender', 'greyscale'),
