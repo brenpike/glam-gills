@@ -509,6 +509,24 @@ export const PELICAN_SLIPPER_FILL = LITTLE_PELICAN_BODY;
 /** Pelican slippers' closed bill along the toe and the sole (the pelican's orange feet), the Little pelican's bill. Alias of LITTLE_PELICAN_BILL. 9.51:1. */
 export const PELICAN_SLIPPER_BILL = LITTLE_PELICAN_BILL;
 
+// ---- Open lake Area 13 Wearable fills (issue #215; all at least 9:1 with ink) ----
+// The six trench Wearables: turtle socks, diving goggles, a turtle shell backpack, a lantern tail charm, a mini
+// submarine and a diving suit. Each takes one new pale fill, no two alike and none near a shipped colour; the worn
+// looks import these names. None equals a BADGE_FILL rarity colour, and none is red. Ratios are fill against ink.
+
+/** Turtle socks, a pale turtle green. 12.15:1. */
+export const TURTLE_SOCKS_FILL = '#b8fcc0';
+/** Diving goggles' frame band, a pale diving blue. 9.84:1. */
+export const DIVING_GOGGLES_FRAME = '#bad8ff';
+/** Turtle shell backpack's shell, a pale sandy shell brown. 9.55:1. */
+export const TURTLE_SHELL_FILL = '#e4cfba';
+/** Lantern tail charm's round glass, a pale glowing aqua, lit softly and never flashing. 12.42:1. */
+export const LANTERN_CHARM_FILL = '#9cfffc';
+/** Mini submarine's hull, conning tower and periscope, a pale lime yellow. 12.31:1. */
+export const MINI_SUBMARINE_FILL = '#f0f396';
+/** Diving suit, a pale copper. 9.58:1. */
+export const DIVING_SUIT_FILL = '#edccbd';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */

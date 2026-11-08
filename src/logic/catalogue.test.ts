@@ -29,9 +29,11 @@ import {
   MOONSTONE,
   OBSIDIAN,
   OLIVE,
+  OPEN_LAKE_2_TREASURES,
   OPEN_LAKE_TREASURES,
   PEACH,
   PERK_VALUES,
+  PITCH_BLACK,
   PLUM,
   POND_2_TREASURES,
   POND_TREASURES,
@@ -42,6 +44,7 @@ import {
   SPRING_CAVE_TREASURES,
   TIE_DYE_GALAXY,
   TREASURE_CATEGORIES,
+  TRENCH_SHINE,
   TULE_GREEN,
   WEARABLE_SLOTS,
   categoryName,
@@ -1413,7 +1416,7 @@ describe('DEEP_CANAL_4_TREASURES', () => {
 });
 
 describe('ALL_TREASURES', () => {
-  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5, spring cave Area 6, spring cave Area 7, deep canal Area 8, deep canal Area 9, deep canal Area 10, deep canal Area 11 and open lake Area 12 treasures, in that order', () => {
+  it('is the canal, pond, pond Area 3, chinampa Area 4, chinampa Area 5, spring cave Area 6, spring cave Area 7, deep canal Area 8, deep canal Area 9, deep canal Area 10, deep canal Area 11, open lake Area 12 and open lake Area 13 treasures, in that order', () => {
     expect(ALL_TREASURES).toEqual([
       ...CANAL_TREASURES,
       ...POND_TREASURES,
@@ -1427,16 +1430,17 @@ describe('ALL_TREASURES', () => {
       ...DEEP_CANAL_3_TREASURES,
       ...DEEP_CANAL_4_TREASURES,
       ...OPEN_LAKE_TREASURES,
+      ...OPEN_LAKE_2_TREASURES,
     ]);
     expect(Object.isFrozen(ALL_TREASURES)).toBe(true);
     expect(Object.isFrozen(POND_TREASURES)).toBe(true);
   });
 
-  it('has 163 treasures: 64 Decorations, 66 Wearables and 33 Paint shells', () => {
-    expect(ALL_TREASURES).toHaveLength(163);
-    expect(ALL_DECORATIONS).toHaveLength(64);
-    expect(ALL_WEARABLES).toHaveLength(66);
-    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(33);
+  it('has 179 treasures: 72 Decorations, 72 Wearables and 35 Paint shells', () => {
+    expect(ALL_TREASURES).toHaveLength(179);
+    expect(ALL_DECORATIONS).toHaveLength(72);
+    expect(ALL_WEARABLES).toHaveLength(72);
+    expect(ALL_TREASURES.filter(isPaintShell)).toHaveLength(35);
   });
 
   it('puts Shell perks only on Epic or Legendary Wearables', () => {
@@ -1449,6 +1453,7 @@ describe('ALL_TREASURES', () => {
       'spring-cave/gemstone-cape',
       'deep-canal/hero-medal',
       'deep-canal/wizard-hat',
+      'open-lake/mini-submarine',
     ]);
     for (const wearable of shellWearables) {
       expect(['epic', 'legendary'], wearable.id).toContain(wearable.rarity);
@@ -1503,7 +1508,7 @@ describe('ALL_TREASURES', () => {
 });
 
 describe('Dream colours', () => {
-  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth, Lagoon shine, Tule green, Obsidian', () => {
+  it('lists the colours in area order: the canal 9, Lily green, Firefly gold, Galaxy, Poppy red, Rainbow, Plum, Tie-dye galaxy, Moonstone, Crystal shine, Chocolate, Glowworm, Jade, Fiesta shine, Olive, Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth, Lagoon shine, Tule green, Obsidian, Pitch black, Trench shine', () => {
     expect(CANAL_DREAM_COLOURS).toHaveLength(9);
     expect(DREAM_COLOURS).toEqual([
       ...CANAL_DREAM_COLOURS,
@@ -1531,8 +1536,10 @@ describe('Dream colours', () => {
       LAGOON_SHINE,
       TULE_GREEN,
       OBSIDIAN,
+      PITCH_BLACK,
+      TRENCH_SHINE,
     ]);
-    expect(DREAM_COLOURS).toHaveLength(33);
+    expect(DREAM_COLOURS).toHaveLength(35);
     expect(Object.isFrozen(DREAM_COLOURS)).toBe(true);
   });
 
@@ -1565,6 +1572,7 @@ describe('Dream colours', () => {
       'hyacinth',
       'tule-green',
       'obsidian',
+      'pitch-black',
     ]);
     for (const colour of solids) {
       expect(['common', 'rare'], colour.id).toContain(colour.rarity);
@@ -1735,12 +1743,12 @@ describe('Dream colours', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('makes Obsidian a Rare solid, the thirty-third and last Dream colour, with a name no other Dream colour has (issue #214, ND-2)', () => {
+  it('makes Obsidian a Rare solid, the thirty-third Dream colour and the last of Area 12, with a name no other Dream colour has (issue #214, ND-2)', () => {
     expect(OBSIDIAN).toEqual({ id: 'obsidian', name: 'Obsidian', rarity: 'rare', kind: 'solid' });
     expect(Object.isFrozen(OBSIDIAN)).toBe(true);
     expect(dreamColourById('obsidian')).toBe(OBSIDIAN);
     expect(DREAM_COLOURS.at(32)).toBe(OBSIDIAN);
-    expect(DREAM_COLOURS.at(-1)).toBe(OBSIDIAN);
+    expect(DREAM_COLOURS.at(DREAM_COLOURS.indexOf(PITCH_BLACK) - 1)).toBe(OBSIDIAN);
     expect(dreamRarityAllowed(OBSIDIAN)).toBe(true);
     const names = DREAM_COLOURS.map((colour) => colour.name);
     expect(new Set(names).size).toBe(names.length);

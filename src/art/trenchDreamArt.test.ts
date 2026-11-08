@@ -6,6 +6,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { DREAM_COLOURS, PITCH_BLACK, TRENCH_SHINE } from '../logic/catalogue';
+import { tailStripe } from './axolotlRigStripe';
 import { DEFAULT_ART_LOOK, axolotlBodyGeometry, tailSamples } from './drawAxolotlParts';
 import { DREAM_INSET_IDS, dreamPatternShapes, isSheenDream } from './drawDreamOverlay';
 import { MORPH_LOOK_IDS } from './drawMorphs';
@@ -485,6 +486,23 @@ describe('Open lake Area 13 Dream colours (guide 3f, issue #215, ND-2)', () => {
     expect(dreamPatternShapes('trench-shine', geo.torso, tail, 0.5)).not.toEqual(still);
     for (const id of DREAM_IDS.filter((other) => other !== 'trench-shine' && isSheenDream(other))) {
       expect(DREAM_SWATCH[id].marks, id).not.toEqual(DREAM_SWATCH['trench-shine'].marks);
+    }
+  });
+
+  it('paints its marks on the shared live stripe, gold first, lighter than the body and with no pattern inset (ADR 0031, guide 6p)', () => {
+    const body = DREAM_SWATCH['trench-shine'].body;
+    const polygonsOf = (id: DreamLookId, sheen: number | undefined) =>
+      tailStripe(id, DEFAULT_ART_LOOK, 0, 1, sheen, Infinity).map((band) => band.polygons);
+    for (const mark of TRENCH_SHINE_MARKS) expect(relativeLuminance(laidOver(mark, body)), mark).toBeGreaterThan(relativeLuminance(body));
+    for (const sheen of [0, 0.5, 0.9, undefined]) {
+      const stripe = tailStripe('trench-shine', DEFAULT_ART_LOOK, 0, 1, sheen, Infinity);
+      expect(stripe.map((band) => [band.colour, band.alpha]), `sheen ${sheen}`).toEqual([
+        [0xf2de8a, 0.85],
+        [0xcfeeff, 0.85],
+      ]);
+      for (const band of stripe) expect(band.polygons.length, `sheen ${sheen}`).toBeGreaterThan(0);
+      expect(stripe.map((band) => band.polygons), `sheen ${sheen}`).toEqual(polygonsOf('crystal-shine', sheen));
+      expect(stripe.map((band) => band.polygons), `sheen ${sheen}`).not.toEqual(polygonsOf('iridescent', sheen));
     }
   });
 
