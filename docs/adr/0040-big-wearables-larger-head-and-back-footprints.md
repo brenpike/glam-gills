@@ -51,3 +51,7 @@ Texture memory is tight. Baking every area's scenery at boot passed iOS Safari's
 ## Note: the Surfboard (issue #214)
 
 Issue #214, Area 12's treasures, adds a fourth big item as the first Consequence allows: the Surfboard, art slug `'surfboard'` in `BIG_WEARABLE_ART_SLUGS`. It is a Back item and draws inside `backBigFootprint`, so the Jetpack and the Surfboard now both use the big Back box. It passes the hero rule: its least shares are 17.14 on the still looks and 16.69 on the smallest look mid-swim (`HERO_RECORD` in `src/art/lakeWearableArt.test.ts`). Every rule above is unchanged.
+
+## Note: the Mini submarine (issue #215)
+
+Issue #215, Area 13's treasures, adds a fifth big item as the first Consequence allows: the Mini submarine, art slug `'mini-submarine'` in `BIG_WEARABLE_ART_SLUGS`. It is a Back item and draws inside `backBigFootprint`, so the Jetpack, the Surfboard and the Mini submarine all use the big Back box. It passes the hero rule: its least shares are 13.18 on the still looks and 12.84 on the smallest look mid-swim (`HERO_RECORD` in `src/art/trenchWearableArt.test.ts`). Every rule above is unchanged.

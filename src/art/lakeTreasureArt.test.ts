@@ -9,6 +9,7 @@ import { badgeShape } from '../logic/hints';
 import {
   ALL_TREASURES,
   OBSIDIAN,
+  OPEN_LAKE_2_TREASURES,
   OPEN_LAKE_TREASURES,
   TULE_GREEN,
   isDecoration,
@@ -626,7 +627,7 @@ const isReddish = (hex: string): boolean => saturationOf(hex) > 0.15 && (hueOf(h
 // ---------------------------------------------------------------------------
 
 describe('Open lake Area 12 treasure icons (issue #214)', () => {
-  it('lists the ten Area 12 items after the Area 11 ones, in catalogue order, with Tule green and Obsidian the last two Paint shells', () => {
+  it('lists the ten Area 12 items after the Area 11 ones, in catalogue order, with Tule green and Obsidian the two Paint shells just before Area 13\'s', () => {
     const added = OPEN_LAKE_TREASURES.map((treasure) => treasureSlug(treasure.id));
     expect(added.filter((slug) => !slug.startsWith('paint-shell-'))).toEqual([
       'windsock',
@@ -642,10 +643,12 @@ describe('Open lake Area 12 treasure icons (issue #214)', () => {
     ]);
     expect(TREASURE_ICON_SLUGS.slice(120, 130)).toEqual(added.filter((slug) => !slug.startsWith('paint-shell-')));
     expect(TREASURE_ICON_SLUGS.indexOf('wizard-hat')).toBe(119);
-    expect(TREASURE_ICON_SLUGS.slice(130)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
-    expect(TREASURE_ICON_SLUGS.slice(-2)).toEqual(LAKE_SHELL_SLUGS);
+    expect(TREASURE_ICON_SLUGS.slice(144)).toEqual(DREAM_SWATCH_IDS.map((id) => `paint-shell-${id}`));
+    const area13Shells = OPEN_LAKE_2_TREASURES.map((treasure) => treasureSlug(treasure.id)).filter((slug) => slug.startsWith('paint-shell-'));
+    const area13ShellsAt = TREASURE_ICON_SLUGS.indexOf(area13Shells[0] as TreasureIconSlug);
+    expect(TREASURE_ICON_SLUGS.slice(area13ShellsAt - 2, area13ShellsAt + area13Shells.length)).toEqual([...LAKE_SHELL_SLUGS, ...area13Shells]);
     expect(added.filter((slug) => slug.startsWith('paint-shell-'))).toEqual(LAKE_SHELL_SLUGS);
-    expect(TREASURE_ICON_SLUGS).toHaveLength(163);
+    expect(TREASURE_ICON_SLUGS).toHaveLength(179);
     expect(new Set(TREASURE_ICON_SLUGS).size).toBe(TREASURE_ICON_SLUGS.length);
     expect(new Set(ALL_TREASURES.map((treasure) => treasureSlug(treasure.id)))).toEqual(new Set(TREASURE_ICON_SLUGS));
     // The five Decorations and five Wearables split by category.
@@ -1105,9 +1108,14 @@ describe('Open lake Area 12 Decorations in the Home Tank (issue #214, ND-5)', ()
   const BASED = ['pinwheel', 'little-pelican', 'twin-volcanoes', 'little-sailboat'] as const;
   const FLOATING = ['little-pelican', 'little-sailboat'] as const;
 
-  it('matches the catalogue placement kinds, rarities and standard widths, listed last', () => {
+  it('matches the catalogue placement kinds, rarities and standard widths, listed just before Area 13\'s', () => {
     const decorations = OPEN_LAKE_TREASURES.filter(isDecoration);
-    expect(TANK_DECORATION_SLUGS.slice(-5)).toEqual(decorations.map((d) => treasureSlug(d.id)));
+    const area13Decorations = OPEN_LAKE_2_TREASURES.filter(isDecoration).map((d) => treasureSlug(d.id));
+    const area13DecorationsAt = TANK_DECORATION_SLUGS.indexOf(area13Decorations[0] as TankDecorationSlug);
+    expect(TANK_DECORATION_SLUGS.slice(area13DecorationsAt - 5, area13DecorationsAt + area13Decorations.length)).toEqual([
+      ...decorations.map((d) => treasureSlug(d.id)),
+      ...area13Decorations,
+    ]);
     for (const decoration of decorations) {
       const slug = treasureSlug(decoration.id) as TankDecorationSlug;
       expect(decoration.width, decoration.id).toBeUndefined();
