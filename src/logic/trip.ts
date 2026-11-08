@@ -22,6 +22,7 @@ import {
   type EncounterState,
 } from './encounter';
 import { DRAG_NET, dragNetCatch, dragNetPhase, sweepFront, type DragNetSpawn } from './dragNets';
+import { driftingIslands, shelteredScoopHit } from './driftingIslands';
 import {
   DRAG_NET_MEET_RANGE,
   LURE_MEET_RANGE,
@@ -70,7 +71,6 @@ import {
 import {
   pelicanBirdPositions,
   pelicanScoopBoxes,
-  pelicanScoopHit,
   pelicanScoopNumber,
   type PelicanLineSpawn,
 } from './pelicanLine';
@@ -556,8 +556,8 @@ function copyBailingBoat(boat: Readonly<BailingBoatSpawn>): BailingBoatSpawn {
 }
 
 /**
- * A copy of the element sharing its type; the mat pair, glow-plant, fading light, pebble and
- * trajinera geometry, when set, are copied.
+ * A copy of the element sharing its type; the mat pair, glow-plant, fading light, pebble, trajinera
+ * and drifting island geometry, when set, are copied.
  */
 function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
   return {
@@ -567,6 +567,7 @@ function copyTripElement(element: Readonly<ElementSpawn>): ElementSpawn {
     ...(element.fadingLight ? { fadingLight: { ...element.fadingLight } } : {}),
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
     ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
+    ...(element.island ? { island: { ...element.island } } : {}),
   };
 }
 
@@ -843,8 +844,9 @@ export function beatArea(state: TripState, ctx: StarContext): TripStepResult {
  * LURE_MEET_RANGE of a lure that is down, or within DRAG_NET_MEET_RANGE of a stretch, outside the
  * safe area.
  * Pelican lines (issue #211, ND-6), after the drag nets, unless the trip ended: each line whose
- * scoop box touches the axolotl centre at the new element time (pelicanScoopHit), at most once per
- * scoop (pelicanScoopNumber), lands one hit through the shared hit path with sourceId 'pelican', from
+ * scoop box touches the axolotl centre at the new element time, skipping a bird a drifting island
+ * shelters for that scoop (shelteredScoopHit, issue #213), at most once per scoop
+ * (pelicanScoopNumber), lands one hit through the shared hit path with sourceId 'pelican', from
  * its bill, the bottom middle of that bird's scoop box. The first such scoop of the step also gives a
  * gentle push of PELICAN_PUSH_SPEED away from the bill, never up (pelicanPush), as `impulse`; a
  * scoop while protected still counts as landed and still pushes. A predator bump on the same step
@@ -1480,7 +1482,8 @@ interface PelicanPass {
 
 /**
  * Checks each pelican line, in line order, for a scoop touching the axolotl centre `pos` at
- * `elementTime` (pelicanScoopHit, issue #211, ND-6), stopping once the trip is over: a scoop not
+ * `elementTime` (issue #211, ND-6), skipping a bird the trip's drifting islands shelter for that
+ * scoop (shelteredScoopHit, issue #213), stopping once the trip is over: a scoop not
  * landed yet keeps its number (pelicanScoopNumber) in the line's slot of the scoops and lands one hit
  * with sourceId 'pelican' from its bill (pelicanBill), then the hit's events; the first gives the
  * push (pelicanPush). A trip with no pelican lines, or an encounter whose trip is over, returns the
@@ -1498,11 +1501,12 @@ function stepPelicans(
     return { scoops, encounter, events: NO_ENCOUNTER_EVENTS, push: null };
   }
   const events: EncounterEvent[] = [];
+  const islands = driftingIslands(state.elements);
   let current = encounter;
   let push: Vec2 | null = null;
   for (const [index, line] of state.pelicanLines.entries()) {
     if (current.tripOver) break;
-    const bird = pelicanScoopHit(line, pos, elementTime);
+    const bird = shelteredScoopHit(line, pos, elementTime, islands);
     if (bird === null) continue;
     const scoop = pelicanScoopNumber(line, elementTime);
     if (scoops[index] === scoop) continue;

@@ -978,6 +978,7 @@ function copyElement(element: Readonly<ElementSpawn>): ElementSpawn {
     ...(element.pebble ? { pebble: { ...element.pebble } } : {}),
     ...(element.trajinera ? { trajinera: { ...element.trajinera } } : {}),
     ...(element.wind ? { wind: { ...element.wind } } : {}),
+    ...(element.island ? { island: { ...element.island } } : {}),
   };
 }
 
