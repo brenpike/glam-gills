@@ -115,6 +115,8 @@ export class FirstHitTipCard {
   /** OK: once the card has shown for MIN_SHOW_MS, hides it and calls `onClose`. Ignored while hidden. */
   press(): void {
     if (!this.container.visible) return;
+    // The HUD clock is paused while the card shows, but time.now still advances: Phaser 3's
+    // Clock.update sets `now` before its paused check. The fact card's wait relies on this too.
     if (this.scene.time.now - this.shownAt < MIN_SHOW_MS) return;
     this.hide();
     this.onClose();
