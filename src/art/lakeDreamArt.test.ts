@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MORPH_LOOK_IDS } from './drawMorphs';
-import { DREAM_GREYSCALE_FLOOR, DREAM_GREYSCALE_MARGIN, DREAM_OKLAB_FLOOR, greyscaleFloorApplies } from './dreamSeparation';
+import { dreamSeparationFailures } from './dreamSeparation';
 import {
   DREAM_EYE_RING,
   DREAM_RIM_LIGHT,
@@ -108,17 +108,6 @@ function measureSeparation(id: DreamLookId): Record<string, [number, number]> {
   );
 }
 
-/** The PRD F15 floors of ND-10 for `subject` against every other Dream colour, by the dreamSeparation.ts rule. */
-function expectF15Floors(subject: DreamLookId, separation: Record<string, [number, number]>): void {
-  for (const [id, [grey, colour]] of Object.entries(separation)) {
-    if (greyscaleFloorApplies(subject, id as DreamLookId)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(DREAM_GREYSCALE_FLOOR);
-    }
-    expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(DREAM_OKLAB_FLOOR);
-  }
-  expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(DREAM_GREYSCALE_MARGIN);
-}
-
 function sortIdsByGrey(separation: Record<string, [number, number]>): string[] {
   return Object.entries(separation)
     .sort(([, a], [, b]) => a[0] - b[0])
@@ -205,7 +194,7 @@ describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
       'pitch-black': [1.46, 0.16],
       'trench-shine': [3.32, 0.392],
     });
-    expectF15Floors('tule-green', separation);
+    expect(dreamSeparationFailures('tule-green')).toEqual([]);
     // It sits in the near-black window between Obsidian and Galaxy: hue tells Galaxy and Tie-dye galaxy apart (green
     // against blue-violet), and they also carry stars. Obsidian, the closest in colour, is darker and nearly grey.
     expect(sortIdsByGrey(separation).slice(0, 2)).toEqual(['galaxy', 'tie-dye-galaxy']);
@@ -281,7 +270,7 @@ describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
       'pitch-black': [1.23, 0.08],
       'trench-shine': [3.97, 0.39],
     });
-    expectF15Floors('obsidian', separation);
+    expect(dreamSeparationFailures('obsidian')).toEqual([]);
     // It sits in the near-black window between Glowworm and Tule green: hue tells Glowworm apart (green-black against
     // night blue), and Glowworm also carries its glow dots. Tule green is a clear green, a step lighter. Pitch black
     // (Area 13, issue #215), the closest in colour, is a step darker and warm.
