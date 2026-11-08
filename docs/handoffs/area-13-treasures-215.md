@@ -16,9 +16,11 @@ Issue #215 (0.70.0, one PR, branch `feature/215-area-13-treasures`) gives Area 1
 
 All recommendations were taken (Q1 to Q9; see PRD open questions 745 to 753). Named defaults ND-1 to ND-11 are posted on #215: <https://github.com/brenpike/glam-gills/issues/215#issuecomment-6715642589>.
 
+Lagoon shine margin (Q1, option A): hold Lagoon shine at least 1.49:1 from Crystal shine, and at least 1.5:1 from Iridescent and Plum. Unrounded, it is 1.4984:1 from Crystal shine (recorded 1.50 in the art guide tables), under its provisional 1.5:1 margin, and Crystal shine and Iridescent are 2.2498:1 apart, so no Lagoon shine body is 1.5:1 from both. No colour changes. PRD F15 and open question 696 record it.
+
 ## Learnings
 
-- **Dream colour room.** The near-black value space was full under F15. Owner rule Q2 / ND-10 sets a same-kind 1.05:1 greyscale floor. It is held once by `greyscaleFloorApplies` in `src/art/dreamSeparation.ts`, and every existing per-colour separation test now calls it. Pitch black's body moved from #1a1210 to #1a1310 so the normal reddish check passes, so there is no per-colour exception. Trench shine against Olive at 1.02:1 is the one pair under the floor (sheen against solid, which is allowed, and pinned).
+- **Dream colour room.** The near-black value space was full under F15. Owner rule Q2 / ND-10 sets a same-kind 1.05:1 greyscale floor. It is held once by `greyscaleFloorApplies` in `src/art/dreamSeparation.ts`, and every per-colour separation test checks its floors through `dreamSeparationFailures` in the same file, on unrounded values, never on the rounded figures in the art guide tables. Pitch black's body moved from #1a1210 to #1a1310 so the normal reddish check passes, so there is no per-colour exception. Among the pairs those per-colour tests cover, Trench shine against Olive at 1.02:1 is the one pair under the floor (sheen against solid, which is allowed, and pinned). Older pairs under the same-kind floor that no test covers (Galaxy against Tie-dye galaxy at 1.043:1, and Sky blue, Lavender, Sunset orange and Bubblegum among themselves) are tracked in [issue #227](https://github.com/brenpike/glam-gills/issues/227). Unrounded, Lagoon shine is 1.4984:1 from Crystal shine, and Crystal shine and Iridescent are 2.2498:1 apart, so see the Lagoon shine decision above.
 - **Test cost.** `wearableArt.test.ts` takes about 18 minutes alone; `axolotlRigStripe` 3 min 40 s; `cardCopyFit` 155 s; `tankUi` 77 s; `stylerUi` 70 s. The full `npm test` ran 199 files and 26607 tests in about 1138 s on a loaded machine. No timeout was raised and no case was dropped. The new tests live in new files: `src/logic/openLake2Treasures.test.ts`, `src/art/trenchDreamArt.test.ts`, `src/art/trenchWearableArt.test.ts` and `src/art/trenchTreasureArt.test.ts`.
 - **Pins that break when a later area appends treasures.**
   - Tail slices such as `slice(-N)` and `at(-1)` in `treasureArt.test.ts`, `lakeTreasureArt.test.ts` and `openLakeTreasures.test.ts`. Area 12's tail pins were made positional (relative to Area 13's first entry).
@@ -38,7 +40,7 @@ Applies to the Area 14 strain (`area-14-twin-trenches-213`, #213) if it merges a
 - Put its art guide section 12 rows after #215's.
 - Update the cross-area test lines. Area 14 is the last area and, until #216, the only area with no own treasures.
 - The `OPEN_LAKE_2_SHARED_TREASURES` alias was removed from `src/logic/openLake2Layout.ts`. Area 14 must build its shared set from catalogue exports such as `DEEP_CANAL_4_TREASURES`, never from Area 13's new treasures, and must not reuse Lagoon shine as its special treasure.
-- Every new Dream colour for Area 14 or #216 follows the same-kind F15 floor (`greyscaleFloorApplies`).
+- Every new Dream colour for Area 14 or #216 follows the same-kind F15 floor (`greyscaleFloorApplies`) and checks its floors with `dreamSeparationFailures`, never by comparing rounded values.
 
 ## Follow-ups
 

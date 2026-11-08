@@ -15,8 +15,12 @@ import {
   DREAM_GREYSCALE_FLOOR,
   DREAM_GREYSCALE_MARGIN,
   DREAM_OKLAB_FLOOR,
+  dreamGreyscaleRatio,
   dreamKind,
+  dreamOklabDifference,
+  dreamSeparationFailures,
   greyscaleFloorApplies,
+  greyscaleMarginApplies,
 } from './dreamSeparation';
 import {
   BLUSH,
@@ -174,20 +178,6 @@ function measureSeparation(id: DreamLookId): Record<string, [number, number]> {
   return Object.fromEntries(DREAM_IDS.filter((other) => other !== id).map((other) => [other, [greyscaleOf(id, other), colourOf(id, other)]]));
 }
 
-/** The PRD F15 floors of ND-10 for `id` against every other Dream colour, by the dreamSeparation.ts rule. */
-function expectF15Floors(id: DreamLookId): void {
-  for (const other of DREAM_IDS.filter((o) => o !== id)) {
-    expect(colourOf(id, other), `${id} vs ${other} OKLab`).toBeGreaterThanOrEqual(DREAM_OKLAB_FLOOR);
-    if (greyscaleFloorApplies(id, other)) {
-      expect(greyscaleOf(id, other), `${id} vs ${other} greyscale`).toBeGreaterThanOrEqual(DREAM_GREYSCALE_FLOOR);
-    }
-  }
-  if (id !== 'plum') expect(greyscaleOf(id, 'plum'), `${id} plum margin`).toBeGreaterThanOrEqual(DREAM_GREYSCALE_MARGIN);
-  if (dreamKind(id) === 'sheen' && id !== 'iridescent') {
-    expect(greyscaleOf(id, 'iridescent'), `${id} iridescent margin`).toBeGreaterThanOrEqual(DREAM_GREYSCALE_MARGIN);
-  }
-}
-
 function sortIdsByGrey(separation: Record<string, [number, number]>): string[] {
   return Object.entries(separation)
     .sort(([, a], [, b]) => a[0] - b[0])
@@ -302,6 +292,37 @@ describe('The PRD F15 separation rule (issue #215, ND-10, src/art/dreamSeparatio
       for (const b of DREAM_IDS) expect(greyscaleFloorApplies(a, b), `${a} vs ${b}`).toBe(greyscaleFloorApplies(b, a));
     }
   });
+
+  it('measures unrounded, holds the margin from Plum and between Iridescent and a sheen, and reports a held pair under 1.5:1 although it rounds to 1.5', () => {
+    for (const a of DREAM_IDS) {
+      for (const b of DREAM_IDS) {
+        expect(dreamGreyscaleRatio(a, b), `${a} vs ${b} greyscale`).toBeCloseTo(contrastRatio(DREAM_SLOTS[a].body, DREAM_SLOTS[b].body), 12);
+        expect(dreamOklabDifference(a, b), `${a} vs ${b} OKLab`).toBeCloseTo(oklabDifference(DREAM_SLOTS[a].body, DREAM_SLOTS[b].body), 12);
+        expect(greyscaleMarginApplies(a, b), `${a} vs ${b} margin`).toBe(greyscaleMarginApplies(b, a));
+      }
+    }
+    expect(greyscaleMarginApplies('pitch-black', 'plum')).toBe(true);
+    expect(greyscaleMarginApplies('plum', 'hearts')).toBe(true);
+    expect(greyscaleMarginApplies('trench-shine', 'iridescent')).toBe(true);
+    expect(greyscaleMarginApplies('iridescent', 'lagoon-shine')).toBe(true);
+    expect(greyscaleMarginApplies('iridescent', 'mint')).toBe(false);
+    expect(greyscaleMarginApplies('iridescent', 'glowworm')).toBe(false);
+    expect(greyscaleMarginApplies('trench-shine', 'crystal-shine')).toBe(false);
+    expect(greyscaleMarginApplies('olive', 'trench-shine')).toBe(false);
+    expect(dreamSeparationFailures('olive')).toEqual([]);
+    expect(dreamSeparationFailures('olive', ['trench-shine'])).toEqual([
+      { pair: ['olive', 'trench-shine'], measure: 'greyscale', floor: DREAM_GREYSCALE_MARGIN, value: expect.closeTo(1.02447, 5) },
+    ]);
+    expect(dreamSeparationFailures('lagoon-shine')).toEqual([]);
+    expect(greyscaleOf('lagoon-shine', 'crystal-shine')).toBe(1.5);
+    expect(dreamSeparationFailures('lagoon-shine', ['crystal-shine'])).toEqual([
+      { pair: ['lagoon-shine', 'crystal-shine'], measure: 'greyscale', floor: DREAM_GREYSCALE_MARGIN, value: expect.closeTo(1.49843, 5) },
+    ]);
+    expect(dreamSeparationFailures('trench-shine', ['plum', 'iridescent'])).toEqual([]);
+    expect(dreamSeparationFailures('pitch-black', ['plum'])).toEqual(dreamSeparationFailures('pitch-black'));
+    expect(() => dreamSeparationFailures('no-such-colour' as DreamLookId)).toThrow('no-such-colour');
+    expect(() => dreamSeparationFailures('olive', ['no-such-colour' as DreamLookId])).toThrow('no-such-colour');
+  });
 });
 
 describe('Open lake Area 13 Dream colours (guide 3f, issue #215, ND-2)', () => {
@@ -382,7 +403,7 @@ describe('Open lake Area 13 Dream colours (guide 3f, issue #215, ND-2)', () => {
       obsidian: [1.23, 0.08],
       'trench-shine': [4.86, 0.462],
     });
-    expectF15Floors('pitch-black');
+    expect(dreamSeparationFailures('pitch-black')).toEqual([]);
     expect(relativeLuminance(DREAM_SLOTS['pitch-black'].body)).toBeLessThan(relativeLuminance(DREAM_SLOTS.glowworm.body));
     for (const id of DREAM_IDS.filter((other) => other !== 'pitch-black')) {
       expect(relativeLuminance(DREAM_SLOTS[id].body), id).toBeGreaterThan(relativeLuminance(DREAM_SLOTS['pitch-black'].body));
@@ -455,7 +476,7 @@ describe('Open lake Area 13 Dream colours (guide 3f, issue #215, ND-2)', () => {
       obsidian: [3.97, 0.39],
       'pitch-black': [4.86, 0.462],
     });
-    expectF15Floors('trench-shine');
+    expect(dreamSeparationFailures('trench-shine')).toEqual([]);
     const sheens = sortIdsByGrey(separation).filter((id) => dreamKind(id as DreamLookId) === 'sheen');
     expect(sheens.slice(0, 2)).toEqual(['crystal-shine', 'lantern-shine']);
     expect(sortIdsByColour(separation)[0]).toBe('hyacinth');
