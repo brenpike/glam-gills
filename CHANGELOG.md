@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-11-08
+
+### Added
+
+- Area 13, the trench of the open lake, now hides 16 treasures of its own, the rarest deepest in the dark pit (#215).
+- The Little mud turtle, Area 13's special treasure, is a new Epic Decoration (#215).
+- 2 new Dream colours, each in its own Paint shell: Pitch black, a solid warm near-black, and Trench shine, a lake-blue sheen with gold and sky stripes (#215).
+- 7 new Decorations: the Stone stack, the Lake buoy, the Raincloud mobile, the Little lighthouse, the Glow-flower lamp, the Diving bell, and the Fading light garden (#215).
+- 6 new Wearables with perks: the Turtle socks, the Diving goggles, the Turtle shell backpack, the Lantern tail charm, the Mini submarine (a big Back item) and the Diving suit (#215).
+
+### Changed
+
+- Area 13 no longer borrows Area 11's treasures, because it has its own (#215).
+
 ## [0.70.0] - 2026-11-07
 
 ### Added

@@ -413,6 +413,7 @@ const SHEEN_DREAMS = [
   'confetti-shine',
   'golden-hour-shine',
   'lagoon-shine',
+  'trench-shine',
 ] as const satisfies readonly DreamLookId[];
 /** The pattern paints of drawAxolotl carry three clips: silhouette, inset Dream clip, face limit. */
 const PATTERN_CLIPS = 3;
@@ -589,6 +590,18 @@ describe('tailStripe', () => {
     it(`covers exactly the Lagoon shine stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
       const tally = newTally();
       tallyLook('lagoon-shine', look, tally);
+      expect(tally.first).toBeNull();
+      expect(tally.mismatches).toBe(0);
+      expect(tally.overlaps).toBe(0);
+      expect(tally.strays).toBe(0);
+      expect(tally.covered).toBeGreaterThan(1000);
+    });
+  }
+
+  for (const look of LOOKS) {
+    it(`covers exactly the Trench shine stripe drawAxolotl paints, once, on ${lookId(look)}`, { timeout: TIMEOUT_MS }, () => {
+      const tally = newTally();
+      tallyLook('trench-shine', look, tally);
       expect(tally.first).toBeNull();
       expect(tally.mismatches).toBe(0);
       expect(tally.overlaps).toBe(0);

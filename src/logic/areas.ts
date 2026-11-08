@@ -420,8 +420,9 @@ export const OPEN_LAKE_AREA: Readonly<AreaData> = Object.freeze({
 
 /**
  * Area 13, the open lake again, a trench whose pitch-black pit the fading lights light and the mud
- * turtles creep (issue #212). Until its own treasures come, it hides Area 11's whole set, with the
- * Legendary Lagoon shine Paint shell, in the deepest band, as its special treasure (issue #212, ND-24).
+ * turtles creep (issue #212). It hides its own 4 Common, 7 Rare, 2 Epic and 3 Legendary treasures
+ * (issue #215), the Little mud turtle among them as its special treasure, an Epic hiding in band 3,
+ * its deepest band.
  */
 export const OPEN_LAKE_2_AREA: Readonly<AreaData> = Object.freeze({
   id: OPEN_LAKE_2_AREA_ID,

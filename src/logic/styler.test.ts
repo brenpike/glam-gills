@@ -888,7 +888,7 @@ describe('Dream colour step', () => {
     expect(reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state.dreamPage).toBe(0);
   });
 
-  it('pages 34 options as 8, 8, 8, 8 then 2 with More colours, wrapping, Real colour first on page 1', () => {
+  it('pages 36 options as 8, 8, 8, 8 then 4 with More colours, wrapping, Real colour first on page 1', () => {
     let state = dreamOn(ALL_DREAMS);
     expect(dreamPageCount(state)).toBe(5);
     expect(optionIds(state)).toHaveLength(8);
@@ -922,7 +922,7 @@ describe('Dream colour step', () => {
     ]);
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
-    expect(optionIds(state)).toEqual(['tule-green', 'obsidian']);
+    expect(optionIds(state)).toEqual(['tule-green', 'obsidian', 'pitch-black', 'trench-shine']);
     expect(state.focus).toEqual({ kind: 'moreColours' });
     state = reduceStyler(state, { type: 'moreColours', perPage: MAX_STEP_OPTIONS }, noRandom).state;
     expect(state.dreamPage).toBe(0);

@@ -329,8 +329,8 @@ describe('rig bake face part and the big Wearables (issue #207)', () => {
     box.minX <= inner.minX - RIG_PAD && box.minY <= inner.minY - RIG_PAD && box.maxX >= inner.maxX + RIG_PAD && box.maxY >= inner.maxY + RIG_PAD;
   const slugsOf = (slot: 'head' | 'back'): WearableArtSlug[] => (Object.keys(WEARABLE_ART_SLOT) as WearableArtSlug[]).filter((slug) => WEARABLE_ART_SLOT[slug] === slot);
 
-  it('names the four big items: the Propeller cap and Wizard hat (Head) and the Jetpack and Surfboard (Back; issue #214, ND-6)', () => {
-    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual(['jetpack', 'propeller-cap', 'surfboard', 'wizard-hat']);
+  it('names the five big items: the Propeller cap and Wizard hat (Head) and the Jetpack, Surfboard and Mini-submarine (Back; issues #214 and #215, ND-6)', () => {
+    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual(['jetpack', 'mini-submarine', 'propeller-cap', 'surfboard', 'wizard-hat']);
   });
 
   it('grows the face part to the big Head footprint only while a big Head item is worn', () => {
@@ -354,9 +354,9 @@ describe('rig bake face part and the big Wearables (issue #207)', () => {
     expect(faceBox(DEFAULT_ART_LOOK, NO_OUTFIT).minY).toBeGreaterThan(hat.minY);
   });
 
-  it('grows the face part to the big Back footprint only while the Jetpack or the Surfboard is worn, on every body', () => {
+  it('grows the face part to the big Back footprint only while the Jetpack, the Surfboard or the Mini-submarine is worn, on every body', () => {
     const small = slugsOf('back').filter((slug) => !BIG_WEARABLE_ART_SLUGS.has(slug));
-    expect(slugsOf('back').filter((slug) => BIG_WEARABLE_ART_SLUGS.has(slug))).toEqual(['jetpack', 'surfboard']);
+    expect(slugsOf('back').filter((slug) => BIG_WEARABLE_ART_SLUGS.has(slug))).toEqual(['jetpack', 'surfboard', 'mini-submarine']);
     for (const body of ['slim', 'regular', 'chubby'] as const) {
       for (const age of ['baby', 'young', 'grownUp'] as const) {
         const look: AxolotlArtLook = { ...DEFAULT_ART_LOOK, body, age };
@@ -365,7 +365,7 @@ describe('rig bake face part and the big Wearables (issue #207)', () => {
         for (const slug of small) expect(faceBox(look, { back: slug }), `${id} ${slug}`).toEqual(tank);
         expect(holds(tank, backFootprint(look).bounds), id).toBe(true);
         expect(holds(tank, backBigFootprint(look).bounds), id).toBe(false);
-        for (const slug of ['jetpack', 'surfboard'] as const) {
+        for (const slug of ['jetpack', 'surfboard', 'mini-submarine'] as const) {
           const jet = faceBox(look, { back: slug });
           expect(holds(jet, backBigFootprint(look).bounds), `${id} ${slug}`).toBe(true);
           expect(jet.minY, `${id} ${slug}`).toBe(backBigFootprint(look).bounds.minY - RIG_PAD);
@@ -389,7 +389,7 @@ describe('rig bake face part and the big Wearables (issue #207)', () => {
     const small: ArtOutfit = { head: 'sun-hat', back: 'diving-tank', face: 'heart-glasses', shirt: 'tank-top', neck: 'shell-necklace' };
     const smallFace = sizesOf(small, 2048).get('big:face');
     expect(smallFace).toBeDefined();
-    for (const back of ['jetpack', 'surfboard'] as const) {
+    for (const back of ['jetpack', 'surfboard', 'mini-submarine'] as const) {
       const big: ArtOutfit = { ...small, head: 'wizard-hat', back };
       const bigFace = sizesOf(big, 2048).get('big:face');
       expect(bigFace, back).toBeDefined();

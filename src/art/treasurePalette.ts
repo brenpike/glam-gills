@@ -509,6 +509,81 @@ export const PELICAN_SLIPPER_FILL = LITTLE_PELICAN_BODY;
 /** Pelican slippers' closed bill along the toe and the sole (the pelican's orange feet), the Little pelican's bill. Alias of LITTLE_PELICAN_BILL. 9.51:1. */
 export const PELICAN_SLIPPER_BILL = LITTLE_PELICAN_BILL;
 
+// ---- Open lake Area 13 Wearable fills (issue #215; all at least 9:1 with ink) ----
+// The six trench Wearables: turtle socks, diving goggles, a turtle shell backpack, a lantern tail charm, a mini
+// submarine and a diving suit. Each takes one new pale fill, no two alike and none near a shipped colour; the worn
+// looks import these names. None equals a BADGE_FILL rarity colour, and none is red. Ratios are fill against ink.
+
+/** Turtle socks, a pale turtle green. 12.15:1. */
+export const TURTLE_SOCKS_FILL = '#b8fcc0';
+/** Diving goggles' frame band, a pale diving blue. 9.84:1. */
+export const DIVING_GOGGLES_FRAME = '#bad8ff';
+/** Turtle shell backpack's shell, a pale sandy shell brown. 9.55:1. */
+export const TURTLE_SHELL_FILL = '#e4cfba';
+/** Lantern tail charm's round glass, a pale glowing aqua, lit softly and never flashing. 12.42:1. */
+export const LANTERN_CHARM_FILL = '#9cfffc';
+/** Mini submarine's hull, conning tower and periscope, a pale lime yellow. 12.31:1. */
+export const MINI_SUBMARINE_FILL = '#f0f396';
+/** Diving suit, a pale copper. 9.58:1. */
+export const DIVING_SUIT_FILL = '#edccbd';
+
+// ---- Open lake Area 13 Decoration fills (issue #215; all at least 9:1 with ink) ----
+// The eight trench Decorations: a stone stack, a lake buoy, a raincloud mobile, a little lighthouse, a glow-flower
+// lamp, a diving bell, a little mud turtle (the area's special treasure) and a fading light garden. Five fills are new,
+// each a pale colour of its own (a warm stone, a lilac petal, a verdigris green and the turtle's olive shell and moss
+// skin); the rest reuse shipped colours by name. None equals a BADGE_FILL rarity colour, and none is red. Ratios are
+// fill against ink. Aliases of a shipped colour say so.
+
+/** Stone stack's four flat stones and little top pebble, a pale warm lake stone. 10.66:1. */
+export const STONE_STACK_FILL = '#e4ddd0';
+/** Lake buoy's round float, the raincoat's pale apricot. Alias of RAINCOAT_FILL. 9.52:1. */
+export const LAKE_BUOY_FILL = RAINCOAT_FILL;
+/** Lake buoy's little pole and its round top knob, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const LAKE_BUOY_TOP = FIREFLY_HOOK;
+/** Raincloud mobile's cloud, the bailing bucket's pale grey-blue. Alias of BAILING_BUCKET_FILL. 11.61:1. */
+export const RAINCLOUD_FILL = BAILING_BUCKET_FILL;
+/** Raincloud mobile's three hanging drops, the pale paper blue. Alias of PAPER_BOAT_FILL. 11.18:1. */
+export const RAINCLOUD_DROP = PAPER_BOAT_FILL;
+/** Raincloud mobile's hook ring, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const RAINCLOUD_HOOK = FIREFLY_HOOK;
+/** Little lighthouse's tower, the captain's cream. Alias of CAPTAINS_HAT_FILL. 13.34:1. */
+export const LIGHTHOUSE_TOWER = CAPTAINS_HAT_FILL;
+/** Little lighthouse's lamp room, the pale lantern glass. Alias of LANTERN_GLASS. 12.62:1. */
+export const LIGHTHOUSE_LAMP = LANTERN_GLASS;
+/** Little lighthouse's gallery and roof, the pale teal. Alias of TRAJINERA_ARCH. 11.05:1. */
+export const LIGHTHOUSE_CAP = TRAJINERA_ARCH;
+/** Little lighthouse's rocky foot, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const LIGHTHOUSE_ROCK = FESTIVAL_PLINTH;
+/** Glow-flower lamp's five hanging petals, a pale glow lilac. 10.03:1. */
+export const GLOW_FLOWER_PETAL = '#e0d0ff';
+/** Glow-flower lamp's lit bulb, the firefly's pale yellow. Alias of FIREFLY_BULB. 11.84:1. */
+export const GLOW_FLOWER_BULB = FIREFLY_BULB;
+/** Glow-flower lamp's hook ring and its little collar, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const GLOW_FLOWER_CAP = FIREFLY_HOOK;
+/** Diving bell's dome, a pale verdigris green. 11.01:1. */
+export const DIVING_BELL_FILL = '#bdeccf';
+/** Diving bell's lifting ring, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const DIVING_BELL_RING = FIREFLY_HOOK;
+/** Diving bell's round platform, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const DIVING_BELL_BASE = FESTIVAL_PLINTH;
+/** Little mud turtle's dome shell, a pale olive mud. 9.71:1. */
+export const MUD_TURTLE_SHELL = '#dcd6a0';
+/** Little mud turtle's head and stubby feet, a pale moss. 10.63:1. */
+export const MUD_TURTLE_SKIN = '#cfe6a4';
+/** Fading light garden's three bulbs, the firefly's pale yellow. Alias of FIREFLY_BULB. 11.84:1. */
+export const FADING_GARDEN_BULB = FIREFLY_BULB;
+/** Fading light garden's three short stalks, the reed leaf green. Alias of PLANT_LEAF. 9.25:1. */
+export const FADING_GARDEN_STALK = PLANT_LEAF;
+/** Fading light garden's three little bulb caps, pebble A. Alias of FIREFLY_HOOK. 9.50:1. */
+export const FADING_GARDEN_CAP = FIREFLY_HOOK;
+/** Fading light garden's round bed, pebble C. Alias of FESTIVAL_PLINTH. 10.70:1. */
+export const FADING_GARDEN_BASE = FESTIVAL_PLINTH;
+/**
+ * The soft white heart of a lit bulb or lamp (lighthouse lamp, glow-flower lamp, fading light garden): white at alpha 0.75,
+ * inside the silhouette so it carries no ratio, and still, never flashing. Not the shine, and not a gem glint.
+ */
+export const GLOW_CORE = 'rgba(255,255,255,0.75)';
+
 // ---- Trims, gems and details inside the silhouette (free) -----------------
 
 /** Legendary trim (3e, 6i). */
@@ -566,7 +641,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The thirty-three Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-five Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -600,7 +675,9 @@ export type DreamSwatchId =
   | 'hyacinth'
   | 'lagoon-shine'
   | 'tule-green'
-  | 'obsidian';
+  | 'obsidian'
+  | 'pitch-black'
+  | 'trench-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -707,4 +784,12 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
   },
   'tule-green': { body: '#043d00', pattern: 'plain', marks: [], dark: true },
   obsidian: { body: '#1f2925', pattern: 'plain', marks: [], dark: true },
+  'pitch-black': { body: '#1a1310', pattern: 'plain', marks: [], dark: true },
+  // Sheen: a fading-light gold and a pale sky stripe (the fading light's bulb and hint), both lighter than the lake blue body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'trench-shine': {
+    body: '#4a7fee',
+    pattern: 'stripes',
+    marks: ['rgba(242,222,138,0.85)', 'rgba(207,238,255,0.85)'],
+    dark: false,
+  },
 };

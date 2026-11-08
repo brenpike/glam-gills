@@ -111,6 +111,14 @@ const PINWHEEL = 'open-lake/pinwheel';
 const LITTLE_PELICAN = 'open-lake/little-pelican';
 const TWIN_VOLCANOES = 'open-lake/twin-volcanoes';
 const LITTLE_SAILBOAT = 'open-lake/little-sailboat';
+const STONE_STACK = 'open-lake/stone-stack';
+const LAKE_BUOY = 'open-lake/lake-buoy';
+const RAINCLOUD_MOBILE = 'open-lake/raincloud-mobile';
+const LITTLE_LIGHTHOUSE = 'open-lake/little-lighthouse';
+const GLOW_FLOWER_LAMP = 'open-lake/glow-flower-lamp';
+const DIVING_BELL = 'open-lake/diving-bell';
+const LITTLE_MUD_TURTLE = 'open-lake/little-mud-turtle';
+const FADING_LIGHT_GARDEN = 'open-lake/fading-light-garden';
 const WIDE_SHIPPED = [STRING_LIGHTS, PAPEL_PICADO];
 const SHIPPED_FLOOR = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floor');
 const SHIPPED_FLOATING = SHIPPED_DECORATIONS.filter((decoration) => placementKind(decoration) === 'floating');
@@ -509,6 +517,14 @@ describe('placement kinds geometry (issue #95)', () => {
       [LITTLE_PELICAN, 'floating'],
       [TWIN_VOLCANOES, 'floor'],
       [LITTLE_SAILBOAT, 'floating'],
+      [STONE_STACK, 'floor'],
+      [LAKE_BUOY, 'floating'],
+      [RAINCLOUD_MOBILE, 'hanging'],
+      [LITTLE_LIGHTHOUSE, 'floor'],
+      [GLOW_FLOWER_LAMP, 'hanging'],
+      [DIVING_BELL, 'floor'],
+      [LITTLE_MUD_TURTLE, 'floor'],
+      [FADING_LIGHT_GARDEN, 'floor'],
     ]);
     for (const decoration of SHIPPED_DECORATIONS) {
       expect(decorationWidth(decoration), decoration.id).toBe(
@@ -599,6 +615,11 @@ describe('isValidPlacementFor', () => {
       CAROUSEL,
       PINWHEEL,
       TWIN_VOLCANOES,
+      STONE_STACK,
+      LITTLE_LIGHTHOUSE,
+      DIVING_BELL,
+      LITTLE_MUD_TURTLE,
+      FADING_LIGHT_GARDEN,
     ]);
     for (const decoration of SHIPPED_FLOOR) {
       for (const pos of points) expect(isValidPlacementFor(decoration, pos)).toBe(isValidPlacement(pos));
@@ -625,6 +646,7 @@ describe('isValidPlacementFor', () => {
       FLOWER_RAFT,
       LITTLE_PELICAN,
       LITTLE_SAILBOAT,
+      LAKE_BUOY,
     ]);
     expect(SHIPPED_HANGING.map((decoration) => decoration.id)).toEqual([
       STRING_LIGHTS,
@@ -639,6 +661,8 @@ describe('isValidPlacementFor', () => {
       FLAG_STRING,
       FESTIVAL_KITE,
       WINDSOCK,
+      RAINCLOUD_MOBILE,
+      GLOW_FLOWER_LAMP,
     ]);
     for (const decoration of [...SHIPPED_FLOATING, ...SHIPPED_HANGING, LILY_PAD, PAPER_LANTERN, WIDE_BANNER]) {
       const range = placementXRangeFor(decoration);

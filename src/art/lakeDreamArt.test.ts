@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MORPH_LOOK_IDS } from './drawMorphs';
+import { dreamSeparationFailures } from './dreamSeparation';
 import {
   DREAM_EYE_RING,
   DREAM_RIM_LIGHT,
@@ -107,14 +108,6 @@ function measureSeparation(id: DreamLookId): Record<string, [number, number]> {
   );
 }
 
-function expectF15Floors(separation: Record<string, [number, number]>): void {
-  for (const [id, [grey, colour]] of Object.entries(separation)) {
-    expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-    expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-  }
-  expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(1.5);
-}
-
 function sortIdsByGrey(separation: Record<string, [number, number]>): string[] {
   return Object.entries(separation)
     .sort(([, a], [, b]) => a[0] - b[0])
@@ -128,8 +121,8 @@ function sortIdsByColour(separation: Record<string, [number, number]>): string[]
 }
 
 describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
-  it('appends Tule green and Obsidian after every earlier Dream colour, both plain dark solids', () => {
-    expect(DREAM_IDS.slice(-3)).toEqual(['lagoon-shine', 'tule-green', 'obsidian']);
+  it('appends Tule green and Obsidian after every earlier Dream colour and before the Area 13 colours, both plain dark solids', () => {
+    expect(DREAM_IDS.slice(-5)).toEqual(['lagoon-shine', 'tule-green', 'obsidian', 'pitch-black', 'trench-shine']);
     expect(DREAM_SWATCH['tule-green']).toEqual({ body: '#043d00', pattern: 'plain', marks: [], dark: true });
     expect(DREAM_SWATCH.obsidian).toEqual({ body: '#1f2925', pattern: 'plain', marks: [], dark: true });
   });
@@ -198,8 +191,10 @@ describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
       hyacinth: [3.9, 0.441],
       'lagoon-shine': [5.56, 0.451],
       obsidian: [1.19, 0.101],
+      'pitch-black': [1.46, 0.16],
+      'trench-shine': [3.32, 0.392],
     });
-    expectF15Floors(separation);
+    expect(dreamSeparationFailures('tule-green')).toEqual([]);
     // It sits in the near-black window between Obsidian and Galaxy: hue tells Galaxy and Tie-dye galaxy apart (green
     // against blue-violet), and they also carry stars. Obsidian, the closest in colour, is darker and nearly grey.
     expect(sortIdsByGrey(separation).slice(0, 2)).toEqual(['galaxy', 'tie-dye-galaxy']);
@@ -237,7 +232,7 @@ describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
     });
   });
 
-  it('keeps Obsidian apart from every other Dream colour, Plum by 1.5:1, Glowworm most closely in value and Tule green in colour (PRD F15)', () => {
+  it('keeps Obsidian apart from every other Dream colour, Plum by 1.5:1, Glowworm most closely in value and Pitch black and Tule green in colour (PRD F15)', () => {
     const separation = measureSeparation('obsidian');
     expect(separation).toEqual({
       mint: [11.43, 0.632],
@@ -272,12 +267,15 @@ describe('Open lake Dream colours (guide 3f, issue #214, ND-2)', () => {
       hyacinth: [4.65, 0.434],
       'lagoon-shine': [6.64, 0.48],
       'tule-green': [1.19, 0.101],
+      'pitch-black': [1.23, 0.08],
+      'trench-shine': [3.97, 0.39],
     });
-    expectF15Floors(separation);
+    expect(dreamSeparationFailures('obsidian')).toEqual([]);
     // It sits in the near-black window between Glowworm and Tule green: hue tells Glowworm apart (green-black against
-    // night blue), and Glowworm also carries its glow dots. Tule green is a clear green, a step lighter.
+    // night blue), and Glowworm also carries its glow dots. Tule green is a clear green, a step lighter. Pitch black
+    // (Area 13, issue #215), the closest in colour, is a step darker and warm.
     expect(sortIdsByGrey(separation).slice(0, 2)).toEqual(['glowworm', 'tule-green']);
-    expect(sortIdsByColour(separation).slice(0, 2)).toEqual(['tule-green', 'glowworm']);
+    expect(sortIdsByColour(separation).slice(0, 3)).toEqual(['pitch-black', 'tule-green', 'glowworm']);
     expect(relativeLuminance(DREAM_SLOTS.obsidian.body)).toBeGreaterThan(relativeLuminance(DREAM_SLOTS.glowworm.body));
   });
 

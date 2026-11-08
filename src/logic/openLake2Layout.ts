@@ -13,7 +13,7 @@
  * shelves, each one step up the predator ladder from Area 12 (ND-19). No wind and waves (ND-16).
  */
 import type { AreaExit } from './areas';
-import { DEEP_CANAL_4_TREASURES, type Rarity, type Treasure } from './catalogue';
+import { OPEN_LAKE_2_TREASURES, type Rarity } from './catalogue';
 import { fadingLightSpawn } from './fadingLights';
 import type { ElementSpawn } from './hazards';
 import { mobileSnackMix, shrimpHome, shrimpRule, tadpoleRule, tadpoleWander, type TadpoleWander } from './mobileSnacks';
@@ -71,8 +71,8 @@ export const OPEN_LAKE_2_EXIT: Readonly<AreaExit> = Object.freeze({ x: 2650, y: 
 /** Where a trip in Area 13 starts: the Home Spot in the middle shallows over the pit (ND-3). */
 export const OPEN_LAKE_2_START: Readonly<Point> = Object.freeze({ x: 2160, y: 200 });
 
-/** The special treasure Area 13 gives until its own come (issue #212, Q1): the Lagoon shine Paint shell, Legendary. */
-export const OPEN_LAKE_2_SPECIAL_TREASURE_ID = 'deep-canal/paint-shell-lagoon-shine';
+/** Area 13's special treasure, its own Epic Little mud turtle, hiding in band 3, the deepest band (issue #215). */
+export const OPEN_LAKE_2_SPECIAL_TREASURE_ID = 'open-lake/little-mud-turtle';
 
 /**
  * Area 13's tilapia, one step up the predator ladder from Area 12's (ND-19): a 540 px/s strike
@@ -120,12 +120,6 @@ export const OPEN_LAKE_2_CORMORANT: Readonly<PredatorSpecies> = tunedSpecies(
  * every other value PELICAN_LINE's, the dip to y 300 included.
  */
 export const OPEN_LAKE_2_PELICAN_LINE: Readonly<PelicanLineTuning> = Object.freeze({ ...PELICAN_LINE, glideFor: 2.8 });
-
-/**
- * The treasures Area 13 hides until its own come (issue #212, Q1, ND-17): Area 11's whole set, 3
- * Common, 6 Rare, 2 Epic and 3 Legendary, the Lagoon shine Paint shell among them, in catalogue order.
- */
-export const OPEN_LAKE_2_SHARED_TREASURES: readonly Treasure[] = DEEP_CANAL_4_TREASURES;
 
 /** Area 13's tadpole rule, the top of the later snack ramp row: 72 px/s, as Area 12's (ND-20). */
 const OPEN_LAKE_2_TADPOLE = tadpoleRule(72);
@@ -345,8 +339,12 @@ export const OPEN_LAKE_2_LAYOUT: Readonly<AreaLayoutData> = Object.freeze({
     Object.freeze({ id: `${OPEN_LAKE_2_AREA_ID}/strand-3`, x: 3000, y: 400 }),
     Object.freeze({ id: `${OPEN_LAKE_2_AREA_ID}/strand-4`, x: 3720, y: 450 }),
   ]),
-  treasures: Object.freeze([]),
-  sharedTreasures: OPEN_LAKE_2_SHARED_TREASURES,
+  /**
+   * Area 13's own 4 Common, 7 Rare, 2 Epic and 3 Legendary treasures (issue #215), each hiding in any
+   * spot of its rarity: the Commons share the 5 band 1 Common spots, the Rares the 10 band 2 Rare
+   * spots, and the Epics and Legendaries the 3 Epic and 4 Legendary spots on the pit floor in band 3.
+   */
+  treasures: OPEN_LAKE_2_TREASURES,
   /** 4 tadpoles and 10 shrimp to 3 worms and 3 bugs: 14 of 20 snacks mobile, 70% (the later snack ramp row, ND-20). */
   snackWorms: 3,
   snackBugs: 3,

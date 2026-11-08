@@ -26,7 +26,7 @@ import { bake, type TexInfo } from './textures';
  * The Decorations that can stand in the Home Tank: the treasure icon slugs of the four canal
  * Decorations, the four pond ones, the six pond Area 3 ones, the six chinampa Area 4 ones, the five
  * chinampa Area 5 ones, the six spring cave Area 6 ones, the six spring cave Area 7 ones, the six deep canal
- * Area 8 ones, the six deep canal Area 9 ones, the six deep canal Area 10 ones, the deep canal Area 11's four, then the open lake Area 12's five (issue #214) (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/`,
+ * Area 8 ones, the six deep canal Area 9 ones, the six deep canal Area 10 ones, the deep canal Area 11's four, the open lake Area 12's five (issue #214), then the open lake Area 13's eight (issue #215) (the text after `canal/`, `pond/`, `chinampa/`, `spring-cave/`,
  * `deep-canal/` or `open-lake/` in src/logic/catalogue.ts), in catalogue order.
  * This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
@@ -95,6 +95,14 @@ export const TANK_DECORATION_SLUGS = [
   'little-pelican',
   'twin-volcanoes',
   'little-sailboat',
+  'stone-stack',
+  'lake-buoy',
+  'raincloud-mobile',
+  'little-lighthouse',
+  'glow-flower-lamp',
+  'diving-bell',
+  'little-mud-turtle',
+  'fading-light-garden',
 ] as const satisfies readonly TreasureIconSlug[];
 export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
 
@@ -112,7 +120,8 @@ export type TankDecorationSlug = (typeof TANK_DECORATION_SLUGS)[number];
  * name sign Rare, Paper lantern boat Epic, Floating music stage Legendary; Festival flag string Common, Floating candle
  * Common, Axolotl statue Rare, Marigold boat Rare, Mariachi band figures Epic, Refuge snow globe Legendary; Little
  * cormorant Rare, Flower raft Common, Festival kite Rare, Carousel Epic; Windsock Common, Pinwheel Common, Little pelican Rare,
- * Twin volcanoes Rare, Little sailboat Rare). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
+ * Twin volcanoes Rare, Little sailboat Rare; Stone stack Common, Lake buoy Common, Raincloud mobile Common, Little lighthouse
+ * Rare, Glow-flower lamp Rare, Diving bell Rare, Little mud turtle Epic, Fading light garden Legendary). This file does not import the logic; keep it in step with the catalogue (treasureArt.test.ts checks).
  */
 export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeShape>> = {
   'pond-plant': 'circle',
@@ -179,6 +188,14 @@ export const TANK_DECORATION_BADGES: Readonly<Record<TankDecorationSlug, BadgeSh
   'little-pelican': 'diamond',
   'twin-volcanoes': 'diamond',
   'little-sailboat': 'diamond',
+  'stone-stack': 'circle',
+  'lake-buoy': 'circle',
+  'raincloud-mobile': 'circle',
+  'little-lighthouse': 'diamond',
+  'glow-flower-lamp': 'diamond',
+  'diving-bell': 'diamond',
+  'little-mud-turtle': 'shield',
+  'fading-light-garden': 'star',
 };
 
 /** Where a Decoration goes in the Home Tank: on the gravel, on the water surface, or from the glass top. */
@@ -261,6 +278,14 @@ export const TANK_DECORATION_SHAPES: Readonly<Record<TankDecorationSlug, TankDec
   'little-pelican': { placement: 'floating' },
   'twin-volcanoes': { placement: 'floor' },
   'little-sailboat': { placement: 'floating' },
+  'stone-stack': { placement: 'floor' },
+  'lake-buoy': { placement: 'floating' },
+  'raincloud-mobile': { placement: 'hanging' },
+  'little-lighthouse': { placement: 'floor' },
+  'glow-flower-lamp': { placement: 'hanging' },
+  'diving-bell': { placement: 'floor' },
+  'little-mud-turtle': { placement: 'floor' },
+  'fading-light-garden': { placement: 'floor' },
 };
 
 /** The standard Decoration footprint in tank units (TANK.decorationPx): a width x this box. */

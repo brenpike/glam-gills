@@ -30,6 +30,7 @@ import {
   type DreamShape,
 } from './drawDreamOverlay';
 import { MORPH_LOOK_IDS } from './drawMorphs';
+import { DREAM_GREYSCALE_FLOOR, dreamGreyscaleRatio, dreamSeparationFailures } from './dreamSeparation';
 import {
   DREAM_EYE_RING,
   DREAM_RIM_LIGHT,
@@ -67,6 +68,7 @@ const SOLID_IDS: readonly DreamLookId[] = [
   'hyacinth',
   'tule-green',
   'obsidian',
+  'pitch-black',
 ];
 const DARK_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -78,6 +80,7 @@ const DARK_IDS: readonly DreamLookId[] = [
   'confetti-shine',
   'tule-green',
   'obsidian',
+  'pitch-black',
 ];
 const RIM_IDS: readonly DreamLookId[] = [
   'midnight-blue',
@@ -97,6 +100,7 @@ const RIM_IDS: readonly DreamLookId[] = [
   'lagoon-shine',
   'tule-green',
   'obsidian',
+  'pitch-black',
 ];
 const SWIM_SAMPLES = Array.from({ length: 13 }, (_, i) => (i / 12) * TAU);
 const TAIL_AMPS = [1, 1.6] as const;
@@ -186,9 +190,9 @@ function everyPair(): [string, DreamLookId, MorphPalette][] {
 }
 
 describe('Dream colour slots (guide 3f)', () => {
-  it('has the thirty-three Dream colours with the swatch body colours', () => {
-    expect(DREAM_IDS).toHaveLength(33);
-    expect(DREAM_IDS.slice(-21)).toEqual([
+  it('has the thirty-five Dream colours with the swatch body colours', () => {
+    expect(DREAM_IDS).toHaveLength(35);
+    expect(DREAM_IDS.slice(-23)).toEqual([
       'lily-green',
       'firefly-gold',
       'poppy-red',
@@ -210,6 +214,8 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine',
       'tule-green',
       'obsidian',
+      'pitch-black',
+      'trench-shine',
     ]);
     expect(DREAM_IDS).toEqual(Object.keys(DREAM_SWATCH));
     for (const id of DREAM_IDS) expect(DREAM_SLOTS[id].body, id).toBe(DREAM_SWATCH[id].body);
@@ -302,11 +308,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.59, 0.296],
       'tule-green': [8.85, 0.585],
       obsidian: [10.56, 0.637],
+      'pitch-black': [12.93, 0.709],
+      'trench-shine': [2.66, 0.438],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
+    expect(dreamSeparationFailures('firefly-gold')).toEqual([]);
   });
 
   it('gives Poppy red the 3f mixes of its two picks, a body over the 0.2 spot line, 3:1 cue floor and a plain swatch (issue #76)', () => {
@@ -373,15 +378,15 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.79, 0.331],
       'tule-green': [3.11, 0.405],
       obsidian: [3.71, 0.412],
+      'pitch-black': [4.55, 0.467],
+      'trench-shine': [1.07, 0.343],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    // Olive (Area 9, issue #107) is now the closest pair, told apart by hue (yellow-green against red); Crystal shine is
-    // next, and it also carries its sheen stripes.
+    expect(dreamSeparationFailures('poppy-red')).toEqual([]);
+    // Trench shine (Area 13, issue #215) is now the closest in value, a sheen told apart by its stripes and by hue (lake
+    // blue against red). Olive (Area 9, issue #107) is the closest solid, told apart by hue (yellow-green against red);
+    // Crystal shine is next, and it also carries its sheen stripes.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 2)).toEqual(['olive', 'crystal-shine']);
+    expect(closest.slice(0, 3)).toEqual(['trench-shine', 'olive', 'crystal-shine']);
   });
 
   it('gives Plum the 3f mixes of its two picks, a dark body under the 0.2 spot line, the white edge over 3:1 and a dark plain swatch (issue #118, ND-11)', () => {
@@ -453,12 +458,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [2.76, 0.303],
       'tule-green': [2.02, 0.326],
       obsidian: [2.41, 0.295],
+      'pitch-black': [2.95, 0.352],
+      'trench-shine': [1.65, 0.207],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(grey, `${id} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
+    expect(dreamSeparationFailures('plum')).toEqual([]);
     // Plum is a deep body between Midnight blue and Rainbow in value. Chocolate (issue #105), darker still, is now the
     // closest in greyscale, held to the same 1.5:1 margin; Poppy red is next.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -532,11 +535,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [2.11, 0.257],
       'tule-green': [11.71, 0.672],
       obsidian: [13.97, 0.706],
+      'pitch-black': [17.12, 0.782],
+      'trench-shine': [3.52, 0.397],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
+    expect(dreamSeparationFailures('moonstone')).toEqual([]);
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
     expect(closest).toBe('hearts');
   });
@@ -614,13 +616,11 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [4.15, 0.385],
       'tule-green': [1.34, 0.165],
       obsidian: [1.6, 0.162],
+      'pitch-black': [1.96, 0.22],
+      'trench-shine': [2.48, 0.328],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
     // Plum's own 1.5:1 greyscale margin holds for Chocolate; Midnight blue is the closest in value and is told apart by hue.
-    expect(separation.plum[0]).toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('chocolate')).toEqual([]);
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0])[0][0];
     expect(closest).toBe('midnight-blue');
   });
@@ -694,13 +694,11 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.5, 0.127],
       'tule-green': [3.71, 0.327],
       obsidian: [4.43, 0.367],
+      'pitch-black': [5.43, 0.446],
+      'trench-shine': [1.12, 0.166],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
     // Iridescent also glides a stripe pair, so Crystal shine is held 1.5:1 from it in value.
-    expect(separation.iridescent[0]).toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('crystal-shine')).toEqual([]);
     // Hyacinth (Area 11, issue #207) is now the closest in value, told apart by hue (violet against teal) and Crystal
     // shine's stripe pair; Olive (Area 9, issue #107) is next, told apart by hue.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -737,10 +735,11 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(contrastRatio(s.body, DREAM_EYE_RING.colour)).toBeCloseTo(10.11, 2);
     expect(contrastRatio(s.body, s.gillNearStem)).toBeCloseTo(9.99, 2);
     expect(relativeLuminance(s.body)).toBeCloseTo(0.0155, 4);
-    // Darker than every other Dream colour.
-    for (const id of DREAM_IDS.filter((other) => other !== 'glowworm')) {
+    // Darker than every other Dream colour but Pitch black (Area 13, issue #215), now the darkest.
+    for (const id of DREAM_IDS.filter((other) => other !== 'glowworm' && other !== 'pitch-black')) {
       expect(relativeLuminance(s.body), id).toBeLessThan(relativeLuminance(DREAM_SLOTS[id].body));
     }
+    expect(relativeLuminance(DREAM_SLOTS['pitch-black'].body)).toBeLessThan(relativeLuminance(s.body));
     expect(DREAM_SWATCH.glowworm).toEqual({
       body: '#101c52',
       pattern: 'glow-dots',
@@ -798,15 +797,15 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [7.1, 0.489],
       'tule-green': [1.28, 0.191],
       obsidian: [1.07, 0.104],
+      'pitch-black': [1.14, 0.125],
+      'trench-shine': [4.25, 0.37],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
+    expect(dreamSeparationFailures('glowworm')).toEqual([]);
     // Obsidian (Area 12, issue #214, ND-2) is now the closest body, told apart by hue (green-black against night blue)
-    // and Glowworm's own cue, round glow dots, on a plain solid. Galaxy, next after Tule green, has stars.
+    // and Glowworm's own cue, round glow dots, on a plain solid. Pitch black (Area 13, issue #215), the one darker body,
+    // is next, a plain warm near-black. Galaxy, next after Tule green, has stars.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 3)).toEqual(['obsidian', 'tule-green', 'galaxy']);
+    expect(closest.slice(0, 4)).toEqual(['obsidian', 'pitch-black', 'tule-green', 'galaxy']);
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
     const kinds = (id: DreamLookId): string[] => [
@@ -883,14 +882,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.08, 0.111],
       'tule-green': [6, 0.443],
       obsidian: [7.15, 0.494],
+      'pitch-black': [8.76, 0.573],
+      'trench-shine': [1.8, 0.254],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const green of ['mint', 'lily-green', 'crystal-shine', 'olive'] as const) {
-      expect(separation[green][0], `${green} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('jade', ['mint', 'lily-green', 'crystal-shine', 'olive'])).toEqual([]);
     // Lime and Lagoon shine (Area 11, issue #207) are now the closest in value, told apart by hue (lime and lagoon blue
     // against blue-green), and Lagoon shine also glides its sheen stripes.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -969,13 +964,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.06, 0.251],
       'tule-green': [5.24, 0.525],
       obsidian: [6.26, 0.524],
+      'pitch-black': [7.66, 0.588],
+      'trench-shine': [1.58, 0.276],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    expect(separation.bubblegum[0]).toBeGreaterThanOrEqual(1.5);
-    expect(separation.iridescent[0]).toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('fiesta-shine', ['bubblegum'])).toEqual([]);
     // Lagoon shine (Area 11, issue #207) and Golden hour shine (issue #112) are the closest in value; hue tells them
     // apart, and all three sheens glide their own stripe colours.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -1064,18 +1056,17 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.63, 0.23],
       'tule-green': [3.41, 0.301],
       obsidian: [4.06, 0.359],
+      'pitch-black': [4.98, 0.433],
+      'trench-shine': [1.02, 0.288],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['plum', 'jade', 'lily-green'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('olive', ['jade', 'lily-green'])).toEqual([]);
     // It sits in the window between Poppy red and Crystal shine, the closest in value: hue tells Poppy red apart, and
-    // Crystal shine also glides its sheen stripes.
+    // Crystal shine also glides its sheen stripes. Trench shine (Area 13, issue #215) is closer still, under the 1.05:1
+    // floor, which by the F15 rule of ND-10 binds a sheen only against the other sheens: its stripes and hue (lake blue
+    // against yellow-green) tell it apart.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
-    expect(closest.slice(0, 2)).toEqual(['poppy-red', 'crystal-shine']);
+    expect(closest.slice(0, 3)).toEqual(['trench-shine', 'poppy-red', 'crystal-shine']);
+    expect(dreamGreyscaleRatio('olive', 'trench-shine')).toBeLessThan(DREAM_GREYSCALE_FLOOR);
   });
 
   it('gives Lantern shine the 3f mixes of its two picks, a lantern orange body over the 0.2 spot line, both 3:1 cue edges and a sheen swatch (Area 9 Legendary, issue #107)', () => {
@@ -1148,14 +1139,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.36, 0.275],
       'tule-green': [4.1, 0.408],
       obsidian: [4.89, 0.441],
+      'pitch-black': [5.99, 0.505],
+      'trench-shine': [1.23, 0.337],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['iridescent', 'sunset-orange', 'plum'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('lantern-shine', ['sunset-orange'])).toEqual([]);
     // Hyacinth (Area 11, issue #207) is now the closest in value, told apart by hue (violet against orange) and Lantern
     // shine's own stripe colours; Rainbow is next, told apart by hue and its bands.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -1251,12 +1238,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.24, 0.215],
       'tule-green': [6.87, 0.537],
       obsidian: [8.2, 0.561],
+      'pitch-black': [10.04, 0.631],
+      'trench-shine': [2.07, 0.314],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('peach')).toEqual([]);
     // Halfway between Sunset orange and Bubblegum in colour, the two closest in OKLab, and a step darker than both.
     const closestInColour = Object.entries(separation).sort(([, a], [, b]) => a[1] - b[1]).map(([id]) => id);
     expect(closestInColour.slice(0, 2)).toEqual(['bubblegum', 'sunset-orange']);
@@ -1353,14 +1338,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [4.7, 0.407],
       'tule-green': [1.18, 0.308],
       obsidian: [1.41, 0.24],
+      'pitch-black': [1.73, 0.277],
+      'trench-shine': [2.81, 0.277],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['iridescent', 'plum'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('confetti-shine')).toEqual([]);
     // It sits in the dark window between Tie-dye galaxy and Midnight blue, the closest in value: hue and its gliding
     // stripes tell them apart.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -1459,12 +1440,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.3, 0.27],
       'tule-green': [7.22, 0.535],
       obsidian: [8.61, 0.579],
+      'pitch-black': [10.55, 0.649],
+      'trench-shine': [2.17, 0.394],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('marigold')).toEqual([]);
     // In the window between Peach and the light solids in value; Sunset orange and Firefly gold are the closest in
     // colour, and Marigold sits between them in hue, a step darker than both.
     const closestInColour = Object.entries(separation).sort(([, a], [, b]) => a[1] - b[1]).map(([id]) => id);
@@ -1561,14 +1540,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.13, 0.23],
       'tule-green': [4.92, 0.412],
       obsidian: [5.87, 0.463],
+      'pitch-black': [7.19, 0.535],
+      'trench-shine': [1.48, 0.331],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['iridescent', 'sunset-orange', 'plum'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('golden-hour-shine', ['sunset-orange'])).toEqual([]);
     // It sits in the window between Fiesta shine and Rainbow, the closest in value: hue tells them apart, Rainbow also
     // has its bands, and Fiesta shine its own stripe colours. Lantern shine, the other golden sheen, is the closest in
     // colour, told apart by value and hue (gold against orange).
@@ -1671,14 +1646,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.15, 0.234],
       'tule-green': [6.42, 0.468],
       obsidian: [7.66, 0.533],
+      'pitch-black': [9.38, 0.608],
+      'trench-shine': [1.93, 0.37],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['plum', 'lily-green', 'olive'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('lime', ['lily-green', 'olive'])).toEqual([]);
     // It sits in the window between Jade and Peach, the closest in value: hue tells them apart (lime against blue-green
     // and peach). Golden hour shine is the closest in colour, told apart by value and its sheen stripes.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -1764,12 +1735,10 @@ describe('Dream colour slots (guide 3f)', () => {
       'lagoon-shine': [1.43, 0.17],
       'tule-green': [3.9, 0.441],
       obsidian: [4.65, 0.434],
+      'pitch-black': [5.7, 0.502],
+      'trench-shine': [1.17, 0.104],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    expect(separation.plum[0], 'plum greyscale margin').toBeGreaterThanOrEqual(1.5);
+    expect(dreamSeparationFailures('hyacinth')).toEqual([]);
     // It sits in the narrow window between Crystal shine and Lantern shine, the closest in value: hue tells them apart
     // (violet against teal and orange), and both sheens also glide their own stripe colours.
     const closest = Object.entries(separation).sort(([, a], [, b]) => a[0] - b[0]).map(([id]) => id);
@@ -1818,7 +1787,7 @@ describe('Dream colour slots (guide 3f)', () => {
     expect(dreamPalette(MORPH_PALETTES.leucistic, 'lagoon-shine').extras).toEqual({ spot: 'rgba(43,35,80,0.30)', rim: DREAM_RIM_LIGHT });
   });
 
-  it('keeps Lagoon shine apart from every other Dream colour, Iridescent (the light sheen), Crystal shine (the teal sheen) and Plum by 1.5:1, Fiesta shine and Jade most closely in value (PRD F15)', () => {
+  it('keeps Lagoon shine apart from every other Dream colour, Iridescent (the light sheen) and Plum by 1.5:1, Crystal shine (the teal sheen) by 1.49:1, Fiesta shine and Jade most closely in value (PRD F15)', () => {
     const body = DREAM_SLOTS['lagoon-shine'].body;
     const separation = Object.fromEntries(
       DREAM_IDS.filter((id) => id !== 'lagoon-shine').map((id) => [
@@ -1862,14 +1831,11 @@ describe('Dream colour slots (guide 3f)', () => {
       hyacinth: [1.43, 0.17],
       'tule-green': [5.56, 0.451],
       obsidian: [6.64, 0.48],
+      'pitch-black': [8.13, 0.558],
+      'trench-shine': [1.67, 0.162],
     });
-    for (const [id, [grey, colour]] of Object.entries(separation)) {
-      expect(grey, `${id} greyscale`).toBeGreaterThanOrEqual(1.05);
-      expect(colour, `${id} OKLab`).toBeGreaterThanOrEqual(0.075);
-    }
-    for (const held of ['iridescent', 'crystal-shine', 'plum'] as const) {
-      expect(separation[held][0], `${held} greyscale margin`).toBeGreaterThanOrEqual(1.5);
-    }
+    expect(dreamSeparationFailures('lagoon-shine')).toEqual([]);
+    expect(dreamGreyscaleRatio('lagoon-shine', 'crystal-shine'), 'crystal-shine greyscale margin (PRD F15, issue #215 Q1)').toBeGreaterThanOrEqual(1.49);
     // It sits in the window between Fiesta shine and Jade, the closest in value: hue tells them apart, and Fiesta shine
     // also glides its own stripe colours. Jade, Sky blue and Crystal shine are the closest in colour, told apart by hue
     // (lagoon blue between teal and sky) and its sea foam and coral stripes.
@@ -1918,7 +1884,7 @@ describe('Dream palettes over every real morph (guide 3f, 6h, 6p)', () => {
     }
   });
 
-  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold, Golden hour shine, Lime, Lagoon shine, Tule green and Obsidian', () => {
+  it('carry the rim light on exactly Midnight blue, Rainbow, Galaxy, Tie-dye galaxy, Plum, Chocolate, Glowworm, Jade, Fiesta shine, Peach, Confetti shine, Marigold, Golden hour shine, Lime, Lagoon shine, Tule green, Obsidian and Pitch black', () => {
     for (const [name, id, palette] of everyPair()) {
       if (RIM_IDS.includes(id)) expect(palette.extras?.rim, name).toEqual(DREAM_RIM_LIGHT);
       else expect(palette.extras?.rim, name).toBeUndefined();
@@ -2280,14 +2246,14 @@ describe('Dream marker (guide 4e, 6p)', () => {
 });
 
 describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
-  it('leaves exactly the twenty solids plain', () => {
+  it('leaves exactly the twenty-one solids plain', () => {
     const plain = DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'plain');
     expect(plain).toEqual(SOLID_IDS);
   });
 
-  it('gives the thirteen patterned and sheen colours seven distinct cues (the seven sheens share stripes), each with a pattern', () => {
+  it('gives the fourteen patterned and sheen colours seven distinct cues (the eight sheens share stripes), each with a pattern', () => {
     const patterned = DREAM_IDS.filter((id) => !SOLID_IDS.includes(id));
-    expect(patterned).toHaveLength(13);
+    expect(patterned).toHaveLength(14);
     const cues = patterned.map((id) => DREAM_SWATCH[id].pattern);
     expect(new Set(cues).size).toBe(7);
     expect(patterned.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual([
@@ -2298,6 +2264,7 @@ describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
       'confetti-shine',
       'golden-hour-shine',
       'lagoon-shine',
+      'trench-shine',
     ]);
     const geo = axolotlBodyGeometry(DEFAULT_ART_LOOK);
     const tail = tailSamples(geo.tail, 0, 1);
@@ -2309,7 +2276,7 @@ describe('Dream greyscale cues (PRD F15, guide 6p)', () => {
 });
 
 describe('Sheen Dream colours (guide 6p, 9)', () => {
-  it('flag exactly the stripes swatches, Iridescent, Crystal shine, Fiesta shine, Lantern shine, Confetti shine, Golden hour shine and Lagoon shine', () => {
+  it('flag exactly the stripes swatches, Iridescent, Crystal shine, Fiesta shine, Lantern shine, Confetti shine, Golden hour shine, Lagoon shine and Trench shine', () => {
     expect(DREAM_IDS.filter(isSheenDream)).toEqual([
       'iridescent',
       'crystal-shine',
@@ -2318,6 +2285,7 @@ describe('Sheen Dream colours (guide 6p, 9)', () => {
       'confetti-shine',
       'golden-hour-shine',
       'lagoon-shine',
+      'trench-shine',
     ]);
     expect(DREAM_IDS.filter((id) => DREAM_SWATCH[id].pattern === 'stripes')).toEqual(DREAM_IDS.filter(isSheenDream));
   });
@@ -2333,6 +2301,7 @@ describe('Sheen Dream colours (guide 6p, 9)', () => {
       'confetti-shine',
       'golden-hour-shine',
       'lagoon-shine',
+      'trench-shine',
     ] as const) {
       const still = dreamPatternShapes(id, geo.torso, tail, undefined);
       const moved = dreamPatternShapes(id, geo.torso, tail, 0.5);

@@ -4,8 +4,10 @@ import {
   DEEP_CANAL_4_TREASURES,
   DREAM_COLOURS,
   OBSIDIAN,
+  OPEN_LAKE_2_TREASURES,
   OPEN_LAKE_TREASURES,
   PERK_VALUES,
+  PITCH_BLACK,
   RARITIES,
   TULE_GREEN,
   categoryName,
@@ -186,8 +188,11 @@ describe('OPEN_LAKE_TREASURES', () => {
       expect(shell.rarity, shell.id).toBe(dreamColourById(shell.dreamColour)?.rarity);
       expect(shell.name, shell.id).toBe(`${dreamColourById(shell.dreamColour)?.name} Paint shell`);
     }
-    expect(DREAM_COLOURS.slice(-2)).toEqual([TULE_GREEN, OBSIDIAN]);
-    expect(ALL_TREASURES.filter(isPaintShell).slice(-2)).toEqual(shells);
+    const area13ColourStart = DREAM_COLOURS.indexOf(PITCH_BLACK);
+    expect(DREAM_COLOURS.slice(area13ColourStart - 2, area13ColourStart)).toEqual([TULE_GREEN, OBSIDIAN]);
+    const allShells = ALL_TREASURES.filter(isPaintShell);
+    const area13ShellStart = allShells.indexOf(OPEN_LAKE_2_TREASURES.filter(isPaintShell)[0]);
+    expect(allShells.slice(area13ShellStart - 2, area13ShellStart)).toEqual(shells);
   });
 
   it('keeps both Area 12 Dream colours solid and Common or Rare (B3)', () => {
@@ -212,9 +217,11 @@ describe('OPEN_LAKE_TREASURES', () => {
     }
   });
 
-  it('comes last in ALL_TREASURES, after every earlier area list unchanged', () => {
-    expect(ALL_TREASURES.slice(-OPEN_LAKE_TREASURES.length)).toEqual(OPEN_LAKE_TREASURES);
-    expect(ALL_TREASURES.at(-OPEN_LAKE_TREASURES.length - 1)).toBe(DEEP_CANAL_4_TREASURES.at(-1));
+  it("sits in ALL_TREASURES just before Area 13's list, after every earlier area list unchanged", () => {
+    const area13Start = ALL_TREASURES.indexOf(OPEN_LAKE_2_TREASURES[0]);
+    const area12Start = area13Start - OPEN_LAKE_TREASURES.length;
+    expect(ALL_TREASURES.slice(area12Start, area13Start)).toEqual(OPEN_LAKE_TREASURES);
+    expect(ALL_TREASURES.at(area12Start - 1)).toBe(DEEP_CANAL_4_TREASURES.at(-1));
     expect(DEEP_CANAL_4_TREASURES).toHaveLength(14);
     expect(DEEP_CANAL_4_TREASURES.at(-1)?.id).toBe('deep-canal/paint-shell-lagoon-shine');
   });

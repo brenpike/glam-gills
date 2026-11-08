@@ -1,5 +1,5 @@
 /**
- * Worn looks of the sixty-six Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
+ * Worn looks of the seventy-two Wearables (guide 6a, 6i, 6q; PRD C10, F9, F13): the
  * canal's Sun hat, Shell necklace, Heart glasses, Golden bow, Tank top, Diving
  * tank, Stripy socks and Flippers, the pond's Lily flower crown, Pond-weed
  * scarf, Dragonfly glasses, Raincoat, Ladybug backpack, Rainbow dragonfly wings
@@ -14,7 +14,8 @@
  * Bucket hat, Rope necklace, Poncho, Tail bell and Golden boatman cape, and the deep canal Area 10's Party hat,
  * Confetti scarf, Festival shirt, Hero medal and Champion crown, and the deep canal Area 11's Propeller cap, Star
  * sunglasses, Robot suit, Jetpack and Wizard hat, and the open lake Area 12's Wave socks, Cloud scarf, Pelican swim
- * ring, Surfboard and Pelican slippers, painted on the anchors
+ * ring, Surfboard and Pelican slippers, and the open lake Area 13's Turtle socks, Diving goggles, Turtle shell backpack,
+ * Lantern tail charm, Mini submarine and Diving suit, painted on the anchors
  * and footprints of drawAxolotlParts.ts. Each is the 7e catalogue icon's design re-fitted to its
  * footprint, with ink widths never scaled (guide 4b). Every worn silhouette
  * (`shape`, inkedShape and `blob`) uses the item ink ITEM_LW 2.0 (#88): thinner
@@ -119,6 +120,17 @@
  * their own, never the Stripy or Lily-pad socks', the Flippers' or the Froggy boots'. Kid-safe (issue #214, ND-8): every
  * end and tip is rounded, no letters or numbers, and a pelican's bill is always closed over an empty pouch, never
  * catching anything. No look has net-like lines.
+ *
+ * The Area 13 looks (issue #215) keep the same rules. The Mini submarine is a big Back item, as the Jetpack and the Surfboard are:
+ * it draws within backBigFootprint and its visible paint stays under the axolotl's own; the other five keep their slots'
+ * footprints. Their outer fills are new pale colours of their own, imported by name from treasurePalette.ts
+ * (TURTLE_SOCKS_FILL, DIVING_GOGGLES_FRAME, TURTLE_SHELL_FILL, LANTERN_CHARM_FILL, MINI_SUBMARINE_FILL,
+ * DIVING_SUIT_FILL; each 9:1 or better with ink, none red). Their other colours are internal details: ink at the stripe
+ * alpha (the Turtle socks' scute marks), the boat-yellow and gold trims, pebble A fittings and the aqua porthole gem. The
+ * Turtle socks' six-sided shell pad gives an outline of its own, never the Stripy or Lily-pad socks', the Wave socks' or
+ * any Feet item's. The Lantern tail charm's soft glow is one still disc at a fixed alpha: it never flickers, pulses or
+ * flashes. Kid-safe (issue #215): every end and tip is rounded, no letters, numbers or dials, and the submarine has a
+ * periscope and a propeller but no torpedo, tube or gun. No look has net-like lines.
  */
 import { ell, inkMany, line, seg, shape } from './canvasKit';
 import { roundedPolygon, type Pt } from './drawBadges';
@@ -129,6 +141,7 @@ import {
   FOOT_BACK_U,
   GLASSES_BAND,
   GLASSES_LENSES,
+  GLASSES_TEMPLE_MIN_X,
   HEAD_ELLIPSE,
   SOCK_SLEEVE_OL,
   SOCK_SLEEVE_W,
@@ -258,6 +271,12 @@ import {
   WIZARD_HAT_TIP,
   WORN_FAR_INK_MIX,
   CLOUD_SCARF_FILL,
+  DIVING_GOGGLES_FRAME,
+  DIVING_SUIT_FILL,
+  LANTERN_CHARM_FILL,
+  MINI_SUBMARINE_FILL,
+  TURTLE_SHELL_FILL,
+  TURTLE_SOCKS_FILL,
   PELICAN_SLIPPER_BILL,
   PELICAN_SLIPPER_FILL,
   PELICAN_SWIM_RING_BILL,
@@ -351,14 +370,20 @@ export type WearableArtSlug =
   | 'cloud-scarf'
   | 'pelican-swim-ring'
   | 'surfboard'
-  | 'pelican-slippers';
+  | 'pelican-slippers'
+  | 'turtle-socks'
+  | 'diving-goggles'
+  | 'turtle-shell-backpack'
+  | 'lantern-tail-charm'
+  | 'mini-submarine'
+  | 'diving-suit';
 
 /**
  * The slot each art slug is worn in (guide 6i). The canal's eight come first, the
  * pond's seven after them, the pond Area 3's five next, the chinampa Area 4's five and the
  * chinampa Area 5's six, the spring cave Area 6's five, the spring cave Area 7's five, then the deep canal Area 8's,
- * Area 9's, Area 10's and Area 11's five each, then the open lake Area 12's five, the last, so WEARABLE_ART_SLUGS
- * finds each slot's canal slug first.
+ * Area 9's, Area 10's and Area 11's five each, then the open lake Area 12's five and Area 13's six, the last, so
+ * WEARABLE_ART_SLUGS finds each slot's canal slug first.
  */
 export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> = {
   'sun-hat': 'head',
@@ -427,6 +452,12 @@ export const WEARABLE_ART_SLOT: Readonly<Record<WearableArtSlug, WearableSlot>> 
   'pelican-swim-ring': 'shirt',
   surfboard: 'back',
   'pelican-slippers': 'feet',
+  'turtle-socks': 'socks',
+  'diving-goggles': 'face',
+  'turtle-shell-backpack': 'back',
+  'lantern-tail-charm': 'tail',
+  'mini-submarine': 'back',
+  'diving-suit': 'shirt',
 };
 
 /** The canal's art slug of each slot, in slot order (PRD order): one per slot, though a slot can hold more than one slug. */
@@ -451,10 +482,10 @@ export function wornSlug(outfit: ArtOutfit, slot: WearableSlot): WearableArtSlug
 
 /**
  * The big items (issue #207): the Head items drawn within HEAD_BIG_FOOTPRINT and the Back items drawn within
- * backBigFootprint, the Surfboard the open lake's one (issue #214, ND-6). Every other item keeps its slot's footprint,
+ * backBigFootprint, the Surfboard and the Mini submarine the open lake's two (issue #214, ND-6; issue #215). Every other item keeps its slot's footprint,
  * so only an outfit with one of these grows the picture it is baked into.
  */
-export const BIG_WEARABLE_ART_SLUGS: ReadonlySet<WearableArtSlug> = new Set<WearableArtSlug>(['propeller-cap', 'jetpack', 'wizard-hat', 'surfboard']);
+export const BIG_WEARABLE_ART_SLUGS: ReadonlySet<WearableArtSlug> = new Set<WearableArtSlug>(['propeller-cap', 'jetpack', 'wizard-hat', 'surfboard', 'mini-submarine']);
 
 /** Whether the item `outfit` wears in `slot` is a big item (BIG_WEARABLE_ART_SLUGS). */
 export function wearsBigItem(outfit: ArtOutfit, slot: WearableSlot): boolean {
@@ -4843,6 +4874,341 @@ function paintPelicanSlippers(ctx: CanvasRenderingContext2D, frame: LegSlotFrame
 }
 
 // ---------------------------------------------------------------------------
+// The open lake Area 13 looks (issue #215): shared shapes
+// ---------------------------------------------------------------------------
+
+/** Thin ink of the Area 13 looks' small inner details: the shell and scute lines, the strap, the seams. */
+const TRENCH_DETAIL_LW = BAND_LW;
+
+/** A rounded hexagon of circumradius `r` about (cx, cy), one vertex pointing along `rot`: a turtle's shell plate. */
+function shellPlatePath(cx: number, cy: number, r: number, rot: number): Path2D {
+  const points = Array.from({ length: 6 }, (_, k): Pt => ({ x: cx + Math.cos(rot + (k * TAU) / 6) * r, y: cy + Math.sin(rot + (k * TAU) / 6) * r }));
+  return roundedPolygon(points, r * 0.28);
+}
+
+// ---------------------------------------------------------------------------
+// Socks: Turtle socks (Common), in leg space
+// ---------------------------------------------------------------------------
+
+/**
+ * The Turtle socks' shell pad, in leg space: the Sock's foot pad pulled in by half the ink and cut as a rounded
+ * hexagon (a turtle's shell seen from above): flat at the ankle and at the toes, widest at the middle, every corner
+ * round. Its back edge holds TURTLE_PAD_BACK of the pad's half width and its front edge TURTLE_PAD_FRONT of it, so the
+ * round toes still lie inside it; its outline is never the Stripy or Lily-pad socks' rounded rectangle, the Wave
+ * socks' round toe with its two crests, or any Feet item's.
+ */
+const TURTLE_PAD_BACK = 0.46;
+const TURTLE_PAD_FRONT = 0.62;
+const TURTLE_PAD_CORNER = 3.2;
+/** The scute marks (ink at the stripe alpha): the sleeve's, how far back from the leg end its centre sits, and the pad's, with their radii. */
+const TURTLE_SLEEVE_MARK_BACK = 5.4;
+const TURTLE_SLEEVE_MARK_R = 3;
+const TURTLE_PAD_MARK_R = 3.6;
+
+function turtlePadPath(frame: LegSlotFrame): Path2D {
+  const pad = sockFootPad(frame);
+  const half = ITEM_LW / 2;
+  const v = pad.vHalf - half;
+  const back = pad.u0 + half;
+  const front = pad.u1 - half;
+  const mid = (back + front) / 2;
+  return roundedPolygon(
+    [
+      { x: back, y: -v * TURTLE_PAD_BACK },
+      { x: mid, y: -v },
+      { x: front, y: -v * TURTLE_PAD_FRONT },
+      { x: front, y: v * TURTLE_PAD_FRONT },
+      { x: mid, y: v },
+      { x: back, y: v * TURTLE_PAD_BACK },
+    ],
+    TURTLE_PAD_CORNER,
+  );
+}
+
+/**
+ * Common (issue #215): a TURTLE_SOCKS_FILL pale turtle green sleeve (colour 11.6, `ol` 2.4) from the leg root to the
+ * leg end, the Stripy socks' sleeve, and a shell foot pad over the toes on each leg (turtlePadPath, `shape` 2.0). Two
+ * scute marks, a rounded hexagon each (ink at the stripe alpha, the same colour darkened, not a second colour): one
+ * across the sleeve and one on the pad, clipped to it. One shine on the pad; no trim, gem or star. In leg space: u
+ * along the leg from the root, v across it. Far legs use the fill mixed toward ink; the marks, ink and shine are as on
+ * the near legs.
+ */
+function paintTurtleSocks(ctx: CanvasRenderingContext2D, frame: LegSlotFrame, tone: Tone): void {
+  const l = frame.length;
+  const pad = sockFootPad(frame);
+  inkMany(ctx, [seg(line(0, 0, l, 0), SOCK_SLEEVE_W, tone(TURTLE_SOCKS_FILL), SOCK_SLEEVE_OL)]);
+  ctx.save();
+  ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+  ctx.fillStyle = INK;
+  ctx.fill(shellPlatePath(l - TURTLE_SLEEVE_MARK_BACK, 0, TURTLE_SLEEVE_MARK_R, 0));
+  ctx.restore();
+  inkedShape(ctx, turtlePadPath(frame), tone(TURTLE_SOCKS_FILL), () => {
+    ctx.globalAlpha = SOCK_STRIPE_ALPHA;
+    ctx.fillStyle = INK;
+    ctx.fill(shellPlatePath((pad.u0 + pad.u1) / 2 + 1.2, 1.4, TURTLE_PAD_MARK_R, 0));
+  });
+  shine(ctx, l + 4.6, -5.4, 2, 0.9);
+}
+
+// ---------------------------------------------------------------------------
+// Face: Diving goggles (Rare)
+// ---------------------------------------------------------------------------
+
+/** The strap tab (the one trim band): a rounded bar over the near lens's back edge, within the Face footprint (x 14 and on), and its corner radius. */
+const DIVING_STRAP = { x0: GLASSES_TEMPLE_MIN_X + BAND_LW / 2, x1: 18.4, y0: -9.2, y1: -2.8, r: 1.4 } as const;
+
+/**
+ * Rare (issue #215): the glasses construction (guide 6i) in DIVING_GOGGLES_FRAME pale diving blue: the same merged
+ * two-lens frame with a band of 3.5 (colour 2.1, ink 0.7 each side), a clear lens tint (white at 0.25, never dark: dark
+ * lenses would hide the eyes) and the eyes painting above it, so the eyes always show. Its one trim band is a small
+ * #ffe14a strap tab on the near lens's back edge, where a diving strap would leave the frame: a rounded bar 3.8 x 6.4,
+ * its ink 0.6 outside (the thin band ink), from x 14.6 to 18.4, in the Face footprint, 0.2 or more short of the near eye
+ * zone and 2 or more from the gill-root zone. It is the temple stub the glasses construction allows. No gem (that is
+ * the Heart glasses' Epic detail), no shine and no bridge buckle (that is the Cave goggles').
+ */
+function paintDivingGoggles(ctx: CanvasRenderingContext2D): void {
+  const frame = glassesPath();
+  ctx.fillStyle = GLASSES_LENS;
+  ctx.fill(frame);
+  inkMany(ctx, [seg(frame, GLASSES_BAND_W, DIVING_GOGGLES_FRAME, GLASSES_BAND_OL)]);
+  const { x0, x1, y0, y1, r } = DIVING_STRAP;
+  silhouette(ctx, [{ path: roundRectPath(x0, y0, x1, y1, r), fill: BOAT_TRIM }], BAND_LW / 2);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Turtle shell backpack (Rare)
+// ---------------------------------------------------------------------------
+
+/** The rim band (the one trim band) along the shell's foot: its height. */
+const SHELL_RIM_H = 3.4;
+/** The dome stands on short upright sides this tall, and its two foot corners are rounded with this radius. */
+const SHELL_SIDE = 4;
+const SHELL_FOOT_R = 2.4;
+/** The two scute lines: their foot places and top places as shares of the shell's half length from its middle, and how far under the shell's top they stop. */
+const SHELL_SCUTE_FOOT = 0.4;
+const SHELL_SCUTE_TOP = 0.2;
+const SHELL_SCUTE_BELOW = 3.4;
+
+/**
+ * Rare (issue #215): a TURTLE_SHELL_FILL pale sandy shell shaped as a high dome (a half ellipse as wide as the Back box
+ * and as tall as it, on short upright sides with rounded feet, one `blob` with ink 2.0 all outside the fill) lying along the back, so its outline is never the
+ * Ladybug backpack's rounded-top shell with its head. One #ffe14a rim band along its foot (the one trim band, 3.4 tall,
+ * between two 1.2 ink lines, clipped to the dome) and two curved ink scute lines (1.2) rising from the rim toward the top,
+ * leaning in, that part the shell into three plates; one shine on the upper rear. No letters, numbers, gem, gold or
+ * star. Painted in the Back frame (x' along the torso edge toward the snout, y' + into the body): the box is ink
+ * included, so the fills are ITEM_LW inside it, and the foot, y' +1, keeps off the Shirt.
+ */
+function paintTurtleShellBackpack(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const top = box.minV + ITEM_LW;
+  const bottom = box.maxV - ITEM_LW;
+  const rear = box.minU + ITEM_LW;
+  const front = box.maxU - ITEM_LW;
+  const cx = (rear + front) / 2;
+  const rx = (front - rear) / 2;
+  const ry = bottom - top;
+  const dome = new Path2D();
+  dome.moveTo(rear, bottom - SHELL_FOOT_R);
+  dome.arcTo(rear, bottom, rear + SHELL_FOOT_R, bottom, SHELL_FOOT_R);
+  dome.lineTo(front - SHELL_FOOT_R, bottom);
+  dome.arcTo(front, bottom, front, bottom - SHELL_FOOT_R, SHELL_FOOT_R);
+  dome.lineTo(front, bottom - SHELL_SIDE);
+  dome.ellipse(cx, bottom - SHELL_SIDE, rx, ry - SHELL_SIDE, 0, 0, Math.PI, true);
+  dome.closePath();
+  silhouette(ctx, [{ path: dome, fill: TURTLE_SHELL_FILL }]);
+  ctx.save();
+  ctx.clip(dome);
+  trimBand(ctx, { x0: rear - 1, x1: front + 1, y0: bottom - SHELL_RIM_H, y1: bottom + 1 }, BOAT_TRIM, true, TRENCH_DETAIL_LW);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = TRENCH_DETAIL_LW;
+  for (const side of [-1, 1]) {
+    const foot = { x: cx + side * rx * SHELL_SCUTE_FOOT, y: bottom - SHELL_RIM_H };
+    const tip = { x: cx + side * rx * SHELL_SCUTE_TOP, y: top + SHELL_SCUTE_BELOW };
+    const scute = new Path2D();
+    scute.moveTo(foot.x, foot.y);
+    scute.quadraticCurveTo(foot.x - side * rx * 0.02, (foot.y + tip.y) / 2, tip.x, tip.y);
+    ctx.stroke(scute);
+  }
+  ctx.restore();
+  shine(ctx, cx - rx * 0.55, bottom - ry * 0.62, 0.9, 2.2, 0.55);
+}
+
+// ---------------------------------------------------------------------------
+// Tail: Lantern tail charm (Rare)
+// ---------------------------------------------------------------------------
+
+/** The charm in the Tail frame (y' down): the hanging ring, the cord to the glass, the round glass and the little tassel under it. */
+const CHARM_RING: Pt = { x: 0, y: -13.2 };
+const CHARM_RING_R = 1.5;
+const CHARM_CORD = { half: 0.8, top: -12.2, bottom: -7.8 } as const;
+const CHARM_GLASS: Pt = { x: 0, y: -2 };
+const CHARM_GLASS_RX = 7.6;
+const CHARM_GLASS_RY = 6.4;
+const CHARM_TASSEL = { half: 0.7, top: 3.8, bottom: 6.2 } as const;
+const CHARM_TASSEL_BEAD: Pt = { x: 0, y: 7.6 };
+const CHARM_TASSEL_BEAD_R = 1.7;
+/** The one trim band (Rare) across the glass's lower part: its top and foot. */
+const CHARM_BAND = { y0: 0.4, y1: 3 } as const;
+/** The soft glow behind the glass: its radius and its alpha. Still: it never flickers, pulses or flashes. */
+const CHARM_HALO_R = 10.6;
+const CHARM_HALO_ALPHA = 0.35;
+/**
+ * How far the whole charm sits toward the head from the anchor (frame x'), as the lantern's and the bell's, so its
+ * tip-side glass and halo keep a Dream marker star clear at every swim phase.
+ */
+const CHARM_SHIFT = 1.4;
+
+/**
+ * Rare (issue #215): a round lantern charm hanging on the tail's top edge: a LANTERN_CHARM_FILL pale glowing aqua glass
+ * orb under a FIREFLY_HOOK pebble A hanging ring and cord, with a small pebble tassel under it, one merged `blob`
+ * silhouette (ink 2.0 all outside the fill) with the orb's round outline unlike the Glow tail lantern's box. The one
+ * #ffe14a trim band (between two 1.2 ink lines, clipped to the orb) crosses the lower part of the glass. Behind it a soft
+ * glow: the glass colour at alpha 0.35, a still disc with no ink, never flickering or flashing. One shine on the glass;
+ * no gem, gold or star. Painted in the Tail frame (x' along the local tail direction toward the head, y' down), set
+ * CHARM_SHIFT toward the head. Everything, ink and glow included, stays within TAIL_SLOT_REACH of the anchor.
+ */
+function paintLanternTailCharm(ctx: CanvasRenderingContext2D): void {
+  ctx.translate(CHARM_SHIFT, 0);
+  ctx.save();
+  ctx.globalAlpha = CHARM_HALO_ALPHA;
+  ctx.fillStyle = LANTERN_CHARM_FILL;
+  ctx.fill(ellipsePath(CHARM_GLASS.x, CHARM_GLASS.y, CHARM_HALO_R, CHARM_HALO_R));
+  ctx.restore();
+  const glass = ellipsePath(CHARM_GLASS.x, CHARM_GLASS.y, CHARM_GLASS_RX, CHARM_GLASS_RY);
+  silhouette(ctx, [
+    { path: ellipsePath(CHARM_RING.x, CHARM_RING.y, CHARM_RING_R, CHARM_RING_R), fill: FIREFLY_HOOK },
+    { path: roundRectPath(-CHARM_CORD.half, CHARM_CORD.top, CHARM_CORD.half, CHARM_CORD.bottom, 0.5), fill: FIREFLY_HOOK },
+    { path: roundRectPath(-CHARM_TASSEL.half, CHARM_TASSEL.top, CHARM_TASSEL.half, CHARM_TASSEL.bottom, 0.5), fill: FIREFLY_HOOK },
+    { path: ellipsePath(CHARM_TASSEL_BEAD.x, CHARM_TASSEL_BEAD.y, CHARM_TASSEL_BEAD_R, CHARM_TASSEL_BEAD_R), fill: FIREFLY_HOOK },
+    { path: glass, fill: LANTERN_CHARM_FILL },
+  ]);
+  ctx.save();
+  ctx.clip(glass);
+  trimBand(ctx, { x0: -CHARM_GLASS_RX - 1, x1: CHARM_GLASS_RX + 1, y0: CHARM_BAND.y0, y1: CHARM_BAND.y1 }, BOAT_TRIM, true, TRENCH_DETAIL_LW);
+  ctx.restore();
+  shine(ctx, CHARM_GLASS.x - 3.4, CHARM_GLASS.y - 2.6, 0.9, 2.2, 0.55);
+}
+
+// ---------------------------------------------------------------------------
+// Back: Mini submarine (Epic), big
+// ---------------------------------------------------------------------------
+
+/** The hull's height (fill edges), standing on the foot of the big Back box, and the room the propeller takes at the rear. */
+const SUB_HULL_H = 10;
+const SUB_PROPELLER_ROOM = 2.8;
+/** The conning tower: its width as a share of the fill length (at most SUB_TOWER_MAX_W), where its middle sits along the hull (share of the hull), how far it rises above the hull, and its top corner radius. */
+const SUB_TOWER_SHARE = 0.36;
+const SUB_TOWER_MAX_W = 9;
+const SUB_TOWER_AT = 0.42;
+const SUB_TOWER_RISE = 6;
+const SUB_TOWER_R = 2.4;
+/** The periscope: its tube's width, and its arm's length forward and height. It rises to the box's outer fill edge. */
+const SUB_SCOPE_W = 3;
+const SUB_SCOPE_ARM = 5.2;
+const SUB_SCOPE_ARM_H = 2.8;
+/** The two propeller blades: radii and tilt, and how far each sits above and below the hull's middle line. */
+const SUB_BLADE_RX = 1.3;
+const SUB_BLADE_RY = 2.6;
+const SUB_BLADE_TILT = 0.3;
+const SUB_BLADE_OFF = 2.2;
+/** The porthole gem: how far along the hull it sits (share of the hull). */
+const SUB_PORTHOLE_AT = 0.7;
+/** The hull seam (ink 1.2): how far along the hull (share), curving this much. */
+const SUB_SEAM_AT = 0.2;
+const SUB_SEAM_BOW = 1.4;
+
+/**
+ * Epic (issue #215), big: a MINI_SUBMARINE_FILL pale lime yellow submarine lying along the back in the big Back box
+ * (backBigFootprint): a round-ended hull as long as the box, a conning tower on it and a periscope rising from the tower
+ * to the box's outer edge, its arm bending forward at the top, and at the rear two FIREFLY_HOOK pebble propeller
+ * blades. Hull, tower and periscope are one fill; every part is one `blob` silhouette (ink 2.0 all outside the fill).
+ * One rounded gem (radius 2.5, outline 1.2) in the hull is its porthole, the Epic detail; one ink hull seam (1.2) near
+ * the rear, clipped to the hull; one shine on the hull's top. No trim band, gold or star; no torpedoes, tubes, guns or
+ * markings, and no letters or numbers (ADR 0007). Painted in the Back frame (x' along the torso edge toward the snout,
+ * y' + into the body); the box is ink included, so the fills are ITEM_LW inside it, and the hull's foot, y' +1, keeps
+ * off the Shirt.
+ */
+function paintMiniSubmarine(ctx: CanvasRenderingContext2D, box: BackFrameBox): void {
+  const outer = box.minV + ITEM_LW;
+  const foot = box.maxV - ITEM_LW;
+  const rear = box.minU + ITEM_LW;
+  const front = box.maxU - ITEM_LW;
+  const hullTop = foot - SUB_HULL_H;
+  const hullMid = (hullTop + foot) / 2;
+  const hullRear = rear + SUB_PROPELLER_ROOM;
+  const hullLen = front - hullRear;
+  const hull = roundRectPath(hullRear, hullTop, front, foot, SUB_HULL_H / 2);
+  const towerW = Math.min(SUB_TOWER_MAX_W, (front - rear) * SUB_TOWER_SHARE);
+  const towerX = hullRear + hullLen * SUB_TOWER_AT;
+  const towerTop = hullTop - SUB_TOWER_RISE;
+  const tower = roundedPolygon(
+    [
+      { x: towerX - towerW / 2, y: towerTop },
+      { x: towerX + towerW / 2, y: towerTop },
+      { x: towerX + towerW / 2, y: hullTop + 2 },
+      { x: towerX - towerW / 2, y: hullTop + 2 },
+    ],
+    [SUB_TOWER_R, SUB_TOWER_R, 0.4, 0.4],
+  );
+  const scopeX = towerX - towerW / 2 + SUB_SCOPE_W / 2 + 0.8;
+  const scopeTube = roundRectPath(scopeX - SUB_SCOPE_W / 2, outer, scopeX + SUB_SCOPE_W / 2, towerTop + 2, 0.6);
+  const scopeArm = roundRectPath(scopeX - SUB_SCOPE_W / 2, outer, scopeX + SUB_SCOPE_W / 2 + SUB_SCOPE_ARM, outer + SUB_SCOPE_ARM_H, SUB_SCOPE_ARM_H / 2);
+  const bladeReach = Math.hypot(SUB_BLADE_RX * Math.cos(SUB_BLADE_TILT), SUB_BLADE_RY * Math.sin(SUB_BLADE_TILT));
+  const blades = [-1, 1].map((side) => ellipsePath(rear + bladeReach, hullMid + side * SUB_BLADE_OFF, SUB_BLADE_RX, SUB_BLADE_RY, -side * SUB_BLADE_TILT));
+  silhouette(ctx, [
+    ...blades.map((path) => ({ path, fill: FIREFLY_HOOK })),
+    { path: hull, fill: MINI_SUBMARINE_FILL },
+    { path: tower, fill: MINI_SUBMARINE_FILL },
+    { path: scopeTube, fill: MINI_SUBMARINE_FILL },
+    { path: scopeArm, fill: MINI_SUBMARINE_FILL },
+  ]);
+  ctx.save();
+  ctx.clip(hull);
+  const seamX = hullRear + hullLen * SUB_SEAM_AT;
+  const seam = new Path2D();
+  seam.moveTo(seamX, hullTop - 1);
+  seam.quadraticCurveTo(seamX - 2 * SUB_SEAM_BOW, hullMid, seamX, foot + 1);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = BAND_LW;
+  ctx.stroke(seam);
+  ctx.restore();
+  gem(ctx, hullRear + hullLen * SUB_PORTHOLE_AT, hullMid, GLASSES_GEM, BAND_LW);
+  shine(ctx, hullRear + hullLen * 0.5, hullTop + 2.4, 3.2, 0.7);
+}
+
+// ---------------------------------------------------------------------------
+// Shirt: Diving suit (Legendary)
+// ---------------------------------------------------------------------------
+
+/** The collar ring (the Legendary gold trim): a vertical band behind the neckline, its width and how far the neckline's ink leaves it clear. */
+const SUIT_COLLAR_W = 3.4;
+const SUIT_COLLAR_GAP = 0.8;
+const SUIT_COLLAR_LW = 0.6;
+/** The one static 4-point star on the chest, behind the collar ring: the gap between its tips and the ring, and how far below the centre line it sits (share of the inset ry). */
+const SUIT_STAR_GAP = 1.8;
+const SUIT_STAR_DROP = 0.18;
+
+/**
+ * Legendary (issue #215): the Tank top's silhouette (the whole Shirt footprint, `shape` 2.0, the neckline arc) in a
+ * DIVING_SUIT_FILL pale copper, with one #ffc12e gold collar ring (the Legendary trim band: a band 3.4 wide down the
+ * torso just behind the neckline, between two 0.6 ink lines, clipped inside the silhouette) and one static 4-point star
+ * (R 3, white, outline 1.2) on the chest behind it. One shine placed as on the Tank top. The icon's helmet and boots
+ * would leave the Shirt footprint, so there are none. No hose, dial, letter or number (ADR 0007). It sits inside the
+ * silhouette, so it never reaches the torso edge band, the front line, the tail root or a leg.
+ */
+function paintDivingSuit(ctx: CanvasRenderingContext2D, look: AxolotlArtLook): void {
+  const outline = shirtOutline(look);
+  const shirt = shirtGeometry(look);
+  const e = shirt.inset;
+  inkedShape(ctx, outline.body, DIVING_SUIT_FILL, () => {
+    const x1 = shirt.neckline.apexX - 2 * outline.half - SUIT_COLLAR_GAP;
+    const x0 = x1 - SUIT_COLLAR_W;
+    trimBand(ctx, { x0, x1, y0: e.cy - e.ry - 1, y1: e.cy + e.ry + 1 }, GOLD_TRIM, false, SUIT_COLLAR_LW);
+    legendStar(ctx, x0 - SUIT_STAR_GAP - STAR_R, e.cy + e.ry * SUIT_STAR_DROP, BAND_LW);
+  });
+  shirtShine(ctx, outline);
+}
+
+// ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
 
@@ -5071,6 +5437,25 @@ export function paintBodyWearable(
       inFrame(ctx, back.frame, () => paintSurfboard(ctx, back.box));
       break;
     }
+    case 'diving-goggles':
+      paintDivingGoggles(ctx);
+      break;
+    case 'turtle-shell-backpack': {
+      const back = backFootprint(look);
+      inFrame(ctx, back.frame, () => paintTurtleShellBackpack(ctx, back.box));
+      break;
+    }
+    case 'lantern-tail-charm':
+      inFrame(ctx, tailSlotFrame(axolotlBodyGeometry(look).tail, swim, tailAmp), () => paintLanternTailCharm(ctx));
+      break;
+    case 'mini-submarine': {
+      const back = backBigFootprint(look);
+      inFrame(ctx, back.frame, () => paintMiniSubmarine(ctx, back.box));
+      break;
+    }
+    case 'diving-suit':
+      paintDivingSuit(ctx, look);
+      break;
     default:
       break;
   }
@@ -5094,6 +5479,7 @@ export function paintLegWearables(ctx: CanvasRenderingContext2D, outfit: ArtOutf
     if (socks === 'stripy-socks') paintStripySocks(ctx, frame, tone);
     if (socks === 'lily-pad-socks') paintLilyPadSocks(ctx, frame, tone);
     if (socks === 'wave-socks') paintWaveSocks(ctx, frame, tone);
+    if (socks === 'turtle-socks') paintTurtleSocks(ctx, frame, tone);
     if (feet === 'flippers') paintFlippers(ctx, frame, tone);
     if (feet === 'froggy-boots') paintFroggyBoots(ctx, frame, tone);
     if (feet === 'pelican-slippers') paintPelicanSlippers(ctx, frame, tone);

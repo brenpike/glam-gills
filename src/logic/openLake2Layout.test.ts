@@ -4,7 +4,7 @@
  * danger bar is proved in openLake2Danger.test.ts and the fairness proofs in openLake2Fairness.test.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { DEEP_CANAL_4_TREASURES, RARITIES, type Rarity } from './catalogue';
+import { OPEN_LAKE_2_TREASURES, RARITIES, type Rarity } from './catalogue';
 import { waterScreenCount } from './dangerBar';
 import { DEEP_CANAL_4_CORMORANT, DEEP_CANAL_4_LAYOUT } from './deepCanal4Layout';
 import { deepestWaterBand, depthBandAt, raritySpotsInDeepestBand, spotFitsBand } from './depthBand';
@@ -30,7 +30,6 @@ import {
   OPEN_LAKE_2_EXIT,
   OPEN_LAKE_2_LAYOUT,
   OPEN_LAKE_2_PELICAN_LINE,
-  OPEN_LAKE_2_SHARED_TREASURES,
   OPEN_LAKE_2_SPECIAL_TREASURE_ID,
   OPEN_LAKE_2_START,
   OPEN_LAKE_2_TILAPIA,
@@ -96,6 +95,8 @@ const CORMORANT_IDS = ['cormorant-0', 'cormorant-1'];
 const TURTLE_IDS = ['mud-turtle-0', 'mud-turtle-1'];
 const LINE_IDS = [1, 2].map((n) => `open-lake-2/pelican-line-${n}`);
 const LIGHT_IDS = [1, 2, 3, 4].map((n) => `open-lake-2/fading-light-${n}`);
+/** Empty treasure slots over the 200 fresh trips, as measured: 18 slots and the special treasure's for 16 treasures (issue #215). */
+const EMPTY_SLOTS = { most: 7, mean: 5.305 };
 
 const zone = buildZone(OPEN_LAKE_2_LAYOUT, DEFAULT_ZONE_SEED);
 const bounds = swimBounds(zone);
@@ -262,7 +263,7 @@ describe('OPEN_LAKE_2_LAYOUT', () => {
     for (const part of [OPEN_LAKE_2_LAYOUT, OPEN_LAKE_2_TILAPIA, OPEN_LAKE_2_CARP, OPEN_LAKE_2_CARP.tuning, OPEN_LAKE_2_CORMORANT, OPEN_LAKE_2_CORMORANT.tuning]) {
       expect(Object.isFrozen(part)).toBe(true);
     }
-    for (const part of [OPEN_LAKE_2_CORMORANT.tuning.chase, OPEN_LAKE_2_PELICAN_LINE, OPEN_LAKE_2_EXIT, OPEN_LAKE_2_START, OPEN_LAKE_2_SHARED_TREASURES]) {
+    for (const part of [OPEN_LAKE_2_CORMORANT.tuning.chase, OPEN_LAKE_2_PELICAN_LINE, OPEN_LAKE_2_EXIT, OPEN_LAKE_2_START, OPEN_LAKE_2_TREASURES]) {
       expect(Object.isFrozen(part)).toBe(true);
     }
     const { rockWalls, pelicanLines, reedBeds, tilapiaRoutes, predatorRoutes, mobileSnacks, elements } = OPEN_LAKE_2_LAYOUT;
@@ -633,8 +634,8 @@ describe('Area 13 hiding spots by depth band (B5, B6, B10, ND-18)', () => {
   it('has 5 Common, 10 Rare, 3 Epic and 4 Legendary spots, every pool at least its floor and larger than its treasures', () => {
     const spots = rarityCounts(zone.spots);
     expect(spots).toEqual([5, 10, 3, 4]);
-    const treasures = rarityCounts(OPEN_LAKE_2_SHARED_TREASURES);
-    expect(treasures).toEqual([3, 6, 2, 3]);
+    const treasures = rarityCounts(OPEN_LAKE_2_TREASURES);
+    expect(treasures).toEqual([4, 7, 2, 3]);
     RARITIES.forEach((rarity, i) => {
       expect(spots[i], rarity).toBeGreaterThanOrEqual(POOL_FLOOR[i]);
       expect(spots[i], rarity).toBeGreaterThan(treasures[i]);
@@ -642,12 +643,12 @@ describe('Area 13 hiding spots by depth band (B5, B6, B10, ND-18)', () => {
     for (const find of zone.finds) expect(find.pool.length, find.id).toBeGreaterThan(0);
   });
 
-  it('puts every spot of the special treasure rarity, Legendary, in band 3, the deepest band (ND-17)', () => {
-    const special = OPEN_LAKE_2_SHARED_TREASURES.find((treasure) => treasure.id === OPEN_LAKE_2_SPECIAL_TREASURE_ID);
-    expect(special?.rarity).toBe('legendary');
+  it('puts every spot of the special treasure rarity, Epic, in band 3, the deepest band, with every Legendary spot (issue #215)', () => {
+    const special = OPEN_LAKE_2_TREASURES.find((treasure) => treasure.id === OPEN_LAKE_2_SPECIAL_TREASURE_ID);
+    expect(special?.rarity).toBe('epic');
     expect(deepestWaterBand(OPEN_LAKE_2_LAYOUT)).toBe(3);
-    expect(raritySpotsInDeepestBand(zone.spots, 'legendary', deepestWaterBand(OPEN_LAKE_2_LAYOUT))).toBe(true);
-    for (const rarity of ['common', 'rare', 'epic'] as const) expect(raritySpotsInDeepestBand(zone.spots, rarity, 3), rarity).toBe(rarity === 'epic');
+    expect(raritySpotsInDeepestBand(zone.spots, 'epic', deepestWaterBand(OPEN_LAKE_2_LAYOUT))).toBe(true);
+    for (const rarity of RARITIES) expect(raritySpotsInDeepestBand(zone.spots, rarity, 3), rarity).toBe(rarity === 'epic' || rarity === 'legendary');
   });
 
   it('hides the Commons in tule beds on both shelves, standing on the shelf rock in band 1, by the main path', () => {
@@ -711,37 +712,67 @@ describe('Area 13 hiding spots by depth band (B5, B6, B10, ND-18)', () => {
   });
 });
 
-describe('Area 13 treasure (B4; issue #212, Q1, ND-17)', () => {
+describe('Area 13 treasure (B4; issue #215)', () => {
   const tuning = tripTreasureTuning(OPEN_LAKE_2_AREA_ID);
   const options = { extras: [OPEN_LAKE_2_SPECIAL_TREASURE_ID], tuning, mainPath: zone.mainPath, threats: zoneThreats(zone) };
-  const all = OPEN_LAKE_2_SHARED_TREASURES.map((treasure) => treasure.id);
+  const all = OPEN_LAKE_2_TREASURES.map((treasure) => treasure.id);
+  const spotCounts = rarityCounts(zone.spots);
 
-  it("shares Area 11's whole set, 3 Common, 6 Rare, 2 Epic and 3 Legendary, the Lagoon shine Paint shell among them, and hides none of its own yet", () => {
-    expect(OPEN_LAKE_2_SHARED_TREASURES).toBe(DEEP_CANAL_4_TREASURES);
-    expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).toBe(DEEP_CANAL_4_TREASURES);
-    expect(OPEN_LAKE_2_LAYOUT.treasures).toEqual([]);
-    expect(zone.sharedTreasures).toEqual(all);
+  it('hides its own 4 Common, 7 Rare, 2 Epic and 3 Legendary treasures in catalogue order, the Little mud turtle among them, and shares none', () => {
+    expect(OPEN_LAKE_2_LAYOUT.treasures).toBe(OPEN_LAKE_2_TREASURES);
+    expect(OPEN_LAKE_2_LAYOUT).not.toHaveProperty('sharedTreasures');
+    expect(zone).not.toHaveProperty('sharedTreasures');
     expect(zone.finds.map((find) => find.id)).toEqual(all);
     expect(all).toContain(OPEN_LAKE_2_SPECIAL_TREASURE_ID);
+    expect(OPEN_LAKE_2_TREASURES.find((treasure) => treasure.id === OPEN_LAKE_2_SPECIAL_TREASURE_ID)?.rarity).toBe('epic');
   });
 
-  it("never hides Area 12's shared treasures as its set, nor any open lake treasure", () => {
-    expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).not.toBe(OPEN_LAKE_LAYOUT.sharedTreasures);
-    expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).not.toEqual(OPEN_LAKE_LAYOUT.sharedTreasures);
-    for (const id of all) expect(id.startsWith('deep-canal/'), id).toBe(true);
+  it("never hides Area 12's treasures nor any other area's", () => {
     const lakeIds = OPEN_LAKE_LAYOUT.treasures.map((treasure) => treasure.id);
-    for (const id of all) expect(lakeIds, id).not.toContain(id);
+    for (const id of all) {
+      expect(id.startsWith('open-lake/'), id).toBe(true);
+      expect(lakeIds, id).not.toContain(id);
+    }
   });
 
-  it('places 200 trips without throwing: the 18 slots, the lost treasures and the Lagoon shine Paint shell', () => {
+  it("gives every treasure its rarity's whole pool: the 5 Common, 10 Rare, 3 Epic or 4 Legendary spots", () => {
+    expect(spotCounts).toEqual([5, 10, 3, 4]);
+    for (const treasure of OPEN_LAKE_2_TREASURES) {
+      const pool = zone.spots.filter((spot) => spot.rarity === treasure.rarity).map((spot) => spot.id);
+      expect(pool, treasure.id).toHaveLength(spotCounts[RARITIES.indexOf(treasure.rarity)]);
+      expect(zone.finds.find((find) => find.id === treasure.id)?.pool, treasure.id).toEqual(pool);
+    }
+  });
+
+  it("hides the Little mud turtle in band 3, Area 13's deepest band, on the pit floor", () => {
+    const pool = zone.finds.find((find) => find.id === OPEN_LAKE_2_SPECIAL_TREASURE_ID)?.pool;
+    const spots = zone.spots.filter((spot) => pool?.includes(spot.id));
+    expect(spots).toHaveLength(spotCounts[RARITIES.indexOf('epic')]);
+    expect(deepestWaterBand(OPEN_LAKE_2_LAYOUT)).toBe(3);
+    for (const spot of spots) {
+      expect(depthBandAt(spot.y), spot.id).toBe(3);
+      expect(spot.x >= PIT.x0 && spot.x <= PIT.x1, spot.id).toBe(true);
+    }
+  });
+
+  it('places 200 trips without throwing: the 18 slots, the lost treasures and the Little mud turtle', () => {
     expect(tuning.slots).toBe(18);
     for (const tripSeed of TRIP_SEEDS) {
       const fresh = placeTreasures(zone.finds, zone.spots, [], tripSeed, options);
       expect(fresh.map((find) => find.id)).toContain(OPEN_LAKE_2_SPECIAL_TREASURE_ID);
+      for (const find of fresh) expect(zone.spots.find((spot) => spot.id === find.spotId)?.rarity, find.id).toBe(OPEN_LAKE_2_TREASURES.find((treasure) => treasure.id === find.id)?.rarity);
       const lost = placeTreasures(zone.finds, zone.spots, [], tripSeed, { ...options, mustPlace: all });
       expect(lost).toHaveLength(all.length);
       expect(new Set(lost.map((find) => find.spotId)).size).toBe(all.length);
     }
+  });
+
+  it('leaves the slots its 16 treasures cannot fill empty over 200 fresh trips, as measured', () => {
+    const empty = TRIP_SEEDS.map((tripSeed) => tuning.slots + 1 - placeTreasures(zone.finds, zone.spots, [], tripSeed, options).length);
+    const mean = empty.reduce((sum, count) => sum + count, 0) / empty.length;
+    expect(Math.max(...empty)).toBe(EMPTY_SLOTS.most);
+    expect(mean).toBeCloseTo(EMPTY_SLOTS.mean, 2);
+    expect(Math.min(...empty)).toBeGreaterThanOrEqual(tuning.slots + 1 - all.length);
   });
 });
 
