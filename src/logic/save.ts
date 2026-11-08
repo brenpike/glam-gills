@@ -40,6 +40,11 @@
  * count as seen: a missing field cannot tell a save from before #149 from one an older build
  * re-saved, and a Legendary may come from an open spot (ADR 0032).
  *
+ * The first-hit tip (#230) came under the additive rule, with no version bump: the hub's
+ * `firstHitTipSeen` loads as true only when exactly true, so a missing or bad value loads as not
+ * seen, and a returning player who was hit before sees the tip once. An older build drops it, so
+ * the tip may show once more there.
+ *
  * Legacy `book.tilapiaCard`: the Collection Book no longer holds the tilapia card, the hub's
  * `metHazards` does. The encoder still writes `book.tilapiaCard` (true when 'tilapia' is met), so
  * an older build reads the card, and the loader adds 'tilapia' to metHazards when it is exactly true.
@@ -135,6 +140,7 @@ function savedHub(hub: HubState): SavedHub {
     lastAreaId: hub.lastAreaId,
     metHazards: [...hub.metHazards],
     dashPotTipSeen: hub.dashPotTipSeen,
+    firstHitTipSeen: hub.firstHitTipSeen,
   } satisfies { [Key in keyof HubState]-?: unknown };
 }
 
@@ -248,6 +254,7 @@ function repairedHub(saved: Record<string, unknown>): HubState {
     lastAreaId: resolveAreaId(saved.lastAreaId, stars),
     metHazards: repairedMetHazards(saved.metHazards, saved.book),
     dashPotTipSeen: saved.dashPotTipSeen === true,
+    firstHitTipSeen: saved.firstHitTipSeen === true,
   };
 }
 

@@ -73,6 +73,8 @@ export interface HubState {
   metHazards: string[];
   /** Whether the Dash pot tip was seen, or a pot broken before it showed (PRD B11, D2). */
   dashPotTipSeen: boolean;
+  /** Whether the first-hit tip was seen (PRD A23, D2). */
+  firstHitTipSeen: boolean;
 }
 
 /**
@@ -158,6 +160,7 @@ export function createSession(): Session {
       lastAreaId: AREAS[0].id,
       metHazards: [],
       dashPotTipSeen: false,
+      firstHitTipSeen: false,
     },
     areas: Object.fromEntries(AREAS.map((area) => [area.id, emptyAreaMemory()])),
   };
@@ -518,6 +521,15 @@ export function markFirstFindSeen(session: Session, kind: FirstFindKind): Sessio
 export function markDashPotTipSeen(session: Session): Session {
   if (session.hub.dashPotTipSeen) return session;
   return { ...session, hub: { ...session.hub, dashPotTipSeen: true } };
+}
+
+/**
+ * The session with the first-hit tip seen (PRD A23, D2). The same session when it was already seen.
+ * Nothing else changes; the caller saves the session.
+ */
+export function markFirstHitTipSeen(session: Session): Session {
+  if (session.hub.firstHitTipSeen) return session;
+  return { ...session, hub: { ...session.hub, firstHitTipSeen: true } };
 }
 
 /**

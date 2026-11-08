@@ -42,6 +42,7 @@ import {
   markFactCardFound,
   markDashPotTipSeen,
   markFirstFindSeen,
+  markFirstHitTipSeen,
   recordTripEnd,
   restyleAxolotl,
   setDreamColour,
@@ -185,6 +186,7 @@ describe('save round trip', () => {
       'dashPotTipSeen',
       'explorerId',
       'firstFindsSeen',
+      'firstHitTipSeen',
       'lastAreaId',
       'metHazards',
       'stars',
@@ -873,6 +875,41 @@ describe('Dash pot tip seen (#149, B11, D2)', () => {
     const json = savedJson();
     const hub = hubWithFields({ banked: [...(json.hub.banked as string[]), LOTUS_THRONE], dashPotTipSeen });
     expect(hub.dashPotTipSeen).toBe(false);
+  });
+});
+
+describe('First-hit tip seen (#230, A23, D2)', () => {
+  it('round-trips the tip seen', () => {
+    const session = markFirstHitTipSeen(playedSession());
+    expect(session.hub.firstHitTipSeen).toBe(true);
+    expect(JSON.parse(encodeSave(session.hub)).hub.firstHitTipSeen).toBe(true);
+    expect(decodeSave(encodeSave(session.hub))).toEqual({ kind: 'loaded', hub: session.hub });
+  });
+
+  it('round-trips the tip not seen', () => {
+    const hub = playedSession().hub;
+    expect(hub.firstHitTipSeen).toBe(false);
+    expect(JSON.parse(encodeSave(hub)).hub.firstHitTipSeen).toBe(false);
+    expect(decodeSave(encodeSave(hub))).toEqual({ kind: 'loaded', hub });
+  });
+
+  it('loads an older save without the field as not seen, with every other field intact and SAVE_VERSION at 1', () => {
+    const json = savedJson();
+    const olderHub: Record<string, unknown> = { ...json.hub };
+    delete olderHub.firstHitTipSeen;
+    const hub = loadedHub({ version: 1, hub: olderHub });
+    expect(hub).toEqual(playedSession().hub);
+    expect(hub.firstHitTipSeen).toBe(false);
+    expect(SAVE_VERSION).toBe(1);
+  });
+
+  it.each([
+    ['a number', 1],
+    ['null', null],
+    ['a string', 'true'],
+    ['an object', { seen: true }],
+  ])('loads a field that is %s as not seen', (_label, firstHitTipSeen) => {
+    expect(hubWith('firstHitTipSeen', firstHitTipSeen).firstHitTipSeen).toBe(false);
   });
 });
 

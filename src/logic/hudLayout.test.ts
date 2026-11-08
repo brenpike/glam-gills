@@ -825,6 +825,100 @@ describe('placeHudOverlays', () => {
   });
 });
 
+/** The canvases the avoid tests sweep. */
+const AVOID_VIEWS: HudView[] = [200, 320, 460, 568, 800, 1024].flatMap((cssW) =>
+  [150, 240, 320, 440, 600, 768].map((cssH) => ({ cssW, cssH })),
+);
+
+/** Builds the hint request from fake text lengths, given `avoid` when set. */
+function hintRequestFor(texts: OverlayTexts, avoid?: readonly Rect[]): HudOverlayRequest {
+  const [request] = requestsFor(['hint'], texts);
+  return avoid === undefined ? request : { ...request, avoid };
+}
+
+describe('placeHudOverlays with avoid', () => {
+  it('holds a short hint at 320 x 320 that takes the status row place over the legs unless it avoids them', () => {
+    const view = { cssW: 320, cssH: 320 };
+    const controls = hudControls(view, SIZES);
+    const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
+    const [plain] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(SMALL_TEXTS)]);
+    expect(plain).toEqual({ id: 'hint', rect: { x: 16, y: 16, w: 156, h: 54 }, edge: 'panel', textPx: HUD.bannerTextPx });
+    expect(overlaps(plain.rect as Rect, controls.legs)).toBe(true);
+    const [avoiding] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(SMALL_TEXTS, [controls.legs])]);
+    expect(avoiding).toEqual({ id: 'hint', rect: null, edge: null, textPx: null });
+  });
+
+  it('moves a real-length hint at 320 x 440 off the legs to the top edge at 20 px when it avoids them', () => {
+    const controls = hudControls(PORTRAIT, SIZES);
+    const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
+    const [plain] = placeHudOverlays(PORTRAIT, controls, keepOuts, [hintRequestFor(REAL_TEXTS)]);
+    expect(plain).toEqual({ id: 'hint', rect: { x: 16, y: 16, w: 228, h: 144 }, edge: 'panel', textPx: HUD.bannerTextPx });
+    expect(overlaps(plain.rect as Rect, controls.legs)).toBe(true);
+    const [avoiding] = placeHudOverlays(PORTRAIT, controls, keepOuts, [hintRequestFor(REAL_TEXTS, [controls.legs])]);
+    const rect = { x: 16, y: 76, w: 288, h: 74 };
+    expect(avoiding).toEqual({ id: 'hint', rect, edge: 'top', textPx: HUD.bannerRetryTextPx });
+    expect(rect.y).toBe(controls.legs.y + controls.legs.h + HUD.gap);
+    expect(clears(rect, PORTRAIT, [...keepOuts, controls.legs])).toBe(true);
+  });
+
+  it('keeps a hint that avoids the legs a gap clear of them, or held, across canvases', () => {
+    let panelCases = 0;
+    for (const view of AVOID_VIEWS) {
+      const controls = hudControls(view, SIZES);
+      for (const goHomeVisible of [true, false]) {
+        const keepOuts = controlKeepOuts(controls, { goHomeVisible });
+        for (const texts of [SMALL_TEXTS, REAL_TEXTS, LARGE_TEXTS]) {
+          const [plain] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(texts)]);
+          if (plain.edge === 'panel' && !clears(plain.rect as Rect, view, [controls.legs])) panelCases++;
+          const [avoiding] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(texts, [controls.legs])]);
+          const label = `${view.cssW} x ${view.cssH}, goHomeVisible ${String(goHomeVisible)}`;
+          if (avoiding.rect !== null) expect(clears(avoiding.rect, view, [...keepOuts, controls.legs]), label).toBe(true);
+          expect(placementProblems(view, controls, avoiding), label).toEqual([]);
+        }
+      }
+    }
+    expect(panelCases).toBeGreaterThan(0);
+  });
+
+  it('places a request with no avoid, or an empty one, as before', () => {
+    const view = { cssW: 460, cssH: 240 };
+    const controls = hudControls(view, SIZES);
+    const keepOuts = controlKeepOuts(controls, { goHomeVisible: false });
+    const [plain] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(SMALL_TEXTS)]);
+    expect(plain).toEqual({ id: 'hint', rect: { x: 16, y: 16, w: 156, h: 54 }, edge: 'panel', textPx: HUD.bannerTextPx });
+    const [avoiding] = placeHudOverlays(view, controls, keepOuts, [hintRequestFor(SMALL_TEXTS, [controls.legs])]);
+    expect(avoiding.rect).toEqual({ x: 246, y: 16, w: 134, h: 49 });
+    for (const view of AVOID_VIEWS) {
+      const viewControls = hudControls(view, SIZES);
+      const viewKeepOuts = controlKeepOuts(viewControls, { goHomeVisible: true });
+      for (const texts of [SMALL_TEXTS, REAL_TEXTS, LARGE_TEXTS]) {
+        for (const ids of OVERLAY_SUBSETS) {
+          const unset = placeHudOverlays(view, viewControls, viewKeepOuts, requestsFor(ids, texts));
+          const empty = requestsFor(ids, texts).map((request) => ({ ...request, avoid: [] }));
+          expect(placeHudOverlays(view, viewControls, viewKeepOuts, empty)).toEqual(unset);
+        }
+      }
+    }
+  });
+
+  it('leaves the find toast and snack banner where they go alone when the hint carries avoid', () => {
+    const higher: HudOverlayId[][] = [['findToast'], ['snackBanner'], ['findToast', 'snackBanner']];
+    for (const view of AVOID_VIEWS) {
+      const controls = hudControls(view, SIZES);
+      const keepOuts = controlKeepOuts(controls, { goHomeVisible: true });
+      for (const texts of [SMALL_TEXTS, REAL_TEXTS, LARGE_TEXTS]) {
+        for (const ids of higher) {
+          const alone = placeHudOverlays(view, controls, keepOuts, requestsFor(ids, texts));
+          const withHint = [...requestsFor(ids, texts), hintRequestFor(texts, [controls.legs])];
+          const placed = placeHudOverlays(view, controls, keepOuts, withHint);
+          expect(placed.slice(0, ids.length), `${view.cssW} x ${view.cssH} [${ids.join(', ')}]`).toEqual(alone);
+          expectAllClear(view, keepOuts, placed.map((entry) => entry.rect));
+        }
+      }
+    }
+  });
+});
+
 describe('clears', () => {
   const view = { cssW: 400, cssH: 300 };
 

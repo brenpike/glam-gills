@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-11-08
+
+### Added
+
+- The first time you lose a leg, a short tip explains that your legs are your health, that lost legs grow back, that snacks make them grow back faster, and that Regrowth and Shell Wearables help. It shows once, waits until nothing can reach you, and points at the legs display (#230).
+
 ## [0.71.0] - 2026-11-08
 
 ### Added
