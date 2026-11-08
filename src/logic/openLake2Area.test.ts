@@ -1,7 +1,8 @@
 /**
  * Area 13's registration (issue #212): its area data, its place in AREAS, its unlock, its day look
- * and cue, its habitat label, its special treasure's band, its trip slots and cards, and the lost
- * shared treasure coming back on the next Area 13 trip (ND-27).
+ * and cue, its habitat label, its special treasure's band, its trip slots and cards, its own lost
+ * treasure coming back on the next Area 13 trip, and an Area 11 id an older save left in its
+ * lost-treasure memory ignored (issue #215).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -17,7 +18,7 @@ import {
   sourceFactCards,
 } from './areas';
 import { habitatAreasLabel } from './areaText';
-import { treasureById } from './catalogue';
+import { DEEP_CANAL_4_TREASURES, OPEN_LAKE_2_TREASURES, treasureById } from './catalogue';
 import { deepestWaterBand, raritySpotsInDeepestBand } from './depthBand';
 import { MUD_TURTLE_FACT } from './factCards';
 import { FADING_LIGHT } from './hazards';
@@ -26,7 +27,6 @@ import {
   OPEN_LAKE_2_AREA_ID,
   OPEN_LAKE_2_EXIT,
   OPEN_LAKE_2_LAYOUT,
-  OPEN_LAKE_2_SHARED_TREASURES,
   OPEN_LAKE_2_SPECIAL_TREASURE_ID,
 } from './openLake2Layout';
 import { STRANDING_CHANCE, areaStrandingChance } from './rescue';
@@ -89,11 +89,13 @@ describe('Area 13 registration (issue #212)', () => {
     expect(habitatAreasLabel(OPEN_LAKE_HABITAT.name, numbers)).toBe('Open lake: Areas 12 to 14');
   });
 
-  it('gives the Legendary Lagoon shine Paint shell as its special treasure, every Legendary spot in band 3, the deepest band (ND-24)', () => {
-    expect(treasureById(OPEN_LAKE_2_AREA.specialTreasureId)?.rarity).toBe('legendary');
+  it('gives its own Epic Little mud turtle as its special treasure, every Epic spot in band 3, the deepest band (issue #215)', () => {
+    expect(OPEN_LAKE_2_AREA.specialTreasureId).toBe('open-lake/little-mud-turtle');
+    expect(treasureById(OPEN_LAKE_2_AREA.specialTreasureId)?.rarity).toBe('epic');
+    expect(OPEN_LAKE_2_TREASURES.map((treasure) => treasure.id)).toContain(OPEN_LAKE_2_AREA.specialTreasureId);
     expect(deepestWaterBand(OPEN_LAKE_2_LAYOUT)).toBe(3);
     const spots = buildZone(OPEN_LAKE_2_LAYOUT, DEFAULT_ZONE_SEED).spots;
-    expect(raritySpotsInDeepestBand(spots, 'legendary', deepestWaterBand(OPEN_LAKE_2_LAYOUT))).toBe(true);
+    expect(raritySpotsInDeepestBand(spots, 'epic', deepestWaterBand(OPEN_LAKE_2_LAYOUT))).toBe(true);
   });
 
   it('has 18 trip treasure slots', () => {
@@ -110,14 +112,16 @@ describe('Area 13 registration (issue #212)', () => {
   });
 });
 
-describe('a shared Area 13 treasure lost there (issue #212, ND-27)', () => {
+describe('an Area 13 treasure lost there (issue #212, ND-27; issue #215)', () => {
   const zone = buildZone(OPEN_LAKE_2_LAYOUT, DEFAULT_ZONE_SEED);
-  const shared = OPEN_LAKE_2_SHARED_TREASURES.find((treasure) => treasure.id !== OPEN_LAKE_2_SPECIAL_TREASURE_ID);
-  if (shared === undefined) throw new Error('Area 13 shares no treasure but its special');
-  const sharedId = shared.id;
+  const own = OPEN_LAKE_2_TREASURES.find((treasure) => treasure.id !== OPEN_LAKE_2_SPECIAL_TREASURE_ID);
+  if (own === undefined) throw new Error('Area 13 hides no treasure but its special');
+  const ownId = own.id;
+  /** Area 13's special treasure before its own came (issue #212), an Area 11 id an older save may hold. */
+  const staleId = 'deep-canal/paint-shell-lagoon-shine';
 
-  /** A trip-end record of an Area 13 trip carried home losing `sharedId`, with nothing banked. */
-  function lostRecord(): TripEndRecord {
+  /** A trip-end record of an Area 13 trip carried home losing `lostId`, with nothing banked. */
+  function lostRecord(lostId: string): TripEndRecord {
     return {
       areaId: OPEN_LAKE_2_AREA_ID,
       banked: [],
@@ -126,13 +130,13 @@ describe('a shared Area 13 treasure lost there (issue #212, ND-27)', () => {
       tripSeed: 1,
       waitingStranded: null,
       met: [],
-      returnedFinds: [sharedId],
+      returnedFinds: [lostId],
     };
   }
 
-  /** A session with a starter whose last Area 13 trip was carried home losing `sharedId`. */
-  function lostInArea13(): Session {
-    return recordTripEnd(addStarter(createSession(), { name: 'Gilly', look: DEFAULT_LOOK }, STARTER_MORPH), lostRecord());
+  /** A session with a starter whose last Area 13 trip was carried home losing `lostId`. */
+  function lostInArea13(lostId: string): Session {
+    return recordTripEnd(addStarter(createSession(), { name: 'Gilly', look: DEFAULT_LOOK }, STARTER_MORPH), lostRecord(lostId));
   }
 
   /** The ids an Area 13 trip places with `tripSeed`, started from `session`'s banked ids and Area 13's lost treasures. */
@@ -141,17 +145,29 @@ describe('a shared Area 13 treasure lost there (issue #212, ND-27)', () => {
     return createTrip(zone, LEGS, start.banked, tripSeed, { returnedFinds: start.returnedFinds }).placed.map((find) => find.id);
   }
 
-  it('is a shared treasure Area 13 hides, not its special treasure', () => {
-    expect(OPEN_LAKE_2_LAYOUT.sharedTreasures).toContain(shared);
-    expect(sharedId).not.toBe(OPEN_LAKE_2_SPECIAL_TREASURE_ID);
+  it('is a treasure Area 13 hides as its own, not its special treasure', () => {
+    expect(OPEN_LAKE_2_LAYOUT.treasures).toContain(own);
+    expect(OPEN_LAKE_2_LAYOUT).not.toHaveProperty('sharedTreasures');
+    expect(ownId).not.toBe(OPEN_LAKE_2_SPECIAL_TREASURE_ID);
   });
 
   it('comes back on the next Area 13 trip when lost there, whatever its seed, and stays in Area 13 memory only', () => {
-    const session = lostInArea13();
-    expect(tripStart(session, 0, OPEN_LAKE_2_AREA_ID).returnedFinds).toEqual([sharedId]);
+    const session = lostInArea13(ownId);
+    expect(tripStart(session, 0, OPEN_LAKE_2_AREA_ID).returnedFinds).toEqual([ownId]);
     for (const area of AREAS.filter((candidate) => candidate.id !== OPEN_LAKE_2_AREA_ID)) {
       expect(tripStart(session, 0, area.id).returnedFinds, area.id).toEqual([]);
     }
-    for (const seed of TRIP_SEEDS) expect(placedIds(session, seed), `seed ${seed}`).toContain(sharedId);
+    for (const seed of TRIP_SEEDS) expect(placedIds(session, seed), `seed ${seed}`).toContain(ownId);
+  });
+
+  it("ignores, never throws on, an Area 11 id an older save left in Area 13's lost-treasure memory", () => {
+    expect(DEEP_CANAL_4_TREASURES.map((treasure) => treasure.id)).toContain(staleId);
+    expect(zone.finds.map((find) => find.id)).not.toContain(staleId);
+    const session = lostInArea13(staleId);
+    expect(tripStart(session, 0, OPEN_LAKE_2_AREA_ID).returnedFinds).toEqual([staleId]);
+    for (const seed of TRIP_SEEDS) {
+      expect(() => placedIds(session, seed), `seed ${seed}`).not.toThrow();
+      expect(placedIds(session, seed), `seed ${seed}`).not.toContain(staleId);
+    }
   });
 });

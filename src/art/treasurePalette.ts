@@ -566,7 +566,7 @@ export const DREAM_DIVIDER = 'rgba(255,255,255,0.8)';
 /** Galaxy and Tie-dye galaxy stars: plain white, no outline, on a dark base. */
 export const DREAM_STAR = WHITE;
 
-/** The thirty-three Dream colour ids, in the order the guide lists them (3f). */
+/** The thirty-five Dream colour ids, in the order the guide lists them (3f). */
 export type DreamSwatchId =
   | 'mint'
   | 'sky-blue'
@@ -600,7 +600,9 @@ export type DreamSwatchId =
   | 'hyacinth'
   | 'lagoon-shine'
   | 'tule-green'
-  | 'obsidian';
+  | 'obsidian'
+  | 'pitch-black'
+  | 'trench-shine';
 
 /** The simplified pattern drawn in the paint blob (guide 8). */
 export type DreamPattern = 'plain' | 'hearts' | 'spiral' | 'stripes' | 'bands' | 'stars' | 'spiral-stars' | 'glow-dots';
@@ -707,4 +709,12 @@ export const DREAM_SWATCH: Readonly<Record<DreamSwatchId, DreamSwatchLook>> = {
   },
   'tule-green': { body: '#043d00', pattern: 'plain', marks: [], dark: true },
   obsidian: { body: '#1f2925', pattern: 'plain', marks: [], dark: true },
+  'pitch-black': { body: '#1a1310', pattern: 'plain', marks: [], dark: true },
+  // Sheen: a fading-light gold and a pale sky stripe (the fading light's bulb and hint), both lighter than the lake blue body, so ink reaches 3:1 on them and no pattern inset is needed (guide 6p).
+  'trench-shine': {
+    body: '#4a7fee',
+    pattern: 'stripes',
+    marks: ['rgba(242,222,138,0.85)', 'rgba(207,238,255,0.85)'],
+    dark: false,
+  },
 };

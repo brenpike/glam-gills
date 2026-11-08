@@ -458,7 +458,7 @@ export const MORPH_PALETTES: Record<MorphLookId, MorphPalette> = {
 // body and gill slots; the real morph keeps its eye and mouth. Every value in
 // this section is derived (provisional).
 
-/** Look ids of the thirty-three Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
+/** Look ids of the thirty-five Dream colours, in the guide 3f order. Must match the logic layer's Dream colour ids. */
 export type DreamLookId =
   | 'mint'
   | 'sky-blue'
@@ -492,7 +492,9 @@ export type DreamLookId =
   | 'hyacinth'
   | 'lagoon-shine'
   | 'tule-green'
-  | 'obsidian';
+  | 'obsidian'
+  | 'pitch-black'
+  | 'trench-shine';
 
 /** The body and gill role slots a Dream colour swaps (guide 3f). */
 export type DreamSlots = Pick<
@@ -639,6 +641,19 @@ export const DREAM_SLOTS: Readonly<Record<DreamLookId, DreamSlots>> = {
   // (1.19:1), 0.104 from Glowworm and 0.101 from Tule green in OKLab. 14.98:1 with white and 1.04:1 with ink, so it
   // follows the dark-body rules (white spots, eye ring, rim light). The mint gill #8fe8b4 is 10.25:1 against it.
   obsidian: dreamSlots('#1f2925', '#20282a', '#797f7c', '#9a9f9d', ['#8fe8b4', '#a8edc5'], ['#85d4aa', '#9eddbc']),
+  // Open lake Area 13 Dream colour (Pitch black, issue #215, ND-2). Body #1a1310 is the ND-2 start #1a1210 moved one step
+  // in green so the red test of lakeTreasureArt.test.ts passes: a warm near-black (relative luminance 0.0072), the darkest
+  // Dream colour, in the near-black room below Glowworm (1.14:1). Among the solids Obsidian is the closest (1.23:1 in
+  // greyscale, 0.080 in OKLab). 18.35:1 with white and 1.27:1 with ink, so it follows the dark-body rules (white spots,
+  // eye ring, rim light). The fading-light gold gill #f2de8a is 13.62:1 against it.
+  'pitch-black': dreamSlots('#1a1310', '#1c1518', '#767170', '#989593', ['#f2de8a', '#f5e5a4'], ['#decb84', '#e5d59d']),
+  // Open lake Area 13 Legendary Dream colour (Trench shine, a sheen, issue #215, ND-2). Body #4a7fee is the ND-2 start, a
+  // deep lake blue (relative luminance 0.228). Under the F15 rule of ND-10 a sheen keeps the 1.05:1 greyscale floor only
+  // against the other sheens: Crystal shine (1.12:1) and Lantern shine (1.23:1) are the closest; the solid Olive (1.02:1)
+  // is the closest in value, told apart by the stripes. 2.51:1 from Iridescent, 1.65:1 from Plum, and 0.104 from Hyacinth
+  // in OKLab, the closest in colour. 3.81:1 with ink and 3.78:1 with white, so ink spots and, as Crystal shine, no rim
+  // light. The soft apricot gill #ffa86b is 1.99:1 against it.
+  'trench-shine': dreamSlots('#4a7fee', '#4674db', '#92b2f5', '#aec5f7', ['#ffa86b', '#ffbb8c'], ['#ea9b68', '#eeaf87']),
 };
 
 /** Marks a palette as a Dream colour over a real morph; drawAxolotl paints the layer 6.5 overlay from it. */
@@ -666,6 +681,7 @@ const DREAM_DARK_IDS: readonly DreamLookId[] = [
   'confetti-shine',
   'tule-green',
   'obsidian',
+  'pitch-black',
 ];
 /** Guide 3f Extras column: the Dream colours with the rim light. */
 const DREAM_RIM_IDS: readonly DreamLookId[] = [
@@ -686,6 +702,7 @@ const DREAM_RIM_IDS: readonly DreamLookId[] = [
   'lagoon-shine',
   'tule-green',
   'obsidian',
+  'pitch-black',
 ];
 /** Guide 3b spot table: white at 0.45 on the dark Dream bodies. */
 const DREAM_SPOT_DARK = 'rgba(255,255,255,0.45)';

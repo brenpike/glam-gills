@@ -1,7 +1,8 @@
 /**
  * The treasure catalogue: rarities, categories, wearable slots, perks, Dream colours and the
  * treasures of every area: the canal, the pond, the pond's Area 3, the chinampa gardens' Areas 4 and 5, the spring
- * cave's Areas 6 and 7 and the deep canal's Areas 8 to 11 (PRD B1 to B3, F9).
+ * cave's Areas 6 and 7, the deep canal's Areas 8 to 11 and the open lake's Areas 12 and 13 (PRD B1 to
+ * B3, F9).
  * Pure data plus lookups; nothing here applies perks.
  */
 
@@ -104,7 +105,9 @@ export type DreamColourId =
   | 'hyacinth'
   | 'lagoon-shine'
   | 'tule-green'
-  | 'obsidian';
+  | 'obsidian'
+  | 'pitch-black'
+  | 'trench-shine';
 
 /** How a Dream colour is drawn. */
 export type DreamKind = 'solid' | 'patterned' | 'sheen';
@@ -322,12 +325,29 @@ export const OBSIDIAN: DreamColour = Object.freeze({
   kind: 'solid',
 });
 
+/** The open lake's Area 13 Rare Dream colour, the black of the trench's pit, held by that area's Pitch black Paint shell (issue #215). */
+export const PITCH_BLACK: DreamColour = Object.freeze({
+  id: 'pitch-black',
+  name: 'Pitch black',
+  rarity: 'rare',
+  kind: 'solid',
+});
+
+/** The open lake's Area 13 Legendary Dream colour, a sheen (ADR 0031) held by that area's last Paint shell, Trench shine (issue #215). */
+export const TRENCH_SHINE: DreamColour = Object.freeze({
+  id: 'trench-shine',
+  name: 'Trench shine',
+  rarity: 'legendary',
+  kind: 'sheen',
+});
+
 /**
  * Every Dream colour in area order: the canal's 9, then Lily green (Area 2), Firefly gold and Galaxy
  * (Area 3), Poppy red and Rainbow (Area 4), Plum and Tie-dye galaxy (Area 5), Moonstone and Crystal
  * shine (Area 6), Chocolate and Glowworm (Area 7), Jade and Fiesta shine (Area 8), Olive and
  * Lantern shine (Area 9), Peach and Confetti shine (Area 10), Marigold, Golden shine, Lime,
- * Hyacinth and Lagoon shine (Area 11), then Tule green and Obsidian (Area 12).
+ * Hyacinth and Lagoon shine (Area 11), Tule green and Obsidian (Area 12), then Pitch black and
+ * Trench shine (Area 13).
  */
 export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   ...CANAL_DREAM_COLOURS,
@@ -355,6 +375,8 @@ export const DREAM_COLOURS: readonly DreamColour[] = Object.freeze([
   LAGOON_SHINE,
   TULE_GREEN,
   OBSIDIAN,
+  PITCH_BLACK,
+  TRENCH_SHINE,
 ]);
 
 /** Fields every treasure has. `id` is stable forever, e.g. 'canal/sun-hat'. */
@@ -1334,11 +1356,100 @@ export const OPEN_LAKE_TREASURES: readonly Treasure[] = Object.freeze([
 ]);
 
 /**
+ * The open lake Area 13 treasures, all new, in rarity order (issue #215): the 4 Commons (the Stone
+ * stack, Lake buoy, Raincloud mobile and Turtle socks), the 7 Rares (the Little lighthouse, Glow-flower
+ * lamp, Diving bell, Diving goggles, Turtle shell backpack, Lantern tail charm and Pitch black Paint
+ * shell), the 2 Epics (the Little mud turtle, the area's special treasure, and the Mini submarine, a
+ * big Back item per ADR 0040), then the 3 Legendaries (the Fading light garden, Diving suit and
+ * Trench shine Paint shell last). Every perk comes from PERK_VALUES for its type and rarity, no two
+ * Area 13 Wearables share a perk type, and every Decoration has the standard width.
+ */
+export const OPEN_LAKE_2_TREASURES: readonly Treasure[] = Object.freeze([
+  { id: 'open-lake/stone-stack', name: 'Stone stack', rarity: 'common', category: 'decoration' },
+  {
+    id: 'open-lake/lake-buoy',
+    name: 'Lake buoy',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'floating',
+  },
+  {
+    id: 'open-lake/raincloud-mobile',
+    name: 'Raincloud mobile',
+    rarity: 'common',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  {
+    id: 'open-lake/turtle-socks',
+    name: 'Turtle socks',
+    rarity: 'common',
+    category: 'wearable',
+    slot: 'socks',
+    perk: createPerk('snackMagnet', 'common'),
+  },
+  { id: 'open-lake/little-lighthouse', name: 'Little lighthouse', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'open-lake/glow-flower-lamp',
+    name: 'Glow-flower lamp',
+    rarity: 'rare',
+    category: 'decoration',
+    placement: 'hanging',
+  },
+  { id: 'open-lake/diving-bell', name: 'Diving bell', rarity: 'rare', category: 'decoration' },
+  {
+    id: 'open-lake/diving-goggles',
+    name: 'Diving goggles',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'face',
+    perk: createPerk('treasureSense', 'rare'),
+  },
+  {
+    id: 'open-lake/turtle-shell-backpack',
+    name: 'Turtle shell backpack',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('regrowth', 'rare'),
+  },
+  {
+    id: 'open-lake/lantern-tail-charm',
+    name: 'Lantern tail charm',
+    rarity: 'rare',
+    category: 'wearable',
+    slot: 'tail',
+    perk: createPerk('dash', 'rare'),
+  },
+  createPaintShell(PITCH_BLACK, 'open-lake'),
+  { id: 'open-lake/little-mud-turtle', name: 'Little mud turtle', rarity: 'epic', category: 'decoration' },
+  {
+    id: 'open-lake/mini-submarine',
+    name: 'Mini submarine',
+    rarity: 'epic',
+    category: 'wearable',
+    slot: 'back',
+    perk: createPerk('shell', 'epic'),
+  },
+  { id: 'open-lake/fading-light-garden', name: 'Fading light garden', rarity: 'legendary', category: 'decoration' },
+  {
+    id: 'open-lake/diving-suit',
+    name: 'Diving suit',
+    rarity: 'legendary',
+    category: 'wearable',
+    slot: 'shirt',
+    perk: createPerk('speed', 'legendary'),
+  },
+  createPaintShell(TRENCH_SHINE, 'open-lake'),
+]);
+
+/**
  * Every treasure of every area: the canal's, then the pond's, then the pond Area 3's, then the
  * chinampa gardens' Area 4's, then the chinampa gardens' Area 5's, then the spring cave Area 6's,
  * then the spring cave Area 7's, then the deep canal Area 8's, then the deep canal Area 9's, then
- * the deep canal Area 10's, then the deep canal Area 11's, then the open lake Area 12's last
- * (issue #214, ND-3), so placement by seed stays the same for every earlier treasure.
+ * the deep canal Area 10's, then the deep canal Area 11's, then the open lake Area 12's (issue
+ * #214, ND-3), then the open lake Area 13's last (issue #215), so placement by seed stays the same
+ * for every earlier treasure.
  */
 export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...CANAL_TREASURES,
@@ -1353,6 +1464,7 @@ export const ALL_TREASURES: readonly Treasure[] = Object.freeze([
   ...DEEP_CANAL_3_TREASURES,
   ...DEEP_CANAL_4_TREASURES,
   ...OPEN_LAKE_TREASURES,
+  ...OPEN_LAKE_2_TREASURES,
 ]);
 
 const CATEGORY_NAMES: Readonly<Record<TreasureCategory, 'Decoration' | 'Wearable' | 'Paint shell'>> =

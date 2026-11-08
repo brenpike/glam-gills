@@ -6,8 +6,8 @@
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
  * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), its three Decorations and five
  * Wearables (issue #207), the open lake Area 12's five Decorations and five Wearables (issue #214), and one Paint shell
- * per Dream colour (Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, then Tule green
- * and Obsidian, issue #214, the last two).
+ * per Dream colour (Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, Tule green and
+ * Obsidian, issue #214, then Pitch black and Trench shine, issue #215, the last two).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -371,7 +371,7 @@ export const SERAPE_STRIPES: readonly string[] = ['#ffc6e4', '#ffc487', '#ffe14a
 // Ids
 // ---------------------------------------------------------------------------
 
-/** The thirty-three Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, then Tule green and Obsidian, issue #214, last). */
+/** The thirty-five Dream swatches in guide 3f order (Poppy red, issue #76, Plum, issue #103, Moonstone, issue #77, Chocolate, issue #105, Crystal shine and Glowworm, Jade and Fiesta shine, issue #78, Olive and Lantern shine, issue #107, Peach and Confetti shine, issue #108, Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, Tule green and Obsidian, issue #214, then Pitch black and Trench shine, issue #215, last). */
 export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'mint',
   'sky-blue',
@@ -406,6 +406,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
   'lagoon-shine',
   'tule-green',
   'obsidian',
+  'pitch-black',
+  'trench-shine',
 ];
 
 /**
@@ -685,15 +687,15 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
 ];
 
 /**
- * All one hundred and sixty-three icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and sixty-five icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
  * items, the eleven deep canal Area 10 items, the deep canal Area 11's nine items (the Little cormorant, issue #112, then
  * its three Decorations and five Wearables in catalogue order, issue #207), the open lake Area 12's ten items (its five
- * Decorations and five Wearables in catalogue order, issue #214), then the thirty-three Paint shells in
+ * Decorations and five Wearables in catalogue order, issue #214), then the thirty-five Paint shells in
  * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; Jade, Fiesta shine, Olive,
  * Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine the deep canal's; the
- * last two, Tule green and Obsidian, the open lake's, issue #214).
+ * last four, Tule green and Obsidian, issue #214, then Pitch black and Trench shine, issue #215, the open lake's).
  */
 export const TREASURE_ICON_SLUGS: readonly TreasureIconSlug[] = [
   ...ITEM_SLUGS,
@@ -5971,7 +5973,7 @@ function swatchTilePath(half: number, r: number): Path2D {
  * 2.6 at size 32), the body colour, and a simplified pattern clipped to the
  * tile (guide 8). Hearts: one heart about 14 px. Tie-dye: a two-turn spiral.
  * Iridescent: the stripe pair. Rainbow: six vertical bands with dividers.
- * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Golden shine: a sunset rose and a pale gold stripe on deep gold. Lagoon shine: a sea foam and a coral stripe on lagoon blue. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
+ * Crystal shine: the same stripe pair on teal. Fiesta shine: a sunny yellow and a turquoise stripe on pink. Lantern shine: a candle cream and a soft gold stripe on orange. Confetti shine: a confetti pink and a confetti lemon stripe on grape-violet, with the dark rim arc. Golden shine: a sunset rose and a pale gold stripe on deep gold. Lagoon shine: a sea foam and a coral stripe on lagoon blue. Trench shine: a fading-light gold and a pale sky stripe on lake blue. Glowworm: five glow dots with halos. Galaxy: nebula and three stars. Tie-dye galaxy: a spiral and two stars. Solid
  * tiles are plain with one shine. Dark colours get the DREAM_RIM arc along the
  * top, just inside the ink. The name label always sits beside the tile (the
  * scene's job), so this is never colour alone. The geometry scales with `size`;
