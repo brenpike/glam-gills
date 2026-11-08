@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-11-08
+
 ### Added
 
 - Area 13, the trench of the open lake, now hides 16 treasures of its own, the rarest deepest in the dark pit (#215).
