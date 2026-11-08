@@ -34,6 +34,7 @@ import {
   type DashPotTipStep,
 } from '../logic/dashPotTip';
 import { TURN_SQUASH, bodyPoint, drawnAxolotl, type DrawnAxolotl } from '../logic/drawnAxolotl';
+import { driftingIslands } from '../logic/driftingIslands';
 import { currentAt, reedDragAt, reedsNear } from '../logic/environment';
 import { exitArrowSide } from '../logic/exitArrow';
 import { exitGateBase } from '../logic/exitGate';
@@ -64,6 +65,7 @@ import { elementSweep, type HazardRect } from '../logic/hazards';
 import { hintSparkleRadius } from '../logic/hints';
 import { blockExplorer, type MatAvoid } from '../logic/hyacinthMats';
 import { legSwimTuning } from '../logic/legs';
+import { litters } from '../logic/litter';
 import {
   metSnackTypeIds,
   mobileLegBoxes,
@@ -152,6 +154,7 @@ import { CormorantView } from './CormorantView';
 import { CrayfishView } from './CrayfishView';
 import { DarkCaveView, type DarkCaveFading } from './DarkCaveView';
 import { DragNetView, type DragNetFrame } from './DragNetView';
+import { DriftingIslandView, type DriftingIslandFrame } from './DriftingIslandView';
 import { ExitView } from './ExitView';
 import { FadingLightView, type FadingLightViewFrame } from './FadingLightView';
 import { FireflyView } from './FireflyView';
@@ -163,6 +166,7 @@ import { HeronView } from './HeronView';
 import { HomeSpotView } from './HomeSpotView';
 import { HUD_EVENTS, type DashPotTipHeldPayload, type FactCardSeenPayload } from './HudScene';
 import { HyacinthMatView } from './HyacinthMatView';
+import { LitterView } from './LitterView';
 import { MobileSnackView } from './MobileSnackView';
 import { MurkyWaterView, type MurkyWaterFrame } from './MurkyWaterView';
 import { addMotionTween, settleMotionTweens } from './motionTweens';
@@ -364,6 +368,8 @@ export class SwimScene extends Phaser.Scene {
   private petalView: PetalView | null = null;
   /** The ghost nets and the snag cue, or null in an area with no ghost nets. */
   private ghostNetView: GhostNetView | null = null;
+  /** The sharp litter, or null in an area with no sharp litter. */
+  private litterView: LitterView | null = null;
   /** The common carp, or null in an area with no carp route. */
   private carpView: CarpView | null = null;
   /** The moving hazards, or null in an area with no moving hazards. */
@@ -439,6 +445,10 @@ export class SwimScene extends Phaser.Scene {
   private pelicanLineView: PelicanLineView | null = null;
   /** The reused render argument of the pelican line view, made on its first frame. */
   private pelicanFrame: PelicanLineFrame | null = null;
+  /** The drifting islands, or null in an area with no drifting islands. */
+  private driftingIslandView: DriftingIslandView | null = null;
+  /** The reused render argument of the drifting island view, made on its first frame. */
+  private driftingIslandFrame: DriftingIslandFrame | null = null;
   /** What every mobile snack pose shares this frame, reused each frame. */
   private mobileSnackScene: MobileSnackPoseScene = { clock: 0, reduced: false, head: { x: 0, y: 0 } };
   private homeSpotView!: HomeSpotView;
@@ -526,6 +536,7 @@ export class SwimScene extends Phaser.Scene {
     this.fireflyView = null;
     this.petalView = null;
     this.ghostNetView = null;
+    this.litterView = null;
     this.carpView = null;
     this.movingHazardView = null;
     this.crayfishView = null;
@@ -560,6 +571,8 @@ export class SwimScene extends Phaser.Scene {
     this.windFrame = null;
     this.pelicanLineView = null;
     this.pelicanFrame = null;
+    this.driftingIslandView = null;
+    this.driftingIslandFrame = null;
     this.swimPhase = (TAU * T_STATIC) / 1.2;
     this.gillPhase = (TAU * T_STATIC) / 0.8;
   }
@@ -777,6 +790,14 @@ export class SwimScene extends Phaser.Scene {
    * in an area with fading lights DarkCaveView adds fadingLightCircles' result per frame, bounded by
    * the light count, and its radii are quantized into steps, so a dimming light redraws the layer
    * only on a step change.
+   * Open lake Area 14 (#213): Areas 1 to 13 build and call nothing new, and PelicanLineView gets no
+   * islands there, so every bird draws as before. LitterView and DriftingIslandView are made once per
+   * trip, and only in an area with sharp litter or with drifting islands. LitterView places its still
+   * sprites once from the encounter's hazards and draws nothing per frame. DriftingIslandView reuses
+   * its sprites and a render argument object the scene makes once and reuses, and allocates only
+   * islandSpanAt's result per island at the trip's element time: bounded by the area's island count.
+   * PelicanLineView takes the trip's drifting islands, the same ones stepTrip shelters the birds with,
+   * and works out each bird's shelter once per scoop: bounded by the bird and island counts.
    * Recorded residual, inherited from main: stepSwim and stepTrip return new immutable state and
    * event lists each frame, syncSnapshot builds a trip snapshot to compare, the views take a render
    * argument object, and the reeds-near Set, bubble views and surface x list are rebuilt each frame.
@@ -998,6 +1019,8 @@ export class SwimScene extends Phaser.Scene {
     this.plasticWormView = new PlasticWormView(this, this.assets, this.trip.plasticWorms.worms);
     const nets = this.trip.ghostNets.nets;
     this.ghostNetView = nets.length > 0 ? new GhostNetView(this, this.assets, nets, this.axolotlSize()) : null;
+    const hazards = this.trip.encounter.hazards;
+    this.litterView = litters(hazards).length > 0 ? new LitterView(this, this.assets, hazards) : null;
 
     this.snacks.clear();
     for (const item of this.items) {
@@ -1078,7 +1101,11 @@ export class SwimScene extends Phaser.Scene {
         ? new PebbleRoomView(this, this.assets, drawnWalls, this.trip.elements)
         : null;
     const pelicanLines = this.trip.pelicanLines;
-    this.pelicanLineView = pelicanLines.length > 0 ? new PelicanLineView(this, this.assets, pelicanLines) : null;
+    const islands = driftingIslands(this.trip.elements);
+    this.pelicanLineView =
+      pelicanLines.length > 0 ? new PelicanLineView(this, this.assets, pelicanLines, islands) : null;
+    this.driftingIslandView =
+      islands.length > 0 ? new DriftingIslandView(this, this.assets, this.trip.elements) : null;
     this.windView =
       this.windElements.length > 0 ? new WindView(this, this.assets, this.windElements, this.zone.safeArea) : null;
 
@@ -1732,9 +1759,11 @@ export class SwimScene extends Phaser.Scene {
     this.darkCaveView?.destroy();
     this.glowPlantView?.destroy();
     this.fadingLightView?.destroy();
+    this.litterView?.destroy();
     this.pulsingCurrentView?.destroy();
     this.pebbleRoomView?.destroy();
     this.pelicanLineView?.destroy();
+    this.driftingIslandView?.destroy();
     this.windView?.destroy();
     this.hyacinthMatView?.destroy();
     this.axolotlView.destroy();
@@ -1781,6 +1810,7 @@ export class SwimScene extends Phaser.Scene {
     this.hyacinthMatView?.render({ elementTime: this.trip.elementTime, motion: this.motion, time: this.clock });
     this.pulsingCurrentView?.render({ elementTime: this.trip.elementTime, motion: this.pulseMotionNow });
     this.pebbleRoomView?.render({ pebbles: this.pebbleStates, hint: this.trip.phase === 'swimming' && pebbleHintShown(this.pebbleHintTime) });
+    this.renderDriftingIslands();
     this.renderPelicanLines();
     this.renderWind();
     this.fireflyView?.render(this.motion, this.clock);
@@ -1806,6 +1836,21 @@ export class SwimScene extends Phaser.Scene {
     const frame = (this.pelicanFrame ??= { elementTime: 0, reduced: false });
     frame.elementTime = this.trip.elementTime;
     frame.reduced = !this.motion.ambient;
+    view.render(frame);
+  }
+
+  /**
+   * The drifting islands (issue #213) at the trip's element time, drifting in both motion modes and
+   * bobbing only under full motion. Only in an area with drifting islands; its argument object is made
+   * once and reused.
+   */
+  private renderDriftingIslands(): void {
+    const view = this.driftingIslandView;
+    if (view === null) return;
+    const frame = (this.driftingIslandFrame ??= { elementTime: 0, motion: this.motion, time: 0 });
+    frame.elementTime = this.trip.elementTime;
+    frame.motion = this.motion;
+    frame.time = this.clock;
     view.render(frame);
   }
 
