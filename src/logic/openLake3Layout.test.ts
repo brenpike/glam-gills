@@ -44,7 +44,7 @@ import { PEBBLES, bodyInAnyRock, type RockWall } from './pebble';
 import { pelicanLinePeriod, pelicanLineSweep, pelicanNarrowestGap } from './pelicanLine';
 import { placeTreasures } from './placement';
 import { CARP_SPECIES, CORMORANT_SPECIES, MUD_TURTLE_SPECIES, TILAPIA_SPECIES, routeLoopDistance, tunedSpecies, type PredatorRoute } from './predators';
-import { CORMORANT_CHASE, FINDS, MUD_TURTLE, TRIP_TREASURES_BY_AREA, tripTreasureTuning } from './tuning';
+import { CORMORANT_CHASE, FINDS, MUD_TURTLE, tripTreasureTuning } from './tuning';
 import { winds } from './wind';
 import {
   BED_TOP,
@@ -882,7 +882,7 @@ describe('Area 14 hiding spots by depth band', () => {
 });
 
 describe('Area 14 treasure (B4; issue #213, Q1)', () => {
-  const tuning = tripTreasureTuning(OPEN_LAKE_3_AREA_ID, { ...TRIP_TREASURES_BY_AREA, [OPEN_LAKE_3_AREA_ID]: { slots: TRIP_SLOTS } });
+  const tuning = tripTreasureTuning(OPEN_LAKE_3_AREA_ID);
   const options = { extras: [OPEN_LAKE_3_SPECIAL_TREASURE_ID], tuning, mainPath: zone.mainPath, threats: zoneThreats(zone) };
   const all = OPEN_LAKE_3_SHARED_TREASURES.map((treasure) => treasure.id);
 

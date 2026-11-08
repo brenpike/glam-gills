@@ -693,6 +693,7 @@ export const TRIP_TREASURES: Readonly<TripTreasureTuning> = Object.freeze({
  * canal's Area 9 has 14 (issue #107), the deep canal's Area 10 has 15 (issue #108), the deep canal's
  * Area 11 has 16 (issue #112), the open lake's Area 12 has 17 (issue #211) and the open lake's
  * Area 13 has 18 (issue #212).
+ * The open lake's Area 14 has 19 (issue #213).
  */
 export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasureOverride>>> = Object.freeze({
   canal: Object.freeze({ slots: 6 }),
@@ -708,6 +709,7 @@ export const TRIP_TREASURES_BY_AREA: Readonly<Record<string, Readonly<TripTreasu
   'deep-canal-4': Object.freeze({ slots: 16 }),
   'open-lake-1': Object.freeze({ slots: 17 }),
   'open-lake-2': Object.freeze({ slots: 18 }),
+  'open-lake-3': Object.freeze({ slots: 19 }),
 });
 
 /**

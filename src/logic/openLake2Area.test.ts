@@ -46,7 +46,7 @@ function beaten(areaIds: readonly string[]): AreaStarsRecord {
 }
 
 describe('Area 13 registration (issue #212)', () => {
-  it('is Area 13, last in AREAS, in the open lake, with its layout, exit, special treasure and still look', () => {
+  it('is Area 13, just before Area 14 in AREAS, in the open lake, with its layout, exit, special treasure and still look', () => {
     expect(OPEN_LAKE_2_AREA).toMatchObject({
       id: OPEN_LAKE_2_AREA_ID,
       number: 13,
@@ -57,7 +57,7 @@ describe('Area 13 registration (issue #212)', () => {
     });
     expect(OPEN_LAKE_2_AREA.layout).toBe(OPEN_LAKE_2_LAYOUT);
     expect(OPEN_LAKE_2_AREA.exit).toBe(OPEN_LAKE_2_EXIT);
-    expect(AREAS.at(-1)).toBe(OPEN_LAKE_2_AREA);
+    expect(AREAS.at(-2)).toBe(OPEN_LAKE_2_AREA);
     expect(areaById(OPEN_LAKE_2_AREA_ID)).toBe(OPEN_LAKE_2_AREA);
     expect(Object.isFrozen(OPEN_LAKE_2_AREA)).toBe(true);
     expect(Object.isFrozen(OPEN_LAKE_2_AREA.exit)).toBe(true);
@@ -84,9 +84,9 @@ describe('Area 13 registration (issue #212)', () => {
     expect(musicCueFor('trip', OPEN_LAKE_2_AREA)).toBe(LAGOON_BREEZE);
   });
 
-  it("labels the open lake habitat 'Open lake: Areas 12 and 13'", () => {
+  it("labels the open lake habitat 'Open lake: Areas 12 to 14'", () => {
     const numbers = AREAS.filter((area) => area.habitatId === OPEN_LAKE_HABITAT.id).map((area) => area.number);
-    expect(habitatAreasLabel(OPEN_LAKE_HABITAT.name, numbers)).toBe('Open lake: Areas 12 and 13');
+    expect(habitatAreasLabel(OPEN_LAKE_HABITAT.name, numbers)).toBe('Open lake: Areas 12 to 14');
   });
 
   it('gives the Legendary Lagoon shine Paint shell as its special treasure, every Legendary spot in band 3, the deepest band (ND-24)', () => {
@@ -100,13 +100,13 @@ describe('Area 13 registration (issue #212)', () => {
     expect(tripTreasureTuning(OPEN_LAKE_2_AREA_ID).slots).toBe(18);
   });
 
-  it('adds the mud turtle card, last in the area cards, and no fading light card (ND-26)', () => {
+  it("adds the mud turtle card, just before Area 14's sharp litter card in the area cards, and no fading light card (ND-26)", () => {
     const { ids } = sourceFactCards(OPEN_LAKE_2_LAYOUT);
     expect(ids).toContain(MUD_TURTLE_FACT.id);
     expect(ids).not.toContain(FADING_LIGHT.id);
-    expect(areaFactCards().at(-1)).toBe(MUD_TURTLE_FACT);
+    expect(areaFactCards().at(-2)).toBe(MUD_TURTLE_FACT);
     expect(areaFactCards().map((card) => card.id)).not.toContain(FADING_LIGHT.id);
-    expect(newThingsByArea().at(-1)).toEqual({ areaId: OPEN_LAKE_2_AREA_ID, threats: ['mud-turtle'], elements: ['fading-light'] });
+    expect(newThingsByArea().at(-2)).toEqual({ areaId: OPEN_LAKE_2_AREA_ID, threats: ['mud-turtle'], elements: ['fading-light'] });
   });
 });
 
