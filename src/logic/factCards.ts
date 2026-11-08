@@ -255,6 +255,18 @@ export const DRAG_NET_FACT: Readonly<FactCard> = Object.freeze({
 });
 
 /**
+ * The sharp litter fact card, shown the first time the axolotl meets a dented can or a broken bottle
+ * (PRD C13; issue #213).
+ * Sources and owner checks: PRD C13 only (ADR 0045).
+ */
+export const SHARP_LITTER_FACT: Readonly<FactCard> = Object.freeze({
+  id: 'sharp-litter',
+  name: 'Sharp litter',
+  title: 'Litter in the water',
+  body: "People drop cans and glass bottles into Xochimilco's water. They can sink to the bottom, and sharp edges can hurt animals. Put rubbish in a bin!",
+});
+
+/**
  * The punting pole fact card, shown the first time the axolotl meets a punting pole (PRD C13).
  * Sources and owner checks: PRD C13 only (ADR 0045).
  */
@@ -420,6 +432,12 @@ export const LURE_MEET_RANGE = 120;
  * play. The same as the tilapia's.
  */
 export const DRAG_NET_MEET_RANGE = 180;
+
+/**
+ * Distance in px from a piece of sharp litter within which the axolotl meets it (issue #213).
+ * Provisional; tune in play. The same as the lure's.
+ */
+export const SHARP_LITTER_MEET_RANGE = 120;
 
 /**
  * Centre distance in px from an uncollected tadpole, where it is drawn, within which the axolotl

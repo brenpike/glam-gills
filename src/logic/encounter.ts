@@ -554,11 +554,15 @@ function regrowEvents(before: LegsState, after: LegsState): EncounterEvent[] {
   return events;
 }
 
-/** A copy of the hazard sharing its type; the drift (ND-11, PRD open question 258) and the pulse (issue #105, ND-5) are copied only when set. */
+/**
+ * A copy of the hazard sharing its type; the drift (ND-11, PRD open question 258), the pulse (issue
+ * #105, ND-5) and the litter kind (issue #213) are copied only when set.
+ */
 function copyHazard(hazard: Readonly<HazardSpawn>): HazardSpawn {
   const copy: HazardSpawn = { id: hazard.id, type: hazard.type, shape: { ...hazard.shape } };
   if (hazard.drift) copy.drift = { ...hazard.drift };
   if (hazard.pulse) copy.pulse = { ...hazard.pulse };
+  if (hazard.litter) copy.litter = hazard.litter;
   return copy;
 }
 

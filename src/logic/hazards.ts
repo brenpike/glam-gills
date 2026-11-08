@@ -63,6 +63,9 @@ export interface CurrentPulse {
   readonly offset: number;
 }
 
+/** Which piece of sharp litter lies on the floor (issue #213): a dented can or a bottle with a chipped neck. */
+export type LitterKind = 'can' | 'bottle';
+
 export interface HazardSpawn {
   id: string;
   type: HazardType;
@@ -74,6 +77,11 @@ export interface HazardSpawn {
    * other hazard. Build it with pulsingCurrentSpawn().
    */
   pulse?: CurrentPulse;
+  /**
+   * Which piece of sharp litter this is (issue #213), for its look only; absent on every other
+   * hazard. Build it with litterSpawn().
+   */
+  litter?: LitterKind;
 }
 
 /**
@@ -201,6 +209,22 @@ export interface WindSpan {
   direction: GustDirection;
 }
 
+/** Which way a drifting island heads along x (issue #213). */
+export type IslandDriftDirection = 'left' | 'right';
+
+/**
+ * A drifting island's path (issue #213): a reed mat that drifts back and forth over `x0..x1` at the
+ * surface. `direction` is the heading of its first drift, the one that starts at the element's
+ * offset; each drift after it heads the other way, and the element's offset puts neighbouring
+ * islands out of step. Not a sweep: an island never hits, never costs a leg and never slows the
+ * axolotl. Inclusive edges; `x0 < x1`.
+ */
+export interface DriftingIslandPath {
+  x0: number;
+  x1: number;
+  direction: IslandDriftDirection;
+}
+
 export interface ElementSpawn {
   id: string;
   type: ElementType;
@@ -218,6 +242,8 @@ export interface ElementSpawn {
   trajinera?: TrajineraCrossing;
   /** Wind and waves span (issue #211, ND-10); absent on every element that is not wind. */
   wind?: WindSpan;
+  /** Drifting island path (issue #213); absent on every element that is not a drifting island. */
+  island?: DriftingIslandPath;
 }
 
 /**

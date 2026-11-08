@@ -457,7 +457,7 @@ describe('the golden-hour deep canal look (issue #112)', () => {
   const look = habitatLook(GOLDEN);
 
   it('is an area look variant after the dusk pond, never a habitat look, and resolves to its frozen entry', () => {
-    expect(AREA_LOOK_IDS.slice(-4)).toEqual(['pond-dusk', 'deep-canal-golden', 'open-lake-windy', 'open-lake-still']);
+    expect(AREA_LOOK_IDS.slice(-5)).toEqual(['pond-dusk', 'deep-canal-golden', 'open-lake-windy', 'open-lake-still', 'open-lake-late']);
     expect(HABITAT_LOOK_IDS).not.toContain(GOLDEN);
     expect(isAreaLookId(GOLDEN)).toBe(true);
     expect(isHabitatLookId(GOLDEN)).toBe(false);
@@ -540,8 +540,14 @@ describe('the golden-hour deep canal look (issue #112)', () => {
     expect(DAY_RAY_SLANT).toBe(70);
     for (const id of AREA_LOOK_IDS.filter((other) => other !== GOLDEN)) {
       const other = habitatLook(id);
-      expect(other.rayTint, id).toEqual([255, 255, 255]);
-      expect(other.raySlant, id).toBe(70);
+      // The late open lake (issue #213, Area 14) borrows the golden rays, but has no lit row, decorations or petals.
+      if (id === 'open-lake-late') {
+        expect(other.rayTint, id).toEqual(look.rayTint);
+        expect(other.raySlant, id).toBe(look.raySlant);
+      } else {
+        expect(other.rayTint, id).toEqual([255, 255, 255]);
+        expect(other.raySlant, id).toBe(70);
+      }
       expect(other.lowerRowLight, id).toBe(false);
       expect(other.goldenDecor, id).toBe(false);
       expect(other.sinkingPetalsPerScreen, id).toBe(0);
@@ -665,7 +671,7 @@ describe('every other look paints exactly what it did on trunk', () => {
   });
 
   it('covers every look from before the golden one and the open lake: the lake looks are new, so no trunk to match', () => {
-    const lake: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still'];
+    const lake: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still', 'open-lake-late'];
     expect(Object.keys(TRUNK).sort()).toEqual(AREA_LOOK_IDS.filter((id) => id !== GOLDEN && !lake.includes(id)).sort());
   });
 

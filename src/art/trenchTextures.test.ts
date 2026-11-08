@@ -13,6 +13,8 @@ import {
   FADING_LIGHT_TEX,
   type FadingLightFrame,
 } from './drawFadingLight';
+import { DRIFTING_ISLAND_HALF_TEX, DRIFTING_ISLAND_KEY } from './drawDriftingIsland';
+import { LITTER_KEYS, LITTER_KINDS, LITTER_TEX } from './drawLitter';
 import {
   MUD_TURTLE_FRAMES,
   MUD_TURTLE_HEAD_TEX,
@@ -181,6 +183,53 @@ describe('Area 13 lake textures', () => {
       const size = LAKE_TEX_SIZES[key];
       expect(size.w).toBeLessThanOrEqual(LAKE_TEX_MAX_W);
       expect(size.h).toBeLessThanOrEqual(LAKE_TEX_MAX_H);
+    }
+  });
+});
+
+describe('Area 14 lake textures (issue #213)', () => {
+  const AREA_14_KEYS = [LAKE_TEX.litterCan, LAKE_TEX.litterBottle, LAKE_TEX.driftingIslandHalf];
+
+  it('names the litter kinds and the half mat once, matching the painters keys', () => {
+    expect(new Set(AREA_14_KEYS).size).toBe(AREA_14_KEYS.length);
+    expect(LAKE_TEX.litterCan).toBe(LITTER_KEYS.can);
+    expect(LAKE_TEX.litterBottle).toBe(LITTER_KEYS.bottle);
+    expect(LAKE_TEX.driftingIslandHalf).toBe(DRIFTING_ISLAND_KEY);
+    for (const key of AREA_14_KEYS) expect(NEW_KEYS).not.toContain(key);
+  });
+
+  it('bakes each once, at the logical size times the bake scale, anchored where the painters say', () => {
+    vi.stubGlobal('Path2D', LogPath);
+    const made: Made = new Map();
+    const lake = bakeLakeTextures(fakeScene(made), 2);
+    for (const kind of LITTER_KINDS) {
+      const key = LITTER_KEYS[kind];
+      expect([made.get(key)!.w, made.get(key)!.h]).toEqual([Math.ceil(LITTER_TEX.w * 2), Math.ceil(LITTER_TEX.h * 2)]);
+      expect(made.get(key)!.ops.length).toBeGreaterThan(0);
+      expect([lake.litter[kind].key, lake.litter[kind].scale]).toEqual([key, 2]);
+      expect([lake.litter[kind].originX, lake.litter[kind].originY]).toEqual([LITTER_TEX.originX, LITTER_TEX.originY]);
+      expect(LAKE_TEX_SIZES[key]).toBe(LITTER_TEX);
+    }
+    const island = made.get(DRIFTING_ISLAND_KEY)!;
+    expect([island.w, island.h]).toEqual([DRIFTING_ISLAND_HALF_TEX.w * 2, DRIFTING_ISLAND_HALF_TEX.h * 2]);
+    expect(island.ops.length).toBeGreaterThan(0);
+    expect([lake.driftingIslandHalf.key, lake.driftingIslandHalf.scale]).toEqual([DRIFTING_ISLAND_KEY, 2]);
+    expect([lake.driftingIslandHalf.originX, lake.driftingIslandHalf.originY]).toEqual([DRIFTING_ISLAND_HALF_TEX.originX, DRIFTING_ISLAND_HALF_TEX.originY]);
+    expect(LAKE_TEX_SIZES[DRIFTING_ISLAND_KEY]).toBe(DRIFTING_ISLAND_HALF_TEX);
+  });
+
+  it('paints the two litter kinds differently', () => {
+    vi.stubGlobal('Path2D', LogPath);
+    const made: Made = new Map();
+    bakeLakeTextures(fakeScene(made), 1);
+    const painted = LITTER_KINDS.map((kind) => JSON.stringify(made.get(LITTER_KEYS[kind])!.ops));
+    expect(new Set(painted).size).toBe(LITTER_KINDS.length);
+  });
+
+  it('keeps every new texture within the lake small-sprite caps', () => {
+    for (const key of AREA_14_KEYS) {
+      expect(LAKE_TEX_SIZES[key].w).toBeLessThanOrEqual(LAKE_TEX_MAX_W);
+      expect(LAKE_TEX_SIZES[key].h).toBeLessThanOrEqual(LAKE_TEX_MAX_H);
     }
   });
 });

@@ -78,12 +78,13 @@ describe('the dark water (issue #77, ND-7)', () => {
     for (const part of DARK_HIDDEN_PARTS) expect(darknessMayHide(part)).toBe(true);
   });
 
-  it('never hides the axolotl, the exit, the Home Spot, a predator, a moving hazard, a warning, a stranded axolotl, a glow-plant or a fading light', () => {
+  it('never hides the axolotl, the exit, the Home Spot, a predator, a hazard, a moving hazard, a warning, a stranded axolotl, a glow-plant or a fading light', () => {
     expect(DARK_SHOWN_PARTS).toEqual([
       'axolotl',
       'exit',
       'home-spot',
       'predator',
+      'hazard',
       'moving-hazard',
       'warning',
       'stranded-axolotl',

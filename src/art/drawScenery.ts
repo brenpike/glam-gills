@@ -52,6 +52,7 @@ import {
   lakeWaterStops,
   paintLakeVolcanoes,
   paintLakebed,
+  paintPitShafts,
   paintStreamingClouds,
   type LakeBand,
   type LakeRect,
@@ -761,7 +762,9 @@ function paintSpringCaveRow(ctx: CanvasRenderingContext2D, row: ChunkRow, opts: 
  * randomness. `lakebed` paints no canal bed; it paints the lakebed into `solids` last of the water
  * steps, on every row, drawing randomness only for what it paints. On a row with the bed ('single'
  * or 'bottom') it first paints the lakebed into the floor under the bed top (LAKE_FLOOR), so the
- * bowl floor shows where no solid stands.
+ * bowl floor shows where no solid stands. A look with `pitShafts` paints its shafts of light
+ * (paintPitShafts) after the water and the rays and before the lakebed, in a chunk of band 1 and 2
+ * only, no randomness.
  */
 export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkOptions): void {
   const { rand } = opts;
@@ -796,6 +799,8 @@ export function paintBackgroundChunk(ctx: CanvasRenderingContext2D, opts: ChunkO
   } else {
     paintDeepWater(ctx, look);
   }
+  // The late-afternoon pit shafts sink through the water of band 1 and 2, over it and under any wall.
+  if (look.pitShafts) paintPitShafts(ctx, opts.index, opts.band ?? 1, look.raySlant);
   if (hasBed) {
     if (!look.lakebed) paintBed(ctx, opts.index, rand, look);
     if (look.bedStones) paintCanalBedStones(ctx, (x) => bedEdgeY(opts.index * VIEW_W + x));

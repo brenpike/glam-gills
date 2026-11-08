@@ -89,6 +89,7 @@ import {
   POND_WATER_SHALLOW,
   HABITAT_LOOK_IDS,
   OPEN_LAKE_LOOK,
+  OPEN_LAKE_LATE_LOOK,
   OPEN_LAKE_STILL_LOOK,
   OPEN_LAKE_WINDY_LOOK,
   habitatLook,
@@ -806,6 +807,7 @@ describe('area looks (issue #98)', () => {
       'deep-canal-golden',
       'open-lake-windy',
       'open-lake-still',
+      'open-lake-late',
     ]);
     expect(HABITAT_LOOK_IDS).toEqual(['canal', 'pond', 'chinampa', 'spring-cave', 'deep-canal', 'open-lake']);
     for (const id of AREA_LOOK_IDS) expect(habitatLook(id).id).toBe(id);
@@ -817,6 +819,8 @@ describe('area looks (issue #98)', () => {
     expect(isHabitatLookId('open-lake-windy')).toBe(false);
     expect(isAreaLookId('open-lake-still')).toBe(true);
     expect(isHabitatLookId('open-lake-still')).toBe(false);
+    expect(isAreaLookId('open-lake-late')).toBe(true);
+    expect(isHabitatLookId('open-lake-late')).toBe(false);
     expect(isAreaLookId('moon')).toBe(false);
     expect(() => habitatLook('pond-night')).toThrow(RangeError);
   });
@@ -837,6 +841,7 @@ describe('area looks (issue #98)', () => {
       ['deep-canal-golden', false, { kind: 'sunkenHull', anchor: 'bed' }, false, 0],
       ['open-lake-windy', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
       ['open-lake-still', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
+      ['open-lake-late', false, { kind: 'rocks', anchor: 'bed' }, false, 0],
     ]);
   });
 
@@ -1868,16 +1873,18 @@ describe('bakePondTextures', () => {
 describe('open lake looks (issue #211)', () => {
   const lake = habitatLook('open-lake');
   const windy = habitatLook('open-lake-windy');
-  const lakeIds: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still'];
+  const lakeIds: readonly AreaLookId[] = ['open-lake', 'open-lake-windy', 'open-lake-still', 'open-lake-late'];
 
-  it('adds the lake as the last habitat look, its windy and still variants as the last area looks, all frozen', () => {
+  it('adds the lake as the last habitat look, its windy, still and late variants as the last area looks, all frozen', () => {
     expect(HABITAT_LOOK_IDS[HABITAT_LOOK_IDS.length - 1]).toBe('open-lake');
-    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 2]).toBe('open-lake-windy');
-    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 1]).toBe('open-lake-still');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 3]).toBe('open-lake-windy');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 2]).toBe('open-lake-still');
+    expect(AREA_LOOK_IDS[AREA_LOOK_IDS.length - 1]).toBe('open-lake-late');
+    expect(habitatLook('open-lake-late')).toBe(OPEN_LAKE_LATE_LOOK);
     expect(habitatLook('open-lake-still')).toBe(OPEN_LAKE_STILL_LOOK);
     expect(lake).toBe(OPEN_LAKE_LOOK);
     expect(windy).toBe(OPEN_LAKE_WINDY_LOOK);
-    for (const look of [lake, windy, habitatLook('open-lake-still')]) {
+    for (const look of [lake, windy, habitatLook('open-lake-still'), habitatLook('open-lake-late')]) {
       expect(Object.isFrozen(look)).toBe(true);
       expect(Object.isFrozen(look.water)).toBe(true);
       expect(Object.isFrozen(look.bed)).toBe(true);
@@ -1893,6 +1900,7 @@ describe('open lake looks (issue #211)', () => {
     expect(lake.streamingClouds).toBe(false);
     expect(windy.streamingClouds).toBe(true);
     expect(habitatLook('open-lake-still').streamingClouds).toBe(false);
+    expect(habitatLook('open-lake-late').streamingClouds).toBe(false);
   });
 
   it('leaves the new fields off for every other look, so their bakes are unchanged', () => {
@@ -1900,6 +1908,11 @@ describe('open lake looks (issue #211)', () => {
       const look = habitatLook(id);
       expect([look.lakebed, look.depthBands, look.volcanoHorizon, look.streamingClouds], id).toEqual([false, false, false, false]);
     }
+  });
+
+  it('turns the pit shafts on for the late look only, and off for every other look (issue #213)', () => {
+    expect(habitatLook('open-lake-late').pitShafts).toBe(true);
+    for (const id of AREA_LOOK_IDS.filter((other) => other !== 'open-lake-late')) expect(habitatLook(id).pitShafts, id).toBe(false);
   });
 
   it('uses the drawLake sky, band 1 water, haze and silt, with smooth stones as its scenery cave, and no banks, reeds or stream', () => {
