@@ -527,7 +527,7 @@ describe('card copy fit', () => {
 });
 
 describe('area fact card copy fit', () => {
-  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor, the mud seep, the trajinera lure, the drag net, the cormorant, the pelican and the mud turtle', () => {
+  it('checks every area fact card: the tilapia, the carp, the plastic worm, the tadpole, the shrimp, the heron, the ghost net, the punting pole, the garter snake, the water hyacinth, the crayfish, the stalactite, the geyser, the underwater springs, the black bass, the murky water, the anchor, the mud seep, the trajinera lure, the drag net, the cormorant, the pelican, the mud turtle and the sharp litter', () => {
     expect(AREA_FACT_CARDS.map((card) => card.id)).toEqual([
       'tilapia',
       'carp',
@@ -552,6 +552,7 @@ describe('area fact card copy fit', () => {
       'cormorant',
       'pelican',
       'mud-turtle',
+      'sharp-litter',
     ]);
   });
 
@@ -979,6 +980,7 @@ describe('area beaten card copy fit (H5, H8)', () => {
       'Little cormorant',
       'Little pelican',
       'Lagoon shine Paint shell',
+      'Refuge snow globe',
     ]);
   });
 

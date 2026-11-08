@@ -355,8 +355,8 @@ describe('areaStrandingChance', () => {
     expect(areaStrandingChance(area)).toBe(0.4);
   });
 
-  it('gives Areas 1 to 5, 10, 11, 12 and 13 the 40% default, and Area 6 its own 30% (issues #77, #108 and #112)', () => {
-    expect(defaultChanceAreas.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 10, 11, 12, 13]);
+  it('gives Areas 1 to 5, 10, 11, 12, 13 and 14 the 40% default, and Area 6 its own 30% (issues #77, #108 and #112)', () => {
+    expect(defaultChanceAreas.map((area) => area.number)).toEqual([1, 2, 3, 4, 5, 10, 11, 12, 13, 14]);
     const springCave = AREAS.find((area) => area.number === 6);
     expect(springCave && areaStrandingChance(springCave)).toBe(0.3);
   });
