@@ -121,7 +121,7 @@
  * end and tip is rounded, no letters or numbers, and a pelican's bill is always closed over an empty pouch, never
  * catching anything. No look has net-like lines.
  *
- * The Area 13 looks (issue #215) keep the same rules. The Mini submarine is the second big Back item (after the Surfboard):
+ * The Area 13 looks (issue #215) keep the same rules. The Mini submarine is a big Back item, as the Jetpack and the Surfboard are:
  * it draws within backBigFootprint and its visible paint stays under the axolotl's own; the other five keep their slots'
  * footprints. Their outer fills are new pale colours of their own, imported by name from treasurePalette.ts
  * (TURTLE_SOCKS_FILL, DIVING_GOGGLES_FRAME, TURTLE_SHELL_FILL, LANTERN_CHARM_FILL, MINI_SUBMARINE_FILL,
