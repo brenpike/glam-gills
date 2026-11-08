@@ -5,9 +5,10 @@
  * (issue #103), the eleven spring cave Area 6 ones (issue #77), the eleven spring cave Area 7 ones (issue #105),
  * the eleven deep canal Area 8 ones (issue #78), the eleven deep canal Area 9 ones (issue #107), the eleven deep canal
  * Area 10 ones (issue #108), the deep canal Area 11's Little cormorant (issue #112), its three Decorations and five
- * Wearables (issue #207), the open lake Area 12's five Decorations and five Wearables (issue #214), and one Paint shell
- * per Dream colour (Marigold and Golden shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, Tule green and
- * Obsidian, issue #214, then Pitch black and Trench shine, issue #215, the last two).
+ * Wearables (issue #207), the open lake Area 12's five Decorations and five Wearables (issue #214), the open lake Area
+ * 13's eight Decorations and six Wearables (issue #215), and one Paint shell per Dream colour (Marigold and Golden
+ * shine, issue #112, Lime, Hyacinth and Lagoon shine, issue #207, Tule green and Obsidian, issue #214, then Pitch black
+ * and Trench shine, issue #215, the last two).
  *
  * Each icon is authored in a 28-unit box centred on (0, 0) and scaled
  * uniformly, so the longest side is `size` with the ink included. A Decoration
@@ -67,6 +68,11 @@ import {
   CRYSTAL_ARCH_BASE,
   CRYSTAL_CROWN_BAND,
   CRYSTAL_CUFF_BAND,
+  DIVING_BELL_BASE,
+  DIVING_BELL_FILL,
+  DIVING_BELL_RING,
+  DIVING_GOGGLES_FRAME,
+  DIVING_SUIT_FILL,
   DIVING_TANK_FILL,
   DIVING_TANK_STRAP,
   DRAGONFLY_FRAME,
@@ -79,6 +85,10 @@ import {
   DREAM_STAR,
   DREAM_SWATCH,
   EXPLORER_VEST_FILL,
+  FADING_GARDEN_BASE,
+  FADING_GARDEN_BULB,
+  FADING_GARDEN_CAP,
+  FADING_GARDEN_STALK,
   FEATHER_CAP_FILL,
   FEATHER_FILL,
   FIREFLY_BULB,
@@ -101,6 +111,10 @@ import {
   GLASSES_FRAME,
   GLASSES_GEM,
   GLASSES_LENS,
+  GLOW_CORE,
+  GLOW_FLOWER_BULB,
+  GLOW_FLOWER_CAP,
+  GLOW_FLOWER_PETAL,
   GOGGLES_FRAME,
   GOGGLES_STRAP,
   GOLDEN_LOTUS_BASE,
@@ -112,6 +126,13 @@ import {
   GOLD_TRIM,
   HAT_FILL,
   LADYBUG_SHELL,
+  LAKE_BUOY_FILL,
+  LAKE_BUOY_TOP,
+  LANTERN_CHARM_FILL,
+  LIGHTHOUSE_CAP,
+  LIGHTHOUSE_LAMP,
+  LIGHTHOUSE_ROCK,
+  LIGHTHOUSE_TOWER,
   LILY_CROWN_FLOWER,
   LILY_CROWN_LEAF,
   LILY_PAD_FILL,
@@ -127,10 +148,13 @@ import {
   MARIACHI_STUD,
   MARKET_LEAF,
   MINERS_HELMET_FILL,
+  MINI_SUBMARINE_FILL,
   MOSS_BALL_FILL,
   MOSS_BALL_WEIGHT,
   MOSSY_ROCK_FILL,
   MOSSY_ROCK_MOSS,
+  MUD_TURTLE_SHELL,
+  MUD_TURTLE_SKIN,
   MUSIC_STAGE_DECK,
   MUSIC_STAGE_SHELL,
   NAME_SIGN_FILL,
@@ -150,12 +174,16 @@ import {
   POND_WEED_SCARF,
   PONCHO_FILL,
   PYRAMID_GEM,
+  RAINCLOUD_DROP,
+  RAINCLOUD_FILL,
+  RAINCLOUD_HOOK,
   RAINCOAT_FILL,
   PYRAMID_STONE,
   REED_BUNDLE_STALK,
   ROPE_NECKLACE_CORD,
   SAILOR_CAP_FILL,
   SOCK_FILL,
+  STONE_STACK_FILL,
   STRIPED_SCARF_FILL,
   TAIL_BELL_CLAPPER,
   TAIL_BELL_FILL,
@@ -164,6 +192,8 @@ import {
   TRAJINERA_BLOSSOM_PINK,
   TRAJINERA_BLOSSOM_YELLOW,
   TRAJINERA_HULL,
+  TURTLE_SHELL_FILL,
+  TURTLE_SOCKS_FILL,
   TREASURE_SHINE,
   TREASURE_SILHOUETTE_FILL,
   TREASURE_STAR,
@@ -416,8 +446,8 @@ export const DREAM_SWATCH_IDS: readonly DreamSwatchId[] = [
  * Area 4 ones and the eleven chinampa Area 5 ones (the text after `chinampa/`), then the eleven spring cave
  * Area 6 ones and the eleven spring cave Area 7 ones (the text after `spring-cave/`), then the eleven deep canal
  * Area 8 ones, the eleven deep canal Area 9 ones, the eleven deep canal Area 10 ones and the nine deep canal Area 11 ones
- * (the text after `deep-canal/`), then the ten open lake Area 12 ones (the text after `open-lake/`, issue #214), in
- * catalogue order.
+ * (the text after `deep-canal/`), then the ten open lake Area 12 ones (the text after `open-lake/`, issue #214) and the
+ * fourteen open lake Area 13 ones (issue #215), in catalogue order.
  */
 export type TreasureItemSlug =
   | 'pond-plant'
@@ -549,7 +579,21 @@ export type TreasureItemSlug =
   | 'cloud-scarf'
   | 'pelican-swim-ring'
   | 'surfboard'
-  | 'pelican-slippers';
+  | 'pelican-slippers'
+  | 'stone-stack'
+  | 'lake-buoy'
+  | 'raincloud-mobile'
+  | 'turtle-socks'
+  | 'little-lighthouse'
+  | 'glow-flower-lamp'
+  | 'diving-bell'
+  | 'diving-goggles'
+  | 'turtle-shell-backpack'
+  | 'lantern-tail-charm'
+  | 'little-mud-turtle'
+  | 'mini-submarine'
+  | 'fading-light-garden'
+  | 'diving-suit';
 
 export type TreasureIconSlug = TreasureItemSlug | `paint-shell-${DreamSwatchId}`;
 
@@ -684,15 +728,31 @@ const ITEM_SLUGS: readonly TreasureItemSlug[] = [
   'pelican-swim-ring',
   'surfboard',
   'pelican-slippers',
+  'stone-stack',
+  'lake-buoy',
+  'raincloud-mobile',
+  'turtle-socks',
+  'little-lighthouse',
+  'glow-flower-lamp',
+  'diving-bell',
+  'diving-goggles',
+  'turtle-shell-backpack',
+  'lantern-tail-charm',
+  'little-mud-turtle',
+  'mini-submarine',
+  'fading-light-garden',
+  'diving-suit',
 ];
 
 /**
- * All one hundred and sixty-five icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
+ * All one hundred and seventy-nine icon slugs: the twelve canal items, the eleven pond items, the eleven pond Area 3
  * items, the eleven chinampa Area 4 items, the eleven chinampa Area 5 items, the eleven spring cave Area 6
  * items, the eleven spring cave Area 7 items, the eleven deep canal Area 8 items, the eleven deep canal Area 9
  * items, the eleven deep canal Area 10 items, the deep canal Area 11's nine items (the Little cormorant, issue #112, then
  * its three Decorations and five Wearables in catalogue order, issue #207), the open lake Area 12's ten items (its five
- * Decorations and five Wearables in catalogue order, issue #214), then the thirty-five Paint shells in
+ * Decorations and five Wearables in catalogue order, issue #214), the open lake Area 13's fourteen items (its eight
+ * Decorations and six Wearables in catalogue order, the two interleaved by rarity as the catalogue lists them, issue
+ * #215), then the thirty-five Paint shells in
  * Dream order (Moonstone, Chocolate, Crystal shine and Glowworm are the spring cave's; Jade, Fiesta shine, Olive,
  * Lantern shine, Peach, Confetti shine, Marigold, Golden shine, Lime, Hyacinth and Lagoon shine the deep canal's; the
  * last four, Tule green and Obsidian, issue #214, then Pitch black and Trench shine, issue #215, the open lake's).
@@ -792,6 +852,10 @@ export function treasureIconTextureSize(size: number): TexSize {
  * The five open lake Area 12 Decorations (issue #214, ND-5) end on the same 12.6 edge: the round tail end of the
  * Windsock (a Hanging item), the sand mound of the Pinwheel and the lake plinth of the Twin volcanoes (Floor items), and
  * the weights of the Little pelican and the Little sailboat (Floating items, so the box edge).
+ * The eight open lake Area 13 Decorations (issue #215) end on the same 12.6 edge: the foot of the Stone stack's bottom
+ * stone, the Little lighthouse's rock, the Diving bell's platform, the Little mud turtle's feet and the Fading light
+ * garden's bed (Floor items), the weight of the Lake buoy (a Floating item, so the box edge), and the foot of the
+ * Raincloud mobile's middle drop and the tip of the Glow-flower lamp's middle petal (Hanging items).
  */
 const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>> = {
   'pond-plant': 12.3,
@@ -858,6 +922,14 @@ const DECORATION_FILL_BOTTOM: Readonly<Partial<Record<TreasureIconSlug, number>>
   'little-pelican': 12.6,
   'twin-volcanoes': 12.6,
   'little-sailboat': 12.6,
+  'stone-stack': 12.6,
+  'lake-buoy': 12.6,
+  'raincloud-mobile': 12.6,
+  'little-lighthouse': 12.6,
+  'glow-flower-lamp': 12.6,
+  'diving-bell': 12.6,
+  'little-mud-turtle': 12.6,
+  'fading-light-garden': 12.6,
 };
 
 /** How far the outer ink reaches past the fill, for the Decorations whose painter is not a plain `shape`. */
@@ -5780,6 +5852,633 @@ function paintPelicanSlippers(pen: Pen): void {
 }
 
 // ---------------------------------------------------------------------------
+// Open lake Area 13 Decorations (issue #215)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Eight trench Decorations: a stack of flat stones, a lake buoy, a
+// raincloud mobile, a little lighthouse, a glow-flower lamp, a diving bell, a friendly little mud turtle (the area's
+// special treasure) and a fading light garden. Every outer fill is one of the Area 13 Decoration fills of
+// treasurePalette.ts (9:1 or more with ink). Every glow is a soft, still pale heart inside a bulb or lamp and never
+// flashes. The raincloud has no lightning, the lighthouse and the buoy carry no letters or numbers (ADR 0007), and the
+// mud turtle's head is level with a closed, smiling, rounded face: it never raises its head, snaps or bites.
+
+/** One flat stone of the Stone stack: its left and right edges, top and bottom, corner radius and soft ink specks (x, y pairs). */
+interface StackStone {
+  readonly x0: number;
+  readonly x1: number;
+  readonly y0: number;
+  readonly y1: number;
+  readonly r: number;
+  readonly specks: readonly number[];
+}
+
+/** The Stone stack's four flat stones from the widest at the bottom, each leaning a little the other way; the bottom stone's foot is the 12.6 edge. */
+const STONE_STACK: readonly StackStone[] = [
+  { x0: -12.4, x1: 12.4, y0: 7.2, y1: AREA3_FOOT_Y, r: 2.4, specks: [-7.4, 10.2, 6.2, 9.6] },
+  { x0: -9.2, x1: 10.2, y0: 1.8, y1: 8, r: 2.4, specks: [-4, 4.8, 5.4, 5.6] },
+  { x0: -6.8, x1: 6, y0: -3.2, y1: 2.6, r: 2.4, specks: [-2.2, 0.2, 2.4, -0.6] },
+  { x0: -4.2, x1: 4.8, y0: -7.4, y1: -2.4, r: 2.2, specks: [-0.8, -4.6] },
+];
+
+/**
+ * Common, Floor: a cairn of four flat stones, stacked wide to narrow and each leaning a little the other way, with a small
+ * round pebble on top, all in one pale warm stone with a few ink specks (alpha 0.30). One shine on the top stone. The
+ * bottom stone's flat foot is the lowest fill edge. Flat slabs, never the Pebble stack's three round river pebbles.
+ */
+function paintStoneStack(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const stone of STONE_STACK) {
+    const slab = roundedPolygon(pts(stone.x0, stone.y0, stone.x1, stone.y0, stone.x1, stone.y1, stone.x0, stone.y1), stone.r);
+    silhouette(pen, place(slab, k), STONE_STACK_FILL, ITEM_LW, () => {
+      ctx.fillStyle = INK;
+      ctx.globalAlpha = 0.3;
+      for (let i = 0; i < stone.specks.length; i += 2) ctx.fill(place(ellipse(stone.specks[i], stone.specks[i + 1], 0.6, 0.45), k));
+      ctx.globalAlpha = 1;
+    });
+  }
+  outerShape(pen, place(ellipse(0.4, -10.4, 3, 2.2), k), STONE_STACK_FILL, ITEM_LW);
+  shine(pen, -1.8, -5.4, 0.7, 1.1, 0.3);
+}
+
+/** The Lake buoy's round float (half width and half height) and the round pebble A ring on its top (centre and radius). */
+const LAKE_BUOY = { rx: 7.6, ry: 7, ring: { y: -11.1, r: 1.5 } } as const;
+/** The Lake buoy's rope net: the spacing of its criss-cross lines across the float. */
+const LAKE_BUOY_NET_STEP = 4.6;
+
+/**
+ * Common, Floating: a fishing float in a rope net: a round float in the pale apricot with a criss-cross of soft ink rope
+ * lines (1.2, alpha 0.30) over it, a small round pebble A ring on top and a thin ink cord down to a pebble A weight. It
+ * floats across the waterline, 20 below the top of the 80 box, so the top of the float stands in the air and the rest sits
+ * in the water. One shine. The weight is the lowest fill edge, the box edge. A plain float: no letters or numbers, no
+ * light, and no trim, gem or star.
+ */
+function paintLakeBuoy(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { rx, ry, ring } = LAKE_BUOY;
+  const cy = waterlineY(INK_OUT_SHAPE) + 3;
+  boatTether(pen, 0, cy + ry - 0.4);
+  outerShape(pen, place(ellipse(0, ring.y, ring.r, ring.r), k), LAKE_BUOY_TOP, ITEM_LW);
+  silhouette(pen, place(ellipse(0, cy, rx, ry), k), LAKE_BUOY_FILL, ITEM_LW, () => {
+    const net = new Path2D();
+    for (let x = -3 * LAKE_BUOY_NET_STEP; x <= 3 * LAKE_BUOY_NET_STEP; x += LAKE_BUOY_NET_STEP) {
+      net.moveTo(x - ry, cy - ry);
+      net.lineTo(x + ry, cy + ry);
+      net.moveTo(x + ry, cy - ry);
+      net.lineTo(x - ry, cy + ry);
+    }
+    ctx.strokeStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(net, k));
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -3.8, cy - 3.6, 0.9, 1.7, 0.5);
+}
+
+/** The Raincloud mobile's cloud puffs (x, y, radius) and its flat base: the base's left and right edges, top and bottom. */
+const RAINCLOUD_PUFFS: readonly (readonly [number, number, number])[] = [
+  [-5.8, -0.2, 2.6],
+  [-2.2, -2.2, 3],
+  [2.6, -2.4, 2.8],
+  [5.8, -0.2, 2.6],
+];
+const RAINCLOUD_BASE = { x0: -5.8, x1: 5.8, y0: -1.4, y1: 2.4 } as const;
+/** The Raincloud mobile's three hanging drops: string x, the drop's top, half width and height. The middle one's foot is the 12.6 edge. */
+const RAINCLOUD_DROPS: readonly { readonly x: number; readonly top: number; readonly w: number; readonly h: number }[] = [
+  { x: -4.4, top: 7, w: 1.9, h: 3.8 },
+  { x: 0.4, top: 8, w: 2.1, h: 4.6 },
+  { x: 4.6, top: 6.8, w: 1.9, h: 3.6 },
+];
+
+/** One rain drop: its top at (x, top), `w` either side at the belly and `h` tall, the foot a round curve. */
+function rainDropPath(x: number, top: number, w: number, h: number): Path2D {
+  const p = new Path2D();
+  p.moveTo(x, top);
+  p.bezierCurveTo(x + 0.35 * w, top + 0.3 * h, x + w, top + 0.55 * h, x + w, top + 0.72 * h);
+  p.bezierCurveTo(x + w, top + 0.92 * h, x + 0.5 * w, top + h, x, top + h);
+  p.bezierCurveTo(x - 0.5 * w, top + h, x - w, top + 0.92 * h, x - w, top + 0.72 * h);
+  p.bezierCurveTo(x - w, top + 0.55 * h, x - 0.35 * w, top + 0.3 * h, x, top);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Common, Hanging: a mobile of one round cloud in the pale grey-blue with a soft ink underside (alpha 0.30), one merged
+ * silhouette with no line across a joint, hung by a short ink string (1.6) from a pebble A hook ring on its top-centre.
+ * Three pale blue rain drops hang under it on thin ink strings at three different heights. One shine on the cloud. The
+ * middle drop's foot is the lowest fill edge. A calm rain: no lightning, no bolt and no zigzag. A Hanging Decoration moves
+ * left and right only.
+ */
+function paintRaincloudMobile(pen: Pen): void {
+  const { ctx, k } = pen;
+  const strings = new Path2D();
+  strings.moveTo(0, -10);
+  strings.lineTo(0, -4);
+  for (const drop of RAINCLOUD_DROPS) {
+    strings.moveTo(drop.x, 2);
+    strings.lineTo(drop.x, drop.top);
+  }
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  ctx.stroke(place(strings, k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, RAINCLOUD_HOOK), DETAIL_LW);
+  for (const drop of RAINCLOUD_DROPS) outerShape(pen, place(rainDropPath(drop.x, drop.top, drop.w, drop.h), k), RAINCLOUD_DROP, ITEM_LW);
+  const underside = (): void => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(-ICON_BOX * k, 0.8 * k, 2 * ICON_BOX * k, ICON_BOX * k);
+    ctx.globalAlpha = 1;
+  };
+  const { x0, x1, y0, y1 } = RAINCLOUD_BASE;
+  const pieces: Piece[] = [
+    { path: place(roundedPolygon(pts(x0, y0, x1, y0, x1, y1, x0, y1), 1.2), k), fill: RAINCLOUD_FILL, inner: underside },
+    ...RAINCLOUD_PUFFS.map(
+      ([x, y, r]): Piece => ({ path: place(ellipse(x, y, r, r), k), fill: RAINCLOUD_FILL, inner: underside }),
+    ),
+  ];
+  mergedSilhouette(pen, pieces, ITEM_LW);
+  shine(pen, -3.6, -3.4, 1.2, 0.6, -0.4);
+}
+
+/**
+ * Rare, Floor: a little lighthouse on a low rocky foot in pebble C: a tapering tower in the captain's cream with a small
+ * soft ink round window (alpha 0.30) and the one yellow trim band across it, a pale teal gallery, a pale lantern glass
+ * lamp room with a soft white heart that stays still and never flashes, and a pale teal dome roof. One shine on the
+ * tower. The rock's foot is the lowest fill edge. No letters or numbers (ADR 0007), no beam and no gem or star.
+ */
+function paintLittleLighthouse(pen: Pen): void {
+  const { ctx, k } = pen;
+  const rock = roundedPolygon(pts(-12.4, AREA3_FOOT_Y, -10, 8.2, 10, 8.2, 12.4, AREA3_FOOT_Y), [1.8, 2.6, 2.6, 1.8]);
+  outerShape(pen, place(rock, k), LIGHTHOUSE_ROCK, ITEM_LW);
+  const tower = roundedPolygon(pts(-5.4, 8.8, -3.6, -4.4, 3.6, -4.4, 5.4, 8.8), 1);
+  silhouette(pen, place(tower, k), LIGHTHOUSE_TOWER, ITEM_LW, () => {
+    trimBand(pen, 1.2, 3.4, BOAT_TRIM);
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    ctx.fill(place(ellipse(0, 6, 1.1, 1.6), k));
+    ctx.globalAlpha = 1;
+  });
+  outerShape(pen, place(roundedPolygon(pts(-6.6, -4.4, 6.6, -4.4, 6.6, -6.2, -6.6, -6.2), 0.9), k), LIGHTHOUSE_CAP, ITEM_LW);
+  outerShape(pen, place(roundedPolygon(pts(-3.4, -6.2, 3.4, -6.2, 3.4, -10.4, -3.4, -10.4), 1.2), k), LIGHTHOUSE_LAMP, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = GLOW_CORE;
+    ctx.fill(place(ellipse(0, -8.3, 1.9, 1.9), k));
+  });
+  const roof = new Path2D();
+  roof.moveTo(-4.6, -10.4);
+  roof.bezierCurveTo(-4.6, -13.3, 4.6, -13.3, 4.6, -10.4);
+  roof.closePath();
+  outerShape(pen, place(roof, k), LIGHTHOUSE_CAP, ITEM_LW);
+  shine(pen, -2, -1.6, 0.6, 1.6, 0.1);
+}
+
+/** The Glow-flower lamp's five hanging petals, outermost first: degrees off straight down (+ is left), length and width. The middle petal's tip is the 12.6 edge. */
+const GLOW_FLOWER_PETALS: readonly { readonly deg: number; readonly len: number; readonly wid: number }[] = [
+  { deg: -52, len: 10.5, wid: 6.6 },
+  { deg: 52, len: 10.5, wid: 6.6 },
+  { deg: -26, len: 12.5, wid: 6.8 },
+  { deg: 26, len: 12.5, wid: 6.8 },
+  { deg: 0, len: 16.4, wid: 7.2 },
+];
+/** Where the petals meet, just under the collar. */
+const GLOW_FLOWER_HEART = { x: 0, y: -3.8 } as const;
+
+/**
+ * Rare, Hanging: a lamp shaped like an upside-down flower: five pale glow-lilac petals fanning down from a pebble A collar
+ * that carries the one yellow trim band, round a lit bulb in the firefly's pale yellow with a soft white heart that glows
+ * softly and never flashes. The collar hangs by a short ink string (1.6) from a pebble A hook ring on its top-centre. One
+ * shine on a petal. The middle petal's tip is the lowest fill edge. A Hanging Decoration moves left and right only.
+ */
+function paintGlowFlowerLamp(pen: Pen): void {
+  const { ctx, k } = pen;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = DETAIL_LW;
+  ctx.stroke(place(line(0, -10, 0, -7.4), k));
+  shape(ctx, place(ellipse(0, -11.3, 1.3, 1.3), k), outerFill(pen, GLOW_FLOWER_CAP), DETAIL_LW);
+  for (const petal of GLOW_FLOWER_PETALS) {
+    const path = pointedPetal(GLOW_FLOWER_HEART.x, GLOW_FLOWER_HEART.y, 180 + petal.deg, petal.len, petal.wid);
+    outerShape(pen, place(path, k), GLOW_FLOWER_PETAL, ITEM_LW);
+  }
+  outerShape(pen, place(ellipse(0, -0.6, 3.2, 3.2), k), GLOW_FLOWER_BULB, ITEM_LW);
+  detail(pen, () => {
+    ctx.fillStyle = GLOW_CORE;
+    ctx.fill(place(ellipse(0, -0.8, 1.6, 1.6), k));
+  });
+  const collar = roundedPolygon(pts(-3.6, -7.4, 3.6, -7.4, 3, -3.6, -3, -3.6), [1.2, 1.2, 1, 1]);
+  silhouette(pen, place(collar, k), GLOW_FLOWER_CAP, ITEM_LW, () => trimBand(pen, -6.2, -4.6, BOAT_TRIM));
+  shine(pen, -3.2, 2.6, 0.6, 1.5, 0.45);
+}
+
+/**
+ * Rare, Floor: a diving bell in a pale verdigris green: a rounded dome flaring at its open rim, with the one yellow trim
+ * band round the rim, one round porthole in pale glass set in a pebble A frame, a pebble A lifting ring on top, standing on
+ * a round platform in pebble C. One shine on the dome. The platform is the lowest fill edge. A sturdy toy bell: no hose, no diver and no
+ * gem or star.
+ */
+function paintDivingBell(pen: Pen): void {
+  const { ctx, k } = pen;
+  outerShape(pen, place(ellipse(0, -10.9, 1.7, 1.7), k), DIVING_BELL_RING, ITEM_LW);
+  const platform = roundedPolygon(pts(-12.4, AREA3_FOOT_Y, -10.8, 8.6, 10.8, 8.6, 12.4, AREA3_FOOT_Y), [1.6, 2, 2, 1.6]);
+  outerShape(pen, place(platform, k), DIVING_BELL_BASE, ITEM_LW);
+  const bell = new Path2D();
+  bell.moveTo(-10.6, 8.8);
+  bell.quadraticCurveTo(-9.2, 8.4, -9.4, 4.6);
+  bell.bezierCurveTo(-9.6, -4.8, -5.2, -9.4, 0, -9.4);
+  bell.bezierCurveTo(5.2, -9.4, 9.6, -4.8, 9.4, 4.6);
+  bell.quadraticCurveTo(9.2, 8.4, 10.6, 8.8);
+  bell.closePath();
+  silhouette(pen, place(bell, k), DIVING_BELL_FILL, ITEM_LW, () => {
+    trimBand(pen, 5, 6.8, BOAT_TRIM);
+    shape(ctx, place(ellipse(0, -1.4, 4.2, 4.2), k), DIVING_BELL_RING, DETAIL_LW);
+    shape(ctx, place(ellipse(0, -1.4, 2.8, 2.8), k), FIREFLY_JAR_GLASS, DETAIL_LW);
+  });
+  shine(pen, -6, -3.4, 0.7, 1.8, 0.5);
+}
+
+/** The Little mud turtle's two feet: left and right edge of each, under the shell. */
+const MUD_TURTLE_FEET: readonly (readonly [number, number])[] = [
+  [-9.6, -3.8],
+  [0.4, 6.2],
+];
+/** The Little mud turtle's head (centre and radii), level with the body and facing right, its right edge on the 12.6 edge. */
+const MUD_TURTLE_HEAD = { x: 9, y: 1.4, rx: 3.6, ry: 3.2 } as const;
+/** The Little mud turtle's shell: the middle of its centre scute, and that scute's radius. */
+const MUD_TURTLE_SCUTE = { x: -2.2, y: -2.6, r: 4.8 } as const;
+
+/** The Little mud turtle's high dome shell: a flat soft base at y 8.6, the top on the -12.6 edge. */
+function mudTurtleShellPath(): Path2D {
+  const p = new Path2D();
+  p.moveTo(-10.2, 8.6);
+  p.quadraticCurveTo(-12.2, 8.6, -12.2, 6.2);
+  p.bezierCurveTo(-12.2, -6.4, -7.4, -12.6, -2.4, -12.6);
+  p.bezierCurveTo(2.6, -12.6, 7.6, -6.4, 7.8, 6.2);
+  p.quadraticCurveTo(7.8, 8.6, 5.6, 8.6);
+  p.closePath();
+  return p;
+}
+
+/**
+ * Epic, Floor, Area 13's special treasure: a friendly toy mud turtle with a high dome shell in a pale olive mud, a head and
+ * two stubby feet in a pale moss, standing level and facing right. Ink scute lines (1.2) round a centre scute hold one
+ * aqua gem. The head is round with a closed, rounded face, a bead eye and a wide smile (1.2): it stays level, never
+ * raised, and it never snaps, bites or holds anything. One shine on the shell. The feet are the lowest fill edge. No
+ * trim band, gold or star, and never the lake's pale-rimmed predator turtle.
+ */
+function paintLittleMudTurtle(pen: Pen): void {
+  const { ctx, k } = pen;
+  for (const [x0, x1] of MUD_TURTLE_FEET) {
+    const foot = roundedPolygon(pts(x0, 7.6, x1, 7.6, x1, AREA3_FOOT_Y, x0, AREA3_FOOT_Y), [0.4, 0.4, 2.4, 2.4]);
+    outerShape(pen, place(foot, k), MUD_TURTLE_SKIN, ITEM_LW);
+  }
+  const head = MUD_TURTLE_HEAD;
+  outerShape(pen, place(ellipse(head.x, head.y, head.rx, head.ry), k), MUD_TURTLE_SKIN, ITEM_LW);
+  const scute = MUD_TURTLE_SCUTE;
+  silhouette(pen, place(mudTurtleShellPath(), k), MUD_TURTLE_SHELL, ITEM_LW, () => {
+    const corners: Pt[] = [];
+    const spokes = new Path2D();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + (i * Math.PI) / 3;
+      corners.push({ x: scute.x + scute.r * Math.cos(a), y: scute.y + scute.r * Math.sin(a) });
+      spokes.moveTo(scute.x + scute.r * Math.cos(a), scute.y + scute.r * Math.sin(a));
+      spokes.lineTo(scute.x + 16 * Math.cos(a), scute.y + 16 * Math.sin(a));
+    }
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(roundedPolygon(corners, 1.2), k));
+    ctx.stroke(place(spokes, k));
+  });
+  gem(pen, scute.x, scute.y, CASTLE_GEM);
+  detail(pen, () => {
+    ctx.fillStyle = EYE;
+    ctx.fill(place(ellipse(10.6, 0.2, 0.9, 0.9), k));
+    const smile = new Path2D();
+    smile.moveTo(9.4, 2.8);
+    smile.quadraticCurveTo(10.8, 4.2, 12, 2.6);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    ctx.stroke(place(smile, k));
+  });
+  shine(pen, -6.6, -6.2, 1, 2, 0.6);
+}
+
+/** The Fading light garden's three bulbs, left to right with the tall one last: middle, radius, and how far the stalk's top leans from its foot. */
+const FADING_GARDEN_BULBS: readonly { readonly x: number; readonly y: number; readonly r: number; readonly lean: number }[] = [
+  { x: -7.8, y: -0.4, r: 3.6, lean: -0.8 },
+  { x: 8.2, y: 1.4, r: 3.2, lean: 0.8 },
+  { x: 0.2, y: -6.4, r: 4.8, lean: 0 },
+];
+/** Where the Fading light garden's stalks come out of the bed. */
+const FADING_GARDEN_ROOT_Y = 8.4;
+
+/**
+ * Legendary, Floor: a little garden of three fading lights on a low round bed in pebble C: three round pale yellow bulbs
+ * of different heights on short thin green stalks, each under a small pebble A cap and with a soft white heart. They
+ * glow softly and stand still, never flashing. Across the bed one gold band, one pink gem on it and one 4-point star. One
+ * shine on the tallest bulb. The bed is the lowest fill edge. Three bulbs on stalks, never the Firefly string lights'
+ * hanging wire nor the Glow moss ball's float.
+ */
+function paintFadingLightGarden(pen: Pen): void {
+  const { ctx, k } = pen;
+  const stalkW = 1.7;
+  for (const bulb of FADING_GARDEN_BULBS) {
+    const top = bulb.y + bulb.r - 1;
+    const stalk = roundedPolygon(
+      pts(bulb.x + bulb.lean - stalkW, top, bulb.x + bulb.lean + stalkW, top, bulb.x + stalkW, FADING_GARDEN_ROOT_Y, bulb.x - stalkW, FADING_GARDEN_ROOT_Y),
+      0.8,
+    );
+    shape(ctx, place(stalk, k), outerFill(pen, FADING_GARDEN_STALK), DETAIL_LW);
+  }
+  const bed = roundedPolygon(pts(-12.6, AREA3_FOOT_Y, -10.8, 7.4, 10.8, 7.4, 12.6, AREA3_FOOT_Y), [1.8, 2.4, 2.4, 1.8]);
+  silhouette(pen, place(bed, k), FADING_GARDEN_BASE, ITEM_LW, () => trimBand(pen, 8.4, 10, GOLD_TRIM));
+  for (const bulb of FADING_GARDEN_BULBS) {
+    outerShape(pen, place(ellipse(bulb.x, bulb.y, bulb.r, bulb.r), k), FADING_GARDEN_BULB, ITEM_LW);
+    const tall = bulb.r > 4;
+    outerShape(
+      pen,
+      place(ellipse(bulb.x, bulb.y - bulb.r, tall ? 2.4 : 1.9, tall ? 1.4 : 1.2), k),
+      FADING_GARDEN_CAP,
+      ITEM_LW,
+    );
+    detail(pen, () => {
+      ctx.fillStyle = GLOW_CORE;
+      ctx.fill(place(ellipse(bulb.x - 0.1 * bulb.r, bulb.y + 0.1 * bulb.r, 0.5 * bulb.r, 0.5 * bulb.r), k));
+    });
+  }
+  gem(pen, 0, 10.6, PYRAMID_GEM, 1.9);
+  shine(pen, -2, -8.6, 0.7, 1.5, 0.5);
+  legendStar(pen, 9.8, -9.8);
+}
+
+// ---------------------------------------------------------------------------
+// Open lake Area 13 Wearables (issue #215)
+// ---------------------------------------------------------------------------
+//
+// The same ladder and ink as the earlier icons. Six trench looks: turtle socks, diving goggles, a turtle shell backpack,
+// a lantern tail charm, a mini submarine and a diving suit. The six outer fills are the Area 13 Wearable fills of
+// treasurePalette.ts (9:1 or more with ink), the same names the worn looks import, so icon and worn look match; the
+// pebble A rings and straps are the shipped hook colour. Nothing carries letters or numbers (ADR 0007), nothing is red,
+// the lantern glows softly and stays still, and the Mini submarine has no torpedoes, tubes or guns.
+
+/** The Turtle socks' leg: left and right edge of the leg, and the cuff's top. */
+const TURTLE_SOCK_LEG = { x0: -7.2, x1: 3.6, top: -12.6 } as const;
+/** The Turtle socks' two scute marks (rounded hexagons, soft ink alpha 0.30): middle x, y and radius; the second sits on the shell foot. */
+const TURTLE_SOCK_MARKS: readonly (readonly [number, number, number])[] = [
+  [-1.8, -6.2, 3.4],
+  [8.2, 5.8, 3.2],
+];
+
+/** A rounded scute hexagon of radius `r` about (x, y), a corner at the top. */
+function scuteHexPath(x: number, y: number, r: number): Path2D {
+  const corners: Pt[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 3;
+    corners.push({ x: x + r * Math.cos(a), y: y + r * Math.sin(a) });
+  }
+  return roundedPolygon(corners, 1);
+}
+
+/**
+ * Common: one `shape` silhouette (2.8) of an upright leg and a foot to the right that rises in a high round shell dome,
+ * in the pale turtle green, with two soft ink scute marks (alpha 0.30), one across the leg and one on the dome. One
+ * shine. No trim, gem or star. Never the Stripy socks' stripes, the Lily pad socks' pads nor the Wave socks' wave cuff.
+ */
+function paintTurtleSocks(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { x0, x1, top } = TURTLE_SOCK_LEG;
+  const sock = new Path2D();
+  sock.moveTo(x0 + 1.6, top);
+  sock.lineTo(x1 - 1.6, top);
+  sock.arcTo(x1, top, x1, top + 1.6, 1.6);
+  sock.lineTo(x1, 1.8);
+  sock.bezierCurveTo(4, -3.4, 12.4, -3.8, 12.4, 6);
+  sock.lineTo(12.4, AREA3_FOOT_Y - 2);
+  sock.arcTo(12.4, AREA3_FOOT_Y, 12.4 - 2, AREA3_FOOT_Y, 2);
+  sock.lineTo(x0 + 5, AREA3_FOOT_Y);
+  sock.arcTo(x0, AREA3_FOOT_Y, x0, AREA3_FOOT_Y - 5, 5);
+  sock.lineTo(x0, top + 1.6);
+  sock.arcTo(x0, top, x0 + 1.6, top, 1.6);
+  sock.closePath();
+  silhouette(pen, place(sock, k), TURTLE_SOCKS_FILL, ITEM_LW, () => {
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.3;
+    for (const [x, y, r] of TURTLE_SOCK_MARKS) ctx.fill(place(scuteHexPath(x, y, r), k));
+    ctx.globalAlpha = 1;
+  });
+  shine(pen, -4.8, -9.4, 0.8, 1.8, 0.1);
+}
+
+/** The Diving goggles' one trim band across the mask's lower rim, under the lens: its top and foot. */
+const GOGGLES_BAND = { y0: 4.8, y1: 6.4 } as const;
+
+/**
+ * Rare: diving goggles in the pale diving blue: one wide rounded mask (never the Cave goggles' two round frames) with a
+ * clear pale sky lens set in it (ink 1.6), on two short pebble A strap ends, one on each side. The one yellow trim
+ * band runs across the mask's lower rim, under the lens. One shine on the lens. No gem, gold or star.
+ */
+function paintDivingGoggles(pen: Pen): void {
+  const { ctx, k } = pen;
+  const tab = (xs: readonly number[], radii: readonly number[]): Path2D => roundedPolygon(pts(xs[0], -2.6, xs[1], -2.6, xs[1], 2.6, xs[0], 2.6), radii);
+  outerShape(pen, place(tab([-12.6, -8.6], [1.8, 0.4, 0.4, 1.8]), k), GOGGLES_STRAP, ITEM_LW);
+  outerShape(pen, place(tab([8.6, 12.6], [0.4, 1.8, 1.8, 0.4]), k), GOGGLES_STRAP, ITEM_LW);
+  const mask = roundedPolygon(pts(-10, -7.2, 10, -7.2, 10.8, 2.4, 8.2, 7.4, -8.2, 7.4, -10.8, 2.4), [3, 3, 2.6, 2.6, 2.6, 2.6]);
+  silhouette(pen, place(mask, k), DIVING_GOGGLES_FRAME, ITEM_LW, () => {
+    trimBand(pen, GOGGLES_BAND.y0, GOGGLES_BAND.y1, BOAT_TRIM);
+    const lens = roundedPolygon(pts(-7.4, -4.6, 7.4, -4.6, 7.8, 0.6, 5.6, 3.4, -5.6, 3.4, -7.8, 0.6), 2.4);
+    shape(ctx, place(lens, k), GOGGLES_LENS, DETAIL_LW);
+  });
+  shine(pen, -4.8, -2.4, 0.7, 1.5, 0.5);
+}
+
+/** The Turtle shell backpack's dome: half width, top, foot and the height of its short upright sides; its carry ring (middle y and radius). */
+const SHELL_PACK = { half: 12.4, top: -6.2, foot: 10.8, side: 3.2, ring: { y: -8.4, r: 1.8 } } as const;
+/** The Turtle shell backpack's rim band (top and foot), and its two scute lines: where each starts on the band and where it ends, as distances from the middle. */
+const SHELL_PACK_BAND = { y0: 6.6, y1: 8.2 } as const;
+const SHELL_PACK_SCUTE = { footX: 5, tipX: 2.5, tipY: -2.6 } as const;
+
+/**
+ * Rare: a high dome shell on short upright sides in the pale sandy shell brown, with a small pebble A carry ring on
+ * top, the one yellow trim band across its foot and two ink scute lines (1.2) rising from the band, leaning in, that part
+ * the shell into three plates. One shine on the upper left. No letters or numbers, gem, gold or star. Never the Ladybug
+ * backpack's spotted shell with a head, nor the Little mud turtle.
+ */
+function paintTurtleShellBackpack(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { half, top, foot, side, ring } = SHELL_PACK;
+  outerShape(pen, place(ellipse(0, ring.y, ring.r, ring.r), k), FIREFLY_HOOK, ITEM_LW);
+  const cy = foot - side;
+  const dome = new Path2D();
+  dome.moveTo(-half, cy);
+  dome.ellipse(0, cy, half, cy - top, 0, Math.PI, TAU, false);
+  dome.lineTo(half, foot - 2.4);
+  dome.arcTo(half, foot, half - 2.4, foot, 2.4);
+  dome.lineTo(-half + 2.4, foot);
+  dome.arcTo(-half, foot, -half, foot - 2.4, 2.4);
+  dome.closePath();
+  silhouette(pen, place(dome, k), TURTLE_SHELL_FILL, ITEM_LW, () => {
+    trimBand(pen, SHELL_PACK_BAND.y0, SHELL_PACK_BAND.y1, BOAT_TRIM);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = BAND_LW;
+    const { footX, tipX, tipY } = SHELL_PACK_SCUTE;
+    for (const sign of [-1, 1]) {
+      const scute = new Path2D();
+      scute.moveTo(sign * footX, SHELL_PACK_BAND.y0);
+      scute.quadraticCurveTo(sign * (footX + 0.4), (SHELL_PACK_BAND.y0 + tipY) / 2, sign * tipX, tipY);
+      ctx.stroke(place(scute, k));
+    }
+  });
+  shine(pen, -7.4, -0.4, 0.9, 2.2, 0.5);
+}
+
+/** The Lantern tail charm's parts: carry ring, cord, round glass, tassel and tassel bead (middle y and size). */
+const CHARM = {
+  ring: { y: -9.4, r: 1.7 },
+  cord: { half: 0.8, top: -8.4, bottom: -5.4 },
+  glass: { y: -0.2, rx: 7.4, ry: 6.2 },
+  tassel: { half: 0.8, top: 5.2, bottom: 8.2 },
+  bead: { y: 9.6, r: 1.6 },
+  /** The one trim band across the lower part of the glass, and the soft heart (middle and radius) above it. */
+  band: { y0: 1.8, y1: 3.4 },
+  heart: { x: 0.6, y: -1.6, r: 2.6 },
+} as const;
+
+/**
+ * Rare: a round lantern charm, one merged `blob` silhouette (2.8, all outside the fills, so no line crosses a joint): a
+ * round orb of glass in the pale glowing aqua under a pebble A carry ring and cord, with a small pebble A tassel and bead
+ * under it. The one yellow trim band crosses the lower part of the glass, and a soft white heart glows still inside it
+ * (never flashing, never a ring or beam outside the glass). One shine. No gem, gold or star.
+ */
+function paintLanternTailCharm(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { ring, cord, glass, tassel, bead, band, heart } = CHARM;
+  const post = (half: number, y0: number, y1: number): Path2D => roundedPolygon(pts(-half, y0, half, y0, half, y1, -half, y1), 0.3);
+  const pieces: Piece[] = [
+    { path: place(ellipse(0, ring.y, ring.r, ring.r), k), fill: FIREFLY_HOOK },
+    { path: place(post(cord.half, cord.top, cord.bottom), k), fill: FIREFLY_HOOK },
+    { path: place(post(tassel.half, tassel.top, tassel.bottom), k), fill: FIREFLY_HOOK },
+    { path: place(ellipse(0, bead.y, bead.r, bead.r), k), fill: FIREFLY_HOOK },
+    {
+      path: place(ellipse(0, glass.y, glass.rx, glass.ry), k),
+      fill: LANTERN_CHARM_FILL,
+      inner: () => {
+        ctx.fillStyle = GLOW_CORE;
+        ctx.fill(place(ellipse(heart.x, heart.y, heart.r, heart.r), k));
+        trimBand(pen, band.y0, band.y1, BOAT_TRIM);
+      },
+    },
+  ];
+  mergedSilhouette(pen, pieces, ITEM_LW);
+  shine(pen, -3.8, -3.6, 0.8, 1.8, 0.5);
+}
+
+/** The Mini submarine's hull (left, right, top, foot), its conning tower (left, right, top, foot) and its periscope (tube left and right, arm end, top, arm foot). */
+const SUB_HULL = { x0: -8.6, x1: 11.2, y0: -0.7, y1: 9.3 } as const;
+const SUB_TOWER = { x0: -3.6, x1: 4.4, y0: -5.9, y1: 1.3 } as const;
+const SUB_SCOPE = { x0: -0.8, x1: 2.2, armX: 6.6, top: -9.3, armFoot: -6.5, tubeFoot: -5 } as const;
+/** The two propeller blades: middle x, offsets above and below the hull's middle, radii and tilt. */
+const SUB_BLADES = { x: -9.6, off: 2.2, rx: 1.3, ry: 2.6, tilt: 0.3 } as const;
+/** The porthole gem (middle and radius) and the rear hull seam (x). */
+const SUB_PORTHOLE = { x: 5.4, y: 5, r: 2.2 } as const;
+const SUB_SEAM_X = -4.6;
+
+/**
+ * Epic: a toy submarine lying level, one merged `blob` silhouette (2.8, all outside the fills) in the pale lime yellow: a
+ * round-ended hull, a conning tower on it and a periscope rising from the tower with its arm bending forward (to the
+ * right), and two pebble A propeller blades at the rear. One round gem (radius 2.2) in the hull is its porthole, the Epic
+ * detail, and one ink hull seam (1.2) sits near the rear. One shine on the hull. No trim band, gold or star, and no
+ * torpedoes, tubes, guns or markings, and no letters or numbers (ADR 0007).
+ */
+function paintMiniSubmarine(pen: Pen): void {
+  const { ctx, k } = pen;
+  const { x0, x1, y0, y1 } = SUB_HULL;
+  const hullMid = (y0 + y1) / 2;
+  const tower = SUB_TOWER;
+  const scope = SUB_SCOPE;
+  const hull = roundedPolygon(pts(x0, y0, x1, y0, x1, y1, x0, y1), (y1 - y0) / 2);
+  const towerPath = roundedPolygon(pts(tower.x0, tower.y0, tower.x1, tower.y0, tower.x1, tower.y1, tower.x0, tower.y1), [2.4, 2.4, 0.4, 0.4]);
+  const tube = roundedPolygon(pts(scope.x0, scope.top, scope.x1, scope.top, scope.x1, scope.tubeFoot, scope.x0, scope.tubeFoot), 0.6);
+  const arm = roundedPolygon(pts(scope.x0, scope.top, scope.armX, scope.top, scope.armX, scope.armFoot, scope.x0, scope.armFoot), 1.4);
+  const blades = [-1, 1].map((side) => ellipse(SUB_BLADES.x, hullMid + side * SUB_BLADES.off, SUB_BLADES.rx, SUB_BLADES.ry, -side * SUB_BLADES.tilt));
+  const pieces: Piece[] = [
+    ...blades.map((blade): Piece => ({ path: place(blade, k), fill: FIREFLY_HOOK })),
+    {
+      path: place(hull, k),
+      fill: MINI_SUBMARINE_FILL,
+      inner: () => {
+        const seam = new Path2D();
+        seam.moveTo(SUB_SEAM_X, y0 - 1);
+        seam.quadraticCurveTo(SUB_SEAM_X - 2, hullMid, SUB_SEAM_X, y1 + 1);
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = BAND_LW;
+        ctx.stroke(place(seam, k));
+      },
+    },
+    { path: place(towerPath, k), fill: MINI_SUBMARINE_FILL },
+    { path: place(tube, k), fill: MINI_SUBMARINE_FILL },
+    { path: place(arm, k), fill: MINI_SUBMARINE_FILL },
+  ];
+  mergedSilhouette(pen, pieces, ITEM_LW);
+  gem(pen, SUB_PORTHOLE.x, SUB_PORTHOLE.y, GLASSES_GEM, SUB_PORTHOLE.r);
+  shine(pen, 7.6, 0.9, 1.6, 0.5, 0.1);
+}
+
+/**
+ * The Diving suit's parts: the helmet (middle y and radius), the torso (half width, top, foot), an arm angled out from the
+ * shoulder (its inner and outer edge at the top, its outer and inner edge at the hand, and the top and foot), a leg with its
+ * boot (inner and outer edge, boot edge, top, boot top and foot), the gold collar ring across the top of the torso, the
+ * helmet's window gem and the chest star.
+ */
+const SUIT = {
+  helmet: { y: -6.6, r: 4.6 },
+  torso: { half: 5.2, top: -2.6, foot: 7.4 },
+  arm: { shoulderIn: 4.6, shoulderOut: 7.8, top: -2.6, handOut: 11.2, handIn: 8, foot: 6.4 },
+  leg: { inner: 0.8, outer: 4.8, boot: 6.8, top: 6.6, bootTop: 9, foot: 11.2 },
+  ring: { y0: -1.8, y1: -0.4 },
+  gem: { y: -6.5, r: 2.4 },
+  star: { y: 3.8 },
+} as const;
+
+/**
+ * Legendary: a toy diving suit standing, one merged `blob` silhouette (2.8, all outside the fills) in the pale copper:
+ * a round helmet, a torso with two arms angled out, and two legs ending in round boots, a thin seam between the legs.
+ * One gold collar ring (trim) crosses the top of the torso under the helmet, one round gem (radius 2.4) is the helmet's
+ * window, and one 4-point star sits on the chest. One shine on the helmet. No hose, dial, letters or numbers (ADR 0007).
+ */
+function paintDivingSuit(pen: Pen): void {
+  const { k } = pen;
+  const { helmet, torso, arm, leg, ring } = SUIT;
+  const armPath = (sign: number): Path2D =>
+    roundedPolygon(
+      pts(sign * arm.shoulderIn, arm.top, sign * arm.shoulderOut, arm.top, sign * arm.handOut, arm.foot, sign * arm.handIn, arm.foot),
+      [1.6, 2.6, 2.2, 2.2],
+    );
+  const legPath = (sign: number): Path2D =>
+    roundedPolygon(
+      pts(
+        sign * leg.outer, leg.top,
+        sign * leg.inner, leg.top,
+        sign * leg.inner, leg.foot,
+        sign * leg.boot, leg.foot,
+        sign * leg.boot, leg.bootTop,
+        sign * leg.outer, leg.bootTop,
+      ),
+      [0.4, 0.4, 1.4, 2, 2, 0.4],
+    );
+  const body = roundedPolygon(pts(-torso.half, torso.top, torso.half, torso.top, torso.half, torso.foot, -torso.half, torso.foot), [2.2, 2.2, 0.6, 0.6]);
+  const pieces: Piece[] = [
+    { path: place(armPath(-1), k), fill: DIVING_SUIT_FILL },
+    { path: place(armPath(1), k), fill: DIVING_SUIT_FILL },
+    { path: place(legPath(-1), k), fill: DIVING_SUIT_FILL },
+    { path: place(legPath(1), k), fill: DIVING_SUIT_FILL },
+    { path: place(body, k), fill: DIVING_SUIT_FILL, inner: () => trimBand(pen, ring.y0, ring.y1, GOLD_TRIM) },
+    { path: place(ellipse(0, helmet.y, helmet.r, helmet.r), k), fill: DIVING_SUIT_FILL },
+  ];
+  mergedSilhouette(pen, pieces, ITEM_LW);
+  gem(pen, 0, SUIT.gem.y, CASTLE_GEM, SUIT.gem.r);
+  legendStar(pen, 0, SUIT.star.y);
+  shine(pen, -2.9, -9, 0.6, 1.3, 0.6);
+}
+
+// ---------------------------------------------------------------------------
 // Paint shell and the Dream blob
 // ---------------------------------------------------------------------------
 
@@ -6591,6 +7290,48 @@ function paintIcon(ctx: CanvasRenderingContext2D, slug: TreasureIconSlug, size: 
       break;
     case 'pelican-slippers':
       paintPelicanSlippers({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'stone-stack':
+      paintStoneStack({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'lake-buoy':
+      paintLakeBuoy({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'raincloud-mobile':
+      paintRaincloudMobile({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-lighthouse':
+      paintLittleLighthouse({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'glow-flower-lamp':
+      paintGlowFlowerLamp({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'diving-bell':
+      paintDivingBell({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'little-mud-turtle':
+      paintLittleMudTurtle({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'fading-light-garden':
+      paintFadingLightGarden({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'turtle-socks':
+      paintTurtleSocks({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'diving-goggles':
+      paintDivingGoggles({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'turtle-shell-backpack':
+      paintTurtleShellBackpack({ ctx, k: fitScale(size, INK_OUT_SHAPE), flat });
+      break;
+    case 'lantern-tail-charm':
+      paintLanternTailCharm({ ctx, k: fitScale(size, INK_OUT_BLOB), flat });
+      break;
+    case 'mini-submarine':
+      paintMiniSubmarine({ ctx, k: fitScale(size, INK_OUT_BLOB), flat });
+      break;
+    case 'diving-suit':
+      paintDivingSuit({ ctx, k: fitScale(size, INK_OUT_BLOB), flat });
       break;
   }
 }

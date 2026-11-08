@@ -990,8 +990,8 @@ const LAKE_WEARABLES: readonly Wearable[] = ALL_TREASURES.filter(
 // ---------------------------------------------------------------------------
 
 describe('open lake Area 12 Wearables (issue #214): art, slots and the one big item', () => {
-  it('has five open lake Wearables, the last of the 66: Socks, Neck, Shirt, Back and Feet, each with its art', () => {
-    expect(ALL_TREASURES.filter((t) => t.category === 'wearable')).toHaveLength(66);
+  it('has five open lake Wearables, the 62nd to 66th of the 72: Socks, Neck, Shirt, Back and Feet, each with its art', () => {
+    expect(ALL_TREASURES.filter((t) => t.category === 'wearable')).toHaveLength(72);
     expect(LAKE_WEARABLES.map((w) => `${w.slot}:${treasureSlug(w.id)}`)).toEqual([
       'socks:wave-socks',
       'neck:cloud-scarf',
@@ -999,9 +999,9 @@ describe('open lake Area 12 Wearables (issue #214): art, slots and the one big i
       'back:surfboard',
       'feet:pelican-slippers',
     ]);
-    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(66);
-    // The Area 12 slugs come last, after the sixty-one earlier ones.
-    expect(Object.keys(WEARABLE_ART_SLOT).slice(61)).toEqual(Object.values(LAKE_SLUG));
+    expect(Object.keys(WEARABLE_ART_SLOT)).toHaveLength(72);
+    // The Area 12 slugs come after the sixty-one earlier ones, in catalogue order.
+    expect(Object.keys(WEARABLE_ART_SLOT).slice(61, 66)).toEqual(Object.values(LAKE_SLUG));
     for (const wearable of LAKE_WEARABLES) expect(artOutfit({ [wearable.slot]: wearable.id })[wearable.slot]).toBe(treasureSlug(wearable.id));
   });
 
@@ -1011,7 +1011,7 @@ describe('open lake Area 12 Wearables (issue #214): art, slots and the one big i
       expect(wearsBigItem({ [slot]: slug }, slot), slug).toBe(slug === LAKE_SLUG.board);
     }
     expect(BIG_WEARABLE_ART_SLUGS.has(LAKE_SLUG.board)).toBe(true);
-    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual(['jetpack', 'propeller-cap', 'surfboard', 'wizard-hat']);
+    expect([...BIG_WEARABLE_ART_SLUGS].sort()).toEqual(['jetpack', 'mini-submarine', 'propeller-cap', 'surfboard', 'wizard-hat']);
   });
 
   it('maps Area 12 catalogue ids to art slugs by slot, and leaves out an Area 12 id worn in the wrong slot', () => {
