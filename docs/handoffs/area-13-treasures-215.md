@@ -43,7 +43,7 @@ Applies to the Area 14 strain (`area-14-twin-trenches-213`, #213) if it merges a
 ## Follow-ups
 
 - The CONTEXT.md catch-up (PRD open question 743).
-- [Issue #222](https://github.com/brenpike/glam-gills/issues/222): the catalogue counts rule.
+- [Issue #222](https://github.com/brenpike/glam-gills/issues/222): the catalogue counts rule. Done: it merged in #225 before this branch, and this branch's PRD, art guide and README lines follow it.
 - [Issue #223](https://github.com/brenpike/glam-gills/issues/223): the boot texture budget.
 - Owner checks:
   - Icons read at Small and in the tank.
