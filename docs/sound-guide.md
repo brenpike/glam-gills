@@ -94,7 +94,7 @@ The deep canal (issue #78) adds no sound code. The black bass's warning plays th
 | | Put on a Wearable | A cloth swish and two twinkles. | 3 |
 | | Take off a Wearable | Just the swish (touch level). | 3 |
 | | Put on a Dream colour | A glassy run up the scale. | 3 |
-| | Open a fact card | A page flip and a two-note music box "ooh". | 3 |
+| | Open a fact card, or the first-hit tip card | A page flip and a two-note music box "ooh". | 3 |
 | | Turn a Collection Book or Treasure Chest page | A paper flip (touch level). | 3 |
 | | Refuge milestone | A marimba run, a whistle, a strum and bubbles. | 3 |
 | | New area unlocked | A boing and two whistle notes up. | 3 |

@@ -6,14 +6,14 @@ It is mostly fun, with real axolotl facts along the way.
 
 ## What you can do now
 
-Version 0.71.0 is playable in these habitats: the canal, the Lily pad pond, the Chinampa gardens, the Spring cave, the Deep canal and the Open lake:
+Version 0.72.0 is playable in these habitats: the canal, the Lily pad pond, the Chinampa gardens, the Spring cave, the Deep canal and the Open lake:
 
 - Make your own axolotl the first time you play, one step at a time in 11 steps: colour (one of eight real morphs), boy or girl (with a boy or girl sign), eyes, mouth (eight to choose from), gills, spots, tail, body, age, size, and name. Every choice is a big picture button that shows it on your axolotl, and the preview changes as you pick. On the first step, Surprise me picks a whole new axolotl at random, with a name that fits. On the other steps, it picks something new for that step only. The other seven colours are the ones you rescue.
 - Type a name, or pick a suggested one that fits a boy or a girl, so typing is optional. Names stay on your device.
 - On trips you swim as the axolotl you pick, in its own look and outfit. Size (Small, Medium, or Large), boy or girl, tail, body, and age are for looks only: every axolotl swims the same and has the same hit area.
 - Swim with the on-screen swim pad, or the arrow keys or WASD.
 - Use Tail Dash, ride the current, and eat snacks.
-- Dodge three tilapia. A hit costs a leg, and legs regrow. If you lose all four, you are carried home, you lose the finds you had not banked, and the snacks start over.
+- Dodge three tilapia. A hit costs a leg, and legs regrow. If you lose all four, you are carried home, you lose the finds you had not banked, and the snacks start over. The first time you lose a leg, a short card pauses the game and rings your legs display. It explains that your legs are your health, lost legs grow back, snacks make them grow back faster, and Regrowth and Shell Wearables help. It shows once, when nothing can reach you, and OK closes it.
 - Find hidden treasures: Decorations, Wearables, and Paint shells for Dream colours. Each has a rarity badge, and hint sparkles help you look. Once revealed or found, a treasure glows faintly in its rarity's colour; it never glows while hidden.
 - Each trip in Area 1 has 6 treasure slots, and chance picks each slot's rarity, so no trip is sure to have an Epic or a Legendary. Treasures you lost, and the Toy boat until you bank it, come on top of the slots. They hide in hiding spots that shuffle each trip. Rarer treasures hide nearer the tilapia, so they are harder to get.
 - The snack counter shows how many snacks are left. The last 3 snacks sparkle, and snacks drift slowly.

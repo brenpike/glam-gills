@@ -348,6 +348,10 @@ A predator's strike, a **Hazard** that costs a leg, or a **Drag net**'s catch, t
 A short time after a hit when no second hit can land.
 _Avoid_: invulnerability (in UI)
 
+**Legs display**:
+The axolotl's health, shown as leg icons: one icon for each leg, present, regrowing or lost. The first-hit tip card explains it after the first **Hit** that costs a leg.
+_Avoid_: HP, hearts, health bar (in the UI)
+
 **Leg loss**:
 Losing one leg to a hit, shown as a gentle sparkle poof.
 _Avoid_: injury, wound, damage

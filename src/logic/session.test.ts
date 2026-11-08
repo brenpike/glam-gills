@@ -30,6 +30,7 @@ import {
   markFactCardFound,
   markDashPotTipSeen,
   markFirstFindSeen,
+  markFirstHitTipSeen,
   needsStarter,
   newOwnedAxolotl,
   orderedMetHazards,
@@ -283,6 +284,7 @@ describe('createSession', () => {
         lastAreaId: CANAL_AREA_ID,
         metHazards: [],
         dashPotTipSeen: false,
+        firstHitTipSeen: false,
       },
       areas: {
         canal: { eatenSnacks: [], lastTripSeed: null, waitingStranded: null, returnedFinds: [] },
@@ -1459,6 +1461,23 @@ describe('markDashPotTipSeen (B11, D2)', () => {
   it('returns the same session when the tip was already seen', () => {
     const seen = markDashPotTipSeen(withStarter());
     expect(markDashPotTipSeen(seen)).toBe(seen);
+  });
+});
+
+describe('markFirstHitTipSeen (A23, D2)', () => {
+  it('marks the tip seen, keeps every other field and leaves the input session alone', () => {
+    const before = withStarter();
+    const copy = JSON.parse(JSON.stringify(before)) as Session;
+    const after = markFirstHitTipSeen(before);
+    expect(after.hub.firstHitTipSeen).toBe(true);
+    expect({ ...after.hub, firstHitTipSeen: false }).toEqual(before.hub);
+    expect(after.areas).toBe(before.areas);
+    expect(before).toEqual(copy);
+  });
+
+  it('returns the same session when the tip was already seen', () => {
+    const seen = markFirstHitTipSeen(withStarter());
+    expect(markFirstHitTipSeen(seen)).toBe(seen);
   });
 });
 

@@ -1054,7 +1054,7 @@ function sameRescue(a: RescueSnapshot | null, b: RescueSnapshot | null): boolean
 }
 
 /** The first id met this trip whose fact card is not seen yet, or null when there is none. */
-function factCardDue(state: TripState): string | null {
+export function factCardDue(state: Pick<TripState, 'met' | 'factCardsSeen'>): string | null {
   return state.met.find((id) => !state.factCardsSeen.includes(id)) ?? null;
 }
 
