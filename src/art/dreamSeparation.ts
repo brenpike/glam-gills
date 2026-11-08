@@ -4,6 +4,10 @@
  * only against Dream colours of its own kind; it keeps 0.075 in OKLab from every Dream colour, 1.5:1 from Plum, a sheen
  * 1.5:1 from Iridescent, and every cue check." Pure: the kinds are the catalogue's (solid, patterned or sheen), the
  * bodies the palette's, and every floor is checked against the unrounded measure.
+ *
+ * It also owns the F15 floor exceptions: RECORDED_DREAM_FLOOR_MISSES, the older pairs F15 records as missing a floor,
+ * each only between ONCE_CANAL_DREAM_IDS, and dreamCatalogueSeparationDrift, the check of every Dream colour pair
+ * against those floors that reports each miss the record does not excuse and each record entry that excuses nothing.
  */
 import { dreamColourById, type DreamKind } from '../logic/catalogue';
 import { DREAM_SLOTS, type DreamLookId } from './palette';
@@ -81,6 +85,95 @@ function listPairFailures(id: DreamLookId, other: DreamLookId, held: boolean): D
     failures.push({ pair: [id, other], measure: 'greyscale', floor: DREAM_GREYSCALE_MARGIN, value: greyscale });
   }
   return failures;
+}
+
+/** The 12 Dream colours that were once canal colours (issue #146): the only colours a recorded floor miss may join. */
+export const ONCE_CANAL_DREAM_IDS = Object.freeze([
+  'mint',
+  'sky-blue',
+  'lavender',
+  'sunset-orange',
+  'bubblegum',
+  'midnight-blue',
+  'hearts',
+  'tie-dye',
+  'iridescent',
+  'rainbow',
+  'galaxy',
+  'tie-dye-galaxy',
+] as const satisfies readonly DreamLookId[]);
+
+/** A Dream colour that was once a canal colour. */
+export type OnceCanalDreamId = (typeof ONCE_CANAL_DREAM_IDS)[number];
+
+/**
+ * One older pair PRD F15 records as missing a floor. 'oklab' is the 0.075 OKLab floor; 'greyscale' is only the 1.05:1
+ * same-kind greyscale floor, never the 1.5:1 margin.
+ */
+export interface RecordedDreamFloorMiss {
+  readonly pair: readonly [OnceCanalDreamId, OnceCanalDreamId];
+  readonly measure: 'greyscale' | 'oklab';
+}
+
+/**
+ * The older Dream colour pairs PRD F15 records as missing a floor, each once with its measure (owner decision,
+ * 2026-11-08, option A; open question 747; tracked in issue #227). Only Dream colours that were once canal colours
+ * (issue #146) may join a pair, so a newer colour's miss can never be recorded.
+ */
+export const RECORDED_DREAM_FLOOR_MISSES: readonly RecordedDreamFloorMiss[] = Object.freeze([
+  recordFloorMiss('sky-blue', 'lavender', 'greyscale'),
+  recordFloorMiss('sky-blue', 'sunset-orange', 'greyscale'),
+  recordFloorMiss('sky-blue', 'bubblegum', 'greyscale'),
+  recordFloorMiss('lavender', 'sunset-orange', 'greyscale'),
+  recordFloorMiss('lavender', 'bubblegum', 'greyscale'),
+  recordFloorMiss('sunset-orange', 'bubblegum', 'greyscale'),
+  recordFloorMiss('galaxy', 'tie-dye-galaxy', 'greyscale'),
+  recordFloorMiss('sky-blue', 'iridescent', 'oklab'),
+  recordFloorMiss('lavender', 'bubblegum', 'oklab'),
+  recordFloorMiss('lavender', 'iridescent', 'oklab'),
+  recordFloorMiss('bubblegum', 'iridescent', 'oklab'),
+  recordFloorMiss('midnight-blue', 'galaxy', 'oklab'),
+  recordFloorMiss('midnight-blue', 'tie-dye-galaxy', 'oklab'),
+  recordFloorMiss('hearts', 'tie-dye', 'oklab'),
+  recordFloorMiss('galaxy', 'tie-dye-galaxy', 'oklab'),
+]);
+
+/** Where the Dream catalogue and RECORDED_DREAM_FLOOR_MISSES disagree. */
+export interface DreamCatalogueSeparationDrift {
+  readonly unrecorded: readonly DreamSeparationFailure[];
+  readonly stale: readonly RecordedDreamFloorMiss[];
+}
+
+/**
+ * Every PRD F15 floor miss over every unique Dream colour pair, on unrounded measures, set against
+ * RECORDED_DREAM_FLOOR_MISSES. Each miss is excused by at most one unclaimed entry with the same unordered pair and
+ * measure whose floor is the miss's floor, so a greyscale entry never excuses a 1.5:1 margin miss. `unrecorded` holds
+ * each miss no entry excuses; `stale` each entry that excuses no miss. Both empty when the catalogue matches the record.
+ */
+export function dreamCatalogueSeparationDrift(): DreamCatalogueSeparationDrift {
+  const ids = Object.keys(DREAM_SLOTS) as DreamLookId[];
+  const misses = ids.flatMap((id, index) => ids.slice(index + 1).flatMap((other) => listPairFailures(id, other, false)));
+  const unclaimed = [...RECORDED_DREAM_FLOOR_MISSES];
+  const unrecorded: DreamSeparationFailure[] = [];
+  for (const miss of misses) {
+    const index = unclaimed.findIndex((entry) => excusesMiss(entry, miss));
+    if (index === -1) unrecorded.push(miss);
+    else unclaimed.splice(index, 1);
+  }
+  return { unrecorded, stale: unclaimed };
+}
+
+/** A deep-frozen record entry for the pair `a` and `b` missing the `measure` floor. */
+function recordFloorMiss(a: OnceCanalDreamId, b: OnceCanalDreamId, measure: RecordedDreamFloorMiss['measure']): RecordedDreamFloorMiss {
+  return Object.freeze({ pair: Object.freeze([a, b] as const), measure });
+}
+
+/** True when record entry `entry` excuses `miss`: the same unordered pair, the same measure and that measure's floor. */
+function excusesMiss(entry: RecordedDreamFloorMiss, miss: DreamSeparationFailure): boolean {
+  const floor = entry.measure === 'oklab' ? DREAM_OKLAB_FLOOR : DREAM_GREYSCALE_FLOOR;
+  if (entry.measure !== miss.measure || miss.floor !== floor) return false;
+  const [first, second] = miss.pair;
+  return (entry.pair[0] === first && entry.pair[1] === second) || (entry.pair[0] === second && entry.pair[1] === first);
 }
 
 /** The 0 to 255 channels of a #rrggbb colour; throws for any other form. */
